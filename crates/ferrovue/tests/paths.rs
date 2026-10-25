@@ -1,29 +1,30 @@
-//! The public paths `ferrovue` re-exports from `ferrovue-core`, `ferrovue-router` and
-//! `ferrovue-i18n`.
+//! The public paths of `ferrovue-core`, `ferrovue-router` and `ferrovue-i18n` through the
+//! `ferrovue` crate's modules `core`, `router` and `i18n`.
 
 #[allow(unused_imports)]
-use ferrovue::{
-    Js, escape_into, js_max, js_min, js_round, js_to_exponential, js_to_fixed, js_to_precision,
-    push_int, push_number,
+use ferrovue::core::{
+    escape::escape_into,
+    numbers::{
+        Js, js_max, js_min, js_round, js_sign, js_to_exponential, js_to_fixed, js_to_precision,
+        push_int, push_number,
+    },
+    uri::{js_encode_uri, js_encode_uri_component},
 };
 
 #[cfg(feature = "router")]
 #[allow(unused_imports)]
-use ferrovue::{Link, Query, Route, RouteDef, Router, query_into};
+use ferrovue::router::{Link, Query, Route, RouteDef, Router, query_into};
 
 #[cfg(feature = "i18n")]
 #[allow(unused_imports)]
-use ferrovue::{
-    I18n,
-    i18n::{Args, Locale, Message, Part, Value},
-};
+use ferrovue::i18n::{Args, I18n, Locale, Message, Part, Value};
 
 #[cfg(all(feature = "router", feature = "i18n"))]
 #[test]
-fn the_re_exports_are_the_items_of_the_crates_they_come_from() {
-    let router: ferrovue_router::Router = ferrovue::Router::new(&["/"]);
-    let _: ferrovue::Route<'_> = router.at("/");
+fn the_modules_are_the_crates_they_name() {
+    let router: ferrovue_router::Router = ferrovue::router::Router::new(&["/"]);
+    let _: ferrovue::router::Route<'_> = router.at("/");
     let _: ferrovue_i18n::I18n = ferrovue::i18n::I18n::new(&[], "en", &[]);
-    let _: ferrovue::I18n = ferrovue_i18n::I18n::new(&[], "en", &[]);
-    let _: ferrovue_core::numbers::Js<i64> = ferrovue::Js(1);
+    let _: ferrovue::i18n::I18n = ferrovue_i18n::I18n::new(&[], "en", &[]);
+    let _: ferrovue_core::numbers::Js<i64> = ferrovue::core::numbers::Js(1);
 }

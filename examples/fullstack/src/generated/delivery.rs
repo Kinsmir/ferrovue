@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,41 +41,41 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(101 + props.ordered.len());
-    let fv_refusals = fv::Refusals::new(NAME, "client/components/Delivery.vue");
-    let s_arrives = std::cell::LazyCell::new(|| fv::js_time_clip(fv_refusals.keep(fv::try_date_parse(&props.ordered), 5, 41) + props.days as f64 * 86400000.0));
+    let fv_refusals = fv::refused::Refusals::new(NAME, "client/components/Delivery.vue");
+    let s_arrives = std::cell::LazyCell::new(|| fv::dates::js_time_clip(fv_refusals.keep(fv::dates::try_date_parse(&props.ordered), 5, 41) + props.days as f64 * 86400000.0));
     out.push_str("<p class=\"delivery\"> Ordered on <time datetime=\"");
-    fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.ordered), 10, 31)), 10, 31));
+    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.ordered), 10, 31)), 10, 31));
     out.push_str("\">");
-    fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(&props.ordered), 10, 69)), 10, 69), 0.0f64, Some(10.0f64)));
+    fv::core::escape::escape_into(out, &fv::strings::js_slice(&fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(&props.ordered), 10, 69)), 10, 69), 0.0f64, Some(10.0f64)));
     out.push_str("</time>, arrives ");
-    fv::escape_into(out, &(if props.days as f64 == 1.0 { std::borrow::Cow::<str>::Borrowed("the next day") } else { std::borrow::Cow::<str>::Owned(format!("{} days later", fv::Js(props.days))) }));
+    fv::core::escape::escape_into(out, &(if props.days as f64 == 1.0 { std::borrow::Cow::<str>::Borrowed("the next day") } else { std::borrow::Cow::<str>::Owned(format!("{} days later", fv::core::numbers::Js(props.days))) }));
     out.push_str(", on <time datetime=\"");
-    fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(*s_arrives), 11, 83));
+    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(*s_arrives), 11, 83));
     out.push_str("\">");
-    fv::escape_into(out, &fv::js_slice(&fv::js_to_utc_string(*s_arrives), 0.0f64, Some(16.0f64)));
+    fv::core::escape::escape_into(out, &fv::strings::js_slice(&fv::dates::js_to_utc_string(*s_arrives), 0.0f64, Some(16.0f64)));
     out.push_str("</time></p>");
     fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

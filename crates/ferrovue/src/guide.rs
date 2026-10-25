@@ -6,20 +6,20 @@
 //! 2. [`generated_code`]: what the compiler writes, module by module, and the shape of a
 //!    component's API: `Props`, `render`, `html`, `island`.
 //! 3. [`props`]: how each TypeScript prop type becomes a Rust type, and how to build props;
-//!    dictionaries, with [`Record`](crate::Record).
+//!    dictionaries, with [`Record`](crate::record::Record).
 //! 4. [`script_logic`]: statements in a `computed`, a list method's callback and the functions
 //!    a template calls, as the server evaluates them.
 //! 5. [`slots`]: slot content from Rust, named and scoped slots, fallbacks.
 //! 6. [`scoped_styles`]: `<style scoped>` ids, matching `@vitejs/plugin-vue`, and `:slotted()`;
 //!    `v-bind()` in `<style>`; CSS modules.
-//! 7. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::Router)
-//!    and [`Route`](crate::Route); routes from a folder of pages.
-//! 8. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::I18n).
-//! 9. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::Teleports).
+//! 7. [`routing`]: `<RouterLink>`, `<RouterView>` and `useRoute()`, with [`Router`](crate::router::Router)
+//!    and [`Route`](crate::router::Route); routes from a folder of pages.
+//! 8. [`i18n`]: vue-i18n's `$t`, with [`I18n`](crate::i18n::I18n).
+//! 9. [`teleports`]: `<Teleport>`, with [`Teleports`](crate::teleport::Teleports).
 //! 10. [`pinia`]: Pinia state on the server, and handing it to the client.
 //! 11. [`provide_inject`]: `provide` and `inject`, resolved through the component tree.
 //! 12. [`loaders`]: the data a component awaits in `<script setup>`, which the Rust app loads.
-//! 13. [`head`]: the page head from `useHead` and `useSeoMeta`, with [`Head`](crate::Head).
+//! 13. [`head`]: the page head from `useHead` and `useSeoMeta`, with [`Head`](crate::head::Head).
 //! 14. [`islands_and_hydration`]: what the browser does with the page, and when each island
 //!     hydrates.
 //! 15. [`streaming`]: holes, for sending a page in the order its parts are ready.

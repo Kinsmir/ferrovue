@@ -10,30 +10,30 @@ pub const NAME: &str = "DateStamp";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "at", with = "fv::date_prop")]
-    pub at: ferrovue::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub edited: Option<ferrovue::JsDate>,
-    #[serde(rename = "deleted", default, with = "fv::opt_date_prop")]
-    pub deleted: Option<ferrovue::JsDate>,
-    #[serde(rename = "shown", with = "fv::date_prop")]
-    pub shown: ferrovue::JsDate,
+    #[serde(rename = "at", with = "fv::js_date::date_prop")]
+    pub at: ferrovue::js_date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::opt_date_prop")]
+    pub edited: Option<ferrovue::js_date::JsDate>,
+    #[serde(rename = "deleted", default, with = "fv::js_date::opt_date_prop")]
+    pub deleted: Option<ferrovue::js_date::JsDate>,
+    #[serde(rename = "shown", with = "fv::js_date::date_prop")]
+    pub shown: ferrovue::js_date::JsDate,
 }
 
 impl Props {
     /// Props with its required fields, every optional one absent and every nullable one `null`.
-    pub fn new(at: ferrovue::JsDate, shown: ferrovue::JsDate) -> Self {
+    pub fn new(at: ferrovue::js_date::JsDate, shown: ferrovue::js_date::JsDate) -> Self {
         Props { at, edited: None, deleted: None, shown }
     }
 
     /// Set `edited`, which is absent otherwise.
-    pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {
+    pub fn edited(mut self, edited: ferrovue::js_date::JsDate) -> Self {
         self.edited = Some(edited);
         self
     }
 
     /// Set `deleted`, which is `null` otherwise.
-    pub fn deleted(mut self, deleted: ferrovue::JsDate) -> Self {
+    pub fn deleted(mut self, deleted: ferrovue::js_date::JsDate) -> Self {
         self.deleted = Some(deleted);
         self
     }
@@ -46,7 +46,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -54,29 +54,29 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(107);
     out.push_str("<footer>");
-    fv::push_number(out, fv::js_time_of(&props.at));
+    fv::core::numbers::push_number(out, fv::js_date::js_time_of(&props.at));
     out.push('|');
-    fv::push_number(out, fv::js_utc_seconds(fv::js_time_of(&props.shown)));
+    fv::core::numbers::push_number(out, fv::dates::js_utc_seconds(fv::js_date::js_time_of(&props.shown)));
     out.push(' ');
-    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_date::js_time_of) {
         out.push_str("<span>");
-        fv::push_number(out, fv_edited);
+        fv::core::numbers::push_number(out, fv_edited);
         out.push_str("</span>");
     } else {
         out.push_str("<!---->");
     }
-    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::js_time_of) {
+    if let Some(fv_deleted) = props.deleted.as_ref().map(fv::js_date::js_time_of) {
         out.push_str("<span>");
-        fv::push_number(out, fv::js_utc_full_year(fv_deleted));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv_deleted));
         out.push_str("</span>");
     } else {
         out.push_str("<!---->");
     }
-    if props.edited.as_ref().map(fv::js_time_of).is_some() && props.deleted.as_ref().map(fv::js_time_of).is_some() {
+    if props.edited.as_ref().map(fv::js_date::js_time_of).is_some() && props.deleted.as_ref().map(fv::js_date::js_time_of).is_some() {
         out.push_str("<span>both</span>");
     } else {
         out.push_str("<!---->");
@@ -86,21 +86,21 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

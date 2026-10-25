@@ -1,4 +1,5 @@
-use crate::{escape_into, js_trim, record};
+use crate::{record, strings::js_trim};
+use ferrovue_core::escape::escape_into;
 
 /// `escapeHtml(normalizeClass([...]))` for a list of strings: each one trimmed, the empty ones
 /// dropped, the rest joined with one space. `after` says a class has already been written, so the
@@ -8,7 +9,7 @@ use crate::{escape_into, js_trim, record};
 ///
 /// ```
 /// let mut out = String::from("card");
-/// ferrovue::class_into(&mut out, true, &[" big ", "", "x<y"]);
+/// ferrovue::class::class_into(&mut out, true, &[" big ", "", "x<y"]);
 /// assert_eq!(out, "card big x&lt;y");
 /// ```
 pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
@@ -34,7 +35,7 @@ pub fn class_into(out: &mut String, after: bool, items: &[&str]) {
 ///
 /// ```
 /// // `{ active: true, [" wide "]: true, hidden: false }`
-/// assert_eq!(ferrovue::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
+/// assert_eq!(ferrovue::class::class_object(&[(true, "active"), (true, " wide "), (false, "hidden")]), "active  wide");
 /// ```
 #[must_use]
 pub fn class_object(entries: &[(bool, &str)]) -> String {

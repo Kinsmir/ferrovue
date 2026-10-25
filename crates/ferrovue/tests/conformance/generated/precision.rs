@@ -35,7 +35,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,122 +43,122 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(129 + props.label.len());
     let s_sum = props.x + props.n as f64;
-    let s_shown = format!("{}: {}", props.label, fv::js_to_precision(props.x, 3));
+    let s_shown = format!("{}: {}", props.label, fv::core::numbers::js_to_precision(props.x, 3));
     out.push_str("<div");
-    if fv::js_to_precision(props.x, 2).is_empty() {
+    if fv::core::numbers::js_to_precision(props.x, 2).is_empty() {
         out.push_str(" data-p");
     } else {
         out.push_str(" data-p=\"");
-        fv::escape_into(out, &fv::js_to_precision(props.x, 2));
+        fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 2));
         out.push('"');
     }
-    if fv::js_to_exponential(props.n as f64, Some(1)).is_empty() {
+    if fv::core::numbers::js_to_exponential(props.n as f64, Some(1)).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &fv::js_to_exponential(props.n as f64, Some(1)));
+        fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.n as f64, Some(1)));
         out.push('"');
     }
     out.push_str("><p>");
-    fv::escape_into(out, &fv::Js(props.x).to_string());
+    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.x).to_string());
     out.push('|');
-    fv::escape_into(out, &fv::Js(props.x).to_string());
+    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.x).to_string());
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 1));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 1));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 2));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 2));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 3));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 3));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 6));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 6));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 17));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 17));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 21));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 21));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.x, 2));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 2));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_to_exponential(props.x, None));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, None));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, None));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, None));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(0)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(0)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(1)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(1)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(2)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(2)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(5)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(5)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(16)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(16)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(20)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(20)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(0)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(0)));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_to_precision(props.x, 100));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x, 100));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_to_exponential(props.x, Some(100)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x, Some(100)));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::Js(props.n).to_string());
+    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.n).to_string());
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.n as f64, 1));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.n as f64, 1));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.n as f64, 4));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.n as f64, 4));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(props.n as f64, 16));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.n as f64, 16));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.n as f64, None));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.n as f64, None));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.n as f64, Some(3)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.n as f64, Some(3)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(-(props.n as f64), 2));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(-(props.n as f64), 2));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_to_precision(props.x / 0.0, 5));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(props.x / 0.0, 5));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(-props.x / 0.0, Some(2)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(-props.x / 0.0, Some(2)));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(f64::NAN, 3));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(f64::NAN, 3));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x * 0.0, None));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x * 0.0, None));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_precision(s_sum, 5));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_precision(s_sum, 5));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_exponential(props.x / 3.0, Some(4)));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_exponential(props.x / 3.0, Some(4)));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_to_fixed(props.x, 2));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.x, 2));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_fixed(props.x, 0));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.x, 0));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_fixed(props.n as f64, 0));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.n as f64, 0));
     out.push_str("</p><p>");
-    fv::escape_into(out, &s_shown);
+    fv::core::escape::escape_into(out, &s_shown);
     out.push('|');
-    fv::escape_into(out, &format!("{} and {}", fv::js_to_exponential(props.x, Some(2)), fv::js_to_precision(props.n as f64, 3)));
+    fv::core::escape::escape_into(out, &format!("{} and {}", fv::core::numbers::js_to_exponential(props.x, Some(2)), fv::core::numbers::js_to_precision(props.n as f64, 3)));
     out.push_str("</p></div>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -40,7 +40,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,60 +48,60 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(582 + props.text.len() + props.tone.as_deref().map_or(0, str::len));
     let s_picked = if props.on { "Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn" } else { "Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv" };
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__card___G8aPs"]);
+    fv::class::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__card___G8aPs"]);
     out.push_str("\" style=\"");
     if let Some(v) = props.tone.as_deref() {
         out.push_str("--46bce602-tone:");
         if v.is_empty() {
             out.push(' ');
         } else {
-            fv::escape_into(out, v);
+            fv::core::escape::escape_into(out, v);
         }
         out.push(';');
     } else {
         out.push_str("--46bce602-tone:initial;");
     }
     out.push_str("\" data-v-46bce602><h2 class=\"");
-    fv::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4", &*fv::class_object(&[(props.on, "Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk")])]);
+    fv::class::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4", &*fv::class::class_object(&[(props.on, "Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk")])]);
     out.push_str("\" data-v-46bce602>");
-    fv::escape_into(out, &props.text);
+    fv::core::escape::escape_into(out, &props.text);
     out.push_str("</h2><p class=\"");
-    fv::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__red-dash___3GAvp"]);
+    fv::class::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__red-dash___3GAvp"]);
     out.push_str("\" data-anim=\"Moduled-vue-vue-type-style-index-0-lang-module__spin___ciCju\" data-v-46bce602>");
-    fv::escape_into(out, props.tone.as_deref().unwrap_or("#f00"));
+    fv::core::escape::escape_into(out, props.tone.as_deref().unwrap_or("#f00"));
     out.push_str("</p><p class=\"");
-    fv::class_into(out, false, &[s_picked, "Moduled-vue-vue-type-style-index-0-lang-module__sm--hidden___SkXzu"]);
+    fv::class::class_into(out, false, &[s_picked, "Moduled-vue-vue-type-style-index-0-lang-module__sm--hidden___SkXzu"]);
     out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-0-lang-module__comp___MclRi Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4 Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk</p><span class=\"");
-    fv::class_into(out, false, &["Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn", "plain"]);
+    fv::class::class_into(out, false, &["Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn", "plain"]);
     out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv</span><i class=\"");
-    fv::class_into(out, false, &["Moduled-vue-vue-type-style-index-2-scoped-46bce602-lang-module__dot___hS8nn"]);
+    fv::class::class_into(out, false, &["Moduled-vue-vue-type-style-index-2-scoped-46bce602-lang-module__dot___hS8nn"]);
     out.push_str("\" data-v-46bce602></i>");
-    super::moduled_chip::try_render_scoped(out, &super::moduled_chip::Props { label: std::borrow::Cow::Borrowed(&*props.text) }, &fv::Attrs::new(&[("class", fv::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"))?;
+    super::moduled_chip::try_render_scoped(out, &super::moduled_chip::Props { label: std::borrow::Cow::Borrowed(&*props.text) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"))?;
     out.push_str("</section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

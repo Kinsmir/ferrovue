@@ -59,7 +59,7 @@ export function checkVHtmlPlacement(comp: Component, node: N, inline: boolean): 
     fail(
       comp,
       "FV1513",
-      `\`v-html\` ${p === found.el ? "on" : "inside"} a \`<p>\` of HTML that may hold a block (\`<p>\`, \`<ul>\`, \`<div>\`), which ends the \`<p>\` where the browser reads it: type the prop \`InlineHtml\` from \`ferrovue/types\` (\`ferrovue::InlineHtml\` on the server, which keeps inline tags only), or use a \`<div>\``,
+      `\`v-html\` ${p === found.el ? "on" : "inside"} a \`<p>\` of HTML that may hold a block (\`<p>\`, \`<ul>\`, \`<div>\`), which ends the \`<p>\` where the browser reads it: type the prop \`InlineHtml\` from \`ferrovue/types\` (\`ferrovue::basic_html::InlineHtml\` on the server, which keeps inline tags only), or use a \`<div>\``,
       node,
     );
   }

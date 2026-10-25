@@ -36,9 +36,9 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
     /// `<slot name="corner">`
-    pub corner: Option<fv::Slot<'s>>,
+    pub corner: Option<fv::slots::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -47,7 +47,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE));
+    fv::refused::rendered(try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -55,31 +55,31 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE)
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+    try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(43 + props.label.len());
     out.push_str("<b");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"square\"");
         if let Some(v) = props.size {
             out.push_str(" data-size=\"");
-            fv::push_int(out, v);
+            fv::core::numbers::push_int(out, v);
             out.push('"');
         }
         out.push_str(fv_attrs.ids());
     } else {
-        fv::attrs_into(out, &[&[("class", fv::Attr::str("square")), ("data-size", props.size.map_or(fv::Attr::Undefined, fv::Attr::Int))], fv_attrs.list()], 1, fv_attrs.ids());
+        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("square")), ("data-size", props.size.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Int))], fv_attrs.list()], 1, fv_attrs.ids());
     }
     out.push('>');
-    fv::escape_into(out, &props.label);
-    fv::slot_into(out, fv_slots.default, None);
-    fv::slot_into(out, fv_slots.corner, Some(&mut |out: &mut String| {
+    fv::core::escape::escape_into(out, &props.label);
+    fv::slots::slot_into(out, fv_slots.default, None);
+    fv::slots::slot_into(out, fv_slots.corner, Some(&mut |out: &mut String| {
         out.push('·');
     }));
     out.push_str("</b>");
@@ -87,6 +87,6 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

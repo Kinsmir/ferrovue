@@ -102,7 +102,7 @@ ferrovue::conformance!("fixtures", generated::render_json, at_least = 24);
 The path is relative to the crate's manifest. The test fails, listing each fixture, when a render
 differs from its `.html` (with where they first differ), a fixture has no `.html` or names no
 component, or fewer than `at_least` fixtures are found (one when it is not given), so a suite that
-finds nothing does not pass. [`check_fixtures`](crate::check_fixtures) is the same check as a
+finds nothing does not pass. [`check_fixtures`](crate::conformance::check_fixtures) is the same check as a
 function, for a test of your own.
 
 # Fixtures in your own vitest tests

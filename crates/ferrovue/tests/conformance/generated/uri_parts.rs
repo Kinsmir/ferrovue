@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,54 +52,54 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(105 + 30 * props.tags.len() + props.q.len() + props.path.len() + props.tag.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
-    let s_search = format!("/search?q={}&page={}", fv::js_encode_uri_component(&props.q), fv::js_encode_uri_component(&format!("{}", fv::Js(props.page))));
-    let s_kept = fv::js_encode_uri(fv::js_trim(&props.path));
+    let s_search = format!("/search?q={}&page={}", fv::core::uri::js_encode_uri_component(&props.q), fv::core::uri::js_encode_uri_component(&format!("{}", fv::core::numbers::Js(props.page))));
+    let s_kept = fv::core::uri::js_encode_uri(fv::strings::js_trim(&props.path));
     out.push_str("<nav");
-    if fv::js_encode_uri_component(&props.q).is_empty() {
+    if fv::core::uri::js_encode_uri_component(&props.q).is_empty() {
         out.push_str(" data-q");
     } else {
         out.push_str(" data-q=\"");
-        fv::escape_into(out, &fv::js_encode_uri_component(&props.q));
+        fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.q));
         out.push('"');
     }
     out.push_str("><a href=\"");
-    fv::escape_into(out, &s_search);
+    fv::core::escape::escape_into(out, &s_search);
     out.push_str("\">");
-    fv::escape_into(out, &s_search);
+    fv::core::escape::escape_into(out, &s_search);
     out.push_str("</a><a href=\"");
-    fv::escape_into(out, &s_kept);
+    fv::core::escape::escape_into(out, &s_kept);
     out.push_str("\">");
-    fv::escape_into(out, &s_kept);
+    fv::core::escape::escape_into(out, &s_kept);
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri(&props.path));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri(&props.path));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri(&format!("{}#{}", props.path, props.q)));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri(&format!("{}#{}", props.path, props.q)));
     out.push_str("</a><p>");
-    fv::escape_into(out, &fv::js_encode_uri_component(&props.q));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.q));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri_component(&props.q.to_uppercase()));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.q.to_uppercase()));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri_component(props.tag.as_deref().unwrap_or("undefined")));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(props.tag.as_deref().unwrap_or("undefined")));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri_component(props.tag.as_deref().unwrap_or("")));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(props.tag.as_deref().unwrap_or("")));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_encode_uri_component(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri_component(&format!("{}", fv::Js(props.page as f64 * -1.5))));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(&format!("{}", fv::core::numbers::Js(props.page as f64 * -1.5))));
     out.push('|');
-    fv::escape_into(out, &fv::js_encode_uri_component(if props.page as f64 > 2.0 { "true" } else { "false" }));
+    fv::core::escape::escape_into(out, &fv::core::uri::js_encode_uri_component(if props.page as f64 > 2.0 { "true" } else { "false" }));
     out.push_str("</p><ul><!--[-->");
     for fv_t_ref in props.tags.iter() {
         let fv_t: &str = fv_t_ref;
         out.push_str("<li><a href=\"");
-        fv::escape_into(out, &format!("/tags/{}", fv::js_encode_uri_component(fv_t)));
+        fv::core::escape::escape_into(out, &format!("/tags/{}", fv::core::uri::js_encode_uri_component(fv_t)));
         out.push_str("\">");
-        fv::push_int(out, fv::js_length(&fv::js_encode_uri_component(fv_t)));
+        fv::core::numbers::push_int(out, fv::strings::js_length(&fv::core::uri::js_encode_uri_component(fv_t)));
         out.push_str("</a></li>");
     }
     out.push_str("<!--]--></ul></nav>");
@@ -107,21 +107,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -31,7 +31,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,45 +39,45 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(534);
     let s_root = props.x.sqrt();
     let s_kilo = 1024i64;
     out.push_str("<section data-sign=\"");
-    fv::push_number(out, fv::js_sign(props.x));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_sign(props.x));
     out.push_str("\" style=\"width:");
-    fv::escape_into(out, &format!("{}px", fv::Js((props.n as f64).sqrt() * 10.0)));
+    fv::core::escape::escape_into(out, &format!("{}px", fv::core::numbers::Js((props.n as f64).sqrt() * 10.0)));
     out.push_str(";\"><p>");
-    fv::push_number(out, props.x.sqrt());
+    fv::core::numbers::push_number(out, props.x.sqrt());
     out.push('|');
-    fv::push_number(out, (props.n as f64).sqrt());
+    fv::core::numbers::push_number(out, (props.n as f64).sqrt());
     out.push('|');
-    fv::escape_into(out, &fv::js_to_fixed(s_root, 3));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(s_root, 3));
     out.push('|');
-    fv::push_number(out, (props.x * props.x).sqrt());
+    fv::core::numbers::push_number(out, (props.x * props.x).sqrt());
     out.push_str("|1.4142135623730951|");
-    fv::push_number(out, (-(props.n as f64)).sqrt());
+    fv::core::numbers::push_number(out, (-(props.n as f64)).sqrt());
     out.push_str("</p><p>");
-    fv::push_number(out, fv::js_sign(props.x));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_sign(props.x));
     out.push('|');
-    fv::push_number(out, fv::js_sign(props.n as f64));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_sign(props.n as f64));
     out.push('|');
-    fv::push_number(out, fv::js_sign(-(props.n as f64)));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_sign(-(props.n as f64)));
     out.push('|');
-    fv::push_number(out, 1.0 / fv::js_sign(-props.x.abs()));
+    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_sign(-props.x.abs()));
     out.push('|');
-    fv::push_number(out, 1.0 / fv::js_sign(props.n as f64));
+    fv::core::numbers::push_number(out, 1.0 / fv::core::numbers::js_sign(props.n as f64));
     out.push('|');
-    fv::push_number(out, fv::js_sign(props.x - 1.0));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_sign(props.x - 1.0));
     out.push_str("|-1</p><p>3.141592653589793|2.718281828459045|0.6931471805599453|2.302585092994046|1.4426950408889634|0.4342944819032518|1.4142135623730951|0.7071067811865476|");
-    fv::escape_into(out, &fv::js_to_fixed(props.x * std::f64::consts::PI, 2));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.x * std::f64::consts::PI, 2));
     out.push_str("</p><p>");
-    fv::push_int(out, s_kilo);
+    fv::core::numbers::push_int(out, s_kilo);
     out.push_str("|9007199254740992|-27|1000000000000000|1|1|");
-    fv::push_number(out, props.n as f64 * 256.0);
+    fv::core::numbers::push_number(out, props.n as f64 * 256.0);
     out.push_str("|-9007199254740992</p><p>9007199254740991|-9007199254740991|2.220446049250313e-16|1.7976931348623157e+308|5e-324|Infinity|-Infinity|NaN</p>");
-    if fv::js_sign(props.x) < 0.0 {
+    if fv::core::numbers::js_sign(props.x) < 0.0 {
         out.push_str("<b>negative</b>");
     } else {
         out.push_str("<!---->");
@@ -87,21 +87,21 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

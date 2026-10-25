@@ -1,7 +1,7 @@
 use std::convert::Infallible;
 use std::time::Duration;
 
-use ferrovue::JsDate;
+use ferrovue::js_date::JsDate;
 
 use crate::generated::loaders::{LoadStock, LoadWarehouse, Loaders};
 use crate::generated::types::{Book, Review, Stock, Warehouse};

@@ -112,15 +112,15 @@ pub struct Provides<'p> {
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
     out.reserve(29 + props.label.len());
     out.push_str("<button class=\"btn");
-    fv::class_into(out, true, &[fv_provides.theme_key.unwrap_or("light")]);
+    fv::class::class_into(out, true, &[fv_provides.theme_key.unwrap_or("light")]);
     out.push_str("\">");
-    fv::escape_into(out, &props.label);
+    fv::core::escape::escape_into(out, &props.label);
     out.push_str("</button>");
 }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_provides))
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_provides))
 # }
 # }
 # pub mod toolbar {
@@ -166,13 +166,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, _fv_prov
     out.reserve(27 + props.theme.len());
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme) };
     out.push_str("<nav class=\"toolbar\">");
-    fv::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
+    fv::slots::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</nav>");
 }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_provides))
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_provides))
 # }
 # }
 # }

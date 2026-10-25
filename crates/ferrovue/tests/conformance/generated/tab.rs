@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::rendered(try_render(out, props, fv_provides));
+    fv::refused::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,28 +41,28 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(98 + props.name.len() + props.title.len());
     if fv_provides.tabs_key.map(|fv_tabs| &*fv_tabs.active) == Some(&*props.name) {
         out.push_str("<section class=\"tab active\"");
         if let Some(v) = fv_provides.tabs_key.map(|fv_tabs_2| fv_tabs_2.count) {
             out.push_str(" data-of=\"");
-            fv::push_int(out, v);
+            fv::core::numbers::push_int(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::escape_into(out, &props.title);
+        fv::core::escape::escape_into(out, &props.title);
         out.push_str("</section>");
     } else {
         out.push_str("<button type=\"button\" class=\"tab\">");
-        fv::escape_into(out, &props.title);
+        fv::core::escape::escape_into(out, &props.title);
         out.push_str("</button>");
     }
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

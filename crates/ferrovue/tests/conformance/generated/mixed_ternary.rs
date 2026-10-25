@@ -54,7 +54,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -62,66 +62,66 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(116 + props.label.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<section");
-    if (if props.count as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("none") }).is_empty() {
+    if (if props.count as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("none") }).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &(if props.count as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("none") }));
+        fv::core::escape::escape_into(out, &(if props.count as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("none") }));
         out.push('"');
     }
-    if (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.price))) } else { std::borrow::Cow::<str>::Borrowed(&*props.label) }).is_empty() {
+    if (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.price))) } else { std::borrow::Cow::<str>::Borrowed(&*props.label) }).is_empty() {
         out.push_str(" data-price");
     } else {
         out.push_str(" data-price=\"");
-        fv::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.price))) } else { std::borrow::Cow::<str>::Borrowed(&*props.label) }));
+        fv::core::escape::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.price))) } else { std::borrow::Cow::<str>::Borrowed(&*props.label) }));
         out.push('"');
     }
     out.push_str("><p>");
-    fv::escape_into(out, &(if props.count as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::core::escape::escape_into(out, &(if props.count as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("none") }));
     out.push(' ');
-    fv::escape_into(out, if props.on { if true { "true" } else { "false" } } else { "off" });
+    fv::core::escape::escape_into(out, if props.on { if true { "true" } else { "false" } } else { "off" });
     out.push(' ');
-    fv::escape_into(out, &(if let Some(fv_spare) = props.spare.filter(|v| *v != 0) { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_spare))) } else { std::borrow::Cow::<str>::Borrowed("zero") }));
+    fv::core::escape::escape_into(out, &(if let Some(fv_spare) = props.spare.filter(|v| *v != 0) { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_spare))) } else { std::borrow::Cow::<str>::Borrowed("zero") }));
     out.push_str("</p><p>");
-    fv::escape_into(out, &(if props.on { if props.count as f64 > 1.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.price))) } else { std::borrow::Cow::<str>::Borrowed(if false { "true" } else { "false" }) } } else { std::borrow::Cow::<str>::Borrowed(&*props.label) }));
+    fv::core::escape::escape_into(out, &(if props.on { if props.count as f64 > 1.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.price))) } else { std::borrow::Cow::<str>::Borrowed(if false { "true" } else { "false" }) } } else { std::borrow::Cow::<str>::Borrowed(&*props.label) }));
     out.push(' ');
-    if let Some(v) = (if props.on { props.spare.map(|fv_spare_2| std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_spare_2)))) } else { Some(std::borrow::Cow::<str>::Borrowed("absent")) }).as_deref() {
-        fv::escape_into(out, v);
+    if let Some(v) = (if props.on { props.spare.map(|fv_spare_2| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_spare_2)))) } else { Some(std::borrow::Cow::<str>::Borrowed("absent")) }).as_deref() {
+        fv::core::escape::escape_into(out, v);
     }
     out.push(' ');
-    fv::escape_into(out, &(if let Some(fv_ratio) = props.ratio { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_ratio))) } else { std::borrow::Cow::<str>::Borrowed("no ratio") }));
+    fv::core::escape::escape_into(out, &(if let Some(fv_ratio) = props.ratio { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_ratio))) } else { std::borrow::Cow::<str>::Borrowed("no ratio") }));
     out.push_str("</p><p>");
-    fv::escape_into(out, &format!("{}|{}|{}|{}", (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("-") }), (if let Some(fv_spare_3) = props.spare { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_spare_3))) } else { std::borrow::Cow::<str>::Borrowed("?") }), (if props.on { std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.price))) }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::JsOr(props.ratio.map(fv::Js), "null"))) } else { std::borrow::Cow::<str>::Borrowed(if false { "true" } else { "false" }) })));
+    fv::core::escape::escape_into(out, &format!("{}|{}|{}|{}", (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed("-") }), (if let Some(fv_spare_3) = props.spare { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_spare_3))) } else { std::borrow::Cow::<str>::Borrowed("?") }), (if props.on { std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.price))) }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::strings::JsOr(props.ratio.map(fv::core::numbers::Js), "null"))) } else { std::borrow::Cow::<str>::Borrowed(if false { "true" } else { "false" }) })));
     out.push_str("</p><b aria-label=\"");
-    fv::escape_into(out, &(if let Some(fv_spare_4) = props.spare { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(fv_spare_4))) } else { std::borrow::Cow::<str>::Borrowed("unset") }));
+    fv::core::escape::escape_into(out, &(if let Some(fv_spare_4) = props.spare { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(fv_spare_4))) } else { std::borrow::Cow::<str>::Borrowed("unset") }));
     out.push_str("\" data-on=\"");
-    fv::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(1i64))) } else { std::borrow::Cow::<str>::Borrowed(if props.on { "true" } else { "false" }) }));
+    fv::core::escape::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(1i64))) } else { std::borrow::Cow::<str>::Borrowed(if props.on { "true" } else { "false" }) }));
     out.push_str("\">");
-    fv::escape_into(out, &(if (props.count as f64) < 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed(if props.on { "true" } else { "false" }) }));
+    fv::core::escape::escape_into(out, &(if (props.count as f64) < 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::numbers::Js(props.count))) } else { std::borrow::Cow::<str>::Borrowed(if props.on { "true" } else { "false" }) }));
     out.push_str("</b></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

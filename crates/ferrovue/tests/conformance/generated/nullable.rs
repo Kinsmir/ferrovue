@@ -72,7 +72,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -80,23 +80,23 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(499 + 31 * props.entries.len() + 18 * props.tags.len() + props.label.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)) + props.entries.iter().map(|v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
-    let fv_refusals = fv::Refusals::new(NAME, "components/Nullable.vue");
-    let s_scaled = std::cell::LazyCell::new(|| props.count.map(|fv_count| fv_refusals.keep(fv::try_int(fv_count as f64 * 10.0), 16, 55)));
+    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Nullable.vue");
+    let s_scaled = std::cell::LazyCell::new(|| props.count.map(|fv_count| fv_refusals.keep(fv::refused::try_int(fv_count as f64 * 10.0), 16, 55)));
     let s_fallback = props.label.as_deref();
     out.push_str("<section><p>");
     if let Some(v) = props.label.as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.count {
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = props.ratio {
-        fv::push_number(out, v);
+        fv::core::numbers::push_number(out, v);
     }
     out.push('|');
     if let Some(v) = props.on {
@@ -104,26 +104,26 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     out.push('|');
     if let Some(v) = *s_scaled {
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = s_fallback {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push_str("</p><p");
     if let Some(v) = props.label.as_deref() {
         out.push_str(" title=\"");
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
         out.push('"');
     }
     if let Some(v) = props.count {
         out.push_str(" data-count=\"");
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
         out.push('"');
     }
     if let Some(v) = props.ratio {
         out.push_str(" data-ratio=\"");
-        fv::push_number(out, v);
+        fv::core::numbers::push_number(out, v);
         out.push('"');
     }
     if let Some(v) = props.on {
@@ -133,7 +133,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     if let Some(v) = props.label.as_deref() {
         out.push_str(" aria-label=\"");
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
         out.push('"');
     }
     out.push_str("></p><input");
@@ -142,26 +142,26 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     if let Some(v) = props.label.as_deref() {
         out.push_str(" value=\"");
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
         out.push('"');
     }
     if props.count.is_some_and(|v| v != 0) {
         out.push_str(" hidden");
     }
     out.push_str("><p class=\"");
-    fv::class_into(out, false, &[props.label.as_deref().unwrap_or("")]);
+    fv::class::class_into(out, false, &[props.label.as_deref().unwrap_or("")]);
     out.push_str("\" style=\"");
     if let Some(v) = props.label.as_deref() {
         out.push_str("color:");
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
         out.push(';');
     }
     out.push_str("\">styled</p>");
     if let Some(fv_label) = props.label.as_deref() {
         out.push_str("<p>");
-        fv::push_int(out, fv::js_length(fv_label));
+        fv::core::numbers::push_int(out, fv::strings::js_length(fv_label));
         out.push(':');
-        fv::escape_into(out, &fv_label.to_uppercase());
+        fv::core::escape::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -173,7 +173,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     if let Some(fv_count_2) = props.count {
         out.push_str("<p>");
-        fv::push_number(out, fv_count_2 as f64 * 2.0);
+        fv::core::numbers::push_number(out, fv_count_2 as f64 * 2.0);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -185,14 +185,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     }
     if let Some(fv_ratio) = props.ratio {
         out.push_str("<p>");
-        fv::push_number(out, fv_ratio + 1.0);
+        fv::core::numbers::push_number(out, fv_ratio + 1.0);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     if let Some(fv_label_2) = props.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>truthy ");
-        fv::escape_into(out, fv_label_2);
+        fv::core::escape::escape_into(out, fv_label_2);
         out.push_str("</p>");
     } else {
         out.push_str("<p>falsy</p>");
@@ -203,11 +203,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<p>");
-    fv::escape_into(out, props.label.as_deref().unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::push_int(out, props.count.unwrap_or(-1i64));
+    fv::core::numbers::push_int(out, props.count.unwrap_or(-1i64));
     out.push('|');
-    fv::push_number(out, props.ratio.unwrap_or(0.5f64));
+    fv::core::numbers::push_number(out, props.ratio.unwrap_or(0.5f64));
     out.push('|');
     out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push_str("</p><p>");
@@ -224,23 +224,23 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str(if props.label.as_deref().is_none() { "true" } else { "false" });
     out.push_str("</p><p>");
     if let Some(v) = props.entry.as_ref().map(|fv_entry| &*fv_entry.title) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.entry.as_ref().and_then(|fv_entry_2| fv_entry_2.deleted_at.as_deref()).unwrap_or("live"));
+    fv::core::escape::escape_into(out, props.entry.as_ref().and_then(|fv_entry_2| fv_entry_2.deleted_at.as_deref()).unwrap_or("live"));
     out.push('|');
-    fv::push_int(out, props.entry.as_ref().and_then(|fv_entry_3| fv_entry_3.score).unwrap_or(0i64));
+    fv::core::numbers::push_int(out, props.entry.as_ref().and_then(|fv_entry_3| fv_entry_3.score).unwrap_or(0i64));
     out.push('|');
     if let Some(v) = props.entry.as_ref().and_then(|fv_entry_4| fv_entry_4.note.as_deref()) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     out.push_str(if props.entry.as_ref().and_then(|fv_entry_5| fv_entry_5.deleted_at.as_deref()).is_none() { "true" } else { "false" });
     out.push_str("</p>");
     if let Some(fv_entry_6) = props.entry.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_entry_6.title);
-        fv::escape_into(out, &(if let Some(fv_deleted_at) = fv_entry_6.deleted_at.as_deref() { std::borrow::Cow::<str>::Owned(format!(" (deleted {})", fv_deleted_at)) } else { std::borrow::Cow::<str>::Borrowed("") }));
+        fv::core::escape::escape_into(out, &fv_entry_6.title);
+        fv::core::escape::escape_into(out, &(if let Some(fv_deleted_at) = fv_entry_6.deleted_at.as_deref() { std::borrow::Cow::<str>::Owned(format!(" (deleted {})", fv_deleted_at)) } else { std::borrow::Cow::<str>::Borrowed("") }));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -251,14 +251,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<li");
         if let Some(v) = fv_e.deleted_at.as_deref() {
             out.push_str(" data-deleted=\"");
-            fv::escape_into(out, v);
+            fv::core::escape::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::escape_into(out, &fv_e.title);
-        fv::escape_into(out, if fv_e.deleted_at.as_deref().is_some() { "!" } else { "" });
+        fv::core::escape::escape_into(out, &fv_e.title);
+        fv::core::escape::escape_into(out, if fv_e.deleted_at.as_deref().is_some() { "!" } else { "" });
         if let Some(v) = fv_e.score {
-            fv::push_int(out, v);
+            fv::core::numbers::push_int(out, v);
         }
         out.push_str("</li>");
     }
@@ -268,34 +268,34 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<li");
         if let Some(v) = fv_t {
             out.push_str(" title=\"");
-            fv::escape_into(out, v);
+            fv::core::escape::escape_into(out, v);
             out.push('"');
         }
         out.push('>');
-        fv::escape_into(out, fv_t.unwrap_or("-"));
-        fv::escape_into(out, if fv_t.is_some() { "" } else { "?" });
+        fv::core::escape::escape_into(out, fv_t.unwrap_or("-"));
+        fv::core::escape::escape_into(out, if fv_t.is_some() { "" } else { "?" });
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
     if let Some(v) = props.count {
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = props.label.as_deref().filter(|v| !v.is_empty()) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = if props.on.is_some_and(|v| v) { None } else { Some("off") } {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push_str("</p><p>unpicked|true|</p>");
     fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.label.as_deref().map(std::borrow::Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
         default: Some(&|out: &mut String, fv_slot_props: &super::null_child::DefaultSlotProps<'_>| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
-            fv::escape_into(out, &(if let Some(fv_v) = fv_slot_props.v { std::borrow::Cow::<str>::Owned(format!("slot:{}", fv_v)) } else { std::borrow::Cow::<str>::Borrowed("slot:null") }));
-            fv::escape_into(out, fv_slot_props.e.and_then(|fv_e_2| fv_e_2.deleted_at.as_deref()).unwrap_or(""));
-            filled |= !fv::is_comment(&out[fv_chunk..]);
+            fv::core::escape::escape_into(out, &(if let Some(fv_v) = fv_slot_props.v { std::borrow::Cow::<str>::Owned(format!("slot:{}", fv_v)) } else { std::borrow::Cow::<str>::Borrowed("slot:null") }));
+            fv::core::escape::escape_into(out, fv_slot_props.e.and_then(|fv_e_2| fv_e_2.deleted_at.as_deref()).unwrap_or(""));
+            filled |= !fv::slots::is_comment(&out[fv_chunk..]);
             filled
         }),
     }))?;
@@ -310,21 +310,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

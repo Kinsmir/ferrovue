@@ -2,7 +2,7 @@
 
 A link renders differently when it points where the reader already is: it gets `aria-current="page"`
 and the `router-link-active` and `router-link-exact-active` classes. Deciding that means resolving
-the link as the client's vue-router will, so [`Router`](crate::Router) is vue-router's own matching
+the link as the client's vue-router will, so [`Router`](crate::router::Router) is vue-router's own matching
 algorithm, held to vectors recorded from the real vue-router.
 
 The router is the `ferrovue-router` crate, which ferrovue re-exports at its root with the `router`
@@ -132,9 +132,9 @@ the server's routes come from the files' paths alone.
 
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
-pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef::new("/"),
-    ferrovue::RouteDef::new("/users/:name"),
+pub const ROUTES: &[ferrovue::router::RouteDef<'static>] = &[
+    ferrovue::router::RouteDef::new("/"),
+    ferrovue::router::RouteDef::new("/users/:name"),
 ];
 
 /// Every route's full path, nested ones included.
@@ -147,30 +147,30 @@ pub const PATHS: &[&str] = &[
 pub const BASE: &str = "";
 
 /// The router these routes make: build it once, and resolve each request's location with
-/// [`ferrovue::Router::at`].
-pub fn router() -> ferrovue::Router {
-    ferrovue::Router::tree(ROUTES).with_base(BASE)
+/// [`ferrovue::router::Router::at`].
+pub fn router() -> ferrovue::router::Router {
+    ferrovue::router::Router::tree(ROUTES).with_base(BASE)
 }
 # }
 # let _ = route_table::router();
 ```
 
-Each route is a [`RouteDef`](crate::RouteDef), built with `RouteDef::new` and its `with_name`,
+Each route is a [`RouteDef`](crate::router::RouteDef), built with `RouteDef::new` and its `with_name`,
 `with_view` and `with_children`, which are `const`. A route table written by hand for
-[`Router::tree`](crate::Router::tree) is built the same way.
+[`Router::tree`](crate::router::Router::tree) is built the same way.
 
 # A router per application, a route per request
 
-Build the [`Router`](crate::Router) once, at start-up, and keep it in the application's state; it is
+Build the [`Router`](crate::router::Router) once, at start-up, and keep it in the application's state; it is
 immutable and `Send + Sync`. For each request, resolve the location with
-[`Router::at`](crate::Router::at), which takes the path with any query and hash, **without** the
-history's base, as vue-router's history reports it. The [`Route`](crate::Route) it returns borrows
+[`Router::at`](crate::router::Router::at), which takes the path with any query and hash, **without** the
+history's base, as vue-router's history reports it. The [`Route`](crate::router::Route) it returns borrows
 the router, and is what every component that links or reads the route takes.
 
 The server can read the same route to decide what to render:
 
 ```rust
-let router = ferrovue::Router::named(&[("/", Some("home")), ("/books/:id", Some("book"))]);
+let router = ferrovue::router::Router::named(&[("/", Some("home")), ("/books/:id", Some("book"))]);
 let route = router.at("/books/dune?ref=home#reviews");
 
 match (route.name(), route.param("id")) {
@@ -214,9 +214,9 @@ defineProps<{ user: string }>();
 #
 # /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 # /// routes nested in it.
-# pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-#     ferrovue::RouteDef::new("/"),
-#     ferrovue::RouteDef::new("/users/:name"),
+# pub const ROUTES: &[ferrovue::router::RouteDef<'static>] = &[
+#     ferrovue::router::RouteDef::new("/"),
+#     ferrovue::router::RouteDef::new("/users/:name"),
 # ];
 #
 # /// Every route's full path, nested ones included.
@@ -229,9 +229,9 @@ defineProps<{ user: string }>();
 # pub const BASE: &str = "";
 #
 # /// The router these routes make: build it once, and resolve each request's location with
-# /// [`ferrovue::Router::at`].
-# pub fn router() -> ferrovue::Router {
-#     ferrovue::Router::tree(ROUTES).with_base(BASE)
+# /// [`ferrovue::router::Router::at`].
+# pub fn router() -> ferrovue::router::Router {
+#     ferrovue::router::Router::tree(ROUTES).with_base(BASE)
 # }
 # }
 # pub mod greeting {
@@ -275,18 +275,18 @@ defineProps<{ user: string }>();
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::escape_into(out, &props.name);
+#     fv::core::escape::escape_into(out, &props.name);
 #     out.push('!');
 #     if props.unread != 0 {
 #         out.push_str("<b>");
-#         fv::push_int(out, props.unread);
+#         fv::core::numbers::push_int(out, props.unread);
 #         out.push_str(" new</b>");
 #     } else {
 #         out.push_str("<!---->");
 #     }
 #     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<i>");
-#         fv::escape_into(out, fv_note);
+#         fv::core::escape::escape_into(out, fv_note);
 #         out.push_str("</i>");
 #     } else {
 #         out.push_str("<!---->");
@@ -295,13 +295,13 @@ defineProps<{ user: string }>();
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # }
 # pub mod layout {
@@ -336,11 +336,11 @@ defineProps<{ user: string }>();
 # #[derive(Clone, Copy)]
 # pub struct Slots<'s> {
 #     /// The page `<RouterView>` shows.
-#     pub router_view: fv::Slot<'s>,
+#     pub router_view: fv::slots::Slot<'s>,
 # }
 #
 # /// Write the component's server render into `out`.
-# pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::Route<'_>) {
+# pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
 #     out.reserve(137 + props.user.len());
 #     out.push_str("<div id=\"app\"><nav>");
 #     {
@@ -350,9 +350,9 @@ defineProps<{ user: string }>();
 #             out.push_str(" aria-current=\"page\"");
 #         }
 #         out.push_str(" href=\"");
-#         fv::escape_into(out, &fv_link.href);
+#         fv::core::escape::escape_into(out, &fv_link.href);
 #         out.push_str("\" class=\"");
-#         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+#         fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
 #         out.push_str("\">home</a>");
 #     }
 #     out.push(' ');
@@ -363,11 +363,11 @@ defineProps<{ user: string }>();
 #             out.push_str(" aria-current=\"page\"");
 #         }
 #         out.push_str(" href=\"");
-#         fv::escape_into(out, &fv_link.href);
+#         fv::core::escape::escape_into(out, &fv_link.href);
 #         out.push_str("\" class=\"");
-#         fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+#         fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
 #         out.push_str("\">");
-#         fv::escape_into(out, &props.user);
+#         fv::core::escape::escape_into(out, &props.user);
 #         out.push_str("</a>");
 #     }
 #     out.push_str("</nav><main>");
@@ -376,8 +376,8 @@ defineProps<{ user: string }>();
 # }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_route: &'p fv::router::Route<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots, fv_route))
 # }
 # }
 # }
@@ -394,7 +394,7 @@ let mut html = String::new();
 layout::render(
     &mut html,
     &layout::Props::new("ada"),
-    layout::Slots { router_view: ferrovue::Slot::new(&page) },
+    layout::Slots { router_view: ferrovue::slots::Slot::new(&page) },
     &route,
 );
 assert_eq!(
@@ -409,9 +409,9 @@ assert_eq!(
 ```
 
 For each `<RouterLink>` the generated code asks the route to resolve the link and writes the result:
-[`Route::link`](crate::Route::link) for a string `to`, [`Route::link_named`](crate::Route::link_named)
-for `{ name, params, query, hash }`, [`Route::link_path`](crate::Route::link_path) for
-`{ path, query, hash }`. Each returns a [`Link`](crate::Link): the `href`, with the base, and
+[`Route::link`](crate::router::Route::link) for a string `to`, [`Route::link_named`](crate::router::Route::link_named)
+for `{ name, params, query, hash }`, [`Route::link_path`](crate::router::Route::link_path) for
+`{ path, query, hash }`. Each returns a [`Link`](crate::router::Link): the `href`, with the base, and
 whether it is active and exactly active.
 
 Nested routes work the same way at every level: a parent route's component has a `<RouterView>`
@@ -425,18 +425,18 @@ them, but not a `<RouterView>`, which would give the page it shows that componen
 
 # `useRoute()` and `$route`
 
-A component that reads the route takes the [`Route`](crate::Route) too. Each field is a method, and
-`route.query.x` is a [`Query`](crate::Query), because vue-router's query values may be absent, `null`,
+A component that reads the route takes the [`Route`](crate::router::Route) too. Each field is a method, and
+`route.query.x` is a [`Query`](crate::router::Query), because vue-router's query values may be absent, `null`,
 a string or an array:
 
 | In the template | In the generated Rust |
 |---|---|
-| `route.path` | [`Route::path`](crate::Route::path) |
-| `route.fullPath` | [`Route::full_path`](crate::Route::full_path) |
-| `route.hash` | [`Route::hash`](crate::Route::hash) |
-| `route.name` | [`Route::name`](crate::Route::name) |
-| `route.params.slug` | [`Route::param`](crate::Route::param) |
-| `route.query.q` | [`Route::query`](crate::Route::query) |
+| `route.path` | [`Route::path`](crate::router::Route::path) |
+| `route.fullPath` | [`Route::full_path`](crate::router::Route::full_path) |
+| `route.hash` | [`Route::hash`](crate::router::Route::hash) |
+| `route.name` | [`Route::name`](crate::router::Route::name) |
+| `route.params.slug` | [`Route::param`](crate::router::Route::param) |
+| `route.query.q` | [`Route::query`](crate::router::Route::query) |
 
 `route.meta` and `route.matched` are refused. An optional parameter the location leaves out is
 absent, as in vue-router: `route.params.lang` is `undefined`, and `Route::param` is `None`.
@@ -511,6 +511,6 @@ and mount them again with a new `linkRouter`, built at the new location.
 
 # Panics
 
-[`Router::tree`](crate::Router::tree) panics on a path outside the syntax above or a name used twice.
+[`Router::tree`](crate::router::Router::tree) panics on a path outside the syntax above or a name used twice.
 The generated `router()` builds from routes the compiler has already checked, so this happens only if
 the routes are edited by hand; build the router at start-up, and it happens there.

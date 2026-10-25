@@ -1,6 +1,8 @@
 use serde::Serialize;
 
-use crate::{escape_into, json};
+use ferrovue_core::escape::escape_into;
+
+use crate::json;
 
 /// The stores' state as the client reads it back before it hydrates: a `<script type="application/json">`,
 /// which a `script-src 'self'` policy does not run, so the page needs no nonce for it. `<`, `>`, `&`
@@ -15,7 +17,7 @@ use crate::{escape_into, json};
 /// ```
 /// let state = serde_json::json!({ "prefs": { "theme": "</script>" } });
 /// let mut page = String::new();
-/// ferrovue::state_script_into(&mut page, "__pinia", &state);
+/// ferrovue::state::state_script_into(&mut page, "__pinia", &state);
 /// assert_eq!(
 ///     page,
 ///     r#"<script type="application/json" id="__pinia">{"prefs":{"theme":"\u003c/script\u003e"}}</script>"#

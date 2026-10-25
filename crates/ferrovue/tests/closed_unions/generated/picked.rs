@@ -38,27 +38,27 @@ impl std::fmt::Display for K {
 }
 
 impl std::str::FromStr for K {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(K::A),
             "b" => Ok(K::B),
             "c" => Ok(K::C),
-            _ => Err(ferrovue::ParseUnionError::new("K", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("K", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for K {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for K {
+impl ferrovue::union::Union for K {
     const ALL: &'static [Self] = &K::ALL;
 
     fn as_str(self) -> &'static str {
@@ -98,27 +98,27 @@ impl std::fmt::Display for PickedTag {
 }
 
 impl std::str::FromStr for PickedTag {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "b" => Ok(PickedTag::B),
             "i" => Ok(PickedTag::I),
             "u" => Ok(PickedTag::U),
-            _ => Err(ferrovue::ParseUnionError::new("PickedTag", s, &["b", "i", "u"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("PickedTag", s, &["b", "i", "u"])),
         }
     }
 }
 
 impl TryFrom<&str> for PickedTag {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for PickedTag {
+impl ferrovue::union::Union for PickedTag {
     const ALL: &'static [Self] = &PickedTag::ALL;
 
     fn as_str(self) -> &'static str {
@@ -151,7 +151,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -159,8 +159,8 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(37 + 1 + 1);
     out.push_str("<div>");
     match props.k {
@@ -187,21 +187,21 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

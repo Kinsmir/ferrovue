@@ -20,7 +20,7 @@ const _: fn(crate::domain::Align) = |v| match v {
 #[cfg(test)]
 #[test]
 fn align_gives_each_member_its_literal() {
-    ferrovue::check_union::<crate::domain::Align>("crate::domain::Align", &[(crate::domain::Align::Left, "left"), (crate::domain::Align::Center, "center"), (crate::domain::Align::Right, "right")]);
+    ferrovue::union::check_union::<crate::domain::Align>("crate::domain::Align", &[(crate::domain::Align::Left, "left"), (crate::domain::Align::Center, "center"), (crate::domain::Align::Right, "right")]);
 }
 
 // `Level` in `types/unions.ts`: `"low" | "high"`.
@@ -34,7 +34,7 @@ const _: fn(crate::domain::Level) = |v| match v {
 #[cfg(test)]
 #[test]
 fn level_gives_each_member_its_literal() {
-    ferrovue::check_union::<crate::domain::Level>("crate::domain::Level", &[(crate::domain::Level::Low, "low"), (crate::domain::Level::High, "high")]);
+    ferrovue::union::check_union::<crate::domain::Level>("crate::domain::Level", &[(crate::domain::Level::Low, "low"), (crate::domain::Level::High, "high")]);
 }
 
 /// `state` in `types/unions.ts`: `"todo" | "done" | "skipped"`.
@@ -69,27 +69,27 @@ impl std::fmt::Display for StepState {
 }
 
 impl std::str::FromStr for StepState {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "todo" => Ok(StepState::Todo),
             "done" => Ok(StepState::Done),
             "skipped" => Ok(StepState::Skipped),
-            _ => Err(ferrovue::ParseUnionError::new("StepState", s, &["todo", "done", "skipped"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("StepState", s, &["todo", "done", "skipped"])),
         }
     }
 }
 
 impl TryFrom<&str> for StepState {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for StepState {
+impl ferrovue::union::Union for StepState {
     const ALL: &'static [Self] = &StepState::ALL;
 
     fn as_str(self) -> &'static str {
@@ -109,7 +109,7 @@ const _: fn(crate::domain::Hue) = |v| match v {
 #[cfg(test)]
 #[test]
 fn hue_gives_each_member_its_literal() {
-    ferrovue::check_union::<crate::domain::Hue>("crate::domain::Hue", &[(crate::domain::Hue::Red, "red"), (crate::domain::Hue::Green, "green"), (crate::domain::Hue::BHue, "<b>&\"hue'")]);
+    ferrovue::union::check_union::<crate::domain::Hue>("crate::domain::Hue", &[(crate::domain::Hue::Red, "red"), (crate::domain::Hue::Green, "green"), (crate::domain::Hue::BHue, "<b>&\"hue'")]);
 }
 
 // `Shade` in `types/unions.ts`: `"warm" | "x-cool" | "<b>&'q'\""`.
@@ -124,7 +124,7 @@ const _: fn(crate::domain::Shade) = |v| match v {
 #[cfg(test)]
 #[test]
 fn shade_gives_each_member_its_literal() {
-    ferrovue::check_union::<crate::domain::Shade>("crate::domain::Shade", &[(crate::domain::Shade::Warm, "warm"), (crate::domain::Shade::XCool, "x-cool"), (crate::domain::Shade::BQ, "<b>&'q'\"")]);
+    ferrovue::union::check_union::<crate::domain::Shade>("crate::domain::Shade", &[(crate::domain::Shade::Warm, "warm"), (crate::domain::Shade::XCool, "x-cool"), (crate::domain::Shade::BQ, "<b>&'q'\"")]);
 }
 
 /// `Step` in `types/unions.ts`.
@@ -135,7 +135,7 @@ pub struct Step<'a> {
     pub label: Cow<'a, str>,
     #[serde(rename = "state")]
     pub state: StepState,
-    #[serde(rename = "align", default, skip_serializing_if = "Option::is_none", with = "fv::union_prop")]
+    #[serde(rename = "align", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
     pub align: Option<crate::domain::Align>,
 }
 

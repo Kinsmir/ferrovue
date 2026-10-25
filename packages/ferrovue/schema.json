@@ -140,19 +140,19 @@
       }
     },
     "trustedHtml": {
-      "description": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
-      "markdownDescription": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
+      "description": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::trusted::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::basic_html::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
+      "markdownDescription": "The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::trusted::TrustedHtml`, e.g. `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`: `crate::render::Trusted<'a>`. `ferrovue::basic_html::InlineHtml` makes every `TrustedHtml` prop inline HTML. Without it, only an `InlineHtml` prop may reach `v-html`.",
       "type": "string"
     },
     "dateType": {
-      "description": "The Rust type a `Date` prop is, which must implement `ferrovue::JsTime`: `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature.",
-      "markdownDescription": "The Rust type a `Date` prop is, which must implement `ferrovue::JsTime`: `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature.",
+      "description": "The Rust type a `Date` prop is, which must implement `ferrovue::js_date::JsTime`: `ferrovue::js_date::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature.",
+      "markdownDescription": "The Rust type a `Date` prop is, which must implement `ferrovue::js_date::JsTime`: `ferrovue::js_date::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono` feature.",
       "type": "string",
-      "default": "ferrovue::JsDate"
+      "default": "ferrovue::js_date::JsDate"
     },
     "unions": {
-      "description": "The application's own Rust enum for a union of string literals, by the union's `type` alias: `{ \"Tone\": \"crate::domain::Tone\" }`. Generated code uses that enum, which must implement `ferrovue::Union` and have a variant of the name ferrovue would generate for each literal, and generates no enum for the union.",
-      "markdownDescription": "The application's own Rust enum for a union of string literals, by the union's `type` alias: `{ \"Tone\": \"crate::domain::Tone\" }`. Generated code uses that enum, which must implement `ferrovue::Union` and have a variant of the name ferrovue would generate for each literal, and generates no enum for the union.",
+      "description": "The application's own Rust enum for a union of string literals, by the union's `type` alias: `{ \"Tone\": \"crate::domain::Tone\" }`. Generated code uses that enum, which must implement `ferrovue::union::Union` and have a variant of the name ferrovue would generate for each literal, and generates no enum for the union.",
+      "markdownDescription": "The application's own Rust enum for a union of string literals, by the union's `type` alias: `{ \"Tone\": \"crate::domain::Tone\" }`. Generated code uses that enum, which must implement `ferrovue::union::Union` and have a variant of the name ferrovue would generate for each literal, and generates no enum for the union.",
       "type": "object",
       "additionalProperties": {
         "type": "string"

@@ -289,7 +289,7 @@ impl Fixture {
 
 /// What was teleported, after a marker, as the conformance suite writes Vue's: `{"target":"…"}`.
 #[cfg(test)]
-fn teleports_into(out: &mut String, teleports: ferrovue::Teleports) {
+fn teleports_into(out: &mut String, teleports: ferrovue::teleport::Teleports) {
     let targets = teleports.into_targets();
     if targets.is_empty() {
         return;
@@ -305,9 +305,9 @@ fn teleports_into(out: &mut String, teleports: ferrovue::Teleports) {
 
 /// The head, after a marker, as the conformance suite writes unhead's: `{"headTags":"…",…}`.
 #[cfg(test)]
-fn head_into(out: &mut String, head: &ferrovue::Head) {
+fn head_into(out: &mut String, head: &ferrovue::head::Head) {
     let html = head.render();
-    if html == ferrovue::HeadHtml::default() {
+    if html == ferrovue::head::HeadHtml::default() {
         return;
     }
     let fields = [
@@ -348,7 +348,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_router_view = |out: &mut String| out.push_str(fixture.slot("routerView").unwrap_or_default());
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            app::try_render(&mut out, &props, app::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route).map_err(|e| e.to_string())?;
+            app::try_render(&mut out, &props, app::Slots { router_view: ferrovue::slots::Slot::new(&s_router_view) }, &route).map_err(|e| e.to_string())?;
         }
         "Arrays" => {
             let props: arrays::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -450,7 +450,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: css_vars_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            css_vars_leaf::try_render(&mut out, &props, css_vars_leaf::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            css_vars_leaf::try_render(&mut out, &props, css_vars_leaf::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "CssVarsLink" => {
             let props: css_vars_link::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -661,14 +661,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: forward::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            forward::try_render(&mut out, &props, forward::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            forward::try_render(&mut out, &props, forward::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Frame" => {
             let props: frame::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_head = |out: &mut String| out.push_str(fixture.slot("head").unwrap_or_default());
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            frame::try_render(&mut out, &props, frame::Slots { head: fixture.slot("head").map(|_| ferrovue::Slot::new(&s_head)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            frame::try_render(&mut out, &props, frame::Slots { head: fixture.slot("head").map(|_| ferrovue::slots::Slot::new(&s_head)), default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Glyph" => {
             let props: glyph::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -676,19 +676,19 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         }
         "HeadArticle" => {
             let props: head_article::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_article::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadChoice" => {
             let props: head_choice::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_choice::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadLater" => {
             let props: head_later::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_later::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
@@ -696,37 +696,37 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: head_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            let head = ferrovue::Head::without_defaults();
-            head_leaf::try_render(&mut out, &props, head_leaf::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }, &head).map_err(|e| e.to_string())?;
+            let head = ferrovue::head::Head::without_defaults();
+            head_leaf::try_render(&mut out, &props, head_leaf::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadNest" => {
             let props: head_nest::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_nest::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadNote" => {
             let props: head_note::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_note::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadPage" => {
             let props: head_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_page::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadSeo" => {
             let props: head_seo::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_seo::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadServer" => {
             let props: head_server::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_server::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
@@ -734,13 +734,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: head_theme::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default: &head_theme::DefaultSlot = &|out: &mut String, _: provides::Provides<'_>| -> bool { out.push_str(fixture.slot("default").unwrap_or_default()); true };
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_theme::try_render(&mut out, &props, head_theme::Slots { default: fixture.slot("default").map(|_| s_default) }, provides::Provides::default(), &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "HeadThemePage" => {
             let props: head_theme_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             head_theme_page::try_render(&mut out, &props, provides::Provides::default(), &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
@@ -810,7 +810,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Loaded" => {
             let props: loaded::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     loaded::try_render(&mut out, &props, fv_loads)
@@ -826,7 +826,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LoadedComments" => {
             let props: loaded_comments::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     loaded_comments::try_render(&mut out, &props, fv_loads)
@@ -842,7 +842,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LoadedDates" => {
             let props: loaded_dates::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     loaded_dates::try_render(&mut out, &props, fv_loads)
@@ -858,11 +858,11 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LoadedRanks" => {
             let props: loaded_ranks::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
-                    let teleports = ferrovue::Teleports::new();
-                    let head = ferrovue::Head::without_defaults();
+                    let teleports = ferrovue::teleport::Teleports::new();
+                    let head = ferrovue::head::Head::without_defaults();
                     let rendered = loaded_ranks::try_render(&mut out, &props, &teleports, &head, fv_loads);
                     teleports_into(&mut out, teleports);
                     head_into(&mut out, &head);
@@ -879,7 +879,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LoadedStamp" => {
             let props: loaded_stamp::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     loaded_stamp::try_render(&mut out, &props, fv_loads)
@@ -895,7 +895,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LoadedStamps" => {
             let props: loaded_stamps::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     loaded_stamps::try_render(&mut out, &props, fv_loads)
@@ -955,7 +955,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         }
         "Modal" => {
             let props: modal::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let teleports = ferrovue::Teleports::new();
+            let teleports = ferrovue::teleport::Teleports::new();
             modal::try_render(&mut out, &props, &teleports).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
         }
@@ -1062,7 +1062,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_title = |out: &mut String| out.push_str(fixture.slot("title").unwrap_or_default());
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
-            panel::try_render(&mut out, &props, panel::Slots { title: fixture.slot("title").map(|_| ferrovue::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) }).map_err(|e| e.to_string())?;
+            panel::try_render(&mut out, &props, panel::Slots { title: fixture.slot("title").map(|_| ferrovue::slots::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::slots::Slot::new(&s_footer)) }).map_err(|e| e.to_string())?;
         }
         "Parsing" => {
             let props: parsing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1084,13 +1084,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: plain_box::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            plain_box::try_render(&mut out, &props, plain_box::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            plain_box::try_render(&mut out, &props, plain_box::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "PlainForward" => {
             let props: plain_forward::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            plain_forward::try_render(&mut out, &props, plain_forward::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            plain_forward::try_render(&mut out, &props, plain_forward::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Plurals" => {
             let props: plurals::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1157,7 +1157,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_title = |out: &mut String| out.push_str(fixture.slot("title").unwrap_or_default());
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             let s_footer = |out: &mut String, _: &scoped_card::FooterSlotProps, _: &str| -> bool { out.push_str(fixture.slot("footer").unwrap_or_default()); true };
-            scoped_card::try_render(&mut out, &props, scoped_card::Slots { title: fixture.slot("title").map(|_| ferrovue::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| &s_footer as &scoped_card::FooterSlot) }).map_err(|e| e.to_string())?;
+            scoped_card::try_render(&mut out, &props, scoped_card::Slots { title: fixture.slot("title").map(|_| ferrovue::slots::Slot::new(&s_title)), default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| &s_footer as &scoped_card::FooterSlot) }).map_err(|e| e.to_string())?;
         }
         "ScopedFade" => {
             let props: scoped_fade::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1192,8 +1192,8 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: scoped_page::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_extra = |out: &mut String| out.push_str(fixture.slot("extra").unwrap_or_default());
-            let teleports = ferrovue::Teleports::new();
-            scoped_page::try_render(&mut out, &props, scoped_page::Slots { extra: fixture.slot("extra").map(|_| ferrovue::Slot::new(&s_extra)) }, &teleports).map_err(|e| e.to_string())?;
+            let teleports = ferrovue::teleport::Teleports::new();
+            scoped_page::try_render(&mut out, &props, scoped_page::Slots { extra: fixture.slot("extra").map(|_| ferrovue::slots::Slot::new(&s_extra)) }, &teleports).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
         }
         "ScopedPair" => {
@@ -1208,7 +1208,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: scoped_rack::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            scoped_rack::try_render(&mut out, &props, scoped_rack::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            scoped_rack::try_render(&mut out, &props, scoped_rack::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "ScopedRoot" => {
             let props: scoped_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1218,7 +1218,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: scoped_shelf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            scoped_shelf::try_render(&mut out, &props, scoped_shelf::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            scoped_shelf::try_render(&mut out, &props, scoped_shelf::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "ScopedTree" => {
             let props: scoped_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1242,7 +1242,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: shape_circle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            shape_circle::try_render(&mut out, &props, shape_circle::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            shape_circle::try_render(&mut out, &props, shape_circle::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "ShapePicker" => {
             let props: shape_picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1252,14 +1252,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: shape_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            shape_root::try_render(&mut out, &props, shape_root::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            shape_root::try_render(&mut out, &props, shape_root::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "ShapeSquare" => {
             let props: shape_square::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             let s_corner = |out: &mut String| out.push_str(fixture.slot("corner").unwrap_or_default());
-            shape_square::try_render(&mut out, &props, shape_square::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), corner: fixture.slot("corner").map(|_| ferrovue::Slot::new(&s_corner)) }).map_err(|e| e.to_string())?;
+            shape_square::try_render(&mut out, &props, shape_square::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)), corner: fixture.slot("corner").map(|_| ferrovue::slots::Slot::new(&s_corner)) }).map_err(|e| e.to_string())?;
         }
         "Shown" => {
             let props: shown::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1275,7 +1275,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_header = |out: &mut String| out.push_str(fixture.slot("header").unwrap_or_default());
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
-            slot_probe::try_render(&mut out, &props, slot_probe::Slots { header: fixture.slot("header").map(|_| ferrovue::Slot::new(&s_header)), default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::Slot::new(&s_footer)) }).map_err(|e| e.to_string())?;
+            slot_probe::try_render(&mut out, &props, slot_probe::Slots { header: fixture.slot("header").map(|_| ferrovue::slots::Slot::new(&s_header)), default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::slots::Slot::new(&s_footer)) }).map_err(|e| e.to_string())?;
         }
         "Statements" => {
             let props: statements::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1333,13 +1333,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: tag_gallery::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            tag_gallery::try_render(&mut out, &props, tag_gallery::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            tag_gallery::try_render(&mut out, &props, tag_gallery::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "TagHeading" => {
             let props: tag_heading::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            tag_heading::try_render(&mut out, &props, tag_heading::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            tag_heading::try_render(&mut out, &props, tag_heading::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "Text" => {
             let props: text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1460,7 +1460,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: unread_fold::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
-            unread_fold::try_render(&mut out, &props, unread_fold::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+            unread_fold::try_render(&mut out, &props, unread_fold::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
         }
         "UnreadSteps" => {
             let props: unread_steps::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -130,7 +130,7 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   const head = e.lines.length - 1;
   const indent = /^ */.exec(e.lines[head]!)![0];
   const inner = new Map(s.locals);
-  e.stmt(of.k === "str" ? `let ${v}: &str = ${vRef};` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${vRef};` : of.k === "date" ? `let ${v} = fv::js_time_of(${vRef});` : `let ${v} = ${vRef};`);
+  e.stmt(of.k === "str" ? `let ${v}: &str = ${vRef};` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${vRef};` : of.k === "date" ? `let ${v} = fv::js_date::js_time_of(${vRef});` : `let ${v} = ${vRef};`);
   e.stmt(`let ${i} = ${i} as i64;`);
   const bodyFrom = e.lines.length;
   if (value?.type === "Identifier") inner.set(value.name, { code: v, ty: of });

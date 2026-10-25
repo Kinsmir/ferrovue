@@ -7,7 +7,7 @@ use std::cell::RefCell;
 /// # Example
 ///
 /// ```
-/// use ferrovue::{teleport_into, Teleports};
+/// use ferrovue::teleport::{teleport_into, Teleports};
 ///
 /// let teleports = Teleports::new();
 /// let mut body = String::new();
@@ -30,7 +30,7 @@ impl Teleports {
     /// # Example
     ///
     /// ```
-    /// let teleports = ferrovue::Teleports::new();
+    /// let teleports = ferrovue::teleport::Teleports::new();
     /// assert_eq!(teleports.get("#modals"), None);
     /// ```
     #[must_use]
@@ -44,7 +44,7 @@ impl Teleports {
     /// # Example
     ///
     /// ```
-    /// use ferrovue::{teleport_into, Teleports};
+    /// use ferrovue::teleport::{teleport_into, Teleports};
     ///
     /// let teleports = Teleports::new();
     /// let mut body = String::new();
@@ -71,7 +71,7 @@ impl Teleports {
     /// # Example
     ///
     /// ```
-    /// use ferrovue::{teleport_into, Teleports};
+    /// use ferrovue::teleport::{teleport_into, Teleports};
     ///
     /// let teleports = Teleports::new();
     /// let mut body = String::new();
@@ -117,7 +117,7 @@ impl Teleports {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{teleport_into, Teleports};
+/// use ferrovue::teleport::{teleport_into, Teleports};
 ///
 /// let teleports = Teleports::new();
 /// let mut out = String::new();

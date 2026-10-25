@@ -14,7 +14,7 @@ fuzz_target!(|input: Input| {
         return;
     }
     let mut out = String::from("<body>");
-    ferrovue::state_script_into(&mut out, &input.id, &input.state);
+    ferrovue::state::state_script_into(&mut out, &input.id, &input.state);
     let open = format!(
         r#"<body><script type="application/json" id="{}">"#,
         reference_escape(&input.id)

@@ -1,4 +1,4 @@
-use ferrovue::{Attr, Attrs};
+use ferrovue::attrs::{Attr, Attrs};
 
 use crate::generated::twins::{StarRatingProps, StarRatingSlots};
 
@@ -31,7 +31,7 @@ pub fn star_rating(
         ),
     ];
     out.push_str("<div");
-    ferrovue::attrs_into(out, &[&own, attrs.list()], 1, attrs.ids());
+    ferrovue::attrs::attrs_into(out, &[&own, attrs.list()], 1, attrs.ids());
     out.push('>');
     for i in 0..max {
         out.push_str(if i < props.value {

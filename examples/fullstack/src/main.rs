@@ -20,7 +20,7 @@ use axum::http::{StatusCode, Uri};
 use axum::response::{Html, IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
-use ferrovue::HtmlStream;
+use ferrovue::web::HtmlStream;
 use tower_http::services::ServeDir;
 
 use assets::Assets;
@@ -146,7 +146,7 @@ mod tests {
         let assets = Assets::Built {
             script: "/assets/main.js".to_owned(),
             styles: vec!["/assets/main.css".to_owned()],
-            chunks: ferrovue::Chunks::from_manifest(manifest, islands).unwrap(),
+            chunks: ferrovue::chunks::Chunks::from_manifest(manifest, islands).unwrap(),
         };
         Site::new(assets, Duration::ZERO)
     }
@@ -200,7 +200,7 @@ mod tests {
             "{:?}",
             page.holes
         );
-        let [before, after] = ferrovue::split_holes(&page.html)[..] else {
+        let [before, after] = ferrovue::slots::split_holes(&page.html)[..] else {
             panic!("one hole, two pieces");
         };
         assert!(before.contains("<h1>Dune</h1>"), "{before}");

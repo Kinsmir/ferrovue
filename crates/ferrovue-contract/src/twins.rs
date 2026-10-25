@@ -1,6 +1,6 @@
 //! The Rust twins `ferrovue.config.json` names.
 
-use ferrovue::Attrs;
+use ferrovue::attrs::Attrs;
 
 use crate::generated::twins::{StarRatingProps, StarRatingSlots};
 
@@ -12,16 +12,19 @@ pub fn star_rating(
     attrs: &Attrs<'_>,
 ) {
     out.push_str("<span");
-    ferrovue::attrs_into(
+    ferrovue::attrs::attrs_into(
         out,
-        &[&[("class", ferrovue::Attr::str("stars"))], attrs.list()],
+        &[
+            &[("class", ferrovue::attrs::Attr::str("stars"))],
+            attrs.list(),
+        ],
         1,
         attrs.ids(),
     );
     out.push('>');
-    ferrovue::push_int(out, props.value);
+    ferrovue::core::numbers::push_int(out, props.value);
     out.push('/');
-    ferrovue::push_int(out, props.max.unwrap_or(5));
+    ferrovue::core::numbers::push_int(out, props.max.unwrap_or(5));
     match slots.default {
         Some(slot) => {
             out.push_str("<!--[-->");

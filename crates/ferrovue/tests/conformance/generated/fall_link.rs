@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_route, &fv::Attrs::NONE));
+pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
+    fv::refused::rendered(try_render_scoped(out, props, fv_route, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,14 +39,14 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, fv_route, &fv::Attrs::NONE)
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
+    try_render_scoped(out, props, fv_route, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(58 + props.to.len());
     {
         let fv_link = fv_route.link(&props.to);
@@ -56,13 +56,13 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::Rou
                 out.push_str(" aria-current=\"page\"");
             }
             out.push_str(" href=\"");
-            fv::escape_into(out, &fv_link.href);
+            fv::core::escape::escape_into(out, &fv_link.href);
             out.push_str("\" class=\"");
-            fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "link"]);
+            fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "link"]);
             out.push_str("\" title=\"own\"");
-            out.push_str(&fv::scope_attrs(fv_attrs.ids(), "", ""));
+            out.push_str(&fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
         } else {
-            fv::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::Attr::str("page") } else { fv::Attr::Undefined }), ("href", fv::Attr::str(&fv_link.href)), ("class", fv::Attr::from(fv::class_names(&[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }])))], &fv::merge_props(&[&[("class", fv::Attr::str("link")), ("title", fv::Attr::str("own"))], fv_attrs.list()])], 1, &fv::scope_attrs(fv_attrs.ids(), "", ""));
+            fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }])))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link")), ("title", fv::attrs::Attr::str("own"))], fv_attrs.list()])], 1, &fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
         }
         out.push_str(">go</a>");
     }
@@ -70,6 +70,6 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::Rou
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::router::Route<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

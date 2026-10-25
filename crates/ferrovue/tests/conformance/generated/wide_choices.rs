@@ -40,7 +40,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,48 +48,48 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(93);
     let s_chosen = if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 };
     out.push_str("<p title=\"");
-    fv::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));
+    fv::core::numbers::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64));
     out.push_str("\" data-or=\"");
-    fv::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.n as f64 } });
+    fv::core::numbers::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.n as f64 } });
     out.push_str("\" data-pick=\"");
-    fv::push_number(out, if props.on { props.n as f64 * props.m as f64 } else { props.count.unwrap_or(0i64) as f64 });
+    fv::core::numbers::push_number(out, if props.on { props.n as f64 * props.m as f64 } else { props.count.unwrap_or(0i64) as f64 });
     out.push_str("\">");
-    fv::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.m as f64));
+    fv::core::numbers::push_number(out, props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.m as f64));
     out.push(' ');
-    fv::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });
+    fv::core::numbers::push_number(out, if props.on { props.n as f64 * props.n as f64 } else { props.m as f64 });
     out.push(' ');
-    fv::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.m as f64 } });
+    fv::core::numbers::push_number(out, { let a = props.m as f64; if a != 0.0 { a } else { props.n as f64 * props.m as f64 } });
     out.push(' ');
-    fv::push_number(out, s_chosen);
+    fv::core::numbers::push_number(out, s_chosen);
     out.push(' ');
-    fv::push_number(out, props.n as f64 * props.m as f64);
+    fv::core::numbers::push_number(out, props.n as f64 * props.m as f64);
     out.push(' ');
-    fv::escape_into(out, &format!("{}", fv::Js(props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64))));
+    fv::core::escape::escape_into(out, &format!("{}", fv::core::numbers::Js(props.count.map(|v| v as f64).unwrap_or(props.n as f64 * props.n as f64))));
     out.push_str("</p>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

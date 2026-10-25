@@ -32,20 +32,20 @@ impl<'a> Seat<'a> {
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     #[serde(rename = "scores")]
-    pub scores: ferrovue::Record<'a, i64>,
+    pub scores: ferrovue::record::Record<'a, i64>,
     #[serde(rename = "labels")]
-    pub labels: ferrovue::Record<'a, Cow<'a, str>>,
+    pub labels: ferrovue::record::Record<'a, Cow<'a, str>>,
     #[serde(rename = "seats")]
-    pub seats: ferrovue::Record<'a, Seat<'a>>,
+    pub seats: ferrovue::record::Record<'a, Seat<'a>>,
     #[serde(rename = "tags")]
-    pub tags: ferrovue::Record<'a, Vec<Cow<'a, str>>>,
+    pub tags: ferrovue::record::Record<'a, Vec<Cow<'a, str>>>,
     #[serde(rename = "word")]
     pub word: Cow<'a, str>,
 }
 
 impl<'a> Props<'a> {
     /// Props with its required fields.
-    pub fn new(scores: ferrovue::Record<'a, i64>, labels: ferrovue::Record<'a, Cow<'a, str>>, seats: ferrovue::Record<'a, Seat<'a>>, tags: ferrovue::Record<'a, Vec<Cow<'a, str>>>, word: impl Into<Cow<'a, str>>) -> Self {
+    pub fn new(scores: ferrovue::record::Record<'a, i64>, labels: ferrovue::record::Record<'a, Cow<'a, str>>, seats: ferrovue::record::Record<'a, Seat<'a>>, tags: ferrovue::record::Record<'a, Vec<Cow<'a, str>>>, word: impl Into<Cow<'a, str>>) -> Self {
         Props { scores, labels, seats, tags, word: word.into() }
     }
 
@@ -58,7 +58,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -66,80 +66,80 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(158 + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.seats.iter().map(|(k, v)| k.len() + v.row.len()).sum::<usize>() + props.tags.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.word.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/Pairs.vue");
-    let s_ranked = fv::js_sorted(props.scores.iter(), |fv_a, fv_b| fv::js_order(*fv_b.1 as f64, *fv_a.1 as f64)).collect::<Vec<_>>();
+    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Pairs.vue");
+    let s_ranked = fv::strings::js_sorted(props.scores.iter(), |fv_a, fv_b| fv::strings::js_order(*fv_b.1 as f64, *fv_a.1 as f64)).collect::<Vec<_>>();
     let s_named = props.labels.iter().filter(|fv_item| fv_item.0 != &*props.word && !fv_item.1.is_empty()).collect::<Vec<_>>();
-    let s_best = { let fv_top = fv::js_item_at(s_ranked.iter().copied(), 0.0f64); if let Some(fv_top_2) = fv_top { std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_top_2.0, fv::Js(*fv_top_2.1))) } else { std::borrow::Cow::<str>::Borrowed("none") } };
+    let s_best = { let fv_top = fv::strings::js_item_at(s_ranked.iter().copied(), 0.0f64); if let Some(fv_top_2) = fv_top { std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_top_2.0, fv::core::numbers::Js(*fv_top_2.1))) } else { std::borrow::Cow::<str>::Borrowed("none") } };
     out.push_str("<!--[--><p>");
-    fv::escape_into(out, &props.scores.iter().map(|fv_item_2| std::borrow::Cow::<str>::Owned(format!("{}={}", fv_item_2.0, fv::Js(*fv_item_2.1)))).collect::<Vec<_>>().join(";"));
+    fv::core::escape::escape_into(out, &props.scores.iter().map(|fv_item_2| std::borrow::Cow::<str>::Owned(format!("{}={}", fv_item_2.0, fv::core::numbers::Js(*fv_item_2.1)))).collect::<Vec<_>>().join(";"));
     out.push('|');
-    fv::push_int(out, props.scores.len() as i64);
+    fv::core::numbers::push_int(out, props.scores.len() as i64);
     out.push('|');
-    fv::push_int(out, props.scores.iter().filter(|fv_item_3| *fv_item_3.1 as f64 > 1.0).count() as i64);
+    fv::core::numbers::push_int(out, props.scores.iter().filter(|fv_item_3| *fv_item_3.1 as f64 > 1.0).count() as i64);
     out.push('|');
-    fv::push_int(out, fv::js_reduce(props.scores.iter(), 0i64, |fv_acc, fv_item_4| fv_refusals.keep(fv::try_int(fv_acc as f64 + *fv_item_4.1 as f64), 21, 220)));
+    fv::core::numbers::push_int(out, fv::strings::js_reduce(props.scores.iter(), 0i64, |fv_acc, fv_item_4| fv_refusals.keep(fv::refused::try_int(fv_acc as f64 + *fv_item_4.1 as f64), 21, 220)));
     out.push('|');
     out.push_str(if props.scores.iter().any(|fv_item_5| fv_item_5.0 == &*props.word) { "true" } else { "false" });
     out.push('|');
     out.push_str(if props.scores.iter().all(|fv_item_6| *fv_item_6.1 as f64 >= 0.0) { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, props.scores.iter().position(|fv_item_7| fv_item_7.0 == &*props.word).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.scores.iter().position(|fv_item_7| fv_item_7.0 == &*props.word).map_or(-1, |i| i as i64));
     out.push_str("</p><p>");
-    fv::escape_into(out, props.labels.iter().find(|fv_item_8| fv_item_8.0.starts_with(&*props.word)).map(|fv_value| &**fv_value.1).unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.labels.iter().find(|fv_item_8| fv_item_8.0.starts_with(&*props.word)).map(|fv_value| &**fv_value.1).unwrap_or("none"));
     out.push('|');
-    fv::escape_into(out, props.labels.iter().collect::<Vec<_>>().into_iter().rev().find(|fv_item_9| fv::js_length(fv_item_9.1) as f64 > 1.0).map(|fv_value_2| fv_value_2.0).unwrap_or("-"));
+    fv::core::escape::escape_into(out, props.labels.iter().collect::<Vec<_>>().into_iter().rev().find(|fv_item_9| fv::strings::js_length(fv_item_9.1) as f64 > 1.0).map(|fv_value_2| fv_value_2.0).unwrap_or("-"));
     out.push('|');
-    fv::escape_into(out, &props.labels.iter().map(|fv_pair| std::borrow::Cow::<str>::Owned(format!("{}{}{}", fv_pair.0, fv::Js(2i64), fv_pair.1))).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.labels.iter().map(|fv_pair| std::borrow::Cow::<str>::Owned(format!("{}{}{}", fv_pair.0, fv::core::numbers::Js(2i64), fv_pair.1))).collect::<Vec<_>>().join(","));
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.labels.iter(), -1.0f64).map(|fv_value_3| fv_value_3.0) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.labels.iter(), -1.0f64).map(|fv_value_3| fv_value_3.0) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, &fv::js_slice_items(props.labels.iter(), 1.0f64, None).map(|fv_item_10| std::borrow::Cow::<str>::Borrowed(fv_item_10.0)).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &fv::strings::js_slice_items(props.labels.iter(), 1.0f64, None).map(|fv_item_10| std::borrow::Cow::<str>::Borrowed(fv_item_10.0)).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.labels.iter().collect::<Vec<_>>().into_iter().rev().map(|fv_item_11| std::borrow::Cow::<str>::Borrowed(fv_item_11.1)).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.labels.iter().collect::<Vec<_>>().into_iter().rev().map(|fv_item_11| std::borrow::Cow::<str>::Borrowed(fv_item_11.1)).collect::<Vec<_>>().join(","));
     out.push_str("</p><p>");
-    fv::escape_into(out, &s_best);
+    fv::core::escape::escape_into(out, &s_best);
     out.push('|');
-    fv::escape_into(out, &s_ranked.iter().copied().map(|fv_item_12| std::borrow::Cow::<str>::Borrowed(fv_item_12.0)).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &s_ranked.iter().copied().map(|fv_item_12| std::borrow::Cow::<str>::Borrowed(fv_item_12.0)).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::push_int(out, s_named.iter().copied().count() as i64);
+    fv::core::numbers::push_int(out, s_named.iter().copied().count() as i64);
     out.push('|');
-    fv::escape_into(out, &s_named.iter().copied().map(|fv_item_13| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_13.0, fv_item_13.1))).collect::<Vec<_>>().join("+"));
+    fv::core::escape::escape_into(out, &s_named.iter().copied().map(|fv_item_13| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_13.0, fv_item_13.1))).collect::<Vec<_>>().join("+"));
     out.push('|');
-    fv::escape_into(out, &props.seats.iter().map(|fv_item_14| std::borrow::Cow::<str>::Borrowed(fv_item_14.0)).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.seats.iter().map(|fv_item_14| std::borrow::Cow::<str>::Borrowed(fv_item_14.0)).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.seats.iter().map(|fv_item_15| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_15.1.row, fv::Js(fv_item_15.1.n)))).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.seats.iter().map(|fv_item_15| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_15.1.row, fv::core::numbers::Js(fv_item_15.1.n)))).collect::<Vec<_>>().join(","));
     out.push_str("</p><ul><!--[-->");
-    for (fv_i, fv_item_16) in fv::js_sorted(props.labels.iter(), |fv_pair_2, fv_pair_3| fv::js_cmp(fv_pair_2.0, fv_pair_3.0)).enumerate() {
+    for (fv_i, fv_item_16) in fv::strings::js_sorted(props.labels.iter(), |fv_pair_2, fv_pair_3| fv::strings::js_cmp(fv_pair_2.0, fv_pair_3.0)).enumerate() {
         let fv_i = fv_i as i64;
         out.push_str("<li>");
-        fv::push_int(out, fv_i);
+        fv::core::numbers::push_int(out, fv_i);
         out.push_str(". ");
-        fv::escape_into(out, fv_item_16.0);
+        fv::core::escape::escape_into(out, fv_item_16.0);
         out.push_str(": ");
-        fv::escape_into(out, fv_item_16.1);
+        fv::core::escape::escape_into(out, fv_item_16.1);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ul><!--[-->");
     for fv_item_17 in s_ranked.iter().copied() {
         out.push_str("<li title=\"");
-        fv::escape_into(out, fv_item_17.0);
+        fv::core::escape::escape_into(out, fv_item_17.0);
         out.push_str("\">");
-        fv::push_int(out, *fv_item_17.1);
+        fv::core::numbers::push_int(out, *fv_item_17.1);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ul><!--[-->");
     for fv_item_18 in props.tags.iter().filter(|fv_item_19| fv_item_19.1.len() as i64 as f64 > 0.0) {
         out.push_str("<li>");
-        fv::escape_into(out, fv_item_18.0);
+        fv::core::escape::escape_into(out, fv_item_18.0);
         out.push_str(": ");
-        fv::escape_into(out, &fv_item_18.1.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::core::escape::escape_into(out, &fv_item_18.1.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str(" (");
-        fv::push_int(out, fv_item_18.1.len() as i64);
+        fv::core::numbers::push_int(out, fv_item_18.1.len() as i64);
         out.push_str(")</li>");
     }
     out.push_str("<!--]--></ul><!--]-->");
@@ -147,21 +147,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::{TrustedHtml, escape_into};
+use ferrovue_core::escape::escape_into;
+
+use crate::trusted::TrustedHtml;
 
 /// Untrusted text with a few formatting tags: a [`TrustedHtml`] for `v-html` that needs no
 /// sanitiser.
@@ -26,13 +28,13 @@ use crate::{TrustedHtml, escape_into};
 /// wrote. Name it as the `trustedHtml` type in `ferrovue.config.json`:
 ///
 /// ```json
-/// { "trustedHtml": "ferrovue::BasicHtml" }
+/// { "trustedHtml": "ferrovue::basic_html::BasicHtml" }
 /// ```
 ///
 /// # Example
 ///
 /// ```
-/// use ferrovue::BasicHtml;
+/// use ferrovue::basic_html::BasicHtml;
 ///
 /// let html = BasicHtml::new(r#"<b>Bold</b>, <B>not</B>, <b onclick="x()">nor this</b><p>open"#);
 /// assert_eq!(
@@ -129,7 +131,7 @@ impl<'de> Deserialize<'de> for BasicHtml {
 /// # Example
 ///
 /// ```
-/// use ferrovue::InlineHtml;
+/// use ferrovue::basic_html::InlineHtml;
 ///
 /// let html = InlineHtml::new("<b>Bold</b><br>and <p>no paragraph</p> <i>open");
 /// assert_eq!(

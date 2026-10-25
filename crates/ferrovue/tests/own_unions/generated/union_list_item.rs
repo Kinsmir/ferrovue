@@ -43,7 +43,7 @@ impl std::fmt::Display for UnionListItemWide {
 }
 
 impl std::str::FromStr for UnionListItemWide {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -51,20 +51,20 @@ impl std::str::FromStr for UnionListItemWide {
             "green" => Ok(UnionListItemWide::Green),
             "<b>&\"hue'" => Ok(UnionListItemWide::BHue),
             "blue" => Ok(UnionListItemWide::Blue),
-            _ => Err(ferrovue::ParseUnionError::new("UnionListItemWide", s, &["red", "green", "<b>&\"hue'", "blue"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("UnionListItemWide", s, &["red", "green", "<b>&\"hue'", "blue"])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionListItemWide {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionListItemWide {
+impl ferrovue::union::Union for UnionListItemWide {
     const ALL: &'static [Self] = &UnionListItemWide::ALL;
 
     fn as_str(self) -> &'static str {
@@ -76,13 +76,13 @@ impl ferrovue::Union for UnionListItemWide {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "hue", default, skip_serializing_if = "Option::is_none", with = "fv::union_prop")]
+    #[serde(rename = "hue", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
     pub hue: Option<crate::domain::Hue>,
     #[serde(rename = "wide", default, skip_serializing_if = "Option::is_none")]
     pub wide: Option<UnionListItemWide>,
-    #[serde(rename = "hues", with = "fv::union_prop")]
+    #[serde(rename = "hues", with = "fv::union::union_prop")]
     pub hues: Vec<crate::domain::Hue>,
-    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none", with = "fv::union_prop")]
+    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none", with = "fv::union::union_prop")]
     pub extra: Option<Vec<crate::domain::Hue>>,
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
@@ -120,7 +120,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -128,25 +128,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(73 + 9 + 9 + 9 * props.hues.len() + props.label.len());
     out.push_str("<span");
-    if let Some(v) = props.hue.map(fv::Union::as_str) {
+    if let Some(v) = props.hue.map(fv::union::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-hue");
         } else {
             out.push_str(" data-hue=\"");
-            fv::escape_into(out, v);
+            fv::core::escape::escape_into(out, v);
             out.push('"');
         }
     }
-    if let Some(v) = props.wide.map(fv::Union::as_str) {
+    if let Some(v) = props.wide.map(fv::union::Union::as_str) {
         if v.is_empty() {
             out.push_str(" data-wide");
         } else {
             out.push_str(" data-wide=\"");
-            fv::escape_into(out, v);
+            fv::core::escape::escape_into(out, v);
             out.push('"');
         }
     }
@@ -154,33 +154,33 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape::escape_into(out, &props.label);
         out.push('"');
     }
     out.push('>');
-    fv::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::Union::as_str(*v))).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>().join(","));
     out.push(' ');
-    fv::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::Union::as_str(*v))).collect::<Vec<_>>()).as_deref().map(|fv_extra| std::borrow::Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));
+    fv::core::escape::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::union::Union::as_str(*v))).collect::<Vec<_>>()).as_deref().map(|fv_extra| std::borrow::Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));
     out.push_str("</span>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

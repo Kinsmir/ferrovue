@@ -26,7 +26,7 @@ impl Props {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -35,7 +35,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_slots, ""));
+    fv::refused::rendered(try_render_scoped(out, props, fv_slots, ""));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,20 +43,20 @@ pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
     try_render_scoped(out, props, fv_slots, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::refused::Refused> {
     out.reserve(0);
     super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: Some(std::borrow::Cow::Borrowed("forwarded")) }, super::scoped_card::Slots {
         title: None,
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
+        default: Some(fv::slots::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             let mut filled = false;
-            if fv::slot_into_slotted(out, fv_slots.default, fv_slot_id, None) { filled = true; }
+            if fv::slots::slot_into_slotted(out, fv_slots.default, fv_slot_id, None) { filled = true; }
             filled
         })),
         footer: None,
@@ -65,6 +65,6 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, 
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p>(props: &'p Props, fv_slots: Slots<'p>) -> fv::Html<'p, Props, impl fv::Renderer<Props> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_slots)))
+pub fn html<'p>(props: &'p Props, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props, impl fv::html::Renderer<Props> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_slots)))
 }

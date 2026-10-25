@@ -53,18 +53,18 @@ export interface Config {
   /** Components ferrovue does not compile, by the name a template gives them (`VBtn`, which
    * `<v-btn>` finds too), each rendered by a Rust function of the project's. */
   twins?: Record<string, TwinSpec>;
-  /** The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::TrustedHtml`, e.g.
+  /** The Rust type a `TrustedHtml` prop is, which must implement `ferrovue::trusted::TrustedHtml`, e.g.
    * `crate::sanitize::SafeHtml`. A type that borrows names the props' lifetime, `'a`:
-   * `crate::render::Trusted<'a>`. `ferrovue::InlineHtml` makes every `TrustedHtml` prop inline HTML.
+   * `crate::render::Trusted<'a>`. `ferrovue::basic_html::InlineHtml` makes every `TrustedHtml` prop inline HTML.
    * Without it, only an `InlineHtml` prop may reach `v-html`. */
   trustedHtml?: string;
-  /** The Rust type a `Date` prop is, which must implement `ferrovue::JsTime`:
-   * `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono`
+  /** The Rust type a `Date` prop is, which must implement `ferrovue::js_date::JsTime`:
+   * `ferrovue::js_date::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono`
    * feature. */
   dateType?: string;
   /** The application's own Rust enum for a union of string literals, by the union's `type` alias:
    * `{ "Tone": "crate::domain::Tone" }`. Generated code uses that enum, which must implement
-   * `ferrovue::Union` and have a variant of the name ferrovue would generate for each literal, and
+   * `ferrovue::union::Union` and have a variant of the name ferrovue would generate for each literal, and
    * generates no enum for the union. */
   unions?: Record<string, string>;
   /** A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>`
@@ -350,10 +350,10 @@ export function tyOfName(name: TypeName): Ty {
 }
 
 /** The Rust type of an `InlineHtml` prop, and of a `TrustedHtml` one when `trustedHtml` names it. */
-export const INLINE_HTML = "ferrovue::InlineHtml";
+export const INLINE_HTML = "ferrovue::basic_html::InlineHtml";
 
 /** The Rust type of a `Date` prop when `dateType` names none. */
-export const JS_DATE = "ferrovue::JsDate";
+export const JS_DATE = "ferrovue::js_date::JsDate";
 
 /** Where `TrustedHtml` comes from. Only that import names the type `v-html` will write raw. */
 export const TYPES_MODULE = "ferrovue/types";

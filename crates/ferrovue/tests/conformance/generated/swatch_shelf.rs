@@ -50,7 +50,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::rendered(try_render(out, props, fv_slots, fv_provides));
+    fv::refused::rendered(try_render(out, props, fv_slots, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,8 +58,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(25 + props.size.len() + props.tone.len() + props.note.as_deref().map_or(0, str::len));
     let fv_inherited = fv_provides;
     let fv_provided_look_key = super::types::Look { size: std::borrow::Cow::Borrowed(&*props.size), tone: std::borrow::Cow::Borrowed(&*props.tone), note: props.note.as_deref().map(std::borrow::Cow::Borrowed), count: 5i64 };
@@ -67,12 +67,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
     out.push_str("<div class=\"shelf\">");
     super::swatch::try_render(out, &super::swatch::Props { label: std::borrow::Cow::Borrowed(&*props.tone), size: None }, fv_provides)?;
     super::swatch::try_render(out, &super::swatch::Props { label: std::borrow::Cow::Borrowed("fixed"), size: Some(std::borrow::Cow::Borrowed("xs")) }, fv_provides)?;
-    fv::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
+    fv::slots::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</div>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_provides)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_provides)))
 }

@@ -50,7 +50,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -58,10 +58,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(254 + 37 * props.inputs.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
-    let s_parsed = props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::js_number(&fv_s)).collect::<Vec<_>>();
+    let s_parsed = props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).collect::<Vec<_>>();
     let s_finite = (props.x / props.n as f64).is_finite();
     let s_kept = s_parsed.iter().copied().filter(|fv_v| !fv_v.is_nan() && fv_v.is_finite()).collect::<Vec<_>>();
     out.push_str("<section><p>false|true|true|");
@@ -110,7 +110,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             out.push_str("<b>infinite</b>");
         } else {
             out.push_str("<b>");
-            fv::push_number(out, props.x / props.n as f64);
+            fv::core::numbers::push_number(out, props.x / props.n as f64);
             out.push_str("</b>");
         }
     }
@@ -118,55 +118,55 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     for fv_s_ref in props.inputs.iter() {
         let fv_s_2: &str = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[if fv::js_number(fv_s_2).is_nan() { "nan" } else { "" }, if fv::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" }]);
+        fv::class::class_into(out, false, &[if fv::strings::js_number(fv_s_2).is_nan() { "nan" } else { "" }, if fv::strings::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" }]);
         out.push_str("\">");
-        fv::escape_into(out, fv_s_2);
+        fv::core::escape::escape_into(out, fv_s_2);
         out.push_str(" is ");
-        fv::push_number(out, fv::js_number(fv_s_2));
+        fv::core::numbers::push_number(out, fv::strings::js_number(fv_s_2));
         out.push_str(": ");
-        out.push_str(if fv::js_number(fv_s_2).is_nan() { "true" } else { "false" });
+        out.push_str(if fv::strings::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(fv_s_2).is_finite() { "true" } else { "false" });
+        out.push_str(if fv::strings::js_number(fv_s_2).is_finite() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(fv_s_2).fract() == 0.0 { "true" } else { "false" });
+        out.push_str(if fv::strings::js_number(fv_s_2).fract() == 0.0 { "true" } else { "false" });
         out.push('|');
-        out.push_str(if matches!(fv::js_number(fv_s_2), v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) { "true" } else { "false" });
+        out.push_str(if matches!(fv::strings::js_number(fv_s_2), v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(fv_s_2).is_nan() { "true" } else { "false" });
+        out.push_str(if fv::strings::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_parse_float(fv_s_2).is_finite() { "true" } else { "false" });
+        out.push_str(if fv::strings::js_parse_float(fv_s_2).is_finite() { "true" } else { "false" });
         out.push('|');
-        out.push_str(if !fv::js_number(fv_s_2).is_nan() && fv::js_number(fv_s_2) > 0.0 { "true" } else { "false" });
+        out.push_str(if !fv::strings::js_number(fv_s_2).is_nan() && fv::strings::js_number(fv_s_2) > 0.0 { "true" } else { "false" });
         out.push('|');
-        out.push_str(if fv::js_number(fv_s_2).is_finite() || fv::js_number(fv_s_2).is_nan() { "true" } else { "false" });
+        out.push_str(if fv::strings::js_number(fv_s_2).is_finite() || fv::strings::js_number(fv_s_2).is_nan() { "true" } else { "false" });
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::escape_into(out, &s_kept.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(", "));
+    fv::core::escape::escape_into(out, &s_kept.iter().copied().map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(", "));
     out.push('|');
     out.push_str(if s_parsed.iter().copied().any(|fv_v_2| fv_v_2.is_nan()) { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, s_parsed.iter().copied().filter(|fv_v_3| matches!(*fv_v_3, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)).count() as i64);
+    fv::core::numbers::push_int(out, s_parsed.iter().copied().filter(|fv_v_3| matches!(*fv_v_3, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)).count() as i64);
     out.push_str("</p></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

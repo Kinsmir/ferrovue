@@ -10,22 +10,22 @@ pub const NAME: &str = "RelativeTime";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "now", with = "fv::date_prop")]
-    pub now: ferrovue::JsDate,
-    #[serde(rename = "then", with = "fv::date_prop")]
-    pub then: ferrovue::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::opt_date_prop")]
-    pub edited: Option<ferrovue::JsDate>,
+    #[serde(rename = "now", with = "fv::js_date::date_prop")]
+    pub now: ferrovue::js_date::JsDate,
+    #[serde(rename = "then", with = "fv::js_date::date_prop")]
+    pub then: ferrovue::js_date::JsDate,
+    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::js_date::opt_date_prop")]
+    pub edited: Option<ferrovue::js_date::JsDate>,
 }
 
 impl Props {
     /// Props with its required fields, every optional one absent.
-    pub fn new(now: ferrovue::JsDate, then: ferrovue::JsDate) -> Self {
+    pub fn new(now: ferrovue::js_date::JsDate, then: ferrovue::js_date::JsDate) -> Self {
         Props { now, then, edited: None }
     }
 
     /// Set `edited`, which is absent otherwise.
-    pub fn edited(mut self, edited: ferrovue::JsDate) -> Self {
+    pub fn edited(mut self, edited: ferrovue::js_date::JsDate) -> Self {
         self.edited = Some(edited);
         self
     }
@@ -38,7 +38,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,15 +46,15 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(47);
     out.push_str("<p><time>");
-    fv::escape_into(out, &{ let fv_now = fv::js_time_of(&props.now); { let fv_then = fv::js_time_of(&props.then); { let fv_seconds = fv::js_round((fv_now - fv_then) / 1000.0); if fv_seconds.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_seconds < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_seconds < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_minutes = fv::js_round(fv_seconds / 60.0); if fv_minutes < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_minutes), (if fv_minutes == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_hours = fv::js_round(fv_minutes / 60.0); if fv_hours < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_hours), (if fv_hours == 1.0 { "hour" } else { "hours" }))) } else { { let fv_days = fv::js_round(fv_hours / 24.0); if fv_days == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_days == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_days), (if fv_days == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } } });
+    fv::core::escape::escape_into(out, &{ let fv_now = fv::js_date::js_time_of(&props.now); { let fv_then = fv::js_date::js_time_of(&props.then); { let fv_seconds = fv::core::numbers::js_round((fv_now - fv_then) / 1000.0); if fv_seconds.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_seconds < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_seconds < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_minutes = fv::core::numbers::js_round(fv_seconds / 60.0); if fv_minutes < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::numbers::Js(fv_minutes), (if fv_minutes == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_hours = fv::core::numbers::js_round(fv_minutes / 60.0); if fv_hours < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::numbers::Js(fv_hours), (if fv_hours == 1.0 { "hour" } else { "hours" }))) } else { { let fv_days = fv::core::numbers::js_round(fv_hours / 24.0); if fv_days == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_days == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::numbers::Js(fv_days), (if fv_days == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } } });
     out.push_str("</time>");
-    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_time_of) {
+    if let Some(fv_edited) = props.edited.as_ref().map(fv::js_date::js_time_of) {
         out.push_str("<span>edited ");
-        fv::escape_into(out, &{ let fv_now_2 = fv::js_time_of(&props.now); { let fv_seconds_2 = fv::js_round((fv_now_2 - fv_edited) / 1000.0); if fv_seconds_2.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_seconds_2 < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_seconds_2 < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_minutes_2 = fv::js_round(fv_seconds_2 / 60.0); if fv_minutes_2 < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_minutes_2), (if fv_minutes_2 == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_hours_2 = fv::js_round(fv_minutes_2 / 60.0); if fv_hours_2 < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_hours_2), (if fv_hours_2 == 1.0 { "hour" } else { "hours" }))) } else { { let fv_days_2 = fv::js_round(fv_hours_2 / 24.0); if fv_days_2 == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_days_2 == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::Js(fv_days_2), (if fv_days_2 == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } });
+        fv::core::escape::escape_into(out, &{ let fv_now_2 = fv::js_date::js_time_of(&props.now); { let fv_seconds_2 = fv::core::numbers::js_round((fv_now_2 - fv_edited) / 1000.0); if fv_seconds_2.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_seconds_2 < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_seconds_2 < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_minutes_2 = fv::core::numbers::js_round(fv_seconds_2 / 60.0); if fv_minutes_2 < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::numbers::Js(fv_minutes_2), (if fv_minutes_2 == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_hours_2 = fv::core::numbers::js_round(fv_minutes_2 / 60.0); if fv_hours_2 < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::numbers::Js(fv_hours_2), (if fv_hours_2 == 1.0 { "hour" } else { "hours" }))) } else { { let fv_days_2 = fv::core::numbers::js_round(fv_hours_2 / 24.0); if fv_days_2 == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_days_2 == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::numbers::Js(fv_days_2), (if fv_days_2 == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } });
         out.push_str("</span>");
     } else {
         out.push_str("<!---->");
@@ -64,21 +64,21 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

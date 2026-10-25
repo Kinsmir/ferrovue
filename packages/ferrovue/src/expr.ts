@@ -327,7 +327,7 @@ function unitAt(s: Scope, str: Val, key: N): Val {
   }
   const ascii = isAscii(str.ty);
   const cut = ascii ? {} : { lone: true as const };
-  const at = `Some(fv::js_char_at(${strArg(str.code)}, ${bare(asF64(i))})).filter(|c| !c.is_empty())`;
+  const at = `Some(fv::strings::js_char_at(${strArg(str.code)}, ${bare(asF64(i))})).filter(|c| !c.is_empty())`;
   if (!isTemporary(str)) return { code: at, ty: opt(strTy(ascii)), ...cut };
   const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
   return { code: `${atom(held)}.as_deref()`, ty: opt(strTy(ascii)), held, ...cut };
@@ -459,7 +459,7 @@ export function expr(s: Scope, n: N): Val {
     }
     if (untypedEmpty(base)) return numberVal(0, true);
     if (base.ty.k === "list") return { code: `${atom(base.code)}.len() as i64`, ty: INT };
-    if (base.ty.k === "str") return { code: `fv::js_length(${strArg(base.code)})`, ty: INT };
+    if (base.ty.k === "str") return { code: `fv::strings::js_length(${strArg(base.code)})`, ty: INT };
   }
   if (n.type === "BinaryExpression" && n.operator === "+") {
     const a = expr(s, n.left);
@@ -492,7 +492,7 @@ export function expr(s: Scope, n: N): Val {
     if (comparison && a.ty.k === "str" && b.ty.k === "str") {
       meet(comp, a, b, `\`${n.operator}\``, n, "order");
       const is = { "<": "lt", ">": "gt", "<=": "le", ">=": "ge" }[n.operator as "<"];
-      return { code: `fv::js_cmp(${strArg(a.code)}, ${strArg(b.code)}).is_${is}()`, ty: BOOL };
+      return { code: `fv::strings::js_cmp(${strArg(a.code)}, ${strArg(b.code)}).is_${is}()`, ty: BOOL };
     }
     if (!isNumber(a.ty) || !isNumber(b.ty)) {
       const why =

@@ -40,27 +40,27 @@ impl std::fmt::Display for TagHeadingAs {
 }
 
 impl std::str::FromStr for TagHeadingAs {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "h1" => Ok(TagHeadingAs::H1),
             "h2" => Ok(TagHeadingAs::H2),
             "h3" => Ok(TagHeadingAs::H3),
-            _ => Err(ferrovue::ParseUnionError::new("TagHeadingAs", s, &["h1", "h2", "h3"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("TagHeadingAs", s, &["h1", "h2", "h3"])),
         }
     }
 }
 
 impl TryFrom<&str> for TagHeadingAs {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for TagHeadingAs {
+impl ferrovue::union::Union for TagHeadingAs {
     const ALL: &'static [Self] = &TagHeadingAs::ALL;
 
     fn as_str(self) -> &'static str {
@@ -96,7 +96,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -105,7 +105,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE));
+    fv::refused::rendered(try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -113,14 +113,14 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE)
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+    try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(40 + 2 + props.text.len());
     let fv_tag = match props.r#as.unwrap_or(TagHeadingAs::H2) { TagHeadingAs::H1 => "h1", TagHeadingAs::H2 => "h2", TagHeadingAs::H3 => "h3" };
     out.push('<');
@@ -131,16 +131,16 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::escape_into(out, &props.text);
+            fv::core::escape::escape_into(out, &props.text);
             out.push('"');
         }
     } else {
-        fv::attrs_into(out, &[&[("class", fv::Attr::str("heading")), ("title", fv::Attr::str(&props.text))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("heading")), ("title", fv::attrs::Attr::str(&props.text))], fv_attrs.list()], 1, "");
     }
-    out.push_str(&fv::scope_attrs(fv_attrs.ids(), "data-v-0fcbdc2a", ""));
+    out.push_str(&fv::attrs::scope_attrs(fv_attrs.ids(), "data-v-0fcbdc2a", ""));
     out.push('>');
-    fv::slot_into(out, fv_slots.default, None);
-    fv::escape_into(out, &props.text);
+    fv::slots::slot_into(out, fv_slots.default, None);
+    fv::core::escape::escape_into(out, &props.text);
     out.push_str("</");
     out.push_str(fv_tag);
     out.push('>');
@@ -148,6 +148,6 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,36 +39,36 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(98 + 24 * props.thread.pinned.len() + props.thread.title.len() + props.thread.replies.iter().map(|v| v.author.len()).sum::<usize>() + props.thread.pinned.iter().map(|(k, _)| k.len()).sum::<usize>());
-    let fv_refusals = fv::Refusals::new(NAME, "components/DateThread.vue");
-    let s_moved = std::cell::LazyCell::new(|| props.thread.replies.iter().map(|fv_r| super::types::Reply { author: std::borrow::Cow::<str>::Owned(fv_r.author.to_uppercase()), at: fv_refusals.date(fv::js_time_clip(fv::js_time_of(&fv_r.at) + props.shift), 9, 81), edited: fv_r.edited.as_ref().map(fv::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 9, 129)), removed: None, replies: Vec::new() }).collect::<Vec<_>>());
-    let s_opening = std::cell::LazyCell::new(|| super::types::Reply { author: std::borrow::Cow::<str>::Borrowed(&*props.thread.title), at: fv_refusals.date(fv::js_time_of(&props.thread.opened), 11, 74), removed: Some(fv_refusals.date(fv::js_time_of(&props.thread.opened), 11, 104)), replies: s_moved.to_owned(), edited: None });
+    let fv_refusals = fv::refused::Refusals::new(NAME, "components/DateThread.vue");
+    let s_moved = std::cell::LazyCell::new(|| props.thread.replies.iter().map(|fv_r| super::types::Reply { author: std::borrow::Cow::<str>::Owned(fv_r.author.to_uppercase()), at: fv_refusals.date(fv::dates::js_time_clip(fv::js_date::js_time_of(&fv_r.at) + props.shift), 9, 81), edited: fv_r.edited.as_ref().map(fv::js_date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 9, 129)), removed: None, replies: Vec::new() }).collect::<Vec<_>>());
+    let s_opening = std::cell::LazyCell::new(|| super::types::Reply { author: std::borrow::Cow::<str>::Borrowed(&*props.thread.title), at: fv_refusals.date(fv::js_date::js_time_of(&props.thread.opened), 11, 74), removed: Some(fv_refusals.date(fv::js_date::js_time_of(&props.thread.opened), 11, 104)), replies: s_moved.to_owned(), edited: None });
     out.push_str("<article><h2>");
-    fv::escape_into(out, &props.thread.title);
+    fv::core::escape::escape_into(out, &props.thread.title);
     out.push_str("</h2><p>opened ");
-    fv::push_number(out, fv::js_time_of(&props.thread.opened));
+    fv::core::numbers::push_number(out, fv::js_date::js_time_of(&props.thread.opened));
     out.push_str(", ");
-    fv::push_int(out, props.thread.seen.len() as i64);
+    fv::core::numbers::push_int(out, props.thread.seen.len() as i64);
     out.push_str(" seen</p>");
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: props.thread.replies.to_owned(), depth: 0i64 }))?;
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: s_moved.to_owned(), depth: 1i64 }))?;
     out.push_str("<p>");
-    fv::escape_into(out, &s_opening.author);
+    fv::core::escape::escape_into(out, &s_opening.author);
     out.push(' ');
-    fv::push_number(out, fv::js_time_of(&s_opening.at));
+    fv::core::numbers::push_number(out, fv::js_date::js_time_of(&s_opening.at));
     out.push(' ');
-    fv::push_number(out, if let Some(fv_removed) = s_opening.removed.as_ref().map(fv::js_time_of) { fv::js_utc_day(fv_removed) } else { -1.0f64 });
+    fv::core::numbers::push_number(out, if let Some(fv_removed) = s_opening.removed.as_ref().map(fv::js_date::js_time_of) { fv::dates::js_utc_day(fv_removed) } else { -1.0f64 });
     out.push_str("</p>");
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: s_opening.replies.to_owned(), depth: 2i64 }))?;
     out.push_str("<!--[-->");
     for (fv_who, fv_at_ref) in props.thread.pinned.iter() {
-        let fv_at = fv::js_time_of(fv_at_ref);
+        let fv_at = fv::js_date::js_time_of(fv_at_ref);
         out.push_str("<p>");
-        fv::escape_into(out, fv_who);
+        fv::core::escape::escape_into(out, fv_who);
         out.push_str(" pinned at ");
-        fv::push_number(out, fv::js_utc_hours(fv_at));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_hours(fv_at));
         out.push_str("</p>");
     }
     out.push_str("<!--]--></article>");
@@ -76,25 +76,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::markup_fallible(props, render, try_render);
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::markup_fallible(props, render, try_render);
     html.dates("[{\"thread\":{\"opened\":1,\"replies\":[\"Reply\"],\"pinned\":{\"*\":1},\"seen\":[1]}},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    let html: fv::Html<'p, Props<'a>> = fv::Html::island_fallible(NAME, props, render, try_render);
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    let html: fv::html::Html<'p, Props<'a>> = fv::html::Html::island_fallible(NAME, props, render, try_render);
     html.dates("[{\"thread\":{\"opened\":1,\"replies\":[\"Reply\"],\"pinned\":{\"*\":1},\"seen\":[1]}},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::markup_owned_fallible(props, render, try_render);
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::markup_owned_fallible(props, render, try_render);
     html.dates("[{\"thread\":{\"opened\":1,\"replies\":[\"Reply\"],\"pinned\":{\"*\":1},\"seen\":[1]}},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    let html: fv::Html<'a, Props<'a>> = fv::Html::island_owned_fallible(NAME, props, render, try_render);
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    let html: fv::html::Html<'a, Props<'a>> = fv::html::Html::island_owned_fallible(NAME, props, render, try_render);
     html.dates("[{\"thread\":{\"opened\":1,\"replies\":[\"Reply\"],\"pinned\":{\"*\":1},\"seen\":[1]}},{\"Reply\":{\"at\":1,\"edited\":1,\"removed\":1,\"replies\":[\"Reply\"]}}]")
 }

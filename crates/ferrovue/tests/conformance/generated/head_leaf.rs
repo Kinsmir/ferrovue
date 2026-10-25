@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -37,8 +37,8 @@ pub struct Slots<'s> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_slots, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::head::Head) {
+    fv::refused::rendered(try_render(out, props, fv_slots, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,18 +46,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head:
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
     out.reserve(7 + props.name.len());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.name)), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str(&props.name)), ("content", fv::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::HeadValue::object([("class", fv::HeadValue::str(&props.name))]))]));
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.name)), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
     out.push_str("<i>");
-    fv::escape_into(out, &props.name);
-    fv::slot_into(out, fv_slots.default, None);
+    fv::core::escape::escape_into(out, &props.name);
+    fv::slots::slot_into(out, fv_slots.default, None);
     out.push_str("</i>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots, fv_head)))
 }

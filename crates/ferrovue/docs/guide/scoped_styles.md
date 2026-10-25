@@ -127,18 +127,18 @@ compiler writes, for `TagList`:
 #     out.push_str("<span class=\"tag\"");
 #     out.push_str(fv_attrs);
 #     out.push_str(" data-v-7f092129>");
-#     fv::escape_into(out, &props.label);
+#     fv::core::escape::escape_into(out, &props.label);
 #     out.push_str("</span>");
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # }
 # pub mod tag_list {
@@ -183,13 +183,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 # }
 # }
@@ -226,7 +226,7 @@ pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
     out.push_str("<span class=\"tag\"");
     out.push_str(fv_attrs);
     out.push_str(" data-v-7f092129>");
-    fv::escape_into(out, &props.label);
+    fv::core::escape::escape_into(out, &props.label);
     out.push_str("</span>");
 }
 # }
@@ -246,7 +246,7 @@ slot content that may be given a slot scope id (below). `fv_attrs` holds those i
 order Vue's `ssrRenderAttrs` writes them, keeping each once. Recursion, fragments, a root chosen by
 `v-if`, `inheritAttrs: false`, `<Transition>`, `<KeepAlive>`, `<Teleport>` and `<RouterLink>` are
 handled as Vue renders them. A component a parent also passes attributes to takes the ids inside an
-[`Attrs`](crate::Attrs), after those attributes
+[`Attrs`](crate::attrs::Attrs), after those attributes
 ([`generated_code`](crate::guide::generated_code#fallthrough-attributes)).
 
 `render_scoped` is `#[doc(hidden)]`: call `render`. A component rendered from Rust, as a page's root
@@ -278,7 +278,7 @@ defineProps<{ count: number }>();
 
 The outlets call `slot_into_slotted` and
 `scoped_slot_into_slotted`, the variants of
-[`slot_into`](crate::slot_into) and `scoped_slot_into` that take the
+[`slot_into`](crate::slots::slot_into) and `scoped_slot_into` that take the
 slot scope id, and a scoped slot's closure takes the id as a third parameter:
 
 ```rust
@@ -297,7 +297,7 @@ pub type FooterSlot<'s> = dyn Fn(&mut String, &FooterSlotProps, &str) -> bool + 
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
     /// `<slot name="footer">`
     pub footer: Option<&'s FooterSlot<'s>>,
 }
@@ -306,11 +306,11 @@ pub struct Slots<'s> {
 pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
     out.reserve(84);
     out.push_str("<aside class=\"note\" data-v-421eaec8>");
-    fv::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
+    fv::slots::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
         out.push_str("no note");
     }));
     out.push_str("<footer data-v-421eaec8>");
-    fv::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
+    fv::slots::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
     out.push_str("</footer></aside>");
 }
 # }
@@ -335,16 +335,16 @@ more</small></template></Note>`:
 # pub type FooterSlot<'s> = dyn Fn(&mut String, &FooterSlotProps, &str) -> bool + 's;
 # #[derive(Clone, Copy, Default)]
 # pub struct Slots<'s> {
-#     pub default: Option<fv::Slot<'s>>,
+#     pub default: Option<fv::slots::Slot<'s>>,
 #     pub footer: Option<&'s FooterSlot<'s>>,
 # }
 # pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 #     out.push_str("<aside class=\"note\" data-v-421eaec8>");
-#     fv::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
+#     fv::slots::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
 #         out.push_str("no note");
 #     }));
 #     out.push_str("<footer data-v-421eaec8>");
-#     fv::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
+#     fv::slots::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
 #     out.push_str("</footer></aside>");
 # }
 # }
@@ -356,11 +356,11 @@ more</small></template></Note>`:
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(33 + props.text.len());
     super::note::render(out, &super::note::Props { count: 2i64 }, super::note::Slots {
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
+        default: Some(fv::slots::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             out.push_str("<p");
             out.push_str(fv_slot_id);
             out.push('>');
-            fv::escape_into(out, &props.text);
+            fv::core::escape::escape_into(out, &props.text);
             out.push_str("</p>");
             true
         })),
@@ -368,7 +368,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
             out.push_str("<small");
             out.push_str(fv_slot_id_2);
             out.push('>');
-            fv::push_int(out, fv_slot_props.count);
+            fv::core::numbers::push_int(out, fv_slot_props.count);
             out.push_str(" more</small>");
             true
         }),
@@ -387,7 +387,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 # );
 ```
 
-From Rust, fill the default slot with [`Slot::new`](crate::Slot::new) as for any component: such
+From Rust, fill the default slot with [`Slot::new`](crate::slots::Slot::new) as for any component: such
 content is not given the id, as static markup is not in Vue. A scoped slot's closure receives the
 id, ` data-v-…-s` with its leading space, and may write it onto the elements that the component's
 `:slotted()` rules should select, or ignore it:
@@ -432,7 +432,7 @@ id, ` data-v-…-s` with its leading space, and may write it onto the elements t
 # #[derive(Clone, Copy, Default)]
 # pub struct Slots<'s> {
 #     /// `<slot>`
-#     pub default: Option<fv::Slot<'s>>,
+#     pub default: Option<fv::slots::Slot<'s>>,
 #     /// `<slot name="footer">`
 #     pub footer: Option<&'s FooterSlot<'s>>,
 # }
@@ -441,29 +441,29 @@ id, ` data-v-…-s` with its leading space, and may write it onto the elements t
 # pub fn render(out: &mut String, props: &Props, fv_slots: Slots<'_>) {
 #     out.reserve(84);
 #     out.push_str("<aside class=\"note\" data-v-421eaec8>");
-#     fv::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
+#     fv::slots::slot_into_slotted(out, fv_slots.default, "data-v-421eaec8-s", Some(&mut |out: &mut String| {
 #         out.push_str("no note");
 #     }));
 #     out.push_str("<footer data-v-421eaec8>");
-#     fv::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
+#     fv::slots::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: props.count }, "data-v-421eaec8-s", None);
 #     out.push_str("</footer></aside>");
 # }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p>(props: &'p Props, fv_slots: Slots<'p>) -> fv::Html<'p, Props, impl Fn(&mut String, &Props) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props| render(out, props, fv_slots))
+# pub fn html<'p>(props: &'p Props, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props, impl Fn(&mut String, &Props) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props| render(out, props, fv_slots))
 # }
 # }
 # }
 # use generated::note;
-use ferrovue::Slot;
+use ferrovue::slots::Slot;
 
 let body = |out: &mut String| out.push_str("<p>from Rust</p>");
 let footer = |out: &mut String, p: &note::FooterSlotProps, slot_scope_id: &str| {
     out.push_str("<small");
     out.push_str(slot_scope_id);
     out.push('>');
-    ferrovue::push_int(out, p.count);
+    ferrovue::core::numbers::push_int(out, p.count);
     out.push_str(" more</small>");
     true
 };
@@ -557,18 +557,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     if props.color.is_empty() {
         out.push(' ');
     } else {
-        fv::escape_into(out, &props.color);
+        fv::core::escape::escape_into(out, &props.color);
     }
     out.push(';');
     if let Some(v) = props.size {
         out.push_str("--95abae23-size:");
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
         out.push(';');
     } else {
         out.push_str("--95abae23-size:initial;");
     }
     out.push_str("\" data-v-95abae23>");
-    fv::escape_into(out, &props.color);
+    fv::core::escape::escape_into(out, &props.color);
     out.push_str("</span>");
 }
 # }

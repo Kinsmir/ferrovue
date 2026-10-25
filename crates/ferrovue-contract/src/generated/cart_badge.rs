@@ -28,7 +28,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props, fv_stores: &super::stores::Stores<'_>) {
-    fv::rendered(try_render(out, props, fv_stores));
+    fv::refused::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -36,18 +36,18 @@ pub fn render(out: &mut String, props: &Props, fv_stores: &super::stores::Stores
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(32);
     out.push_str("<b class=\"badge\">");
-    fv::push_int(out, fv_stores.cart.lines.len() as i64);
+    fv::core::numbers::push_int(out, fv_stores.cart.lines.len() as i64);
     out.push_str(" for ");
-    fv::escape_into(out, &fv_stores.cart.owner);
+    fv::core::escape::escape_into(out, &fv_stores.cart.owner);
     out.push_str("</b>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p>(props: &'p Props, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props, impl fv::Renderer<Props> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_stores)))
+pub fn html<'p>(props: &'p Props, fv_stores: &'p super::stores::Stores<'p>) -> fv::html::Html<'p, Props, impl fv::html::Renderer<Props> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props| try_render(out, props, fv_stores)))
 }

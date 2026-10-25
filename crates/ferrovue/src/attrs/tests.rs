@@ -1,5 +1,5 @@
 use super::*;
-use crate::scope_attrs;
+use crate::attrs::scope_attrs;
 
 fn vector_attr(v: &serde_json::Value) -> Attr<'static> {
     use serde_json::Value;

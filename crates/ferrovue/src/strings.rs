@@ -1,7 +1,9 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
 
-use crate::{Refused, push_number};
+use ferrovue_core::numbers::push_number;
+
+use crate::refused::Refused;
 
 /// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts.
 /// `str::len` counts UTF-8 bytes and `chars().count()` scalar values, and either can differ from it.
@@ -9,8 +11,8 @@ use crate::{Refused, push_number};
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_length("café"), 4);
-/// assert_eq!(ferrovue::js_length("🦀"), 2); // two UTF-16 code units, as JavaScript counts
+/// assert_eq!(ferrovue::strings::js_length("café"), 4);
+/// assert_eq!(ferrovue::strings::js_length("🦀"), 2); // two UTF-16 code units, as JavaScript counts
 /// ```
 #[must_use]
 pub fn js_length(s: &str) -> i64 {
@@ -26,8 +28,8 @@ pub fn js_length(s: &str) -> i64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_trim("\u{feff} a \u{3000}"), "a");
-/// assert_eq!(ferrovue::js_trim("\u{85}a"), "\u{85}a"); // JavaScript keeps U+0085
+/// assert_eq!(ferrovue::strings::js_trim("\u{feff} a \u{3000}"), "a");
+/// assert_eq!(ferrovue::strings::js_trim("\u{85}a"), "\u{85}a"); // JavaScript keeps U+0085
 /// ```
 #[must_use]
 pub fn js_trim(s: &str) -> &str {
@@ -39,7 +41,7 @@ pub fn js_trim(s: &str) -> &str {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_trim_start("\u{a0} a "), "a ");
+/// assert_eq!(ferrovue::strings::js_trim_start("\u{a0} a "), "a ");
 /// ```
 #[must_use]
 pub fn js_trim_start(s: &str) -> &str {
@@ -51,7 +53,7 @@ pub fn js_trim_start(s: &str) -> &str {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_trim_end(" a \u{feff}"), " a");
+/// assert_eq!(ferrovue::strings::js_trim_end(" a \u{feff}"), " a");
 /// ```
 #[must_use]
 pub fn js_trim_end(s: &str) -> &str {
@@ -94,9 +96,9 @@ fn relative(x: f64, len: usize) -> usize {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_slice_range(5, -2.0, None), (3, 5));
-/// assert_eq!(ferrovue::js_slice_range(5, 4.0, Some(1.0)), (4, 4));
-/// assert_eq!(ferrovue::js_slice_range(5, f64::NAN, Some(2.9)), (0, 2));
+/// assert_eq!(ferrovue::strings::js_slice_range(5, -2.0, None), (3, 5));
+/// assert_eq!(ferrovue::strings::js_slice_range(5, 4.0, Some(1.0)), (4, 4));
+/// assert_eq!(ferrovue::strings::js_slice_range(5, f64::NAN, Some(2.9)), (0, 2));
 /// ```
 #[must_use]
 pub fn js_slice_range(len: usize, start: f64, end: Option<f64>) -> (usize, usize) {
@@ -110,7 +112,7 @@ pub fn js_slice_range(len: usize, start: f64, end: Option<f64>) -> (usize, usize
 /// # Example
 ///
 /// ```
-/// let last_two: Vec<i64> = ferrovue::js_slice_items([1, 2, 3].into_iter(), -2.0, None).collect();
+/// let last_two: Vec<i64> = ferrovue::strings::js_slice_items([1, 2, 3].into_iter(), -2.0, None).collect();
 /// assert_eq!(last_two, [2, 3]);
 /// ```
 #[must_use]
@@ -132,9 +134,9 @@ pub fn js_slice_items<T>(
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_item_at([1, 2, 3].into_iter(), -1.0), Some(3));
-/// assert_eq!(ferrovue::js_item_at([1, 2, 3].into_iter(), 3.0), None);
-/// assert_eq!(ferrovue::js_item_at([1, 2, 3].into_iter(), f64::NAN), Some(1));
+/// assert_eq!(ferrovue::strings::js_item_at([1, 2, 3].into_iter(), -1.0), Some(3));
+/// assert_eq!(ferrovue::strings::js_item_at([1, 2, 3].into_iter(), 3.0), None);
+/// assert_eq!(ferrovue::strings::js_item_at([1, 2, 3].into_iter(), f64::NAN), Some(1));
 /// ```
 #[must_use]
 pub fn js_item_at<T>(items: impl Iterator<Item = T>, index: f64) -> Option<T> {
@@ -155,9 +157,9 @@ pub fn js_item_at<T>(items: impl Iterator<Item = T>, index: f64) -> Option<T> {
 /// # Example
 ///
 /// ```
-/// let joined = ferrovue::js_reduce(["a", "b"].into_iter(), String::from(">"), |acc, x| acc + x);
+/// let joined = ferrovue::strings::js_reduce(["a", "b"].into_iter(), String::from(">"), |acc, x| acc + x);
 /// assert_eq!(joined, ">ab");
-/// assert_eq!(ferrovue::js_reduce(std::iter::empty::<i64>(), 7, |acc, x| acc + x), 7);
+/// assert_eq!(ferrovue::strings::js_reduce(std::iter::empty::<i64>(), 7, |acc, x| acc + x), 7);
 /// ```
 #[must_use]
 pub fn js_reduce<T, A>(items: impl Iterator<Item = T>, init: A, step: impl FnMut(A, T) -> A) -> A {
@@ -171,7 +173,7 @@ pub fn js_reduce<T, A>(items: impl Iterator<Item = T>, init: A, step: impl FnMut
 ///
 /// ```
 /// let pairs = [(2, "a"), (1, "b"), (2, "c")];
-/// let sorted: Vec<_> = ferrovue::js_sorted(pairs.into_iter(), |a, b| a.0.cmp(&b.0)).collect();
+/// let sorted: Vec<_> = ferrovue::strings::js_sorted(pairs.into_iter(), |a, b| a.0.cmp(&b.0)).collect();
 /// assert_eq!(sorted, [(1, "b"), (2, "a"), (2, "c")]);
 /// ```
 #[must_use]
@@ -191,8 +193,8 @@ pub fn js_sorted<T>(
 /// # Example
 ///
 /// ```
-/// let key = |v: &i64| ferrovue::Js(*v).to_string();
-/// let sorted: Vec<i64> = ferrovue::js_sorted_by_string([10, 9, 1].into_iter(), key).collect();
+/// let key = |v: &i64| ferrovue::core::numbers::Js(*v).to_string();
+/// let sorted: Vec<i64> = ferrovue::strings::js_sorted_by_string([10, 9, 1].into_iter(), key).collect();
 /// assert_eq!(sorted, [1, 10, 9]);
 /// ```
 #[must_use]
@@ -217,9 +219,9 @@ pub fn js_sorted_by_string<T>(
 /// ```
 /// use std::cmp::Ordering;
 ///
-/// assert_eq!(ferrovue::js_order(1.0, 2.0), Ordering::Less);
-/// assert_eq!(ferrovue::js_order(-0.0, 0.0), Ordering::Equal);
-/// assert_eq!(ferrovue::js_order(f64::INFINITY, f64::INFINITY), Ordering::Equal);
+/// assert_eq!(ferrovue::strings::js_order(1.0, 2.0), Ordering::Less);
+/// assert_eq!(ferrovue::strings::js_order(-0.0, 0.0), Ordering::Equal);
+/// assert_eq!(ferrovue::strings::js_order(f64::INFINITY, f64::INFINITY), Ordering::Equal);
 /// ```
 #[must_use]
 pub fn js_order(a: f64, b: f64) -> Ordering {
@@ -302,9 +304,9 @@ fn length(s: &str) -> usize {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_slice("café au lait", -4.0, None), "lait");
+/// assert_eq!(ferrovue::strings::js_slice("café au lait", -4.0, None), "lait");
 /// // Half of 🦀 is a lone surrogate in JavaScript, sent as U+FFFD.
-/// assert_eq!(ferrovue::js_slice("🦀x", 1.0, None), "\u{FFFD}x");
+/// assert_eq!(ferrovue::strings::js_slice("🦀x", 1.0, None), "\u{FFFD}x");
 /// ```
 #[must_use]
 pub fn js_slice(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
@@ -318,9 +320,9 @@ pub fn js_slice(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_substring("ferrovue", 5.0, Some(1.0)), "erro");
-/// assert_eq!(ferrovue::js_substring("ferrovue", -3.0, Some(4.0)), "ferr");
-/// assert_eq!(ferrovue::js_substring("🦀 crab", 3.0, None), "crab");
+/// assert_eq!(ferrovue::strings::js_substring("ferrovue", 5.0, Some(1.0)), "erro");
+/// assert_eq!(ferrovue::strings::js_substring("ferrovue", -3.0, Some(4.0)), "ferr");
+/// assert_eq!(ferrovue::strings::js_substring("🦀 crab", 3.0, None), "crab");
 /// ```
 #[must_use]
 pub fn js_substring(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
@@ -336,8 +338,8 @@ pub fn js_substring(s: &str, start: f64, end: Option<f64>) -> Cow<'_, str> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_at("abc", -1.0), Some("c"));
-/// assert_eq!(ferrovue::js_at("abc", 3.0), None);
+/// assert_eq!(ferrovue::strings::js_at("abc", -1.0), Some("c"));
+/// assert_eq!(ferrovue::strings::js_at("abc", 3.0), None);
 /// ```
 #[must_use]
 pub fn js_at(s: &str, index: f64) -> Option<&str> {
@@ -353,10 +355,10 @@ pub fn js_at(s: &str, index: f64) -> Option<&str> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_char_at("abc", 1.0), "b");
-/// assert_eq!(ferrovue::js_char_at("abc", -1.0), "");
+/// assert_eq!(ferrovue::strings::js_char_at("abc", 1.0), "b");
+/// assert_eq!(ferrovue::strings::js_char_at("abc", -1.0), "");
 /// // Half of 🦀, sent as U+FFFD.
-/// assert_eq!(ferrovue::js_char_at("🦀", 1.0), "\u{FFFD}");
+/// assert_eq!(ferrovue::strings::js_char_at("🦀", 1.0), "\u{FFFD}");
 /// ```
 #[must_use]
 pub fn js_char_at(s: &str, index: f64) -> &str {
@@ -373,8 +375,8 @@ pub fn js_char_at(s: &str, index: f64) -> &str {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_index_of("🦀 crab", "crab"), 3);
-/// assert_eq!(ferrovue::js_index_of("abc", "z"), -1);
+/// assert_eq!(ferrovue::strings::js_index_of("🦀 crab", "crab"), 3);
+/// assert_eq!(ferrovue::strings::js_index_of("abc", "z"), -1);
 /// ```
 #[must_use]
 pub fn js_index_of(s: &str, search: &str) -> i64 {
@@ -386,8 +388,8 @@ pub fn js_index_of(s: &str, search: &str) -> i64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_last_index_of("🦀 a 🦀 a", "a"), 8);
-/// assert_eq!(ferrovue::js_last_index_of("abc", "z"), -1);
+/// assert_eq!(ferrovue::strings::js_last_index_of("🦀 a 🦀 a", "a"), 8);
+/// assert_eq!(ferrovue::strings::js_last_index_of("abc", "z"), -1);
 /// ```
 #[must_use]
 pub fn js_last_index_of(s: &str, search: &str) -> i64 {
@@ -411,9 +413,9 @@ fn char_start(s: &str, unit: usize) -> usize {
 /// # Example
 ///
 /// ```
-/// assert!(ferrovue::js_includes_from("abcabc", "a", 1.0));
-/// assert!(!ferrovue::js_includes_from("abcabc", "a", 4.0));
-/// assert!(ferrovue::js_includes_from("abc", "", 99.0));
+/// assert!(ferrovue::strings::js_includes_from("abcabc", "a", 1.0));
+/// assert!(!ferrovue::strings::js_includes_from("abcabc", "a", 4.0));
+/// assert!(ferrovue::strings::js_includes_from("abc", "", 99.0));
 /// ```
 #[must_use]
 pub fn js_includes_from(s: &str, search: &str, position: f64) -> bool {
@@ -427,9 +429,9 @@ pub fn js_includes_from(s: &str, search: &str, position: f64) -> bool {
 /// # Example
 ///
 /// ```
-/// assert!(ferrovue::js_starts_with_at("abc", "bc", 1.0));
-/// assert!(!ferrovue::js_starts_with_at("🦀x", "x", 1.0));
-/// assert!(ferrovue::js_starts_with_at("abc", "", -5.0));
+/// assert!(ferrovue::strings::js_starts_with_at("abc", "bc", 1.0));
+/// assert!(!ferrovue::strings::js_starts_with_at("🦀x", "x", 1.0));
+/// assert!(ferrovue::strings::js_starts_with_at("abc", "", -5.0));
 /// ```
 #[must_use]
 pub fn js_starts_with_at(s: &str, search: &str, position: f64) -> bool {
@@ -445,9 +447,9 @@ pub fn js_starts_with_at(s: &str, search: &str, position: f64) -> bool {
 /// # Example
 ///
 /// ```
-/// assert!(ferrovue::js_ends_with_at("abc", "ab", 2.0));
-/// assert!(!ferrovue::js_ends_with_at("x🦀", "x", 2.0));
-/// assert!(ferrovue::js_ends_with_at("abc", "abc", f64::INFINITY));
+/// assert!(ferrovue::strings::js_ends_with_at("abc", "ab", 2.0));
+/// assert!(!ferrovue::strings::js_ends_with_at("x🦀", "x", 2.0));
+/// assert!(ferrovue::strings::js_ends_with_at("abc", "abc", f64::INFINITY));
 /// ```
 #[must_use]
 pub fn js_ends_with_at(s: &str, search: &str, end_position: f64) -> bool {
@@ -463,9 +465,9 @@ pub fn js_ends_with_at(s: &str, search: &str, end_position: f64) -> bool {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_index_of_from("abcabc", "a", 1.0), 3);
-/// assert_eq!(ferrovue::js_index_of_from("abc", "", 10.0), 3);
-/// assert_eq!(ferrovue::js_index_of_from("🦀", "", 1.0), 1);
+/// assert_eq!(ferrovue::strings::js_index_of_from("abcabc", "a", 1.0), 3);
+/// assert_eq!(ferrovue::strings::js_index_of_from("abc", "", 10.0), 3);
+/// assert_eq!(ferrovue::strings::js_index_of_from("🦀", "", 1.0), 1);
 /// ```
 #[must_use]
 pub fn js_index_of_from(s: &str, search: &str, position: f64) -> i64 {
@@ -485,9 +487,9 @@ pub fn js_index_of_from(s: &str, search: &str, position: f64) -> i64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_last_index_of_from("abcabc", "a", 2.0), 0);
-/// assert_eq!(ferrovue::js_last_index_of_from("abcabc", "a", f64::NAN), 3);
-/// assert_eq!(ferrovue::js_last_index_of_from("abc", "", 1.0), 1);
+/// assert_eq!(ferrovue::strings::js_last_index_of_from("abcabc", "a", 2.0), 0);
+/// assert_eq!(ferrovue::strings::js_last_index_of_from("abcabc", "a", f64::NAN), 3);
+/// assert_eq!(ferrovue::strings::js_last_index_of_from("abc", "", 1.0), 1);
 /// ```
 #[must_use]
 pub fn js_last_index_of_from(s: &str, search: &str, position: f64) -> i64 {
@@ -518,9 +520,9 @@ pub fn js_last_index_of_from(s: &str, search: &str, position: f64) -> i64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_substr("ferrovue", 5.0, Some(2.0)), "vu");
-/// assert_eq!(ferrovue::js_substr("ferrovue", -3.0, None), "vue");
-/// assert_eq!(ferrovue::js_substr("ferrovue", 1.0, Some(-1.0)), "");
+/// assert_eq!(ferrovue::strings::js_substr("ferrovue", 5.0, Some(2.0)), "vu");
+/// assert_eq!(ferrovue::strings::js_substr("ferrovue", -3.0, None), "vue");
+/// assert_eq!(ferrovue::strings::js_substr("ferrovue", 1.0, Some(-1.0)), "");
 /// ```
 #[must_use]
 pub fn js_substr(s: &str, start: f64, length: Option<f64>) -> Cow<'_, str> {
@@ -535,9 +537,9 @@ pub fn js_substr(s: &str, start: f64, length: Option<f64>) -> Cow<'_, str> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_char_code_at("abc", 1.0), 98.0);
-/// assert_eq!(ferrovue::js_char_code_at("🦀", 1.0), 56704.0);
-/// assert!(ferrovue::js_char_code_at("abc", 3.0).is_nan());
+/// assert_eq!(ferrovue::strings::js_char_code_at("abc", 1.0), 98.0);
+/// assert_eq!(ferrovue::strings::js_char_code_at("🦀", 1.0), 56704.0);
+/// assert!(ferrovue::strings::js_char_code_at("abc", 3.0).is_nan());
 /// ```
 #[must_use]
 pub fn js_char_code_at(s: &str, index: f64) -> f64 {
@@ -559,9 +561,9 @@ pub fn js_char_code_at(s: &str, index: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_code_point_at("🦀", 0.0), Some(0x1F980));
-/// assert_eq!(ferrovue::js_code_point_at("🦀", 1.0), Some(0xDD80));
-/// assert_eq!(ferrovue::js_code_point_at("abc", -1.0), None);
+/// assert_eq!(ferrovue::strings::js_code_point_at("🦀", 0.0), Some(0x1F980));
+/// assert_eq!(ferrovue::strings::js_code_point_at("🦀", 1.0), Some(0xDD80));
+/// assert_eq!(ferrovue::strings::js_code_point_at("abc", -1.0), None);
 /// ```
 #[must_use]
 pub fn js_code_point_at(s: &str, index: f64) -> Option<i64> {
@@ -586,9 +588,9 @@ pub fn js_code_point_at(s: &str, index: f64) -> Option<i64> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_split_limit("a,b,c", ",", 2.0), ["a", "b"]);
-/// assert_eq!(ferrovue::js_split_limit("a,b,c", ",", -1.0), ["a", "b", "c"]);
-/// assert!(ferrovue::js_split_limit("a,b,c", ",", 4294967296.0).is_empty());
+/// assert_eq!(ferrovue::strings::js_split_limit("a,b,c", ",", 2.0), ["a", "b"]);
+/// assert_eq!(ferrovue::strings::js_split_limit("a,b,c", ",", -1.0), ["a", "b", "c"]);
+/// assert!(ferrovue::strings::js_split_limit("a,b,c", ",", 4294967296.0).is_empty());
 /// ```
 #[must_use]
 pub fn js_split_limit<'s>(s: &'s str, separator: &str, limit: f64) -> Vec<Cow<'s, str>> {
@@ -612,8 +614,8 @@ pub fn js_split_limit<'s>(s: &'s str, separator: &str, limit: f64) -> Vec<Cow<'s
 ///
 /// ```
 /// let n: Option<i64> = None;
-/// assert_eq!(format!("{}", ferrovue::JsOr(n.map(ferrovue::Js), "undefined")), "undefined");
-/// assert_eq!(format!("{}", ferrovue::JsOr(Some(ferrovue::Js(2.5)), "null")), "2.5");
+/// assert_eq!(format!("{}", ferrovue::strings::JsOr(n.map(ferrovue::core::numbers::Js), "undefined")), "undefined");
+/// assert_eq!(format!("{}", ferrovue::strings::JsOr(Some(ferrovue::core::numbers::Js(2.5)), "null")), "2.5");
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct JsOr<T>(pub Option<T>, pub &'static str);
@@ -633,9 +635,9 @@ impl<T: std::fmt::Display> std::fmt::Display for JsOr<T> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_split("a,b,", ","), ["a", "b", ""]);
-/// assert_eq!(ferrovue::js_split("", ","), [""]);
-/// assert!(ferrovue::js_split("", "").is_empty());
+/// assert_eq!(ferrovue::strings::js_split("a,b,", ","), ["a", "b", ""]);
+/// assert_eq!(ferrovue::strings::js_split("", ","), [""]);
+/// assert!(ferrovue::strings::js_split("", "").is_empty());
 /// ```
 #[must_use]
 pub fn js_split<'s>(s: &'s str, separator: &str) -> Vec<Cow<'s, str>> {
@@ -677,8 +679,8 @@ fn substitute(out: &mut String, replacement: &str, s: &str, start: usize, end: u
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_replace("a-b-c", "-", "+"), "a+b-c");
-/// assert_eq!(ferrovue::js_replace("abc", "b", "[$&$`$'$$$1]"), "a[bac$$1]c");
+/// assert_eq!(ferrovue::strings::js_replace("a-b-c", "-", "+"), "a+b-c");
+/// assert_eq!(ferrovue::strings::js_replace("abc", "b", "[$&$`$'$$$1]"), "a[bac$$1]c");
 /// ```
 #[must_use]
 pub fn js_replace<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, str> {
@@ -699,9 +701,9 @@ pub fn js_replace<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, s
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_replace_all("a-b-c", "-", "+"), "a+b+c");
-/// assert_eq!(ferrovue::js_replace_all("ab", "", "."), ".a.b.");
-/// assert_eq!(ferrovue::js_replace_all("abc", "z", "y"), "abc");
+/// assert_eq!(ferrovue::strings::js_replace_all("a-b-c", "-", "+"), "a+b+c");
+/// assert_eq!(ferrovue::strings::js_replace_all("ab", "", "."), ".a.b.");
+/// assert_eq!(ferrovue::strings::js_replace_all("abc", "z", "y"), "abc");
 /// ```
 #[must_use]
 pub fn js_replace_all<'s>(s: &'s str, pattern: &str, replacement: &str) -> Cow<'s, str> {
@@ -811,8 +813,8 @@ fn too_long(units: f64, how: &str) -> Refused {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_pad_start("7", 3.0, "0"), "007");
-/// assert_eq!(ferrovue::js_pad_start("abc", 10.0, "123"), "1231231abc");
+/// assert_eq!(ferrovue::strings::js_pad_start("7", 3.0, "0"), "007");
+/// assert_eq!(ferrovue::strings::js_pad_start("abc", 10.0, "123"), "1231231abc");
 /// ```
 #[must_use]
 pub fn js_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
@@ -838,9 +840,9 @@ pub fn try_pad_start<'s>(s: &'s str, max_length: f64, fill: &str) -> Result<Cow<
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_pad_end("7", 3.0, "."), "7..");
+/// assert_eq!(ferrovue::strings::js_pad_end("7", 3.0, "."), "7..");
 /// // 🦀 is two code units: padding by one keeps its first half, sent as U+FFFD.
-/// assert_eq!(ferrovue::js_pad_end("a", 2.0, "🦀"), "a\u{FFFD}");
+/// assert_eq!(ferrovue::strings::js_pad_end("a", 2.0, "🦀"), "a\u{FFFD}");
 /// ```
 #[must_use]
 pub fn js_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Cow<'s, str> {
@@ -867,9 +869,9 @@ pub fn try_pad_end<'s>(s: &'s str, max_length: f64, fill: &str) -> Result<Cow<'s
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_repeat("ab", 3.0), "ababab");
-/// assert_eq!(ferrovue::js_repeat("ab", 2.9), "abab");
-/// assert!(std::panic::catch_unwind(|| ferrovue::js_repeat("ab", -1.0)).is_err());
+/// assert_eq!(ferrovue::strings::js_repeat("ab", 3.0), "ababab");
+/// assert_eq!(ferrovue::strings::js_repeat("ab", 2.9), "abab");
+/// assert!(std::panic::catch_unwind(|| ferrovue::strings::js_repeat("ab", -1.0)).is_err());
 /// ```
 #[must_use]
 pub fn js_repeat(s: &str, count: f64) -> String {
@@ -915,9 +917,9 @@ pub fn try_repeat(s: &str, count: f64) -> Result<String, Refused> {
 /// ```
 /// use std::cmp::Ordering;
 ///
-/// assert_eq!(ferrovue::js_cmp("B", "a"), Ordering::Less);
+/// assert_eq!(ferrovue::strings::js_cmp("B", "a"), Ordering::Less);
 /// // U+FF5E is one unit, 0xFF5E; U+1F980 starts with 0xD83E.
-/// assert_eq!(ferrovue::js_cmp("～", "🦀"), Ordering::Greater);
+/// assert_eq!(ferrovue::strings::js_cmp("～", "🦀"), Ordering::Greater);
 /// assert_eq!("～".cmp("🦀"), Ordering::Less);
 /// ```
 #[must_use]
@@ -1015,9 +1017,9 @@ fn decimal_value(literal: &str) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_number(" 0x1F "), 31.0);
-/// assert_eq!(ferrovue::js_number(""), 0.0);
-/// assert!(ferrovue::js_number("12px").is_nan());
+/// assert_eq!(ferrovue::strings::js_number(" 0x1F "), 31.0);
+/// assert_eq!(ferrovue::strings::js_number(""), 0.0);
+/// assert!(ferrovue::strings::js_number("12px").is_nan());
 /// ```
 #[must_use]
 pub fn js_number(s: &str) -> f64 {
@@ -1055,10 +1057,10 @@ pub fn js_number(s: &str) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_parse_int("  42px", 10), 42.0);
-/// assert_eq!(ferrovue::js_parse_int("0x1F", 0), 31.0);
-/// assert_eq!(ferrovue::js_parse_int("0x1F", 10), 0.0);
-/// assert!(ferrovue::js_parse_int("px", 10).is_nan());
+/// assert_eq!(ferrovue::strings::js_parse_int("  42px", 10), 42.0);
+/// assert_eq!(ferrovue::strings::js_parse_int("0x1F", 0), 31.0);
+/// assert_eq!(ferrovue::strings::js_parse_int("0x1F", 10), 0.0);
+/// assert!(ferrovue::strings::js_parse_int("px", 10).is_nan());
 /// ```
 #[must_use]
 pub fn js_parse_int(s: &str, radix: u32) -> f64 {
@@ -1096,9 +1098,9 @@ pub fn js_parse_int(s: &str, radix: u32) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_parse_float(" 1.5e3px"), 1500.0);
-/// assert_eq!(ferrovue::js_parse_float("0x10"), 0.0);
-/// assert!(ferrovue::js_parse_float(".e1").is_nan());
+/// assert_eq!(ferrovue::strings::js_parse_float(" 1.5e3px"), 1500.0);
+/// assert_eq!(ferrovue::strings::js_parse_float("0x10"), 0.0);
+/// assert!(ferrovue::strings::js_parse_float(".e1").is_nan());
 /// ```
 #[must_use]
 pub fn js_parse_float(s: &str) -> f64 {
@@ -1111,7 +1113,7 @@ pub fn js_parse_float(s: &str) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_json_string("a\"b\n\u{1}"), r#""a\"b\n\u0001""#);
+/// assert_eq!(ferrovue::strings::js_json_string("a\"b\n\u{1}"), r#""a\"b\n\u0001""#);
 /// ```
 #[must_use]
 pub fn js_json_string(s: &str) -> String {
@@ -1143,9 +1145,9 @@ pub fn js_json_string(s: &str) -> String {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_json_number(0.1 + 0.2), "0.30000000000000004");
-/// assert_eq!(ferrovue::js_json_number(-0.0), "0");
-/// assert_eq!(ferrovue::js_json_number(f64::INFINITY), "null");
+/// assert_eq!(ferrovue::strings::js_json_number(0.1 + 0.2), "0.30000000000000004");
+/// assert_eq!(ferrovue::strings::js_json_number(-0.0), "0");
+/// assert_eq!(ferrovue::strings::js_json_number(f64::INFINITY), "null");
 /// ```
 #[must_use]
 pub fn js_json_number(x: f64) -> String {

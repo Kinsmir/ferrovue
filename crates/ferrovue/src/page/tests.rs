@@ -1,5 +1,6 @@
 use super::*;
-use crate::{escape_into, push_number, slot_into, slot_into_slotted};
+use crate::slots::{slot_into, slot_into_slotted};
+use ferrovue_core::{escape::escape_into, numbers::push_number};
 
 #[derive(Serialize)]
 struct WordProps<'a> {
@@ -108,7 +109,7 @@ fn the_record_cannot_be_closed_by_a_prop_and_reads_back_whole() {
     };
     let record = page.render_to(&mut out, layout(&LayoutProps { title: hostile }, slots, ""));
     record.script_into(&mut out, "a\"b");
-    assert_eq!(crate::split_holes(&out).len(), 1, "{out}");
+    assert_eq!(crate::slots::split_holes(&out).len(), 1, "{out}");
     let body = script_body(&out, "a&quot;b");
     assert!(
         !body.contains(['<', '>', '&', '\u{2028}', '\u{2029}']),
@@ -213,7 +214,7 @@ fn an_island_is_written_without_its_wrapper() {
 fn a_page_returns_the_first_refusal_of_its_slots_parts() {
     fn refuse(out: &mut String, props: &WordProps<'_>) -> Result<(), Refused> {
         word(out, props);
-        crate::try_int(props.ratio).map(drop)
+        crate::refused::try_int(props.ratio).map(drop)
     }
     let (early, late) = (
         WordProps {
@@ -356,7 +357,7 @@ fn a_hole_is_recorded_once_it_is_filled_or_dropped() {
     };
     let record = page.render_to(&mut out, layout(&LayoutProps { title: "T" }, slots, ""));
     assert_eq!(
-        crate::split_holes(&out),
+        crate::slots::split_holes(&out),
         [
             "<header><!--[-->",
             "<!--]--></header><main><!--[-->",
@@ -469,8 +470,8 @@ async fn a_streamed_page_writes_its_record_after_its_holes() {
     };
     let record = page.render_to(&mut out, layout(&LayoutProps { title: "T" }, slots, ""));
     out.push_str("</div>");
-    crate::hole().render_to(&mut out);
-    let mut stream = crate::HtmlStream::new(out)
+    crate::slots::hole().render_to(&mut out);
+    let mut stream = crate::web::HtmlStream::new(out)
         .hole(async move {
             tokio::time::sleep(Duration::from_millis(10)).await;
             let text = String::from("slow");

@@ -131,7 +131,7 @@ export interface StateText {
   text: string | undefined;
 }
 
-/** Give Pinia the state the server rendered with (what `ferrovue::state_script_into` wrote) before
+/** Give Pinia the state the server rendered with (what `ferrovue::state::state_script_into` wrote) before
  * the app mounts, so every store starts from it and the markup agrees with the server's. The state
  * is read from the script with the `id` given (`__pinia` by default) in `doc`, or given as
  * `{ text }`: the `state` of a fetched page that `readPage` read. Either way the numbers JSON
@@ -317,13 +317,13 @@ function scriptTexts(html: string, match: (attrs: Map<string, string>) => boolea
 export interface ReadPageOptions {
   /** The `id` of the record's script, as given to `PageRecord::script_into`: `__fv_page` by default. */
   record?: string;
-  /** The `id` of the state's script, as given to `ferrovue::state_script_into`: `__pinia` by default. */
+  /** The `id` of the state's script, as given to `ferrovue::state::state_script_into`: `__pinia` by default. */
   state?: string;
 }
 
 /** A page read out of the HTML of its document. */
 export interface ReadPage {
-  /** The record `ferrovue::PageRecord` wrote, with the numbers JSON cannot carry read back. */
+  /** The record `ferrovue::page::PageRecord` wrote, with the numbers JSON cannot carry read back. */
   record: PageRecord;
   /** The text of the state's script, for `hydrateState(pinia, { text: state })`: `undefined` when
    * the page carries no state. */
@@ -574,7 +574,7 @@ async function load(component: IslandComponent): Promise<Component | Error> {
   }
 }
 
-/** One component the server rendered into a slot of a page's layout, as `ferrovue::Part` records
+/** One component the server rendered into a slot of a page's layout, as `ferrovue::page::Part` records
  * it: its name (`c`) and the props it was rendered from (`p`). */
 export interface PagePart {
   c: string;
@@ -585,7 +585,7 @@ export interface PagePart {
   d?: unknown;
 }
 
-/** What `ferrovue::PageRecord` writes: the layout's props, and each slot's parts in order. */
+/** What `ferrovue::page::PageRecord` writes: the layout's props, and each slot's parts in order. */
 export interface PageRecord {
   /** `null` where serde_json refused the props, which the layout then renders without. */
   props: Record<string, unknown> | null;
@@ -653,7 +653,7 @@ async function loadPage(caller: string, layout: IslandComponent, record: PageRec
   return [root, Object.fromEntries(parts)];
 }
 
-/** Hydrate a page `ferrovue::Page` rendered: read its record, load the components it names (and
+/** Hydrate a page `ferrovue::page::Page` rendered: read its record, load the components it names (and
  * no others), wait for the router, and mount the layout on the container. Rejects, leaving the page
  * as the server rendered it, when the container or the record is missing or a component is not
  * given or does not load. */

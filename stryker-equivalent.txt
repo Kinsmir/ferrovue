@@ -95,9 +95,9 @@ packages/ferrovue/src/attrs.ts: BooleanLiteral: true => false in objectAttrs(s, 
 # third class, which no element has: Vue merges an element's own class with one `v-bind` object's.
 packages/ferrovue/src/attrs.ts: BooleanLiteral: true => false in if (before !== p.value.value) merged.set(key, { ...p, valu … ion", elements: [had.value, p.value], fvMerged: true } });
 
-# attrs.ts, `attrOf`: `valueAttr` gives a value of type `null` the same `fv::Attr::Undefined`.
-packages/ferrovue/src/attrs.ts: ConditionalExpression: n.type === "NullLiteral" => false in if (n.type === "NullLiteral") return "fv::Attr::Undefined";
-packages/ferrovue/src/attrs.ts: StringLiteral: "NullLiteral" => "" in if (n.type === "NullLiteral") return "fv::Attr::Undefined";
+# attrs.ts, `attrOf`: `valueAttr` gives a value of type `null` the same `fv::attrs::Attr::Undefined`.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: n.type === "NullLiteral" => false in if (n.type === "NullLiteral") return "fv::attrs::Attr::Undefined";
+packages/ferrovue/src/attrs.ts: StringLiteral: "NullLiteral" => "" in if (n.type === "NullLiteral") return "fv::attrs::Attr::Undefined";
 
 # attrs.ts, `valueAttr`: `default` is the last clause of the switch, so its `break` ends it either way.
 packages/ferrovue/src/attrs.ts: ConditionalExpression: default: break; => default: in default:

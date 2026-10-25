@@ -37,26 +37,26 @@ impl std::fmt::Display for HeadChoiceKind {
 }
 
 impl std::str::FromStr for HeadChoiceKind {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "article" => Ok(HeadChoiceKind::Article),
             "note" => Ok(HeadChoiceKind::Note),
-            _ => Err(ferrovue::ParseUnionError::new("HeadChoiceKind", s, &["article", "note"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("HeadChoiceKind", s, &["article", "note"])),
         }
     }
 }
 
 impl TryFrom<&str> for HeadChoiceKind {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for HeadChoiceKind {
+impl ferrovue::union::Union for HeadChoiceKind {
     const ALL: &'static [Self] = &HeadChoiceKind::ALL;
 
     fn as_str(self) -> &'static str {
@@ -92,8 +92,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
+    fv::refused::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -101,10 +101,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
     out.reserve(11 + 7 + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
-    fv_head.push(fv::HeadValue::object([("titleTemplate", fv::HeadValue::str("%s (chosen)"))]));
+    fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str("%s (chosen)"))]));
     out.push_str("<div>");
     if props.article {
         super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
@@ -124,6 +124,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Re
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

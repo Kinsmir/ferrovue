@@ -1,6 +1,6 @@
 #![no_main]
 
-use ferrovue::Attr;
+use ferrovue::attrs::Attr;
 use ferrovue_fuzz::unescape;
 use libfuzzer_sys::{arbitrary, fuzz_target};
 
@@ -126,9 +126,9 @@ fuzz_target!(|input: Input| {
 
     let ids_at = usize::from(input.ids_at);
     let mut out = String::new();
-    ferrovue::attrs_into(&mut out, &sources, ids_at, IDS);
+    ferrovue::attrs::attrs_into(&mut out, &sources, ids_at, IDS);
     let mut without = String::new();
-    ferrovue::attrs_into(&mut without, &sources, ids_at, "");
+    ferrovue::attrs::attrs_into(&mut without, &sources, ids_at, "");
     assert!(
         out.match_indices(IDS)
             .any(|(i, _)| out[..i] == without[..i] && out[i + IDS.len()..] == without[i..]),
@@ -142,16 +142,16 @@ fuzz_target!(|input: Input| {
 
     for list in &lists {
         let mut out = String::new();
-        ferrovue::passed_attrs_into(&mut out, list, IDS);
+        ferrovue::attrs::passed_attrs_into(&mut out, list, IDS);
         let read = attributes(&out);
         assert!(read.len() <= 1 + list.len(), "{out}");
         let mut without = String::new();
-        ferrovue::passed_attrs_into(&mut without, list, "");
+        ferrovue::attrs::passed_attrs_into(&mut without, list, "");
         assert_eq!(out.strip_suffix(IDS), Some(&*without));
     }
 
     let mut style = String::new();
-    ferrovue::style_text_into(&mut style, &input.css);
+    ferrovue::attrs::style_text_into(&mut style, &input.css);
     let mut out = String::from(" style=\"");
     out.push_str(&style);
     out.push('"');

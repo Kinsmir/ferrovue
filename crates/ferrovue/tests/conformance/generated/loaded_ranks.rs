@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) {
-    fv::rendered(try_render(out, props, fv_teleports, fv_head, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::teleport::Teleports, fv_head: &fv::head::Head, fv_loads: &fv::load::Loads<'_>) {
+    fv::refused::rendered(try_render(out, props, fv_teleports, fv_head, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,25 +39,25 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports,
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Teleports, fv_head: &fv::Head, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::teleport::Teleports, fv_head: &fv::head::Head, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(62 + props.board.len());
     let Some(l_0) = fv_loads.get(super::loaders::LoadRanking { board: String::from(&*props.board) }) else { return Ok(()); };
-    fv_head.push(fv::HeadValue::object([("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", fv::HeadValue::str(&format!("ranks of {}", props.board)))])]))]));
+    fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("ranks of {}", props.board)))])]))]));
     out.push_str("<!--[--><ol><!--[-->");
     for (fv_name, fv_score_ref) in l_0.scores.iter() {
         let fv_score = *fv_score_ref;
         out.push_str("<li>");
-        fv::escape_into(out, fv_name);
+        fv::core::escape::escape_into(out, fv_name);
         out.push_str(": ");
-        fv::push_int(out, fv_score);
+        fv::core::numbers::push_int(out, fv_score);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
     super::rank_line::try_render(out, &super::rank_line::Props { best: l_0.best, worst: l_0.worst, open: l_0.open })?;
-    fv::teleport_into(out, fv_teleports, "#ranks", false, &|out: &mut String| {
+    fv::teleport::teleport_into(out, fv_teleports, "#ranks", false, &|out: &mut String| {
         out.push_str("<p class=\"board\">");
-        fv::escape_into(out, &props.board);
+        fv::core::escape::escape_into(out, &props.board);
         out.push_str("</p>");
     });
     super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.board), page: 1i64, drafts: None }, fv_loads)?;
@@ -66,6 +66,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::Telepo
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::Teleports, fv_head: &'p fv::Head, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_teleports, fv_head, fv_loads)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_teleports: &'p fv::teleport::Teleports, fv_head: &'p fv::head::Head, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_teleports, fv_head, fv_loads)))
 }

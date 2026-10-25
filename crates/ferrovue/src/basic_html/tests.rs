@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Html, trusted_into};
+use crate::{html::Html, trusted::trusted_into};
 
 fn basic(s: &str) -> String {
     BasicHtml::new(s).into_string()

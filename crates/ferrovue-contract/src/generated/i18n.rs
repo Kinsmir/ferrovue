@@ -22,6 +22,6 @@ pub static LOCALES: &[Locale] = &[
 ];
 
 /// The messages in `locale`, with the configured fallbacks: build one per request.
-pub fn i18n(locale: &str) -> ferrovue::I18n {
-    ferrovue::I18n::new(LOCALES, locale, FALLBACK)
+pub fn i18n(locale: &str) -> ferrovue::i18n::I18n {
+    ferrovue::i18n::I18n::new(LOCALES, locale, FALLBACK)
 }

@@ -40,27 +40,27 @@ impl std::fmt::Display for OnPropsKidOnTone {
 }
 
 impl std::str::FromStr for OnPropsKidOnTone {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "" => Ok(OnPropsKidOnTone::Empty),
             "warm" => Ok(OnPropsKidOnTone::Warm),
             "cold" => Ok(OnPropsKidOnTone::Cold),
-            _ => Err(ferrovue::ParseUnionError::new("OnPropsKidOnTone", s, &["", "warm", "cold"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("OnPropsKidOnTone", s, &["", "warm", "cold"])),
         }
     }
 }
 
 impl TryFrom<&str> for OnPropsKidOnTone {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for OnPropsKidOnTone {
+impl ferrovue::union::Union for OnPropsKidOnTone {
     const ALL: &'static [Self] = &OnPropsKidOnTone::ALL;
 
     fn as_str(self) -> &'static str {
@@ -140,7 +140,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -148,47 +148,47 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(32 + props.on_text.as_deref().map_or(0, str::len) + 4);
     out.push_str("<i>");
-    fv::push_int(out, props.on1.unwrap_or(4i64));
+    fv::core::numbers::push_int(out, props.on1.unwrap_or(4i64));
     out.push('|');
-    fv::escape_into(out, props.on_text.as_deref().unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.on_text.as_deref().unwrap_or("none"));
     out.push('|');
     out.push_str(if props.on_flag.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     out.push_str(if props.on_set.unwrap_or(true) { "true" } else { "false" });
     out.push('|');
     if let Some(v) = props.on_rate {
-        fv::push_number(out, v);
+        fv::core::numbers::push_number(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.on_tone.map(fv::Union::as_str).unwrap_or("unset"));
+    fv::core::escape::escape_into(out, props.on_tone.map(fv::union::Union::as_str).unwrap_or("unset"));
     out.push('|');
     out.push_str(if props.on_req { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, props.on_num);
+    fv::core::numbers::push_int(out, props.on_num);
     out.push_str("</i>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

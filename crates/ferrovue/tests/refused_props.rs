@@ -6,5 +6,6 @@
 fn a_debug_build_stops_at_an_island_whose_props_serde_json_refuses() {
     type ByList = std::collections::BTreeMap<Vec<i64>, f64>;
     let props: ByList = [(vec![1], 2.0)].into_iter().collect();
-    let _ = ferrovue::Html::island("ByList", &props, |_: &mut String, _: &ByList| {}).into_string();
+    let _ = ferrovue::html::Html::island("ByList", &props, |_: &mut String, _: &ByList| {})
+        .into_string();
 }

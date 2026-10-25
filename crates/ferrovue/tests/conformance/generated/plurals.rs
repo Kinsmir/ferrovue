@@ -36,8 +36,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
-    fv::rendered(try_render(out, props, fv_i18n));
+pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
+    fv::refused::rendered(try_render(out, props, fv_i18n));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -45,36 +45,36 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::I18n) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::refused::Refused> {
     out.reserve(45 + props.label.len());
     out.push_str("<!--[--><p>");
-    fv::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args::new().with_named(&[("n", fv::i18n::Value::Float(props.amount))])));
+    fv::core::escape::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args::new().with_named(&[("n", fv::i18n::Value::Float(props.amount))])));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount + 1.0))])));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount + 1.0))])));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))])));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))])));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))]).with_plural(5i64)));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))]).with_plural(5i64)));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Str(&props.label))]).with_plural(props.count)));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Str(&props.label))]).with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Bool(props.on))]).with_plural(props.count)));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Bool(props.on))]).with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount * 2.0))]).with_plural(props.count)));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount * 2.0))]).with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(0i64))]).with_plural(props.count)));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(0i64))]).with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(7i64))]).with_plural(props.count)));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(7i64))]).with_plural(props.count)));
     out.push('|');
-    fv::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(0i64)), ("other", fv::i18n::Value::Int(5i64))])));
+    fv::core::escape::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(0i64)), ("other", fv::i18n::Value::Int(5i64))])));
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv_i18n.t("shout", &fv::i18n::Args::new()));
+    fv::core::escape::escape_into(out, &fv_i18n.t("shout", &fv::i18n::Args::new()));
     out.push_str("</p><!--]-->");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::I18n) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_i18n: &'p fv::i18n::I18n) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_i18n)))
 }

@@ -112,15 +112,16 @@ export class Items {
 
   static read(root = ROOT): Items {
     const items = new Items();
-    const lib = readFileSync(join(root, "crates/ferrovue/src/lib.rs"), "utf8");
-    const modules = new Set([...lib.matchAll(/^pub mod (\w+);/gm)].map((m) => m[1]!));
-    for (const [crate, prefix] of [["ferrovue", ""], ["ferrovue-core", ""], ["ferrovue-router", ""], ["ferrovue-i18n", ""], ["ferrovue-i18n", "i18n::"]] as const) {
-      for (const file of readdirSync(join(root, "crates", crate, "src"), { recursive: true, encoding: "utf8" })) {
+    for (const [crate, prefix] of [["ferrovue", ""], ["ferrovue-core", "core::"], ["ferrovue-router", "router::"], ["ferrovue-i18n", "i18n::"]] as const) {
+      const src = join(root, "crates", crate, "src");
+      const lib = readFileSync(join(src, "lib.rs"), "utf8");
+      const modules = new Set([...lib.matchAll(/^pub mod (\w+);/gm)].map((m) => m[1]!));
+      for (const file of readdirSync(src, { recursive: true, encoding: "utf8" })) {
         if (!file.endsWith(".rs")) continue;
-        const source = readFileSync(join(root, "crates", crate, "src", file), "utf8");
-        items.scan(source, prefix);
+        const source = readFileSync(join(src, file), "utf8");
         const module = file.replace(/\\/g, "/").replace(/(\/mod)?\.rs$/, "");
-        if (crate === "ferrovue" && modules.has(module)) items.scan(source, `${module}::`);
+        if (module === "lib") items.scan(source, prefix);
+        else if (modules.has(module)) items.scan(source, `${prefix}${module}::`);
       }
     }
     return items;
@@ -129,7 +130,7 @@ export class Items {
   scan(source: string, prefix = ""): void {
     const order: Kind[] = ["mod", "macro", "struct", "enum", "trait", "type", "constant", "static", "fn"];
     const add = (name: string, kind: Kind) => {
-      const key = prefix + name;
+      const key = kind === "macro" ? name : prefix + name;
       const known = this.#kinds.get(key);
       if (!known || order.indexOf(kind) < order.indexOf(known)) this.#kinds.set(key, kind);
     };

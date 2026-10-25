@@ -31,7 +31,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) {
-    fv::rendered(try_render(out, props, fv_stores));
+    fv::refused::rendered(try_render(out, props, fv_stores));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,28 +39,28 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(91 + props.title.len());
     out.push_str("<div data-count=\"");
-    fv::push_int(out, fv_stores.counter.count);
+    fv::core::numbers::push_int(out, fv_stores.counter.count);
     out.push_str("\"><h4>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape::escape_into(out, &props.title);
     out.push_str(": ");
-    fv::escape_into(out, &fv_stores.counter.label);
+    fv::core::escape::escape_into(out, &fv_stores.counter.label);
     out.push_str("</h4><p>");
-    fv::push_int(out, fv_stores.counter.count);
+    fv::core::numbers::push_int(out, fv_stores.counter.count);
     out.push('|');
-    fv::push_number(out, fv_stores.counter.count as f64 * 2.0);
+    fv::core::numbers::push_number(out, fv_stores.counter.count as f64 * 2.0);
     out.push('|');
-    fv::escape_into(out, &format!("{} {}", fv::Js(fv_stores.counter.count as f64 * 2.0), fv_stores.counter.label));
+    fv::core::escape::escape_into(out, &format!("{} {}", fv::core::numbers::Js(fv_stores.counter.count as f64 * 2.0), fv_stores.counter.label));
     out.push('|');
-    fv::push_number(out, fv_stores.counter.step);
+    fv::core::numbers::push_number(out, fv_stores.counter.step);
     out.push('|');
-    fv::push_int(out, fv_stores.counter.history.len() as i64);
+    fv::core::numbers::push_int(out, fv_stores.counter.history.len() as i64);
     if let Some(fv_owner) = fv_stores.counter.owner.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
-        fv::escape_into(out, fv_owner);
+        fv::core::escape::escape_into(out, fv_owner);
         out.push_str("</b>");
     } else {
         out.push_str("<!---->");
@@ -70,6 +70,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_stores: &'p super::stores::Stores<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_stores)))
 }

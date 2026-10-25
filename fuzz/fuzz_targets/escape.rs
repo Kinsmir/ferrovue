@@ -13,6 +13,6 @@ fuzz_target!(|data: &[u8]| {
     assert_eq!(escaped, reference_escape(&s));
     assert_eq!(unescape(escaped).as_deref(), Ok(&*s));
     let mut again = String::new();
-    ferrovue::escape_into(&mut again, &s);
+    ferrovue::core::escape::escape_into(&mut again, &s);
     assert_eq!(again, escaped);
 });

@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::html::{Html, Renderer};
 use crate::refused::first;
 use crate::slots::{HOLE, Slot};
-use crate::{Refused, json, state};
+use crate::{json, refused::Refused, state};
 
 /// A page the client hydrates as one app: a layout whose slots hold components rendered from their
 /// props. Each part goes into a slot as a [`Part`], made from the same [`Html`] value that writes
@@ -26,16 +26,16 @@ use crate::{Refused, json, state};
 /// #     #[derive(serde::Serialize)]
 /// #     pub struct Props<'a> { pub title: &'a str }
 /// #     #[derive(Clone, Copy, Default)]
-/// #     pub struct Slots<'s> { pub default: Option<fv::Slot<'s>> }
+/// #     pub struct Slots<'s> { pub default: Option<fv::slots::Slot<'s>> }
 /// #     pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 /// #         out.push_str("<main><h1>");
-/// #         fv::escape_into(out, props.title);
+/// #         fv::core::escape::escape_into(out, props.title);
 /// #         out.push_str("</h1>");
-/// #         fv::slot_into(out, fv_slots.default, None);
+/// #         fv::slots::slot_into(out, fv_slots.default, None);
 /// #         out.push_str("</main>");
 /// #     }
-/// #     pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-/// #         fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+/// #         fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_slots))
 /// #     }
 /// # }
 /// # mod hello {
@@ -44,14 +44,14 @@ use crate::{Refused, json, state};
 /// #     pub struct Props<'a> { pub name: &'a str }
 /// #     pub fn render(out: &mut String, props: &Props<'_>) {
 /// #         out.push_str("<p>Hello, ");
-/// #         ferrovue::escape_into(out, props.name);
+/// #         ferrovue::core::escape::escape_into(out, props.name);
 /// #         out.push_str("!</p>");
 /// #     }
-/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-/// #         ferrovue::Html::markup(props, render)
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+/// #         ferrovue::html::Html::markup(props, render)
 /// #     }
 /// # }
-/// use ferrovue::{Page, Part};
+/// use ferrovue::page::{Page, Part};
 ///
 /// // Frame.vue: <main><h1>{{ title }}</h1><slot /></main>; Hello.vue: <p>Hello, {{ name }}!</p>
 /// let (ada, grace) = (hello::Props { name: "Ada" }, hello::Props { name: "</script>" });
@@ -348,7 +348,7 @@ impl Drop for PageHole {
 impl PageRecord {
     /// The names of the components the record holds so far, each once, in the order they were
     /// given: those of every slot, and of each hole filled by now. The client loads each from
-    /// `ferrovue/islands`, so [`Chunks::for_islands`](crate::Chunks::for_islands) says which
+    /// `ferrovue/islands`, so [`Chunks::for_islands`](crate::chunks::Chunks::for_islands) says which
     /// scripts to preload for them.
     #[must_use]
     pub fn island_names(&self) -> Vec<&'static str> {
@@ -356,7 +356,7 @@ impl PageRecord {
     }
 
     /// Write the record as a `<script type="application/json">` with the given `id`, escaped as
-    /// [`state_script_into`](crate::state_script_into) escapes the state: `"__fv_page"` is what
+    /// [`state_script_into`](crate::state::state_script_into) escapes the state: `"__fv_page"` is what
     /// `mountPage` reads by default.
     ///
     /// # Panics
@@ -373,7 +373,7 @@ impl PageRecord {
     }
 
     /// The record's `<script>`, ready once every hole of the page is filled or dropped. Leave a
-    /// [`hole`](crate::hole) for it after the app's container and give it to the
+    /// [`hole`](crate::slots::hole) for it after the app's container and give it to the
     /// `HtmlStream` (the `stream` feature) after the futures of the page's holes.
     #[must_use]
     pub fn script(self, id: impl Into<String>) -> PageScript {

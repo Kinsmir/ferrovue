@@ -40,7 +40,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,56 +48,56 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(228);
     let s_total = props.price * props.qty as f64;
     out.push_str("<div data-ratio=\"");
-    fv::push_number(out, props.ratio);
+    fv::core::numbers::push_number(out, props.ratio);
     out.push_str("\" style=\"opacity:");
-    fv::push_number(out, props.ratio);
+    fv::core::numbers::push_number(out, props.ratio);
     out.push_str(";width:");
-    fv::escape_into(out, &format!("{}px", fv::Js(props.price)));
+    fv::core::escape::escape_into(out, &format!("{}px", fv::core::numbers::Js(props.price)));
     out.push_str(";\"><p>");
-    fv::push_number(out, s_total);
+    fv::core::numbers::push_number(out, s_total);
     out.push('|');
-    fv::escape_into(out, &fv::js_to_fixed(s_total, 2));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(s_total, 2));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_fixed(props.price, 0));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.price, 0));
     out.push('|');
-    fv::escape_into(out, &fv::js_to_fixed(props.price, 1));
+    fv::core::escape::escape_into(out, &fv::core::numbers::js_to_fixed(props.price, 1));
     out.push('|');
-    fv::push_number(out, props.qty as f64 / 4.0);
+    fv::core::numbers::push_number(out, props.qty as f64 / 4.0);
     out.push('|');
-    fv::push_number(out, props.qty as f64 / 0.0);
+    fv::core::numbers::push_number(out, props.qty as f64 / 0.0);
     out.push('|');
-    fv::push_number(out, -(props.qty as f64) / 0.0);
+    fv::core::numbers::push_number(out, -(props.qty as f64) / 0.0);
     out.push_str("|NaN|");
-    fv::push_number(out, props.price % 1.0);
+    fv::core::numbers::push_number(out, props.price % 1.0);
     out.push_str("</p><p>");
-    fv::push_number(out, fv::js_round(props.price));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_round(props.price));
     out.push('|');
-    fv::push_number(out, props.price.floor());
+    fv::core::numbers::push_number(out, props.price.floor());
     out.push('|');
-    fv::push_number(out, props.price.ceil());
+    fv::core::numbers::push_number(out, props.price.ceil());
     out.push('|');
-    fv::push_number(out, (-props.price).trunc());
+    fv::core::numbers::push_number(out, (-props.price).trunc());
     out.push('|');
-    fv::push_number(out, fv::js_max(props.price, props.qty as f64));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_max(props.price, props.qty as f64));
     out.push('|');
-    fv::push_number(out, fv::js_min(props.ratio, 0.25f64));
+    fv::core::numbers::push_number(out, fv::core::numbers::js_min(props.ratio, 0.25f64));
     out.push('|');
-    fv::push_number(out, (-props.price).abs());
+    fv::core::numbers::push_number(out, (-props.price).abs());
     out.push_str("</p><p>");
-    fv::push_number(out, props.rate.unwrap_or(0.5f64));
+    fv::core::numbers::push_number(out, props.rate.unwrap_or(0.5f64));
     out.push('|');
     if let Some(v) = props.rate {
-        fv::push_number(out, v);
+        fv::core::numbers::push_number(out, v);
     }
     out.push('|');
-    fv::escape_into(out, &format!("{}/{}", fv::Js(props.price), fv::Js(props.qty)));
+    fv::core::escape::escape_into(out, &format!("{}/{}", fv::core::numbers::Js(props.price), fv::core::numbers::Js(props.qty)));
     out.push('|');
-    fv::escape_into(out, &fv::Js(props.ratio).to_string());
+    fv::core::escape::escape_into(out, &fv::core::numbers::Js(props.ratio).to_string());
     out.push('|');
     out.push_str(if props.price > props.qty as f64 { "true" } else { "false" });
     out.push('|');
@@ -119,21 +119,21 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

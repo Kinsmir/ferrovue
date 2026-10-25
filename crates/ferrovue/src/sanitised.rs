@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::TrustedHtml;
+use crate::trusted::TrustedHtml;
 
 /// HTML cleaned by [ammonia](https://docs.rs/ammonia): a [`TrustedHtml`] for `v-html`, with the
 /// `ammonia` feature.
@@ -10,7 +10,7 @@ use crate::TrustedHtml;
 /// the default policy. Name it as the `trustedHtml` type in `ferrovue.config.json`:
 ///
 /// ```json
-/// { "trustedHtml": "ferrovue::Sanitised" }
+/// { "trustedHtml": "ferrovue::sanitised::Sanitised" }
 /// ```
 ///
 /// It serialises as the cleaned string, so an island's `data-props` carries exactly the HTML the
@@ -19,7 +19,7 @@ use crate::TrustedHtml;
 /// # Example
 ///
 /// ```
-/// use ferrovue::{Sanitised, trusted_into};
+/// use ferrovue::{sanitised::Sanitised, trusted::trusted_into};
 ///
 /// let body = Sanitised::new(r#"<p onclick="steal()">Hi <script>alert(1)</script><a href="javascript:x()">you</a></p>"#);
 /// assert_eq!(body.as_str(), r#"<p>Hi <a rel="noopener noreferrer">you</a></p>"#);

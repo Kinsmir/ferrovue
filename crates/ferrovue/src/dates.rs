@@ -1,4 +1,4 @@
-use crate::Refused;
+use crate::refused::Refused;
 
 const MS_PER_DAY: i64 = 86_400_000;
 const MAX_TIME: f64 = 8.64e15;
@@ -9,9 +9,9 @@ const MAX_TIME: f64 = 8.64e15;
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_time_clip(1.9), 1.0);
-/// assert!(ferrovue::js_time_clip(8.64e15 + 1.0).is_nan());
-/// assert!(ferrovue::js_time_clip(-0.0).is_sign_positive());
+/// assert_eq!(ferrovue::dates::js_time_clip(1.9), 1.0);
+/// assert!(ferrovue::dates::js_time_clip(8.64e15 + 1.0).is_nan());
+/// assert!(ferrovue::dates::js_time_clip(-0.0).is_sign_positive());
 /// ```
 #[must_use]
 pub fn js_time_clip(x: f64) -> f64 {
@@ -38,9 +38,9 @@ pub fn js_time_clip(x: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_date_parse("1970-01-02"), 86_400_000.0);
-/// assert_eq!(ferrovue::js_date_parse("1970-01-01T01:00+01:00"), 0.0);
-/// assert!(std::panic::catch_unwind(|| ferrovue::js_date_parse("1970-01-01T00:00")).is_err());
+/// assert_eq!(ferrovue::dates::js_date_parse("1970-01-02"), 86_400_000.0);
+/// assert_eq!(ferrovue::dates::js_date_parse("1970-01-01T01:00+01:00"), 0.0);
+/// assert!(std::panic::catch_unwind(|| ferrovue::dates::js_date_parse("1970-01-01T00:00")).is_err());
 /// ```
 #[must_use]
 pub fn js_date_parse(s: &str) -> f64 {
@@ -76,9 +76,9 @@ pub fn try_date_parse(s: &str) -> Result<f64, Refused> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_to_iso_string(0.0), "1970-01-01T00:00:00.000Z");
-/// assert_eq!(ferrovue::js_to_iso_string(-62_198_755_200_000.0), "-000001-01-01T00:00:00.000Z");
-/// assert!(std::panic::catch_unwind(|| ferrovue::js_to_iso_string(f64::NAN)).is_err());
+/// assert_eq!(ferrovue::dates::js_to_iso_string(0.0), "1970-01-01T00:00:00.000Z");
+/// assert_eq!(ferrovue::dates::js_to_iso_string(-62_198_755_200_000.0), "-000001-01-01T00:00:00.000Z");
+/// assert!(std::panic::catch_unwind(|| ferrovue::dates::js_to_iso_string(f64::NAN)).is_err());
 /// ```
 #[must_use]
 pub fn js_to_iso_string(t: f64) -> String {
@@ -121,7 +121,7 @@ pub fn try_to_iso_string(t: f64) -> Result<String, Refused> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_full_year(-1.0), 1969.0);
+/// assert_eq!(ferrovue::dates::js_utc_full_year(-1.0), 1969.0);
 /// ```
 #[must_use]
 pub fn js_utc_full_year(t: f64) -> f64 {
@@ -133,7 +133,7 @@ pub fn js_utc_full_year(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_month(-1.0), 11.0);
+/// assert_eq!(ferrovue::dates::js_utc_month(-1.0), 11.0);
 /// ```
 #[must_use]
 pub fn js_utc_month(t: f64) -> f64 {
@@ -146,7 +146,7 @@ pub fn js_utc_month(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_date(-1.0), 31.0);
+/// assert_eq!(ferrovue::dates::js_utc_date(-1.0), 31.0);
 /// ```
 #[must_use]
 pub fn js_utc_date(t: f64) -> f64 {
@@ -159,7 +159,7 @@ pub fn js_utc_date(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_day(0.0), 4.0); // a Thursday
+/// assert_eq!(ferrovue::dates::js_utc_day(0.0), 4.0); // a Thursday
 /// ```
 #[must_use]
 pub fn js_utc_day(t: f64) -> f64 {
@@ -173,7 +173,7 @@ pub fn js_utc_day(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_hours(-1.0), 23.0);
+/// assert_eq!(ferrovue::dates::js_utc_hours(-1.0), 23.0);
 /// ```
 #[must_use]
 pub fn js_utc_hours(t: f64) -> f64 {
@@ -185,7 +185,7 @@ pub fn js_utc_hours(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_minutes(-1.0), 59.0);
+/// assert_eq!(ferrovue::dates::js_utc_minutes(-1.0), 59.0);
 /// ```
 #[must_use]
 pub fn js_utc_minutes(t: f64) -> f64 {
@@ -197,7 +197,7 @@ pub fn js_utc_minutes(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_seconds(-1.0), 59.0);
+/// assert_eq!(ferrovue::dates::js_utc_seconds(-1.0), 59.0);
 /// ```
 #[must_use]
 pub fn js_utc_seconds(t: f64) -> f64 {
@@ -209,7 +209,7 @@ pub fn js_utc_seconds(t: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_utc_milliseconds(-1.0), 999.0);
+/// assert_eq!(ferrovue::dates::js_utc_milliseconds(-1.0), 999.0);
 /// ```
 #[must_use]
 pub fn js_utc_milliseconds(t: f64) -> f64 {
@@ -228,8 +228,8 @@ const MONTHS: [&str; 12] = [
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_to_utc_string(0.0), "Thu, 01 Jan 1970 00:00:00 GMT");
-/// assert_eq!(ferrovue::js_to_utc_string(f64::NAN), "Invalid Date");
+/// assert_eq!(ferrovue::dates::js_to_utc_string(0.0), "Thu, 01 Jan 1970 00:00:00 GMT");
+/// assert_eq!(ferrovue::dates::js_to_utc_string(f64::NAN), "Invalid Date");
 /// ```
 #[must_use]
 pub fn js_to_utc_string(t: f64) -> String {
@@ -257,8 +257,8 @@ pub fn js_to_utc_string(t: f64) -> String {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_to_json(0.0).as_deref(), Some("1970-01-01T00:00:00.000Z"));
-/// assert_eq!(ferrovue::js_to_json(f64::NAN), None);
+/// assert_eq!(ferrovue::dates::js_to_json(0.0).as_deref(), Some("1970-01-01T00:00:00.000Z"));
+/// assert_eq!(ferrovue::dates::js_to_json(f64::NAN), None);
 /// ```
 #[must_use]
 pub fn js_to_json(t: f64) -> Option<String> {
@@ -271,8 +271,8 @@ pub fn js_to_json(t: f64) -> Option<String> {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_json_date(0.0), r#""1970-01-01T00:00:00.000Z""#);
-/// assert_eq!(ferrovue::js_json_date(f64::NAN), "null");
+/// assert_eq!(ferrovue::dates::js_json_date(0.0), r#""1970-01-01T00:00:00.000Z""#);
+/// assert_eq!(ferrovue::dates::js_json_date(f64::NAN), "null");
 /// ```
 #[must_use]
 pub fn js_json_date(t: f64) -> String {
@@ -327,9 +327,9 @@ fn v8_day(year: f64, month: f64, date: f64) -> f64 {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::js_date_utc(2024.0, 1.0, 29.0, 0.0, 0.0, 0.0, 0.0), 1_709_164_800_000.0);
-/// assert_eq!(ferrovue::js_date_utc(99.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0), 915_148_800_000.0);
-/// assert!(ferrovue::js_date_utc(f64::NAN, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0).is_nan());
+/// assert_eq!(ferrovue::dates::js_date_utc(2024.0, 1.0, 29.0, 0.0, 0.0, 0.0, 0.0), 1_709_164_800_000.0);
+/// assert_eq!(ferrovue::dates::js_date_utc(99.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0), 915_148_800_000.0);
+/// assert!(ferrovue::dates::js_date_utc(f64::NAN, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0).is_nan());
 /// ```
 #[must_use]
 pub fn js_date_utc(

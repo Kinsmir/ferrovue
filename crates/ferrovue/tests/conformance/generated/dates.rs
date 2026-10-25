@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,80 +52,80 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(270 + 23 * props.days.len() + props.published.len() + props.updated.as_deref().map_or(0, str::len) + props.days.iter().map(|v| v.len()).sum::<usize>());
-    let fv_refusals = fv::Refusals::new(NAME, "components/Dates.vue");
-    let s_date = std::cell::LazyCell::new(|| fv_refusals.keep(fv::try_date_parse(&props.published), 6, 29));
-    let s_moment = fv::js_time_clip(props.at as f64 + props.offset);
+    let fv_refusals = fv::refused::Refusals::new(NAME, "components/Dates.vue");
+    let s_date = std::cell::LazyCell::new(|| fv_refusals.keep(fv::dates::try_date_parse(&props.published), 6, 29));
+    let s_moment = fv::dates::js_time_clip(props.at as f64 + props.offset);
     let s_valid = !s_moment.is_nan();
-    let s_year = std::cell::LazyCell::new(|| fv::js_utc_full_year(*s_date));
+    let s_year = std::cell::LazyCell::new(|| fv::dates::js_utc_full_year(*s_date));
     out.push_str("<article><time datetime=\"");
-    fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(*s_date), 14, 22));
+    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(*s_date), 14, 22));
     out.push_str("\">");
-    fv::push_number(out, fv::js_utc_date(*s_date));
+    fv::core::numbers::push_number(out, fv::dates::js_utc_date(*s_date));
     out.push('/');
-    fv::push_number(out, fv::js_utc_month(*s_date) + 1.0);
+    fv::core::numbers::push_number(out, fv::dates::js_utc_month(*s_date) + 1.0);
     out.push('/');
-    fv::push_number(out, *s_year);
+    fv::core::numbers::push_number(out, *s_year);
     out.push_str("</time><p>");
-    fv::push_number(out, fv_refusals.keep(fv::try_date_parse(&props.published), 15, 11));
+    fv::core::numbers::push_number(out, fv_refusals.keep(fv::dates::try_date_parse(&props.published), 15, 11));
     out.push('|');
-    fv::push_number(out, fv_refusals.keep(fv::try_date_parse(&props.published), 15, 47));
+    fv::core::numbers::push_number(out, fv_refusals.keep(fv::dates::try_date_parse(&props.published), 15, 47));
     out.push('|');
-    fv::push_number(out, *s_date);
+    fv::core::numbers::push_number(out, *s_date);
     out.push('|');
-    fv::push_number(out, fv::js_utc_day(*s_date));
+    fv::core::numbers::push_number(out, fv::dates::js_utc_day(*s_date));
     out.push_str("</p><p>");
-    fv::escape_into(out, &format!("{}:{}:{}.{}", fv::Js(fv::js_utc_hours(*s_date)), fv::js_pad_start(&fv::Js(fv::js_utc_minutes(*s_date)).to_string(), 2.0f64, "0"), fv::js_pad_start(&fv::Js(fv::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"), fv::Js(fv::js_utc_milliseconds(*s_date))));
+    fv::core::escape::escape_into(out, &format!("{}:{}:{}.{}", fv::core::numbers::Js(fv::dates::js_utc_hours(*s_date)), fv::strings::js_pad_start(&fv::core::numbers::Js(fv::dates::js_utc_minutes(*s_date)).to_string(), 2.0f64, "0"), fv::strings::js_pad_start(&fv::core::numbers::Js(fv::dates::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"), fv::core::numbers::Js(fv::dates::js_utc_milliseconds(*s_date))));
     out.push_str("</p>");
     if let Some(fv_updated) = props.updated.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(fv_updated), 17, 26)), 17, 26));
+        fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(fv_updated), 17, 26)), 17, 26));
         out.push_str("</p>");
     } else {
         out.push_str("<p>never updated</p>");
     }
     if s_valid {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(s_moment), 19, 24));
+        fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(s_moment), 19, 24));
         out.push_str("</p>");
     } else {
         out.push_str("<p>invalid: ");
-        fv::push_number(out, s_moment);
+        fv::core::numbers::push_number(out, s_moment);
         out.push('|');
-        fv::push_number(out, fv::js_utc_full_year(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_month(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_month(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_date(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_date(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_day(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_day(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_hours(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_hours(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_minutes(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_minutes(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_seconds(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_seconds(s_moment));
         out.push('|');
-        fv::push_number(out, fv::js_utc_milliseconds(s_moment));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_milliseconds(s_moment));
         out.push_str("</p>");
     }
     out.push_str("<p>");
-    fv::push_number(out, fv::js_utc_full_year(fv::js_time_clip(props.at as f64)));
+    fv::core::numbers::push_number(out, fv::dates::js_utc_full_year(fv::dates::js_time_clip(props.at as f64)));
     out.push('|');
-    fv::push_number(out, fv::js_time_clip(props.offset));
+    fv::core::numbers::push_number(out, fv::dates::js_time_clip(props.offset));
     out.push('|');
-    fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(1709188200000.0f64), 21, 80));
+    fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(1709188200000.0f64), 21, 80));
     out.push('|');
-    fv::push_number(out, *s_date);
+    fv::core::numbers::push_number(out, *s_date);
     out.push_str("</p><ul><!--[-->");
     for fv_day_ref in props.days.iter() {
         let fv_day: &str = fv_day_ref;
         out.push_str("<li>");
-        fv::escape_into(out, &fv::js_slice(&fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(fv_day), 23, 45)), 23, 45), 0.0f64, Some(10.0f64)));
+        fv::core::escape::escape_into(out, &fv::strings::js_slice(&fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(fv_day), 23, 45)), 23, 45), 0.0f64, Some(10.0f64)));
         out.push_str(" is day ");
-        fv::push_number(out, fv::js_utc_day(fv_refusals.keep(fv::try_date_parse(fv_day), 23, 99)));
+        fv::core::numbers::push_number(out, fv::dates::js_utc_day(fv_refusals.keep(fv::dates::try_date_parse(fv_day), 23, 99)));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></article>");
@@ -133,21 +133,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

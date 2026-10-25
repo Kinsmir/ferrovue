@@ -50,7 +50,7 @@ crates/ferrovue/             the Rust runtime crate, which generated code calls
   tests/conformance/         components, fixtures, recorded HTML, generated Rust
   tests/literal_props/       components compiled with `"builders": false`
   tests/closed_unions/       components that read props typed as closed unions through lookups and `:is`
-  tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::Sanitised`
+  tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::sanitised::Sanitised`
   tests/chrono_dates/        the conformance suite's `Date` components, compiled with chrono's type
   tests/own_dates/           `DateStamp`, compiled with a `dateType` whose time values need clipping
   tests/own_unions/          the union components, compiled with `unions` naming enums of the test's own

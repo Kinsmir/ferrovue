@@ -88,7 +88,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -96,102 +96,102 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(140 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
-    let s_line = format!("{}/{}/{}/{}", props.label.as_deref().unwrap_or("undefined"), fv::JsOr(props.count.map(fv::Js), "undefined"), props.nick.as_deref().unwrap_or("null"), props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
-    let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::js_length(fv_t) as f64 > 1.0).collect::<Vec<_>>().join(",");
+    let s_line = format!("{}/{}/{}/{}", props.label.as_deref().unwrap_or("undefined"), fv::strings::JsOr(props.count.map(fv::core::numbers::Js), "undefined"), props.nick.as_deref().unwrap_or("null"), props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
+    let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) as f64 > 1.0).collect::<Vec<_>>().join(",");
     out.push_str("<section");
     if props.label.as_deref().unwrap_or("undefined").is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
+        fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
         out.push('"');
     }
-    if format!("{}", fv::JsOr(props.count.map(fv::Js), "undefined")).is_empty() {
+    if format!("{}", fv::strings::JsOr(props.count.map(fv::core::numbers::Js), "undefined")).is_empty() {
         out.push_str(" data-n");
     } else {
         out.push_str(" data-n=\"");
-        fv::escape_into(out, &format!("{}", fv::JsOr(props.count.map(fv::Js), "undefined")));
+        fv::core::escape::escape_into(out, &format!("{}", fv::strings::JsOr(props.count.map(fv::core::numbers::Js), "undefined")));
         out.push('"');
     }
     out.push_str("><p>");
-    fv::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
+    fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
     out.push('|');
-    fv::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
+    fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
     out.push('|');
-    fv::escape_into(out, &format!("{}", fv::JsOr(props.count.map(fv::Js), "undefined")));
+    fv::core::escape::escape_into(out, &format!("{}", fv::strings::JsOr(props.count.map(fv::core::numbers::Js), "undefined")));
     out.push('|');
-    fv::escape_into(out, &format!("{}", fv::JsOr(props.ratio.map(fv::Js), "undefined")));
+    fv::core::escape::escape_into(out, &format!("{}", fv::strings::JsOr(props.ratio.map(fv::core::numbers::Js), "undefined")));
     out.push('|');
-    fv::escape_into(out, if props.on.unwrap_or(false) { "true" } else { "false" });
+    fv::core::escape::escape_into(out, if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
-    fv::escape_into(out, props.nick.as_deref().unwrap_or("null"));
+    fv::core::escape::escape_into(out, props.nick.as_deref().unwrap_or("null"));
     out.push('|');
-    fv::escape_into(out, &format!("{}", fv::JsOr(props.score.map(fv::Js), "null")));
+    fv::core::escape::escape_into(out, &format!("{}", fv::strings::JsOr(props.score.map(fv::core::numbers::Js), "null")));
     out.push_str("</p><p>");
     if let Some(v) = props.label.as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.count {
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = props.nick.as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push_str("|undefined|null|[undefined]</p><p>");
-    fv::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.nums.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.nums.iter().copied().map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.fracs.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.fracs.iter().copied().map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.flags.iter().copied().map(|v| if v { "true" } else { "false" }).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.flags.iter().copied().map(|v| if v { "true" } else { "false" }).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.names.iter().map(|v| v.as_deref().unwrap_or("")).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.names.iter().map(|v| v.as_deref().unwrap_or("")).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.marks.iter().map(|v| v.map_or_else(String::new, |v| fv::Js(v).to_string())).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.marks.iter().map(|v| v.map_or_else(String::new, |v| fv::core::numbers::Js(v).to_string())).collect::<Vec<_>>().join(","));
     out.push_str("|</p><p>");
-    fv::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_t_2.to_uppercase()).into_owned())).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_t_2.to_uppercase()).into_owned())).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &props.nums.iter().copied().map(|fv_n| fv_n as f64 / 2.0).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.nums.iter().copied().map(|fv_n| fv_n as f64 / 2.0).map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    fv::escape_into(out, &format!("({})", fv::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>().join(",")));
+    fv::core::escape::escape_into(out, &format!("({})", fv::strings::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::escape_into(out, &s_kept);
+    fv::core::escape::escape_into(out, &s_kept);
     out.push('|');
-    fv::escape_into(out, &s_line);
+    fv::core::escape::escape_into(out, &s_line);
     out.push_str("</p><p>");
-    fv::escape_into(out, &format!("<{}>{}", props.label.as_deref().unwrap_or(""), fv::JsOr(props.count.map(fv::Js), "undefined")));
+    fv::core::escape::escape_into(out, &format!("<{}>{}", props.label.as_deref().unwrap_or(""), fv::strings::JsOr(props.count.map(fv::core::numbers::Js), "undefined")));
     out.push('|');
-    fv::escape_into(out, &format!("{}{}{}", props.nick.as_deref().unwrap_or("-"), fv::JsOr(props.score.map(fv::Js), "null"), (if props.on.unwrap_or(false) { "true" } else { "false" })));
+    fv::core::escape::escape_into(out, &format!("{}{}{}", props.nick.as_deref().unwrap_or("-"), fv::strings::JsOr(props.score.map(fv::core::numbers::Js), "null"), (if props.on.unwrap_or(false) { "true" } else { "false" })));
     out.push('|');
-    fv::escape_into(out, props.label.as_deref().unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.label.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::core::escape::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
     out.push_str("</p></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

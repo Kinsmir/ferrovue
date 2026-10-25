@@ -59,7 +59,7 @@ Then add a key for each part of the app the server must reproduce:
 | vue-i18n | `i18n`: `{ messages, locale?, fallbackLocale? }` | [`i18n`](crate::guide::i18n) |
 | `<style scoped>`, `v-bind()` in `<style>`, `<style module>` | `scopeId`, `viteRoot` and `isProduction` as the Vite build sets them, and `cssModules` as Vite's `css.modules` | [`scoped_styles`](crate::guide::scoped_styles) |
 | `v-html` | `trustedHtml`, the Rust type of a `TrustedHtml` prop | [`escaping`](crate::guide::escaping) |
-| `Date` props | `dateType`, when the default `ferrovue::JsDate` does not suit | [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
+| `Date` props | `dateType`, when the default `ferrovue::js_date::JsDate` does not suit | [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |
 | Functions of its own called from templates | `helpers` | [`errors_and_limits`](crate::guide::errors_and_limits#helpers) |
 | Components from a library the compiler refuses | `twins` | [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins) |
 | Custom directives with no server output | `clientDirectives` | [`quick_start`](crate::guide::quick_start#2-configure) |
@@ -104,7 +104,7 @@ What the Node server did per request moves into a Rust handler:
 - **vue-i18n.** Build an `I18n` per request with the generated `i18n(locale)`:
   [`i18n`](crate::guide::i18n#rendering-in-a-locale).
 - **The page head and teleports.** `useHead` and `useSeoMeta` write into a
-  [`Head`](crate::Head), and `<Teleport>` into [`Teleports`](crate::Teleports), which the server
+  [`Head`](crate::head::Head), and `<Teleport>` into [`Teleports`](crate::teleport::Teleports), which the server
   places in the page: [`head`](crate::guide::head) and [`teleports`](crate::guide::teleports).
 - **provide and inject.** What the client app gives `app.provide` is a generated `Provides`:
   [`provide_inject`](crate::guide::provide_inject).
@@ -119,7 +119,7 @@ may combine with islands:
   is the smallest change to the client:
   [hydrating the whole app](crate::guide::islands_and_hydration#hydrating-the-whole-app).
 - **A page recorded part by part**: the server writes the layout and its parts with
-  [`Page`](crate::Page), and `mountPage` hydrates them as one app:
+  [`Page`](crate::page::Page), and `mountPage` hydrates them as one app:
   [hydrating a page](crate::guide::islands_and_hydration#hydrating-a-page).
 - **Islands**: each interactive component hydrates on its own from its props, with `mountIslands`
   and the `ferrovue/islands` module the Vite plugin writes. The rest of the page stays static HTML,

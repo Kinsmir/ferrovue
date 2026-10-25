@@ -1,4 +1,4 @@
-use ferrovue::Union;
+use ferrovue::union::Union;
 
 /// `Tone` as the application keeps it, which `unions` in ferrovue.config.json names for
 /// `Toned.vue`'s `type Tone`.

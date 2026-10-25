@@ -1,6 +1,11 @@
 use std::borrow::Cow;
 
-use crate::{escape_into, js_trim, push_int, push_number, record};
+use ferrovue_core::{
+    escape::escape_into,
+    numbers::{push_int, push_number},
+};
+
+use crate::{record, strings::js_trim};
 
 /// One attribute's value, as Vue holds it once the parent's virtual node is made: `createVNode`
 /// has already normalised a class given as an array or an object, and a style given as an array.
@@ -141,13 +146,13 @@ enum List<'a> {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{Attr, Attrs};
+/// use ferrovue::attrs::{Attr, Attrs};
 ///
 /// let passed = [("class", Attr::str("wide")), ("title", Attr::str("Hi")), ("data-n", Attr::Int(2))];
 /// let attrs = Attrs::new(&passed, " data-v-1");
 /// // The root of the child: `<div class="card" title="own">`.
 /// let mut out = String::from("<div");
-/// ferrovue::attrs_into(&mut out, &[&[("class", Attr::str("card")), ("title", Attr::str("own"))], attrs.list()], 1, attrs.ids());
+/// ferrovue::attrs::attrs_into(&mut out, &[&[("class", Attr::str("card")), ("title", Attr::str("own"))], attrs.list()], 1, attrs.ids());
 /// out.push('>');
 /// assert_eq!(out, r#"<div class="card wide" title="Hi" data-n="2" data-v-1>"#);
 /// ```
@@ -281,9 +286,9 @@ fn join_classes(a: &str, b: &str) -> String {
 /// # Example
 ///
 /// ```
-/// use ferrovue::Attr;
+/// use ferrovue::attrs::Attr;
 ///
-/// let merged = ferrovue::merge_props(&[
+/// let merged = ferrovue::attrs::merge_props(&[
 ///     &[("class", Attr::str("a")), ("id", Attr::str("x"))],
 ///     &[("id", Attr::Undefined), ("class", Attr::str("b"))],
 /// ]);
@@ -305,11 +310,11 @@ pub fn merge_props<'a>(sources: &[&[(&'a str, Attr<'a>)]]) -> Vec<(&'a str, Attr
 /// # Example
 ///
 /// ```
-/// use ferrovue::Attr;
+/// use ferrovue::attrs::Attr;
 ///
 /// let mut out = String::new();
 /// // `<p :id="undefined">` given `title` and `id`, then `v-show`'s style.
-/// ferrovue::attrs_into(
+/// ferrovue::attrs::attrs_into(
 ///     &mut out,
 ///     &[
 ///         &[("id", Attr::str("own"))],
@@ -339,10 +344,10 @@ pub fn attrs_into(out: &mut String, sources: &[&[(&str, Attr<'_>)]], ids_at: usi
 /// # Example
 ///
 /// ```
-/// use ferrovue::Attr;
+/// use ferrovue::attrs::Attr;
 ///
 /// let mut out = String::new();
-/// ferrovue::passed_attrs_into(&mut out, &[("class", Attr::Undefined), ("style", Attr::str("color: red"))], " data-v-1");
+/// ferrovue::attrs::passed_attrs_into(&mut out, &[("class", Attr::Undefined), ("style", Attr::str("color: red"))], " data-v-1");
 /// assert_eq!(out, r#" class="" style="color: red" data-v-1"#);
 /// ```
 pub fn passed_attrs_into(out: &mut String, list: &[(&str, Attr<'_>)], ids: &str) {
@@ -488,7 +493,7 @@ fn style_into(out: &mut String, value: &Attr<'_>) {
 ///
 /// ```
 /// let mut out = String::new();
-/// ferrovue::style_text_into(&mut out, "color: red; background: url(a;b) /* note */");
+/// ferrovue::attrs::style_text_into(&mut out, "color: red; background: url(a;b) /* note */");
 /// assert_eq!(out, "color:red;background:url(a;b);");
 /// ```
 #[doc(hidden)]
@@ -631,12 +636,12 @@ fn split_declarations(text: &str) -> Vec<&str> {
 
 /// `normalizeClass` of a list of names, each one trimmed, the empty ones dropped, the rest joined
 /// with one space: a class bound to an array or an object, as a value among fallthrough attributes.
-/// Unlike [`class_into`](crate::class_into), it is not escaped: it is written later.
+/// Unlike [`class_into`](crate::class::class_into), it is not escaped: it is written later.
 ///
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::class_names(&[" a ", "", "b"]), "a b");
+/// assert_eq!(ferrovue::attrs::class_names(&[" a ", "", "b"]), "a b");
 /// ```
 #[must_use]
 #[doc(hidden)]
@@ -664,8 +669,8 @@ pub fn class_names(items: &[&str]) -> String {
 /// # Example
 ///
 /// ```
-/// assert_eq!(ferrovue::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
-/// assert_eq!(ferrovue::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
+/// assert_eq!(ferrovue::attrs::scope_attrs(" data-v-a", "data-v-b", ""), " data-v-a data-v-b");
+/// assert_eq!(ferrovue::attrs::scope_attrs("", "data-v-a", " data-v-a data-v-c-s"), " data-v-a data-v-c-s");
 /// ```
 #[must_use]
 #[doc(hidden)]

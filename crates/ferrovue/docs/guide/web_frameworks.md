@@ -4,7 +4,7 @@ Three optional features turn renders into HTTP responses:
 
 | Feature | What it adds |
 |---|---|
-| `axum` | `IntoResponse` for [`Html`](crate::Html) and `HtmlStream` |
+| `axum` | `IntoResponse` for [`Html`](crate::html::Html) and `HtmlStream` |
 | `actix-web` | `Responder` for both, and `From` both for `HttpResponse` |
 | `stream` | `HtmlStream` alone, a `Stream` of byte chunks for any other server; both features above include it |
 
@@ -18,7 +18,7 @@ of changing the status applies.
 
 # A component
 
-A generated `html()` or `island()` is an [`Html`](crate::Html), and with the `axum` feature an
+A generated `html()` or `island()` is an [`Html`](crate::html::Html), and with the `axum` feature an
 `IntoResponse`. A handler builds the props and returns `into_html(props)` or `into_island(props)`,
 the forms that hold their props: the component is rendered once the handler has returned, into the
 response's body.
@@ -56,28 +56,28 @@ response's body.
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.reserve(30 + props.name.len());
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::escape_into(out, &props.name);
+#     fv::core::escape::escape_into(out, &props.name);
 #     out.push_str("!</p>");
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::markup(props, render)
+# pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::markup(props, render)
 # }
 #
 # /// The component as an island the client hydrates.
-# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-#     fv::Html::island(NAME, props, render)
+# pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+#     fv::html::Html::island(NAME, props, render)
 # }
 #
 # /// [`html`], holding the props: a handler that builds them can return it.
-# pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-#     fv::Html::markup_owned(props, render)
+# pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+#     fv::html::Html::markup_owned(props, render)
 # }
 #
 # /// [`island`], holding the props.
-# pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-#     fv::Html::island_owned(NAME, props, render)
+# pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+#     fv::html::Html::island_owned(NAME, props, render)
 # }
 # }
 # #[cfg(feature = "axum")]
@@ -129,11 +129,11 @@ another status than `200 OK`, respond with the status beside it:
 # fn main() {
 use axum::http::{StatusCode, Uri};
 use axum::response::{IntoResponse, Response};
-use ferrovue::HtmlStream;
+use ferrovue::web::HtmlStream;
 
 async fn not_found(uri: Uri) -> Response {
     let mut page = String::from("<!doctype html><html><body><h1>Nothing at <code>");
-    ferrovue::escape_into(&mut page, uri.path());
+    ferrovue::core::escape::escape_into(&mut page, uri.path());
     page.push_str("</code></h1></body></html>");
     (StatusCode::NOT_FOUND, HtmlStream::new(page)).into_response()
 }
@@ -146,7 +146,7 @@ let app: axum::Router = axum::Router::new().fallback(not_found);
 
 # A page streamed
 
-A page rendered with [`hole`](crate::hole)s ([`streaming`](crate::guide::streaming)) is sent in
+A page rendered with [`hole`](crate::slots::hole)s ([`streaming`](crate::guide::streaming)) is sent in
 pieces. Give `HtmlStream` the whole render and a future for each hole, in the order the holes
 appear: the markup up to the first hole goes out at once, and each hole's content, then the markup
 after it, as soon as that hole and every one before it are ready. The futures all run from the
@@ -159,11 +159,11 @@ start, so the page ends when the slowest one does.
 # pub struct Props { pub count: i64 }
 # pub fn render(out: &mut String, props: &Props) {
 #     out.push_str("<p>");
-#     fv::push_int(out, props.count);
+#     fv::core::numbers::push_int(out, props.count);
 #     out.push_str(" reviews</p>");
 # }
-# pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-#     fv::Html::island_owned("Reviews", props, render)
+# pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+#     fv::html::Html::island_owned("Reviews", props, render)
 # }
 # }
 # #[cfg(feature = "axum")]
@@ -172,7 +172,7 @@ use std::time::Duration;
 
 use axum::extract::Path;
 use axum::response::{IntoResponse, Response};
-use ferrovue::{HtmlStream, hole, slot_into};
+use ferrovue::{web::HtmlStream, slots::{hole, slot_into}};
 
 /// The reviews of a book, from a slow service.
 async fn review_count(_id: &str) -> i64 {
@@ -182,9 +182,9 @@ async fn review_count(_id: &str) -> i64 {
 
 async fn book(Path(id): Path<String>) -> Response {
     // The book's page, rendered at once with a hole where the reviews go: here the slot of a
-    // generated component, `Slots { reviews: Some(ferrovue::hole()), .. }`.
+    // generated component, `Slots { reviews: Some(ferrovue::slots::hole()), .. }`.
     let mut page = String::from("<!doctype html><html><body><h1>");
-    ferrovue::escape_into(&mut page, &id);
+    ferrovue::core::escape::escape_into(&mut page, &id);
     page.push_str("</h1><section>");
     slot_into(&mut page, Some(hole()), None);
     page.push_str("</section></body></html>");
@@ -245,18 +245,18 @@ an `HttpResponse` with `.into()`.
 # }
 # pub fn render(out: &mut String, props: &Props<'_>) {
 #     out.push_str("<p class=\"greeting\">Hello, ");
-#     fv::escape_into(out, &props.name);
+#     fv::core::escape::escape_into(out, &props.name);
 #     out.push_str("!</p>");
 # }
-# pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-#     fv::Html::markup_owned(props, render)
+# pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+#     fv::html::Html::markup_owned(props, render)
 # }
 # }
 # #[cfg(feature = "actix-web")]
 # fn main() {
 use actix_web::http::StatusCode;
 use actix_web::{App, Responder, web};
-use ferrovue::HtmlStream;
+use ferrovue::web::HtmlStream;
 
 async fn hello(name: web::Path<String>) -> impl Responder {
     greeting::into_html(greeting::Props::new(name.into_inner()))

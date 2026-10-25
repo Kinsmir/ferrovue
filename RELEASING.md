@@ -18,7 +18,7 @@ becomes public until a maintainer approves it, once on each registry.
    reads versions. `cargo semver-checks -p <crate>` (`cargo install cargo-semver-checks --locked`)
    compares a crate with its last version on crates.io and says which the changes need; the
    release workflow runs the same check on every crate crates.io already has, and stops a release
-   whose version is too small. It does not follow a re-export from another crate: `ferrovue::Router`
+   whose version is too small. It does not follow a re-export from another crate: `ferrovue::router::Router`
    is checked as `ferrovue_router::Router`, and `crates/ferrovue/tests/paths.rs` holds each path
    `ferrovue` re-exports in place. A `#[doc(hidden)]` item is outside the API it compares, and
    hiding one it compared before counts as breaking; CONTRIBUTING.md's "The crates' contract"

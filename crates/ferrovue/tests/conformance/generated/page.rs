@@ -42,7 +42,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -50,37 +50,37 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(46 + 7 * props.items.len() + props.title.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
-        head: Some(fv::Slot::markup(&|out: &mut String| -> bool {
+        head: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if props.show_head {
                 filled = true;
                 out.push_str("<b>");
-                fv::escape_into(out, &props.title);
+                fv::core::escape::escape_into(out, &props.title);
                 out.push_str("</b>");
             } else {
                 out.push_str("<!---->");
             }
             filled
         })),
-        default: Some(fv::Slot::markup(&|out: &mut String| -> bool {
+        default: Some(fv::slots::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             out.push_str("<!--[-->");
             for fv_i_ref in props.items.iter() {
                 let fv_i: &str = fv_i_ref;
                 filled = true;
                 out.push_str("<p>");
-                fv::escape_into(out, fv_i);
+                fv::core::escape::escape_into(out, fv_i);
                 out.push_str("</p>");
             }
             out.push_str("<!--]-->");
             if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
                 filled = true;
                 out.push_str("<em>");
-                fv::escape_into(out, fv_note);
+                fv::core::escape::escape_into(out, fv_note);
                 out.push_str("</em>");
             } else {
                 out.push_str("<!---->");
@@ -92,21 +92,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

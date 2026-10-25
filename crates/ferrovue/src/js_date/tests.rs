@@ -292,7 +292,7 @@ struct Nested {
     #[serde(with = "dates_in")]
     seen: Vec<Option<JsDate>>,
     #[serde(with = "dates_in")]
-    by: crate::Record<'static, JsDate>,
+    by: crate::record::Record<'static, JsDate>,
     #[serde(default, skip_serializing_if = "Option::is_none", with = "dates_in")]
     maybe: Option<Vec<JsDate>>,
 }

@@ -37,8 +37,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
-    fv::rendered(try_render(out, props, fv_loads));
+pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) {
+    fv::refused::rendered(try_render(out, props, fv_loads));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,22 +46,22 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::load::Loads<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(92 + props.slug.len() + props.lang.as_deref().map_or(0, str::len));
     let Some(l_0) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };
     let Some(l_2) = fv_loads.get(super::loaders::LoadViews) else { return Ok(()); };
-    let s_heading = format!("{} ({} views)", l_1.title, fv::Js(*l_2));
+    let s_heading = format!("{} ({} views)", l_1.title, fv::core::numbers::Js(*l_2));
     out.push_str("<article><h1>");
-    fv::escape_into(out, &s_heading);
+    fv::core::escape::escape_into(out, &s_heading);
     out.push_str("</h1>");
     if let Some(fv_writer) = l_1.author.as_ref() {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_writer.name);
+        fv::core::escape::escape_into(out, &fv_writer.name);
         if let Some(fv_bio) = fv_writer.bio.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<span> — ");
-            fv::escape_into(out, fv_bio);
+            fv::core::escape::escape_into(out, fv_bio);
             out.push_str("</span>");
         } else {
             out.push_str("<!---->");
@@ -74,7 +74,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
     for fv_tag_ref in l_0.tags.iter() {
         let fv_tag: &str = fv_tag_ref;
         out.push_str("<li>");
-        fv::escape_into(out, fv_tag);
+        fv::core::escape::escape_into(out, fv_tag);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
@@ -85,6 +85,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::Loads<'_>)
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::Loads<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_loads: &'p fv::load::Loads<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_loads)))
 }

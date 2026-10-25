@@ -137,7 +137,7 @@ fn first_difference(recorded: &str, rendered: &str) -> String {
 }
 
 /// Write the test that renders every fixture through the generated `render_json` and compares
-/// the bytes with the HTML Vue recorded: [`check_fixtures`](crate::check_fixtures) over a
+/// the bytes with the HTML Vue recorded: [`check_fixtures`](crate::conformance::check_fixtures) over a
 /// directory relative to the crate's manifest, failing when fewer than `at_least` fixtures (one
 /// when not given) are found.
 ///
@@ -169,7 +169,7 @@ macro_rules! conformance {
     ($fixtures:expr, $render_json:path, at_least = $at_least:expr $(,)?) => {
         #[test]
         fn every_fixture_renders_as_vue_rendered_it() {
-            $crate::check_fixtures(
+            $crate::conformance::check_fixtures(
                 ::std::path::Path::new(::std::env!("CARGO_MANIFEST_DIR")).join($fixtures),
                 $at_least,
                 $render_json,

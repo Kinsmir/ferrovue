@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,25 +41,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(115 + props.book.id.len() + props.book.title.len() + props.book.author.len() + props.note.len());
     out.push_str("<article class=\"pick\"");
     if props.book.id.is_empty() {
         out.push_str(" data-id");
     } else {
         out.push_str(" data-id=\"");
-        fv::escape_into(out, &props.book.id);
+        fv::core::escape::escape_into(out, &props.book.id);
         out.push('"');
     }
     out.push_str("><h2>");
-    fv::escape_into(out, &props.book.title);
+    fv::core::escape::escape_into(out, &props.book.title);
     out.push_str("</h2><p class=\"by\">by ");
-    fv::escape_into(out, &props.book.author);
+    fv::core::escape::escape_into(out, &props.book.author);
     out.push_str(" (");
-    fv::push_int(out, props.book.year);
+    fv::core::numbers::push_int(out, props.book.year);
     out.push_str(")</p><blockquote>");
-    fv::escape_into(out, &props.note);
+    fv::core::escape::escape_into(out, &props.note);
     out.push_str("</blockquote>");
     super::add_to_basket::try_render(out, &super::add_to_basket::Props { id: std::borrow::Cow::Borrowed(&*props.book.id), title: std::borrow::Cow::Borrowed(&*props.book.title) })?;
     out.push_str("</article>");
@@ -67,21 +67,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

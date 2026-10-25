@@ -5,16 +5,16 @@
 
 /// Each route: its vue-router path, its name if it has one, whether it shows a component, and the
 /// routes nested in it.
-pub const ROUTES: &[ferrovue::RouteDef<'static>] = &[
-    ferrovue::RouteDef::new("/").with_name("home"),
-    ferrovue::RouteDef::new("/blog/:slug").with_name("post"),
-    ferrovue::RouteDef::new("/blog/:slug/:tab").with_name("post-tab"),
-    ferrovue::RouteDef::new("/users/:name"),
-    ferrovue::RouteDef::new("/search").with_name("search"),
-    ferrovue::RouteDef::new("/account").with_name("account").with_children(&[
-        ferrovue::RouteDef::new("").with_name("account-home"),
-        ferrovue::RouteDef::new("orders").with_name("orders").with_children(&[
-            ferrovue::RouteDef::new(":order").with_name("order"),
+pub const ROUTES: &[ferrovue::router::RouteDef<'static>] = &[
+    ferrovue::router::RouteDef::new("/").with_name("home"),
+    ferrovue::router::RouteDef::new("/blog/:slug").with_name("post"),
+    ferrovue::router::RouteDef::new("/blog/:slug/:tab").with_name("post-tab"),
+    ferrovue::router::RouteDef::new("/users/:name"),
+    ferrovue::router::RouteDef::new("/search").with_name("search"),
+    ferrovue::router::RouteDef::new("/account").with_name("account").with_children(&[
+        ferrovue::router::RouteDef::new("").with_name("account-home"),
+        ferrovue::router::RouteDef::new("orders").with_name("orders").with_children(&[
+            ferrovue::router::RouteDef::new(":order").with_name("order"),
         ]),
     ]),
 ];
@@ -36,7 +36,7 @@ pub const PATHS: &[&str] = &[
 pub const BASE: &str = "";
 
 /// The router these routes make: build it once, and resolve each request's location with
-/// [`ferrovue::Router::at`].
-pub fn router() -> ferrovue::Router {
-    ferrovue::Router::tree(ROUTES).with_base(BASE)
+/// [`ferrovue::router::Router::at`].
+pub fn router() -> ferrovue::router::Router {
+    ferrovue::router::Router::tree(ROUTES).with_base(BASE)
 }

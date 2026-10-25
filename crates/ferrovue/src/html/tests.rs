@@ -1,5 +1,5 @@
 use super::*;
-use crate::push_number;
+use ferrovue_core::numbers::push_number;
 
 #[derive(serde::Serialize)]
 struct Label<'a> {
@@ -14,7 +14,7 @@ fn label(out: &mut String, p: &Label<'_>) {
 
 fn refuse(out: &mut String, _: &Label<'_>) -> Result<(), Refused> {
     out.push_str("<b>");
-    crate::try_int(1e20).map(drop)
+    crate::refused::try_int(1e20).map(drop)
 }
 
 #[test]

@@ -42,9 +42,9 @@ pub type FooterSlot<'s> = dyn Fn(&mut String, &FooterSlotProps, &str) -> bool + 
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot name="title">`
-    pub title: Option<fv::Slot<'s>>,
+    pub title: Option<fv::slots::Slot<'s>>,
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
     /// `<slot name="footer">`
     pub footer: Option<&'s FooterSlot<'s>>,
 }
@@ -55,7 +55,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_slots, ""));
+    fv::refused::rendered(try_render_scoped(out, props, fv_slots, ""));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -63,34 +63,34 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
     try_render_scoped(out, props, fv_slots, "")
 }
 
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::refused::Refused> {
     out.reserve(204 + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<article class=\"card");
-    fv::class_into(out, true, &[props.tone.as_deref().unwrap_or("")]);
+    fv::class::class_into(out, true, &[props.tone.as_deref().unwrap_or("")]);
     out.push('"');
     out.push_str(fv_attrs);
     out.push_str(" data-v-57c45abf><header data-v-57c45abf>");
-    fv::slot_into_slotted(out, fv_slots.title, "data-v-57c45abf-s", Some(&mut |out: &mut String| {
+    fv::slots::slot_into_slotted(out, fv_slots.title, "data-v-57c45abf-s", Some(&mut |out: &mut String| {
         out.push_str("Untitled");
     }));
     out.push_str("</header><div class=\"body\" data-v-57c45abf>");
-    fv::slot_into_slotted(out, fv_slots.default, "data-v-57c45abf-s", Some(&mut |out: &mut String| {
+    fv::slots::slot_into_slotted(out, fv_slots.default, "data-v-57c45abf-s", Some(&mut |out: &mut String| {
         out.push_str("<p class=\"empty\" data-v-57c45abf>empty</p>");
     }));
     out.push_str("</div><footer data-v-57c45abf>");
-    fv::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: 3i64 }, "data-v-57c45abf-s", None);
+    fv::slots::scoped_slot_into_slotted(out, fv_slots.footer, &FooterSlotProps { count: 3i64 }, "data-v-57c45abf-s", None);
     out.push_str("</footer></article>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

@@ -52,7 +52,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -60,63 +60,63 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(58 + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.padded.len());
     out.push_str("<p><b>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape::escape_into(out, &props.title);
     out.push_str("</b>|");
-    fv::push_int(out, props.count);
+    fv::core::numbers::push_int(out, props.count);
     out.push('|');
     out.push_str(if props.on { "true" } else { "false" });
     out.push('|');
     if let Some(v) = props.note.as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.score {
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
-    fv::escape_into(out, fv::js_trim(&props.padded));
+    fv::core::escape::escape_into(out, fv::strings::js_trim(&props.padded));
     out.push('|');
-    fv::push_int(out, fv::js_length(&props.padded));
+    fv::core::numbers::push_int(out, fv::strings::js_length(&props.padded));
     out.push('|');
-    fv::escape_into(out, &format!("#{}", fv::Js(props.count)));
+    fv::core::escape::escape_into(out, &format!("#{}", fv::core::numbers::Js(props.count)));
     out.push('|');
-    fv::push_number(out, props.count as f64 + 1.0);
+    fv::core::numbers::push_number(out, props.count as f64 + 1.0);
     out.push('|');
-    fv::escape_into(out, &format!("{}!", props.title));
+    fv::core::escape::escape_into(out, &format!("{}!", props.title));
     out.push('|');
-    fv::escape_into(out, props.note.as_deref().unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.note.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::escape_into(out, { let a = &*props.title; if !a.is_empty() { a } else { "untitled" } });
+    fv::core::escape::escape_into(out, { let a = &*props.title; if !a.is_empty() { a } else { "untitled" } });
     out.push('|');
-    fv::escape_into(out, if props.on { "yes" } else { "no" });
+    fv::core::escape::escape_into(out, if props.on { "yes" } else { "no" });
     out.push('|');
-    fv::push_int(out, props.score.unwrap_or(props.count));
+    fv::core::numbers::push_int(out, props.score.unwrap_or(props.count));
     out.push('|');
-    fv::escape_into(out, if props.count != 0 { "some" } else { "zero" });
+    fv::core::escape::escape_into(out, if props.count != 0 { "some" } else { "zero" });
     out.push_str("</p>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

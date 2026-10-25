@@ -38,27 +38,27 @@ impl std::fmt::Display for K {
 }
 
 impl std::str::FromStr for K {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "a" => Ok(K::A),
             "b" => Ok(K::B),
             "c" => Ok(K::C),
-            _ => Err(ferrovue::ParseUnionError::new("K", s, &["a", "b", "c"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("K", s, &["a", "b", "c"])),
         }
     }
 }
 
 impl TryFrom<&str> for K {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for K {
+impl ferrovue::union::Union for K {
     const ALL: &'static [Self] = &K::ALL;
 
     fn as_str(self) -> &'static str {
@@ -100,7 +100,7 @@ impl Props {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -108,8 +108,8 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::refused::Refused> {
     out.reserve(134 + 1 + 1 + 4);
     let s_key = props.k;
     out.push_str("<p");
@@ -117,29 +117,29 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+        fv::core::escape::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
         out.push('"');
     }
     out.push_str(" class=\"");
-    fv::class_into(out, false, &[match props.k { K::B => "y", K::A | K::C => "x" }]);
+    fv::class::class_into(out, false, &[match props.k { K::B => "y", K::A | K::C => "x" }]);
     out.push_str("\" style=\"opacity:");
-    fv::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
+    fv::core::numbers::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
     out.push_str(";\">");
-    fv::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::escape_into(out, match props.m.unwrap_or(K::A) { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape::escape_into(out, match props.m.unwrap_or(K::A) { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::escape_into(out, match props.m.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape::escape_into(out, match props.m.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::escape_into(out, match props.k { K::B => "y", K::A | K::C => "x" });
+    fv::core::escape::escape_into(out, match props.k { K::B => "y", K::A | K::C => "x" });
     out.push(' ');
-    fv::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
+    fv::core::numbers::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
     out.push(' ');
-    fv::escape_into(out, match s_key { K::A => "A", K::B => "B", K::C => "C" });
+    fv::core::escape::escape_into(out, match s_key { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::escape_into(out, match props.level { 1 => "one", 2 => "two", _ => "three" });
+    fv::core::escape::escape_into(out, match props.level { 1 => "one", 2 => "two", _ => "three" });
     out.push(' ');
-    fv::escape_into(out, match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
+    fv::core::escape::escape_into(out, match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
     out.push(' ');
     if !matches!(props.k, K::A | K::B) {
         out.push_str("<b>last</b>");
@@ -153,14 +153,14 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     }
     if !matches!(props.k, K::B) {
         out.push_str("<i>");
-        fv::escape_into(out, match props.k { K::A => "ia", K::C | K::B => "ic" });
+        fv::core::escape::escape_into(out, match props.k { K::A => "ia", K::C | K::B => "ic" });
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     if matches!(props.k, K::A | K::B) {
         out.push_str("<i>");
-        fv::escape_into(out, match props.k { K::A => "ia", K::B | K::C => "ib" });
+        fv::core::escape::escape_into(out, match props.k { K::A => "ia", K::B | K::C => "ib" });
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
@@ -170,21 +170,21 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p>(props: &'p Props) -> fv::Html<'p, Props> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p>(props: &'p Props) -> fv::html::Html<'p, Props> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island(props: Props) -> fv::Html<'static, Props> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island(props: Props) -> fv::html::Html<'static, Props> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

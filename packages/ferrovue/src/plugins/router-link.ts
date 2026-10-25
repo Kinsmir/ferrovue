@@ -34,7 +34,7 @@ function noHalves(s: Scope, v: Val, n: N): void {
 export function urlText(s: Scope, v: Val, n: N): string {
   noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
-  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::Js(${bare(asWritten(v).code)}).to_string()`;
+  if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::core::numbers::Js(${bare(asWritten(v).code)}).to_string()`;
   if (v.ty.k === "bool") return `if ${condition(v.code)} { "true" } else { "false" }`;
   return fail(s.comp, "FV1201", "a route parameter is a string or a number that is present", n);
 }
@@ -71,9 +71,9 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
       if (v.ty.k === "undef") continue;
       if (v.ty.k === "opt") {
         e.open(`if let Some(v) = ${scrutinee(v.code)}`);
-        e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, { code: "v", ty: v.ty.of }, p.value))});`);
+        e.stmt(`fv::router::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, { code: "v", ty: v.ty.of }, p.value))});`);
         e.close();
-      } else e.stmt(`fv::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, v, p.value))});`);
+      } else e.stmt(`fv::router::query_into(&mut fv_search, ${rustStr(key)}, ${strArg(urlText(s, v, p.value))});`);
     }
   }
   let hash = '""';
@@ -184,7 +184,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   e.lit(` aria-current="${escapeHtml(ariaCurrent)}"`);
   e.close();
   e.lit(' href="');
-  e.stmt("fv::escape_into(out, &fv_link.href);");
+  e.stmt("fv::core::escape::escape_into(out, &fv_link.href);");
   e.lit('" class="');
   const linkItems =
     activeClass === exactClass
@@ -192,7 +192,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
       : [`if fv_link.active { ${rustStr(activeClass)} } else { "" }`, `if fv_link.exact { ${rustStr(exactClass)} } else { "" }`];
   const cls = fields.get("class");
   const own = cls ? classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code)) : [];
-  e.stmt(`fv::class_into(out, false, &[${[...linkItems, ...own].join(", ")}]);`);
+  e.stmt(`fv::class::class_into(out, false, &[${[...linkItems, ...own].join(", ")}]);`);
   e.lit('"');
   for (const p of attrs) {
     const key: string = p.key.value;
@@ -206,7 +206,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   }
   if (base === null && slotted === null) {
     if (scopeId !== null) e.lit(` ${scopeId}`);
-  } else e.stmt(`out.push_str(&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'}));`);
+  } else e.stmt(`out.push_str(&fv::attrs::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'}));`);
   if (fallsThrough) {
     e.close(" else {");
     const sources: string[] = [];
@@ -229,13 +229,13 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     const ids =
       base === null && slotted === null
         ? rustStr(scopeId === null ? "" : ` ${scopeId}`)
-        : `&fv::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'})`;
+        : `&fv::attrs::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'})`;
     const linkOwn = [
-      `("aria-current", if fv_link.exact { fv::Attr::str(${rustStr(ariaCurrent)}) } else { fv::Attr::Undefined })`,
-      '("href", fv::Attr::str(&fv_link.href))',
-      `("class", fv::Attr::from(fv::class_names(&[${linkItems.join(", ")}])))`,
+      `("aria-current", if fv_link.exact { fv::attrs::Attr::str(${rustStr(ariaCurrent)}) } else { fv::attrs::Attr::Undefined })`,
+      '("href", fv::attrs::Attr::str(&fv_link.href))',
+      `("class", fv::attrs::Attr::from(fv::attrs::class_names(&[${linkItems.join(", ")}])))`,
     ];
-    e.stmt(`fv::attrs_into(out, &[&[${linkOwn.join(", ")}], &fv::merge_props(&[${sources.join(", ")}])], 1, ${ids});`);
+    e.stmt(`fv::attrs::attrs_into(out, &[&[${linkOwn.join(", ")}], &fv::attrs::merge_props(&[${sources.join(", ")}])], 1, ${ids});`);
     e.close();
   }
   e.lit(">");

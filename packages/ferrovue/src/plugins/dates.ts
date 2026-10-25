@@ -90,7 +90,7 @@ function fromParts(s: Scope, n: N): Val {
     return numberVal(Date.UTC(...(parts as [number])), false);
   }
   const code = [...vals.map((v) => bare(asF64(v))), ...UTC_DEFAULTS.slice(vals.length - 1)].join(", ");
-  return { code: kept(`fv::try_date_utc(${code})`, refusalAt(s.comp, n)), ty: FLOAT };
+  return { code: kept(`fv::dates::try_date_utc(${code})`, refusalAt(s.comp, n)), ty: FLOAT };
 }
 
 const LOCAL_GETTERS = new Map([
@@ -149,7 +149,7 @@ function parsed(s: Scope, arg: N, what: string, n: N): Val {
   }
   const v = expr(s, arg);
   if (v.ty.k !== "str") return fail(s.comp, "FV1802", `${what} takes a string that is present`, arg);
-  return { code: kept(`fv::try_date_parse(${strArg(v.code)})`, refusalAt(s.comp, n)), ty: FLOAT };
+  return { code: kept(`fv::dates::try_date_parse(${strArg(v.code)})`, refusalAt(s.comp, n)), ty: FLOAT };
 }
 
 function constructed(s: Scope, n: N): Val {
@@ -161,8 +161,8 @@ function constructed(s: Scope, n: N): Val {
   if (args[0].type === "StringLiteral") return { code: parsed(s, args[0], "`new Date()`", n).code, ty: DATE };
   const v = expr(s, args[0]);
   if (v.ty.k === "date") return v;
-  if (v.ty.k === "str") return { code: kept(`fv::try_date_parse(${strArg(v.code)})`, refusalAt(s.comp, n)), ty: DATE };
-  if (v.ty.k === "int" || v.ty.k === "float") return { code: `fv::js_time_clip(${bare(asF64(v))})`, ty: DATE };
+  if (v.ty.k === "str") return { code: kept(`fv::dates::try_date_parse(${strArg(v.code)})`, refusalAt(s.comp, n)), ty: DATE };
+  if (v.ty.k === "int" || v.ty.k === "float") return { code: `fv::dates::js_time_clip(${bare(asF64(v))})`, ty: DATE };
   return fail(s.comp, "FV1802", `\`new Date()\` takes one string or one number that is present (${GUIDE})`, args[0]);
 }
 
@@ -192,13 +192,13 @@ export const dates: Plugin = {
     const plain = args.length === 0;
     if (plain && method === "toISOString") {
       const valid = target.num !== undefined && Number.isFinite(target.num);
-      return { code: valid ? `&*fv::js_to_iso_string(${t})` : `&*${kept(`fv::try_to_iso_string(${t})`, refusalAt(s.comp, n))}`, ty: STR };
+      return { code: valid ? `&*fv::dates::js_to_iso_string(${t})` : `&*${kept(`fv::dates::try_to_iso_string(${t})`, refusalAt(s.comp, n))}`, ty: STR };
     }
-    if (plain && method === "toUTCString") return { code: `&*fv::js_to_utc_string(${t})`, ty: STR };
-    if (plain && method === "toJSON") return { code: `fv::js_to_json(${t}).as_deref()`, ty: { k: "opt", of: STR, none: "null" }, held: `fv::js_to_json(${t}).map(std::borrow::Cow::<str>::Owned)` };
+    if (plain && method === "toUTCString") return { code: `&*fv::dates::js_to_utc_string(${t})`, ty: STR };
+    if (plain && method === "toJSON") return { code: `fv::dates::js_to_json(${t}).as_deref()`, ty: { k: "opt", of: STR, none: "null" }, held: `fv::dates::js_to_json(${t}).map(std::borrow::Cow::<str>::Owned)` };
     if (plain && (method === "getTime" || method === "valueOf")) return { code: target.code, ty: FLOAT };
     const utc = UTC_GETTERS.get(method);
-    if (plain && utc !== undefined) return { code: `fv::js_utc_${utc}(${t})`, ty: FLOAT };
+    if (plain && utc !== undefined) return { code: `fv::dates::js_utc_${utc}(${t})`, ty: FLOAT };
     if (LOCAL_GETTERS.has(method) || method === "getTimezoneOffset") {
       const instead = LOCAL_GETTERS.get(method);
       return fail(s.comp, "FV1804", `\`.${method}()\` reads the date in the time zone of the machine running it, which differs between the server and the reader's browser${instead ? `: use \`.${instead}()\`` : ""} (${GUIDE})`, n);
@@ -218,7 +218,7 @@ export const dates: Plugin = {
         : "compares the date as an object, or as its `.toString()` in the time zone of the machine running it";
       fail(s.comp, "FV1809", `\`${n.operator}\` between ${describeTy(a.ty)} and ${describeTy(b.ty)} ${why}: compare time values, \`a.getTime() === b.getTime()\` (${GUIDE})`, n);
     },
-    json: (v) => (v.ty.k === "date" ? `fv::js_json_date(${bare(v.code)})` : undefined),
+    json: (v) => (v.ty.k === "date" ? `fv::dates::js_json_date(${bare(v.code)})` : undefined),
     describe: (ty) => (ty.k === "date" ? "a `Date`" : undefined),
     unbindable: (ty) =>
       ty.k === "date" ? { what: "a `Date`", fix: "bind `.toISOString()`, or format it in Rust and pass a string" } : undefined,

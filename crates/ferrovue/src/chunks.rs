@@ -27,7 +27,7 @@ use serde::Deserialize;
 ///     "_vue.js": { "file": "assets/vue.js" }
 /// }"#;
 /// let islands = r#"{ "Counter": "assets/Counter.js" }"#;
-/// let chunks = ferrovue::Chunks::from_manifest(manifest, islands)?;
+/// let chunks = ferrovue::chunks::Chunks::from_manifest(manifest, islands)?;
 /// assert_eq!(chunks.for_islands(["Counter"]), ["/assets/Counter.js", "/assets/vue.js"]);
 ///
 /// let mut preloads = chunks.preloads();
@@ -38,7 +38,7 @@ use serde::Deserialize;
 ///     out,
 ///     r#"<link rel="modulepreload" href="/assets/Counter.js"><link rel="modulepreload" href="/assets/vue.js">"#
 /// );
-/// # Ok::<(), ferrovue::ManifestError>(())
+/// # Ok::<(), ferrovue::chunks::ManifestError>(())
 /// ```
 #[derive(Debug, Clone)]
 pub struct Chunks {
@@ -201,7 +201,7 @@ impl<'c> Preloads<'c> {
         for file in chunks.needed(key, &mut HashSet::new()) {
             if self.linked.insert(file) {
                 out.push_str("<link rel=\"modulepreload\" href=\"");
-                crate::escape_into(out, &chunks.url(file));
+                ferrovue_core::escape::escape_into(out, &chunks.url(file));
                 out.push_str("\">");
             }
         }

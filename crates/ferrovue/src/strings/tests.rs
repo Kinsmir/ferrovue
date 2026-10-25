@@ -214,7 +214,7 @@ fn sorting_keeps_equal_items_in_their_order() {
 
 #[test]
 fn default_sort_orders_by_string_as_javascript_does() {
-    let key = |v: &f64| crate::Js(*v).to_string();
+    let key = |v: &f64| ferrovue_core::numbers::Js(*v).to_string();
     let numbers = [
         10.0,
         9.0,

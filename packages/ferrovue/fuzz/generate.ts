@@ -904,7 +904,7 @@ export function configOf(c: Component, viteRoot: string): Config {
     out: "generated",
     scopeId: "filepath",
     viteRoot,
-    trustedHtml: "ferrovue::BasicHtml",
+    trustedHtml: "ferrovue::basic_html::BasicHtml",
     ...(r
       ? {
           router: {

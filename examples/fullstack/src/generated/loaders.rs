@@ -12,11 +12,11 @@ pub struct LoadStock {
     pub id: String,
 }
 
-impl fv::Load for LoadStock {
+impl fv::load::Load for LoadStock {
     const NAME: &'static str = "loadStock";
     type Output = super::types::Stock<'static>;
     const DATES: &'static str = "[{\"counted\":1}]";
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::load::LoadKey) {
         key.arg(&self.id);
     }
 }
@@ -27,52 +27,52 @@ pub struct LoadWarehouse {
     pub code: String,
 }
 
-impl fv::Load for LoadWarehouse {
+impl fv::load::Load for LoadWarehouse {
     const NAME: &'static str = "loadWarehouse";
     type Output = Option<super::types::Warehouse<'static>>;
-    fn args(&self, key: &mut fv::LoadKey) {
+    fn args(&self, key: &mut fv::load::LoadKey) {
         key.arg(&self.code);
     }
 }
 
 /// The app's loaders: one method for each `defineLoader`, given its call, returning what the
-/// client's loader returns. A method that fails fails the render, with [`fv::LoadError`].
+/// client's loader returns. A method that fails fails the render, with [`fv::load::LoadError`].
 pub trait Loaders: Sync {
     /// What a loader fails with.
     type Error;
 
     /// `loadStock`, in client/components/loaders.ts.
-    fn load_stock(&self, call: LoadStock) -> impl std::future::Future<Output = Result<<LoadStock as fv::Load>::Output, Self::Error>> + Send;
+    fn load_stock(&self, call: LoadStock) -> impl std::future::Future<Output = Result<<LoadStock as fv::load::Load>::Output, Self::Error>> + Send;
 
     /// `loadWarehouse`, in client/components/loaders.ts.
-    fn load_warehouse(&self, call: LoadWarehouse) -> impl std::future::Future<Output = Result<<LoadWarehouse as fv::Load>::Output, Self::Error>> + Send;
+    fn load_warehouse(&self, call: LoadWarehouse) -> impl std::future::Future<Output = Result<<LoadWarehouse as fv::load::Load>::Output, Self::Error>> + Send;
 }
 
 /// Run `call` with the loader of its name.
-pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::LoadCall) -> fv::LoadFuture<'a, L::Error> {
+pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::load::LoadCall) -> fv::load::LoadFuture<'a, L::Error> {
     match call.name() {
-        <LoadStock as fv::Load>::NAME => call.run(|c: LoadStock| loaders.load_stock(c)),
-        <LoadWarehouse as fv::Load>::NAME => call.run(|c: LoadWarehouse| loaders.load_warehouse(c)),
+        <LoadStock as fv::load::Load>::NAME => call.run(|c: LoadStock| loaders.load_stock(c)),
+        <LoadWarehouse as fv::load::Load>::NAME => call.run(|c: LoadWarehouse| loaders.load_warehouse(c)),
         name => unreachable!("no loader is called `{name}`"),
     }
 }
 
-/// Render with `loaders`: [`fv::load`], each call run by its method of [`Loaders`]. Write the
-/// payload with [`fv::Loads::script_into`] after the components, for the client to hydrate from.
-pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::Loads<'_>) -> T) -> Result<T, fv::LoadError<L::Error>> {
-    fv::load(render, |call| dispatch(loaders, call)).await
+/// Render with `loaders`: [`fv::load::load`], each call run by its method of [`Loaders`]. Write the
+/// payload with [`fv::load::Loads::script_into`] after the components, for the client to hydrate from.
+pub async fn load<L: Loaders, T>(loaders: &L, render: impl FnMut(&fv::load::Loads<'_>) -> T) -> Result<T, fv::load::LoadError<L::Error>> {
+    fv::load::load(render, |call| dispatch(loaders, call)).await
 }
 
 /// Each call answered from a fixture's `$loads`, by its key.
 #[cfg(test)]
-pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::LoadCall) -> fv::LoadFuture<'static, String> + '_ {
+pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::value::RawValue>>) -> impl FnMut(fv::load::LoadCall) -> fv::load::LoadFuture<'static, String> + '_ {
     move |call| match call.name() {
-        <LoadStock as fv::Load>::NAME => call.run(|c: LoadStock| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadStock as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadStock as fv::load::Load>::NAME => call.run(|c: LoadStock| {
+            let found = results.get(&fv::load::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadStock as fv::load::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
-        <LoadWarehouse as fv::Load>::NAME => call.run(|c: LoadWarehouse| {
-            let found = results.get(&fv::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadWarehouse as fv::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+        <LoadWarehouse as fv::load::Load>::NAME => call.run(|c: LoadWarehouse| {
+            let found = results.get(&fv::load::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::load::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadWarehouse as fv::load::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
         name => unreachable!("no loader is called `{name}`"),

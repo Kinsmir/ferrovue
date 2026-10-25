@@ -8,12 +8,12 @@ use serde::de::{self, Deserialize, DeserializeOwned, Deserializer, Visitor};
 use serde::ser::{Serialize, Serializer};
 
 use crate::dates::{iso_time, js_time_clip, js_to_iso_string};
-use crate::{Record, Refused};
+use crate::{record::Record, refused::Refused};
 
 /// A JavaScript `Date`: its time value, the milliseconds since 1970-01-01T00:00:00Z, a whole number
 /// within ±8.64 × 10¹⁵, or `NaN` for an invalid date. It is the Rust type of a prop the component
 /// types `Date`, unless `dateType` in `ferrovue.config.json` names another
-/// [`JsTime`](crate::JsTime).
+/// [`JsTime`].
 ///
 /// An island's `data-props` carries it as `toISOString()` writes it, and an invalid date as `NaN`,
 /// which `ferrovue/client` turns back into a `Date` before Vue hydrates. It reads back from such a
@@ -27,7 +27,7 @@ use crate::{Record, Refused};
 /// # Example
 ///
 /// ```
-/// use ferrovue::JsDate;
+/// use ferrovue::js_date::JsDate;
 ///
 /// let posted = JsDate::parse("2024-05-01T09:30+02:00").unwrap();
 /// assert_eq!(posted.time_value(), 1_714_548_600_000.0);
@@ -189,7 +189,7 @@ impl<'de> Deserialize<'de> for JsDate {
 /// # Example
 ///
 /// ```
-/// use ferrovue::JsTime;
+/// use ferrovue::js_date::JsTime;
 ///
 /// /// Whole seconds since 1970, as a database keeps them.
 /// #[derive(Debug, Clone)]
@@ -255,7 +255,7 @@ pub(crate) fn date_refused(t: f64) -> Refused {
         format!(
             "the date {:?} is passed to a `Date` prop whose Rust type cannot hold it: check the \
              date before rendering, or name a `dateType` that holds every date, such as \
-             `ferrovue::JsDate`",
+             `ferrovue::js_date::JsDate`",
             JsDate::from_millis(t)
         ),
     )
@@ -450,7 +450,7 @@ pub mod dates_in {
 ///
 /// ```
 /// use chrono::{DateTime, Utc};
-/// use ferrovue::JsDate;
+/// use ferrovue::js_date::JsDate;
 ///
 /// let far = JsDate::parse("+270000-01-01").unwrap();
 /// let refused = DateTime::<Utc>::try_from(far).unwrap_err();

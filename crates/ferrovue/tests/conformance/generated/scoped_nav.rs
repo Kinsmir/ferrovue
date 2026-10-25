@@ -32,8 +32,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    fv::rendered(try_render(out, props, fv_route));
+pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
+    fv::refused::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,10 +41,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(252 + props.href.len() + props.label.len());
-    let fv_refusals = fv::Refusals::new(NAME, "components/ScopedNav.vue");
+    let fv_refusals = fv::refused::Refusals::new(NAME, "components/ScopedNav.vue");
     out.push_str("<nav class=\"nav\" data-v-f60bf031>");
     {
         let fv_link = fv_route.link("/blog/intro");
@@ -53,9 +53,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
+        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
         out.push_str("\" data-v-f60bf031>intro</a>");
     }
     {
@@ -65,21 +65,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push('"');
         if props.label.is_empty() {
             out.push_str(" title");
         } else {
             out.push_str(" title=\"");
-            fv::escape_into(out, &props.label);
+            fv::core::escape::escape_into(out, &props.label);
             out.push('"');
         }
         out.push_str(" data-v-f60bf031>");
-        fv::escape_into(out, &props.label);
+        fv::core::escape::escape_into(out, &props.label);
         out.push_str(" <i data-v-f60bf031>");
-        fv::escape_into(out, &props.href);
+        fv::core::escape::escape_into(out, &props.href);
         out.push_str("</i>");
         fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031"))?;
         out.push_str("</a>");
@@ -87,7 +87,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
     fv_refusals.check(super::scoped_link::try_render_scoped(out, &super::scoped_link::Props { to: std::borrow::Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031"))?;
     fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
-        default: Some(fv::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
+        default: Some(fv::slots::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             {
                 let fv_link = fv_route.link("/");
                 out.push_str("<a");
@@ -95,16 +95,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
                     out.push_str(" aria-current=\"page\"");
                 }
                 out.push_str(" href=\"");
-                fv::escape_into(out, &fv_link.href);
+                fv::core::escape::escape_into(out, &fv_link.href);
                 out.push_str("\" class=\"");
-                fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+                fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
                 out.push('"');
-                out.push_str(&fv::scope_attrs("", "data-v-f60bf031", fv_slot_id));
+                out.push_str(&fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id));
                 out.push_str(">home ");
-                fv::escape_into(out, &props.label);
+                fv::core::escape::escape_into(out, &props.label);
                 out.push_str("</a>");
             }
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::scope_attrs("", "data-v-f60bf031", fv_slot_id)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id)));
             true
         })),
         footer: None,
@@ -114,6 +114,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::router::Route<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

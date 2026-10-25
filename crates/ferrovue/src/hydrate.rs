@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 /// When the client hydrates an island, and so when it fetches the island's code: what
-/// [`Html::hydrate`](crate::Html::hydrate) writes as the island's `data-hydrate`. An island without
+/// [`Html::hydrate`](crate::html::Html::hydrate) writes as the island's `data-hydrate`. An island without
 /// one is hydrated as soon as `mountIslands` runs.
 ///
 /// # Example
@@ -12,14 +12,14 @@ use std::borrow::Cow;
 /// #     pub struct Props { pub start: i64 }
 /// #     pub fn render(out: &mut String, props: &Props) {
 /// #         out.push_str("<button>");
-/// #         ferrovue::push_int(out, props.start);
+/// #         ferrovue::core::numbers::push_int(out, props.start);
 /// #         out.push_str("</button>");
 /// #     }
-/// #     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
-/// #         ferrovue::Html::island("Counter", props, render)
+/// #     pub fn island(props: &Props) -> ferrovue::html::Html<'_, Props> {
+/// #         ferrovue::html::Html::island("Counter", props, render)
 /// #     }
 /// # }
-/// use ferrovue::Hydrate;
+/// use ferrovue::hydrate::Hydrate;
 ///
 /// let props = counter::Props { start: 5 };
 /// assert_eq!(
@@ -71,7 +71,7 @@ impl Hydrate {
     /// # Example
     ///
     /// ```
-    /// use ferrovue::Hydrate;
+    /// use ferrovue::hydrate::Hydrate;
     ///
     /// assert_eq!(Hydrate::Idle.attribute(), "idle");
     /// assert_eq!(Hydrate::visible_with("200px 0px").attribute(), "visible:200px 0px");

@@ -1,6 +1,12 @@
 use serde::Serialize;
 
-use crate::{Hydrate, Refused, escape_into, json, rendered};
+use ferrovue_core::escape::escape_into;
+
+use crate::{
+    hydrate::Hydrate,
+    json,
+    refused::{Refused, rendered},
+};
 
 /// A component applied to its props, ready to be written: what a generated `html()` or `island()`
 /// returns, borrowing the props, and `into_html()` or `into_island()`, holding them.
@@ -24,17 +30,17 @@ use crate::{Hydrate, Refused, escape_into, json, rendered};
 /// # }
 /// # pub fn render(out: &mut String, props: &Props<'_>) {
 /// #     out.push_str("<p>Hello, ");
-/// #     fv::escape_into(out, &*props.name);
+/// #     fv::core::escape::escape_into(out, &*props.name);
 /// #     out.push_str("!</p>");
 /// # }
-/// # pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-/// #     fv::Html::markup(props, render)
+/// # pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+/// #     fv::html::Html::markup(props, render)
 /// # }
-/// # pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-/// #     fv::Html::island(NAME, props, render)
+/// # pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+/// #     fv::html::Html::island(NAME, props, render)
 /// # }
-/// # pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-/// #     fv::Html::markup_owned(props, render)
+/// # pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+/// #     fv::html::Html::markup_owned(props, render)
 /// # }
 /// # }
 /// // `hello::html`, `hello::island` and `hello::into_html` are what the compiler writes for
@@ -47,7 +53,7 @@ use crate::{Hydrate, Refused, escape_into, json, rendered};
 /// );
 ///
 /// // `into_html` holds the props, so the function that makes them can return the page.
-/// fn greet(name: String) -> ferrovue::Html<'static, hello::Props<'static>> {
+/// fn greet(name: String) -> ferrovue::html::Html<'static, hello::Props<'static>> {
 ///     hello::into_html(hello::Props::new(name))
 /// }
 /// assert_eq!(greet("Grace".into()).into_string(), "<p>Hello, Grace!</p>");
@@ -222,8 +228,8 @@ impl<'p, P: Serialize, F: Renderer<P>> Html<'p, P, F> {
     /// Hydrate the island when `when` says, fetching its code only then; an island is otherwise
     /// hydrated as soon as `mountIslands` runs. The island's markup is unchanged: its wrapper gains a
     /// `data-hydrate` attribute. A component that is not an island has no wrapper to carry it, and
-    /// is written as before; so is an island given to a [`Page`](crate::Page) as a
-    /// [`Part`](crate::Part).
+    /// is written as before; so is an island given to a [`Page`](crate::page::Page) as a
+    /// [`Part`](crate::page::Part).
     ///
     /// # Example
     ///
@@ -233,14 +239,14 @@ impl<'p, P: Serialize, F: Renderer<P>> Html<'p, P, F> {
     /// #     pub struct Props { pub start: i64 }
     /// #     pub fn render(out: &mut String, props: &Props) {
     /// #         out.push_str("<button>");
-    /// #         ferrovue::push_int(out, props.start);
+    /// #         ferrovue::core::numbers::push_int(out, props.start);
     /// #         out.push_str("</button>");
     /// #     }
-    /// #     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
-    /// #         ferrovue::Html::island("Counter", props, render)
+    /// #     pub fn island(props: &Props) -> ferrovue::html::Html<'_, Props> {
+    /// #         ferrovue::html::Html::island("Counter", props, render)
     /// #     }
     /// # }
-    /// use ferrovue::Hydrate;
+    /// use ferrovue::hydrate::Hydrate;
     ///
     /// let props = counter::Props { start: 5 };
     /// assert_eq!(
@@ -275,11 +281,11 @@ impl<'p, P: Serialize, F: Renderer<P>> Html<'p, P, F> {
     /// #     pub struct Props<'a> { pub name: &'a str }
     /// #     pub fn render(out: &mut String, props: &Props<'_>) {
     /// #         out.push_str("<p>Hello, ");
-    /// #         ferrovue::escape_into(out, props.name);
+    /// #         ferrovue::core::escape::escape_into(out, props.name);
     /// #         out.push_str("!</p>");
     /// #     }
-    /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-    /// #         ferrovue::Html::markup(props, render)
+    /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+    /// #         ferrovue::html::Html::markup(props, render)
     /// #     }
     /// # }
     /// let mut page = String::from("<main>");
@@ -356,11 +362,11 @@ impl<'p, P: Serialize, F: Renderer<P>> Html<'p, P, F> {
     /// #     pub struct Props<'a> { pub name: &'a str }
     /// #     pub fn render(out: &mut String, props: &Props<'_>) {
     /// #         out.push_str("<p>Hello, ");
-    /// #         ferrovue::escape_into(out, props.name);
+    /// #         ferrovue::core::escape::escape_into(out, props.name);
     /// #         out.push_str("!</p>");
     /// #     }
-    /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-    /// #         ferrovue::Html::markup(props, render)
+    /// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+    /// #         ferrovue::html::Html::markup(props, render)
     /// #     }
     /// # }
     /// let html: String = hello::html(&hello::Props { name: "<Ada>" }).into_string();
@@ -399,11 +405,11 @@ impl<P> Given<'_, P> {
 /// #     pub struct Props { pub start: i64 }
 /// #     pub fn render(out: &mut String, props: &Props) {
 /// #         out.push_str("<button>");
-/// #         ferrovue::push_int(out, props.start);
+/// #         ferrovue::core::numbers::push_int(out, props.start);
 /// #         out.push_str("</button>");
 /// #     }
-/// #     pub fn island(props: &Props) -> ferrovue::Html<'_, Props> {
-/// #         ferrovue::Html::island("Counter", props, render)
+/// #     pub fn island(props: &Props) -> ferrovue::html::Html<'_, Props> {
+/// #         ferrovue::html::Html::island("Counter", props, render)
 /// #     }
 /// # }
 /// let props = counter::Props { start: 5 };
@@ -435,11 +441,11 @@ impl<P: std::fmt::Debug, F> std::fmt::Debug for Html<'_, P, F> {
 /// #     pub struct Props<'a> { pub name: &'a str }
 /// #     pub fn render(out: &mut String, props: &Props<'_>) {
 /// #         out.push_str("<p>Hello, ");
-/// #         ferrovue::escape_into(out, props.name);
+/// #         ferrovue::core::escape::escape_into(out, props.name);
 /// #         out.push_str("!</p>");
 /// #     }
-/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::Html<'p, Props<'a>> {
-/// #         ferrovue::Html::markup(props, render)
+/// #     pub fn html<'p, 'a>(props: &'p Props<'a>) -> ferrovue::html::Html<'p, Props<'a>> {
+/// #         ferrovue::html::Html::markup(props, render)
 /// #     }
 /// # }
 /// # #[cfg(feature = "maud")]

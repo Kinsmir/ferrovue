@@ -1,5 +1,5 @@
 use super::*;
-use crate::push_number;
+use ferrovue_core::numbers::push_number;
 
 fn shown(x: f64) -> String {
     let mut out = String::new();

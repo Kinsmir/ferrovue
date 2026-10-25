@@ -103,10 +103,10 @@ ${fields}}
 /// What a template puts in \`<${name}>\`'s slots.
 #[derive(Clone, Copy, Default)]
 pub struct ${name}Slots<'s> {
-${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Option<fv::Slot<'s>>,\n`).join("")}}
+${comp.slotNames.map((slot) => `    /// \`#${slot}\`\n    pub ${snake(slot)}: Option<fv::slots::Slot<'s>>,\n`).join("")}}
 `
     : "";
-  const params = ["&mut String", `&${name}Props${life ? "<'_>" : ""}`, ...(comp.slotNames.length ? [`${name}Slots<'_>`] : []), "&fv::Attrs<'_>"];
+  const params = ["&mut String", `&${name}Props${life ? "<'_>" : ""}`, ...(comp.slotNames.length ? [`${name}Slots<'_>`] : []), "&fv::attrs::Attrs<'_>"];
   return `${props}${slots}
 /// How generated code calls the twin of \`<${name}>\`: with the buffer, the props,
 /// ${comp.slotNames.length ? "the slots, " : ""}and the attributes and scope ids its root takes.

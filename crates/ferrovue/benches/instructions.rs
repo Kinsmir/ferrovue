@@ -8,7 +8,7 @@
 
 use std::hint::black_box;
 
-use ferrovue::Route;
+use ferrovue::router::Route;
 use gungraun::{library_benchmark, library_benchmark_group, main};
 
 #[rustfmt::skip]
@@ -31,7 +31,7 @@ mod scenarios;
 #[serde(transparent)]
 pub struct Sanitised(String);
 
-impl ferrovue::TrustedHtml for Sanitised {
+impl ferrovue::trusted::TrustedHtml for Sanitised {
     fn trusted_html(&self) -> &str {
         &self.0
     }
@@ -122,7 +122,7 @@ fn render_number(mut out: String) -> String {
 
 #[library_benchmark]
 #[bench::head(runtime_input())]
-fn render_head(_: String) -> ferrovue::HeadHtml {
+fn render_head(_: String) -> ferrovue::head::HeadHtml {
     black_box(head()).render()
 }
 

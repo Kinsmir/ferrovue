@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Html, trusted_into};
+use crate::{html::Html, trusted::trusted_into};
 
 #[test]
 fn script_elements_are_removed_with_their_content() {
@@ -24,12 +24,12 @@ fn no_value_holds_a_hole() {
             assert!(!html.as_str().contains(crate::slots::HOLE), "{html:?}");
         }
         assert!(
-            !crate::BasicHtml::new(input)
+            !crate::basic_html::BasicHtml::new(input)
                 .as_str()
                 .contains(crate::slots::HOLE)
         );
         assert!(
-            !crate::InlineHtml::new(input)
+            !crate::basic_html::InlineHtml::new(input)
                 .as_str()
                 .contains(crate::slots::HOLE)
         );

@@ -29,9 +29,9 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot name="head">`
-    pub head: Option<fv::Slot<'s>>,
+    pub head: Option<fv::slots::Slot<'s>>,
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -40,7 +40,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render(out, props, fv_slots));
+    fv::refused::rendered(try_render(out, props, fv_slots));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -48,15 +48,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(67 + props.title.len());
     out.push_str("<div class=\"frame\"><header>");
-    fv::slot_into(out, fv_slots.head, Some(&mut |out: &mut String| {
-        fv::escape_into(out, &props.title);
+    fv::slots::slot_into(out, fv_slots.head, Some(&mut |out: &mut String| {
+        fv::core::escape::escape_into(out, &props.title);
     }));
     out.push_str("</header><main>");
-    fv::slot_into(out, fv_slots.default, Some(&mut |out: &mut String| {
+    fv::slots::slot_into(out, fv_slots.default, Some(&mut |out: &mut String| {
         out.push_str("nothing here");
     }));
     out.push_str("</main></div>");
@@ -64,6 +64,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

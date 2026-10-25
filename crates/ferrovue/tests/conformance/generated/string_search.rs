@@ -44,7 +44,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -52,116 +52,116 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(276 + props.text.len() + props.part.len());
-    let s_first_two = fv::js_split_limit(&props.text, " ", 2.0f64).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    let s_tail = fv::js_substr(&props.text, -(props.at as f64), None).into_owned();
-    let s_codes = &[fv::js_char_code_at(&props.text, 0.0f64), fv::js_char_code_at(&props.text, props.at as f64)];
+    let s_first_two = fv::strings::js_split_limit(&props.text, " ", 2.0f64).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_tail = fv::strings::js_substr(&props.text, -(props.at as f64), None).into_owned();
+    let s_codes = &[fv::strings::js_char_code_at(&props.text, 0.0f64), fv::strings::js_char_code_at(&props.text, props.at as f64)];
     out.push_str("<section data-from=\"");
-    fv::push_int(out, fv::js_index_of_from(&props.text, &props.part, props.at as f64));
+    fv::core::numbers::push_int(out, fv::strings::js_index_of_from(&props.text, &props.part, props.at as f64));
     out.push_str("\"><p>");
-    out.push_str(if fv::js_includes_from(&props.text, &props.part, props.at as f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_includes_from(&props.text, &props.part, props.at as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_includes_from(&props.text, "a", -5.0f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_includes_from(&props.text, "a", -5.0f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_includes_from(&props.text, &props.part, f64::INFINITY) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_includes_from(&props.text, &props.part, f64::INFINITY) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_starts_with_at(&props.text, &props.part, props.at as f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_starts_with_at(&props.text, &props.part, props.at as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_starts_with_at(&props.text, "", 1.0f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_starts_with_at(&props.text, "", 1.0f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_ends_with_at(&props.text, &props.part, props.at as f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_ends_with_at(&props.text, &props.part, props.at as f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_ends_with_at(&props.text, &props.part, props.size.map_or(f64::INFINITY, |v| v as f64)) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_ends_with_at(&props.text, &props.part, props.size.map_or(f64::INFINITY, |v| v as f64)) { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::push_int(out, fv::js_index_of_from(&props.text, &props.part, props.at as f64));
+    fv::core::numbers::push_int(out, fv::strings::js_index_of_from(&props.text, &props.part, props.at as f64));
     out.push('|');
-    fv::push_int(out, fv::js_index_of_from(&props.text, "", props.at as f64));
+    fv::core::numbers::push_int(out, fv::strings::js_index_of_from(&props.text, "", props.at as f64));
     out.push('|');
-    fv::push_int(out, fv::js_index_of_from(&props.text, &props.part, f64::NAN));
+    fv::core::numbers::push_int(out, fv::strings::js_index_of_from(&props.text, &props.part, f64::NAN));
     out.push('|');
-    fv::push_int(out, fv::js_last_index_of_from(&props.text, &props.part, props.at as f64));
+    fv::core::numbers::push_int(out, fv::strings::js_last_index_of_from(&props.text, &props.part, props.at as f64));
     out.push('|');
-    fv::push_int(out, fv::js_last_index_of_from(&props.text, &props.part, -1.0f64));
+    fv::core::numbers::push_int(out, fv::strings::js_last_index_of_from(&props.text, &props.part, -1.0f64));
     out.push('|');
-    fv::push_int(out, fv::js_last_index_of_from(&props.text, "", props.at as f64));
+    fv::core::numbers::push_int(out, fv::strings::js_last_index_of_from(&props.text, "", props.at as f64));
     out.push('|');
-    fv::push_int(out, fv::js_last_index_of_from(&props.text, &props.part, props.size.map_or(f64::NAN, |v| v as f64)));
+    fv::core::numbers::push_int(out, fv::strings::js_last_index_of_from(&props.text, &props.part, props.size.map_or(f64::NAN, |v| v as f64)));
     out.push_str("</p><p>");
-    fv::push_int(out, fv::js_split_limit(&props.text, "", props.limit as f64).len() as i64);
+    fv::core::numbers::push_int(out, fv::strings::js_split_limit(&props.text, "", props.limit as f64).len() as i64);
     out.push('|');
-    fv::push_int(out, fv::js_split_limit(&props.text, " ", props.limit as f64).len() as i64);
+    fv::core::numbers::push_int(out, fv::strings::js_split_limit(&props.text, " ", props.limit as f64).len() as i64);
     out.push('|');
-    fv::escape_into(out, &s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join("+"));
+    fv::core::escape::escape_into(out, &s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join("+"));
     out.push('|');
-    fv::push_int(out, fv::js_split_limit(&props.text, &props.part, -1.0f64).len() as i64);
+    fv::core::numbers::push_int(out, fv::strings::js_split_limit(&props.text, &props.part, -1.0f64).len() as i64);
     out.push('|');
-    fv::escape_into(out, &fv::js_split_limit(&props.text, ",", 4294967297.0f64).into_iter().collect::<Vec<_>>().join(";"));
+    fv::core::escape::escape_into(out, &fv::strings::js_split_limit(&props.text, ",", 4294967297.0f64).into_iter().collect::<Vec<_>>().join(";"));
     out.push('|');
-    fv::push_int(out, fv::js_split_limit(&props.text, ",", 0.0f64).len() as i64);
+    fv::core::numbers::push_int(out, fv::strings::js_split_limit(&props.text, ",", 0.0f64).len() as i64);
     out.push_str("</p><p>");
-    fv::escape_into(out, &fv::js_substr(&props.text, props.at as f64, None));
+    fv::core::escape::escape_into(out, &fv::strings::js_substr(&props.text, props.at as f64, None));
     out.push('|');
-    fv::escape_into(out, &fv::js_substr(&props.text, 0.0f64, Some(2.0f64)));
+    fv::core::escape::escape_into(out, &fv::strings::js_substr(&props.text, 0.0f64, Some(2.0f64)));
     out.push('|');
-    fv::escape_into(out, &s_tail);
+    fv::core::escape::escape_into(out, &s_tail);
     out.push('|');
-    fv::escape_into(out, &fv::js_substr(&props.text, props.at as f64, Some(props.limit as f64)));
+    fv::core::escape::escape_into(out, &fv::strings::js_substr(&props.text, props.at as f64, Some(props.limit as f64)));
     out.push('|');
-    fv::escape_into(out, &fv::js_substr(&props.text, -2.0f64, Some(props.size.map_or(f64::INFINITY, |v| v as f64))));
+    fv::core::escape::escape_into(out, &fv::strings::js_substr(&props.text, -2.0f64, Some(props.size.map_or(f64::INFINITY, |v| v as f64))));
     out.push('|');
-    out.push_str(if fv::js_substr(&props.text, 0.0f64, Some(-1.0f64)).is_empty() { "true" } else { "false" });
+    out.push_str(if fv::strings::js_substr(&props.text, 0.0f64, Some(-1.0f64)).is_empty() { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::escape_into(out, fv::js_trim_start(&props.text));
+    fv::core::escape::escape_into(out, fv::strings::js_trim_start(&props.text));
     out.push('|');
-    fv::escape_into(out, fv::js_trim_end(&props.text));
+    fv::core::escape::escape_into(out, fv::strings::js_trim_end(&props.text));
     out.push('|');
-    fv::push_int(out, fv::js_length(fv::js_trim_start(&props.text)));
+    fv::core::numbers::push_int(out, fv::strings::js_length(fv::strings::js_trim_start(&props.text)));
     out.push('|');
-    fv::escape_into(out, &format!("{}{}!{}", props.text, props.part, props.text));
+    fv::core::escape::escape_into(out, &format!("{}{}!{}", props.text, props.part, props.text));
     out.push('|');
-    fv::escape_into(out, &props.part);
+    fv::core::escape::escape_into(out, &props.part);
     out.push_str("</p><p>");
-    out.push_str(if fv::js_includes_from(&props.text, "a", 1.0f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_includes_from(&props.text, "a", 1.0f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_starts_with_at(&props.text, "a", 1.0f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_starts_with_at(&props.text, "a", 1.0f64) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if fv::js_ends_with_at(&props.text, "🦀", 1.0f64) { "true" } else { "false" });
+    out.push_str(if fv::strings::js_ends_with_at(&props.text, "🦀", 1.0f64) { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, fv::js_index_of_from(&props.text, "", 1.0f64));
+    fv::core::numbers::push_int(out, fv::strings::js_index_of_from(&props.text, "", 1.0f64));
     out.push('|');
-    fv::push_int(out, fv::js_index_of_from(&props.text, "a", 1.0f64));
+    fv::core::numbers::push_int(out, fv::strings::js_index_of_from(&props.text, "a", 1.0f64));
     out.push('|');
-    fv::push_int(out, fv::js_last_index_of_from(&props.text, "🦀", 1.0f64));
+    fv::core::numbers::push_int(out, fv::strings::js_last_index_of_from(&props.text, "🦀", 1.0f64));
     out.push('|');
-    fv::push_number(out, fv::js_char_code_at(&props.text, 1.0f64));
+    fv::core::numbers::push_number(out, fv::strings::js_char_code_at(&props.text, 1.0f64));
     out.push('|');
-    if let Some(v) = fv::js_code_point_at(&props.text, 1.0f64) {
-        fv::push_int(out, v);
+    if let Some(v) = fv::strings::js_code_point_at(&props.text, 1.0f64) {
+        fv::core::numbers::push_int(out, v);
     }
     out.push_str("</p><p>");
-    fv::push_number(out, fv::js_char_code_at(&props.text, props.at as f64));
+    fv::core::numbers::push_number(out, fv::strings::js_char_code_at(&props.text, props.at as f64));
     out.push('|');
-    fv::push_number(out, fv::js_char_code_at(&props.text, 0.0));
+    fv::core::numbers::push_number(out, fv::strings::js_char_code_at(&props.text, 0.0));
     out.push('|');
-    if let Some(v) = fv::js_code_point_at(&props.text, props.at as f64) {
-        fv::push_int(out, v);
+    if let Some(v) = fv::strings::js_code_point_at(&props.text, props.at as f64) {
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
-    fv::push_int(out, fv::js_code_point_at(&props.text, props.at as f64).unwrap_or(-1i64));
+    fv::core::numbers::push_int(out, fv::strings::js_code_point_at(&props.text, props.at as f64).unwrap_or(-1i64));
     out.push('|');
-    out.push_str(if fv::js_code_point_at(&props.text, 99.0f64).is_none() { "true" } else { "false" });
+    out.push_str(if fv::strings::js_code_point_at(&props.text, 99.0f64).is_none() { "true" } else { "false" });
     out.push('|');
-    fv::escape_into(out, &s_codes.iter().copied().map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &s_codes.iter().copied().map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push_str("</p><ul><!--[-->");
-    for fv_w_cow in fv::js_split_limit(&props.text, " ", props.limit as f64).into_iter() {
+    for fv_w_cow in fv::strings::js_split_limit(&props.text, " ", props.limit as f64).into_iter() {
         let fv_w: &str = &fv_w_cow;
         out.push_str("<li>");
-        fv::push_number(out, fv::js_char_code_at(fv_w, 0.0f64));
+        fv::core::numbers::push_number(out, fv::strings::js_char_code_at(fv_w, 0.0f64));
         out.push(':');
-        if let Some(v) = fv::js_code_point_at(fv_w, 0.0f64) {
-            fv::push_int(out, v);
+        if let Some(v) = fv::strings::js_code_point_at(fv_w, 0.0f64) {
+            fv::core::numbers::push_int(out, v);
         }
         out.push_str("</li>");
     }
@@ -170,21 +170,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

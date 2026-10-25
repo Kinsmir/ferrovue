@@ -62,9 +62,9 @@ impl Fixture {
 
 /// The head, after a marker, as the conformance suite writes unhead's: `{"headTags":"…",…}`.
 #[cfg(test)]
-fn head_into(out: &mut String, head: &ferrovue::Head) {
+fn head_into(out: &mut String, head: &ferrovue::head::Head) {
     let html = head.render();
-    if html == ferrovue::HeadHtml::default() {
+    if html == ferrovue::head::HeadHtml::default() {
         return;
     }
     let fields = [
@@ -109,8 +109,8 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             let state: stores::Stores = serde_json::from_value(fixture.stores.clone()).map_err(|e| e.to_string())?;
-            let head = ferrovue::Head::without_defaults();
-            layout::try_render(&mut out, &props, layout::Slots { router_view: ferrovue::Slot::new(&s_router_view) }, &route, &state, &head).map_err(|e| e.to_string())?;
+            let head = ferrovue::head::Head::without_defaults();
+            layout::try_render(&mut out, &props, layout::Slots { router_view: ferrovue::slots::Slot::new(&s_router_view) }, &route, &state, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "Pick" => {
@@ -124,7 +124,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Shipping" => {
             let props: shipping::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     shipping::try_render(&mut out, &props, fv_loads)
@@ -140,7 +140,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "StockLevel" => {
             let props: stock_level::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
                     stock_level::try_render(&mut out, &props, fv_loads)
@@ -159,7 +159,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_actions = |out: &mut String, _: &index::ActionsSlotProps<'_>| -> bool { out.push_str(fixture.slot("actions").unwrap_or_default()); true };
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             index::try_render(&mut out, &props, index::Slots { actions: fixture.slot("actions").map(|_| &s_actions as &index::ActionsSlot) }, &route, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
@@ -168,7 +168,7 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            let head = ferrovue::Head::without_defaults();
+            let head = ferrovue::head::Head::without_defaults();
             missing::try_render(&mut out, &props, &route, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
@@ -179,8 +179,8 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_reviews = |out: &mut String| out.push_str(fixture.slot("reviews").unwrap_or_default());
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            let head = ferrovue::Head::without_defaults();
-            books_id::try_render(&mut out, &props, books_id::Slots { actions: fixture.slot("actions").map(|_| ferrovue::Slot::new(&s_actions)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head).map_err(|e| e.to_string())?;
+            let head = ferrovue::head::Head::without_defaults();
+            books_id::try_render(&mut out, &props, books_id::Slots { actions: fixture.slot("actions").map(|_| ferrovue::slots::Slot::new(&s_actions)), reviews: fixture.slot("reviews").map(|_| ferrovue::slots::Slot::new(&s_reviews)) }, &route, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
         }
         "Picks" => {
@@ -190,11 +190,11 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_reviews = |out: &mut String| out.push_str(fixture.slot("reviews").unwrap_or_default());
             let router = route_table::router();
             let route = router.at(&fixture.route);
-            let loading = ferrovue::load(
+            let loading = ferrovue::load::load(
                 |fv_loads| {
                     out.clear();
-                    let head = ferrovue::Head::without_defaults();
-                    let rendered = picks::try_render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::Slot::new(&s_reviews)) }, &route, &head, fv_loads);
+                    let head = ferrovue::head::Head::without_defaults();
+                    let rendered = picks::try_render(&mut out, &props, picks::Slots { default: fixture.slot("default").map(|_| ferrovue::slots::Slot::new(&s_default)), reviews: fixture.slot("reviews").map(|_| ferrovue::slots::Slot::new(&s_reviews)) }, &route, &head, fv_loads);
                     head_into(&mut out, &head);
                     rendered
                 },

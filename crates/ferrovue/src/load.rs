@@ -70,7 +70,7 @@ impl LoadKey {
     /// Add an integer.
     pub fn int(&mut self, n: i64) -> &mut Self {
         self.json.push(',');
-        crate::push_int(&mut self.json, n);
+        ferrovue_core::numbers::push_int(&mut self.json, n);
         self
     }
 
@@ -80,7 +80,7 @@ impl LoadKey {
             return self.null();
         }
         self.json.push(',');
-        crate::push_number(&mut self.json, x);
+        ferrovue_core::numbers::push_number(&mut self.json, x);
         self
     }
 
@@ -164,7 +164,7 @@ impl<T: LoadArg + ?Sized> LoadArg for &T {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{Load, LoadKey, load_key};
+/// use ferrovue::load::{Load, LoadKey, load_key};
 ///
 /// struct LoadPost {
 ///     id: i64,
@@ -328,7 +328,7 @@ impl<'c> Loads<'c> {
     /// `<script type="application/json" data-fv-loads>` holding an object from each key to its
     /// result, in the order the render first read them, and under `dates` where the results of
     /// each loader hold dates, for the client to read them back as such. `<`, `>`, `&` and the two line separators
-    /// are written as JSON escapes, as [`state_script_into`](crate::state_script_into) writes them.
+    /// are written as JSON escapes, as [`state_script_into`](crate::state::state_script_into) writes them.
     ///
     /// Write it after the components, so that it holds what they read.
     pub fn script_into(&self, out: &mut String) {
@@ -420,7 +420,7 @@ struct Running<'a, E> {
 ///
 /// ```
 /// # use std::convert::Infallible;
-/// # use ferrovue::{Load, LoadKey, Loads};
+/// # use ferrovue::load::{Load, LoadKey, Loads};
 /// # struct LoadName(i64);
 /// # impl Load for LoadName {
 /// #     const NAME: &'static str = "loadName";
@@ -432,11 +432,11 @@ struct Running<'a, E> {
 /// # fn greeting(out: &mut String, id: i64, loads: &Loads<'_>) {
 /// #     let Some(name) = loads.get(LoadName(id)) else { return };
 /// #     out.push_str("<p>Hello, ");
-/// #     ferrovue::escape_into(out, name);
+/// #     ferrovue::core::escape::escape_into(out, name);
 /// #     out.push_str("!</p>");
 /// # }
 /// // Greeting.vue: const name = await loadName(props.id); <p>Hello, {{ name }}!</p>
-/// let page = ferrovue::load(
+/// let page = ferrovue::load::load(
 ///     |loads| {
 ///         let mut out = String::new();
 ///         greeting(&mut out, 1, loads);

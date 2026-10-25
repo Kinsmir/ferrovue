@@ -33,7 +33,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    fv::rendered(try_render(out, props, fv_provides));
+    fv::refused::rendered(try_render(out, props, fv_provides));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,23 +41,23 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(91 + props.label.len());
     let fv_inherited = fv_provides;
     let s_flipped = -(props.n as f64);
     let s_negated = -(props.n as f64);
-    let s_padded = fv::js_pad_start(&props.label.to_lowercase(), 6.0f64, "0").into_owned();
-    let fv_provided_tone = fv::js_pad_end(&props.label.to_uppercase(), 4.0f64, "!").into_owned();
+    let s_padded = fv::strings::js_pad_start(&props.label.to_lowercase(), 6.0f64, "0").into_owned();
+    let fv_provided_tone = fv::strings::js_pad_end(&props.label.to_uppercase(), 4.0f64, "!").into_owned();
     let fv_provides = super::provides::Provides { tone: Some(&*fv_provided_tone), ..fv_inherited };
     out.push_str("<!--[--><p title=\"a\u{202e}b\u{2066}c\">-Infinity ");
-    fv::push_number(out, 1.0 / s_flipped);
+    fv::core::numbers::push_number(out, 1.0 / s_flipped);
     out.push(' ');
-    fv::push_number(out, 1.0 / s_negated);
+    fv::core::numbers::push_number(out, 1.0 / s_negated);
     out.push(' ');
-    fv::push_number(out, s_flipped);
+    fv::core::numbers::push_number(out, s_flipped);
     out.push(' ');
-    fv::escape_into(out, &s_padded);
+    fv::core::escape::escape_into(out, &s_padded);
     out.push_str("</p><p>\u{202e}a\u{202e}b\u{2066}c</p>");
     super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*s_padded) }, fv_provides, "")?;
     out.push_str("<!--]-->");
@@ -65,6 +65,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_provides: super::provides::Provides<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_provides)))
 }

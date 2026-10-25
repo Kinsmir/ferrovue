@@ -61,7 +61,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -69,14 +69,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(107 + 9 * props.words.len() + 64 * props.numbers.len() + 37 * props.groups.iter().map(|fv_g| fv_g.members.len()).sum::<usize>() + 73 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
     for fv_w_ref in props.words.iter() {
         let fv_w: &str = fv_w_ref;
         out.push_str("<li>");
-        fv::escape_into(out, fv_w);
+        fv::core::escape::escape_into(out, fv_w);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
@@ -84,9 +84,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         let fv_n = *fv_n_ref;
         let fv_i = fv_i as i64;
         out.push_str("<li data-index=\"");
-        fv::push_int(out, fv_i);
+        fv::core::numbers::push_int(out, fv_i);
         out.push_str("\">");
-        fv::push_int(out, fv_n);
+        fv::core::numbers::push_int(out, fv_n);
         if fv_i as f64 == 0.0 {
             out.push_str("<!--[--> first<!--]-->");
         } else {
@@ -98,13 +98,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     for fv_g_ref in props.groups.iter() {
         let fv_g = fv_g_ref;
         out.push_str("<div class=\"group\"><h3>");
-        fv::escape_into(out, &fv_g.name);
+        fv::core::escape::escape_into(out, &fv_g.name);
         out.push_str(" (");
-        fv::push_int(out, fv_g.members.len() as i64);
+        fv::core::numbers::push_int(out, fv_g.members.len() as i64);
         out.push_str(")</h3>");
         if let Some(fv_lead) = fv_g.lead.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<b>");
-            fv::escape_into(out, fv_lead);
+            fv::core::escape::escape_into(out, fv_lead);
             out.push_str("</b>");
         } else {
             out.push_str("<!---->");
@@ -114,9 +114,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
             let fv_m: &str = fv_m_ref;
             let fv_j = fv_j as i64;
             out.push_str("<!--[--><span>");
-            fv::push_int(out, fv_j);
+            fv::core::numbers::push_int(out, fv_j);
             out.push(':');
-            fv::escape_into(out, fv_m);
+            fv::core::escape::escape_into(out, fv_m);
             out.push_str("</span>,<!--]-->");
         }
         out.push_str("<!--]--></div>");
@@ -132,21 +132,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

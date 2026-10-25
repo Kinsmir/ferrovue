@@ -18,7 +18,7 @@ use serde::ser::{Serialize, SerializeSeq, Serializer};
 /// # Example
 ///
 /// ```
-/// use ferrovue::Union;
+/// use ferrovue::union::Union;
 ///
 /// // `export type Tone = "warm" | "cool" | "x-dark";` in a `.ts` file, and
 /// // `"unions": { "Tone": "crate::Tone" }` in ferrovue.config.json.
@@ -248,12 +248,12 @@ pub fn check_union<T: Union>(union: &str, members: &[(T, &str)]) {
 /// # #[derive(Debug, PartialEq)]
 /// # enum Size { Sm, Md }
 /// # impl std::str::FromStr for Size {
-/// #     type Err = ferrovue::ParseUnionError;
+/// #     type Err = ferrovue::union::ParseUnionError;
 /// #     fn from_str(s: &str) -> Result<Self, Self::Err> {
 /// #         match s {
 /// #             "sm" => Ok(Size::Sm),
 /// #             "md" => Ok(Size::Md),
-/// #             _ => Err(ferrovue::ParseUnionError::new("Size", s, &["sm", "md"])),
+/// #             _ => Err(ferrovue::union::ParseUnionError::new("Size", s, &["sm", "md"])),
 /// #         }
 /// #     }
 /// # }

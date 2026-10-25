@@ -18,7 +18,7 @@ pub(crate) fn array_index(name: &str) -> Option<u32> {
 /// # Example
 ///
 /// ```
-/// use ferrovue::Record;
+/// use ferrovue::record::Record;
 ///
 /// let scores: Record<'_, i64> = [("b", 1), ("10", 2), ("a", 3), ("2", 4), ("b", 5)].into_iter().collect();
 /// let keys: Vec<&str> = scores.keys().collect();

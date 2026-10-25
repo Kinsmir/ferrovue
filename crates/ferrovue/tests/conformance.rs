@@ -17,7 +17,7 @@ mod vendor;
 #[serde(transparent)]
 pub struct Sanitised(String);
 
-impl ferrovue::TrustedHtml for Sanitised {
+impl ferrovue::trusted::TrustedHtml for Sanitised {
     fn trusted_html(&self) -> &str {
         &self.0
     }
@@ -112,7 +112,7 @@ fn an_island_carries_null_for_a_nullable_prop() {
 
 #[test]
 fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
-    use ferrovue::JsDate;
+    use ferrovue::js_date::JsDate;
     use generated::date_post;
     let date = |iso: &str| JsDate::parse(iso).expect(iso);
     let posts = [
@@ -139,7 +139,7 @@ fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
 
 #[test]
 fn an_island_carries_dates_inside_lists_and_objects_and_where_they_are() {
-    use ferrovue::{JsDate, Record};
+    use ferrovue::{js_date::JsDate, record::Record};
     use generated::date_rows;
     let date = |iso: &str| JsDate::parse(iso).expect(iso);
     let stamps: Record<'_, JsDate> = [
@@ -195,7 +195,7 @@ fn a_component_with_slots_renders_through_html() {
     let body = |out: &mut String| out.push_str("<p>hi</p>");
     let slots = generated::frame::Slots {
         head: None,
-        default: Some(ferrovue::Slot::new(&body)),
+        default: Some(ferrovue::slots::Slot::new(&body)),
     };
     let html = generated::frame::html(&props, slots).into_string();
     assert_eq!(
@@ -204,19 +204,19 @@ fn a_component_with_slots_renders_through_html() {
     );
 }
 
-fn page_part(part: &serde_json::Value) -> ferrovue::Part<'static> {
+fn page_part(part: &serde_json::Value) -> ferrovue::page::Part<'static> {
     use generated::{client_side, prose, text};
     let props = part["p"].clone();
     match part["c"].as_str().expect("a component name") {
-        "ClientSide" => ferrovue::Part::new(
+        "ClientSide" => ferrovue::page::Part::new(
             client_side::NAME,
             client_side::into_html(serde_json::from_value(props).unwrap()),
         ),
-        "Text" => ferrovue::Part::new(
+        "Text" => ferrovue::page::Part::new(
             text::NAME,
             text::into_html(serde_json::from_value(props).unwrap()),
         ),
-        "Prose" => ferrovue::Part::new(
+        "Prose" => ferrovue::page::Part::new(
             prose::NAME,
             prose::into_html(serde_json::from_value(props).unwrap()),
         ),
@@ -237,21 +237,22 @@ fn every_page_renders_as_vue_rendered_it_and_records_what_it_rendered() {
         let fixture: serde_json::Value =
             serde_json::from_str(&fs::read_to_string(&json).unwrap()).unwrap();
         let record = &fixture["record"];
-        let mut page = ferrovue::Page::new();
-        let slots: std::collections::HashMap<&str, ferrovue::PageSlot<'static>> = record["slots"]
-            .as_object()
-            .expect("the slots")
-            .iter()
-            .map(|(name, parts)| {
-                let parts = parts
-                    .as_array()
-                    .expect("a slot's parts")
-                    .iter()
-                    .map(page_part);
-                (name.as_str(), page.slot(name, parts))
-            })
-            .collect();
-        let slot = |name: &str| slots.get(name).map(ferrovue::PageSlot::slot);
+        let mut page = ferrovue::page::Page::new();
+        let slots: std::collections::HashMap<&str, ferrovue::page::PageSlot<'static>> =
+            record["slots"]
+                .as_object()
+                .expect("the slots")
+                .iter()
+                .map(|(name, parts)| {
+                    let parts = parts
+                        .as_array()
+                        .expect("a slot's parts")
+                        .iter()
+                        .map(page_part);
+                    (name.as_str(), page.slot(name, parts))
+                })
+                .collect();
+        let slot = |name: &str| slots.get(name).map(ferrovue::page::PageSlot::slot);
         let props = record["props"].clone();
         let mut out = String::new();
         let written = match fixture["layout"].as_str().expect("a layout") {
@@ -320,9 +321,9 @@ fn a_scoped_slot_is_filled_by_a_closure_given_its_props() {
             return false;
         }
         out.push_str("<b>");
-        ferrovue::escape_into(out, p.label);
+        ferrovue::core::escape::escape_into(out, p.label);
         out.push_str("</b>");
-        ferrovue::push_int(out, p.index);
+        ferrovue::core::numbers::push_int(out, p.index);
         true
     };
     let slots = data_list::Slots {

@@ -305,7 +305,7 @@ function renderElement(s: Scope, e: Emitter, tag: string | { code: string }, d: 
   if (inherited === null && slotted === null) {
     if (own !== null) e.lit(` ${own}`);
   } else {
-    e.stmt(`out.push_str(&fv::scope_attrs(${inherited ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'}));`);
+    e.stmt(`out.push_str(&fv::attrs::scope_attrs(${inherited ?? '""'}, ${own === null ? '""' : rustStr(own)}, ${slotted ?? '""'}));`);
   }
   e.lit(">");
   if (typeof tag === "string" && isVoidTag(tag)) return;

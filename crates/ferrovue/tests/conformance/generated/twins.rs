@@ -20,11 +20,11 @@ pub struct StarRatingProps<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct StarRatingSlots<'s> {
     /// `#default`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
 }
 
 /// How generated code calls the twin of `<StarRating>`: with the buffer, the props,
 /// the slots, and the attributes and scope ids its root takes.
-pub type StarRatingRender = fn(&mut String, &StarRatingProps<'_>, StarRatingSlots<'_>, &fv::Attrs<'_>);
+pub type StarRatingRender = fn(&mut String, &StarRatingProps<'_>, StarRatingSlots<'_>, &fv::attrs::Attrs<'_>);
 
 const _: StarRatingRender = crate::vendor::star_rating;

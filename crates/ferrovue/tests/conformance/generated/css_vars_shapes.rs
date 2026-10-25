@@ -32,8 +32,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    fv::rendered(try_render(out, props, fv_route));
+pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
+    fv::refused::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -41,21 +41,21 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(13 + props.tone.len());
     out.push_str("<main>");
-    super::css_vars_show::try_render_scoped(out, &super::css_vars_show::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on }, &fv::Attrs::new(&[("style", fv::Attr::style([("left", fv::Attr::str("0")), ("--own", fv::Attr::str("1"))]))], ""))?;
-    super::css_vars_bound::try_render_scoped(out, &super::css_vars_bound::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::Attrs::new(&[("style", fv::Attr::style([("left", fv::Attr::str("1px"))])), ("title", fv::Attr::str("t"))], ""))?;
-    super::css_vars_tag::try_render_scoped(out, &super::css_vars_tag::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), tag: if props.on { super::css_vars_tag::CssVarsTagTag::Section } else { super::css_vars_tag::CssVarsTagTag::Div } }, &fv::Attrs::new(&[("style", fv::Attr::style([("right", fv::Attr::str("0"))]))], ""))?;
-    super::css_vars_link::try_render_scoped(out, &super::css_vars_link::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, fv_route, &fv::Attrs::new(&[("style", fv::Attr::style([("bottom", fv::Attr::str("0"))]))], ""))?;
-    super::css_vars_later::try_render_scoped(out, &super::css_vars_later::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::Attrs::new(&[("style", fv::Attr::style([("--later", fv::Attr::str("1"))]))], ""))?;
+    super::css_vars_show::try_render_scoped(out, &super::css_vars_show::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("1"))]))], ""))?;
+    super::css_vars_bound::try_render_scoped(out, &super::css_vars_bound::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))])), ("title", fv::attrs::Attr::str("t"))], ""))?;
+    super::css_vars_tag::try_render_scoped(out, &super::css_vars_tag::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), tag: if props.on { super::css_vars_tag::CssVarsTagTag::Section } else { super::css_vars_tag::CssVarsTagTag::Div } }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("right", fv::attrs::Attr::str("0"))]))], ""))?;
+    super::css_vars_link::try_render_scoped(out, &super::css_vars_link::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, fv_route, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("bottom", fv::attrs::Attr::str("0"))]))], ""))?;
+    super::css_vars_later::try_render_scoped(out, &super::css_vars_later::Props { tone: std::borrow::Cow::Borrowed(&*props.tone) }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("--later", fv::attrs::Attr::str("1"))]))], ""))?;
     super::css_vars_branch::try_render(out, &super::css_vars_branch::Props { tone: std::borrow::Cow::Borrowed(&*props.tone), on: props.on })?;
     out.push_str("</main>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::router::Route<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

@@ -40,27 +40,27 @@ impl std::fmt::Display for Size {
 }
 
 impl std::str::FromStr for Size {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::union::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "sm" => Ok(Size::Sm),
             "md" => Ok(Size::Md),
             "lg" => Ok(Size::Lg),
-            _ => Err(ferrovue::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
+            _ => Err(ferrovue::union::ParseUnionError::new("Size", s, &["sm", "md", "lg"])),
         }
     }
 }
 
 impl TryFrom<&str> for Size {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::union::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for Size {
+impl ferrovue::union::Union for Size {
     const ALL: &'static [Self] = &Size::ALL;
 
     fn as_str(self) -> &'static str {
@@ -117,15 +117,15 @@ impl<'a> Choice<'a> {
 pub struct Moment<'a> {
     #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "at", with = "fv::date_prop")]
-    pub at: ferrovue::JsDate,
-    #[serde(rename = "seen", with = "fv::dates_in")]
-    pub seen: Vec<Option<ferrovue::JsDate>>,
+    #[serde(rename = "at", with = "fv::js_date::date_prop")]
+    pub at: ferrovue::js_date::JsDate,
+    #[serde(rename = "seen", with = "fv::js_date::dates_in")]
+    pub seen: Vec<Option<ferrovue::js_date::JsDate>>,
 }
 
 impl<'a> Moment<'a> {
     /// Moment with its required fields.
-    pub fn new(label: impl Into<Cow<'a, str>>, at: ferrovue::JsDate, seen: Vec<Option<ferrovue::JsDate>>) -> Self {
+    pub fn new(label: impl Into<Cow<'a, str>>, at: ferrovue::js_date::JsDate, seen: Vec<Option<ferrovue::js_date::JsDate>>) -> Self {
         Moment { label: label.into(), at, seen }
     }
 

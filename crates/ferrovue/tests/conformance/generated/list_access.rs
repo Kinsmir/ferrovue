@@ -80,7 +80,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -88,218 +88,218 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(378 + 17 * props.nums.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.rows.iter().map(|v| v.name.len() + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>() + props.word.len());
     let s_first = props.words.first().map(|v| &**v);
-    let s_last = fv::js_item_at(props.words.iter(), -1.0f64).map(|v| &**v).unwrap_or("none");
+    let s_last = fv::strings::js_item_at(props.words.iter(), -1.0f64).map(|v| &**v).unwrap_or("none");
     let s_chosen = props.rows.iter().filter(|fv_r| fv_r.n as f64 > 0.0).nth(usize::try_from(props.i).unwrap_or(usize::MAX));
-    let s_tail = fv::js_item_at(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| std::borrow::Cow::<str>::Owned(fv::js_trim(&fv_w).to_owned())), -1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned()));
+    let s_tail = fv::strings::js_item_at(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| std::borrow::Cow::<str>::Owned(fv::strings::js_trim(&fv_w).to_owned())), -1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned()));
     out.push_str("<!--[--><p>");
     if let Some(v) = props.words.first().map(|v| &**v) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.words.get(usize::try_from(props.i).unwrap_or(usize::MAX)).map(|v| &**v) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.words.get(usize::try_from(-1i64).unwrap_or(usize::MAX)).map(|v| &**v) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.words.get(100).map(|v| &**v) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = props.nums.get(usize::try_from(props.i).unwrap_or(usize::MAX)).copied() {
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = props.prices.get(usize::try_from(props.i).unwrap_or(usize::MAX)).copied() {
-        fv::push_number(out, v);
+        fv::core::numbers::push_number(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.words.get(usize::try_from(props.i).unwrap_or(usize::MAX)).map(|v| &**v).unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.words.get(usize::try_from(props.i).unwrap_or(usize::MAX)).map(|v| &**v).unwrap_or("none"));
     out.push('|');
     if let Some(v) = props.tags.get(usize::try_from(props.i).unwrap_or(usize::MAX)).and_then(|v| v.as_deref()) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.tags.first().and_then(|v| v.as_deref()).unwrap_or("null"));
+    fv::core::escape::escape_into(out, props.tags.first().and_then(|v| v.as_deref()).unwrap_or("null"));
     out.push_str("</p><p>");
-    if let Some(v) = fv::js_item_at(props.words.iter(), props.i as f64).map(|v| &**v) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.words.iter(), props.i as f64).map(|v| &**v) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.words.iter(), -1.0f64).map(|v| &**v) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.words.iter(), -1.0f64).map(|v| &**v) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.words.iter(), -(props.i as f64)).map(|v| &**v) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.words.iter(), -(props.i as f64)).map(|v| &**v) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.words.iter(), props.f).map(|v| &**v) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.words.iter(), props.f).map(|v| &**v) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.nums.iter(), props.f).copied() {
-        fv::push_int(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.nums.iter(), props.f).copied() {
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.prices.iter(), -1.0f64).copied() {
-        fv::push_number(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.prices.iter(), -1.0f64).copied() {
+        fv::core::numbers::push_number(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.tags.iter(), -1.0f64).and_then(|v| v.as_deref()) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.tags.iter(), -1.0f64).and_then(|v| v.as_deref()) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at([1i64, 2i64, 3i64].iter(), props.i as f64).copied() {
-        fv::push_int(out, v);
+    if let Some(v) = fv::strings::js_item_at([1i64, 2i64, 3i64].iter(), props.i as f64).copied() {
+        fv::core::numbers::push_int(out, v);
     }
     out.push_str("</p>");
     if let Some(fv_rows) = props.rows.first() {
         out.push_str("<p>");
-        fv::escape_into(out, &fv_rows.name);
+        fv::core::escape::escape_into(out, &fv_rows.name);
         out.push(':');
-        fv::push_int(out, fv_rows.n);
+        fv::core::numbers::push_int(out, fv_rows.n);
         out.push_str("</p>");
     } else {
         out.push_str("<p>no rows</p>");
     }
     if let Some(fv_words) = props.words.get(1).map(|v| &**v) {
         out.push_str("<p>second ");
-        fv::escape_into(out, fv_words);
+        fv::core::escape::escape_into(out, fv_words);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<p>");
     if let Some(v) = props.rows.get(usize::try_from(props.i).unwrap_or(usize::MAX)).map(|fv_value| &*fv_value.name) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.rows.iter(), -1.0f64).and_then(|fv_value_2| fv_value_2.note.as_deref()) {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.rows.iter(), -1.0f64).and_then(|fv_value_2| fv_value_2.note.as_deref()) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = props.rows.get(usize::try_from(props.i).unwrap_or(usize::MAX)).and_then(|fv_value_3| fv_value_3.note.as_deref()).map(fv::js_length) {
-        fv::push_int(out, v);
+    if let Some(v) = props.rows.get(usize::try_from(props.i).unwrap_or(usize::MAX)).and_then(|fv_value_3| fv_value_3.note.as_deref()).map(fv::strings::js_length) {
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = props.maybe.as_ref().and_then(|fv_maybe| fv_maybe.get(usize::try_from(props.i).unwrap_or(usize::MAX)).map(|v| &**v)) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = props.maybe.as_ref().and_then(|fv_maybe_2| fv::js_item_at(fv_maybe_2.iter(), -1.0f64).map(|v| &**v)) {
-        fv::escape_into(out, v);
+    if let Some(v) = props.maybe.as_ref().and_then(|fv_maybe_2| fv::strings::js_item_at(fv_maybe_2.iter(), -1.0f64).map(|v| &**v)) {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.maybe.as_ref().and_then(|fv_maybe_3| fv_maybe_3.first().map(|v| &**v)).unwrap_or("absent"));
+    fv::core::escape::escape_into(out, props.maybe.as_ref().and_then(|fv_maybe_3| fv_maybe_3.first().map(|v| &**v)).unwrap_or("absent"));
     out.push_str("</p><p>");
     if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| **fv_w_2 != *props.word).nth(usize::try_from(0i64).unwrap_or(usize::MAX)).as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w_3| std::borrow::Cow::<str>::Owned(fv::js_trim(&fv_w_3).to_owned())), props.i as f64).as_deref() {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w_3| std::borrow::Cow::<str>::Owned(fv::strings::js_trim(&fv_w_3).to_owned())), props.i as f64).as_deref() {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_slice_items(props.nums.iter().copied(), 1.0f64, None).nth(usize::try_from(props.i).unwrap_or(usize::MAX)) {
-        fv::push_int(out, v);
+    if let Some(v) = fv::strings::js_slice_items(props.nums.iter().copied(), 1.0f64, None).nth(usize::try_from(props.i).unwrap_or(usize::MAX)) {
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
-    if let Some(v) = fv::js_item_at(fv::js_slice_items(props.nums.iter().copied(), 1.0f64, None), -1.0f64) {
-        fv::push_int(out, v);
+    if let Some(v) = fv::strings::js_item_at(fv::strings::js_slice_items(props.nums.iter().copied(), 1.0f64, None), -1.0f64) {
+        fv::core::numbers::push_int(out, v);
     }
     out.push('|');
     if let Some(v) = s_first {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::escape_into(out, s_last);
+    fv::core::escape::escape_into(out, s_last);
     out.push('|');
     if let Some(v) = s_chosen.map(|fv_chosen| &*fv_chosen.name) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
     if let Some(v) = s_tail.as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push_str("</p><p>");
-    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).position(|fv_item| *fv_item == *props.word).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).position(|fv_item| *fv_item == *props.word).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rposition(|fv_item_2| *fv_item_2 == *props.word).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rposition(|fv_item_2| *fv_item_2 == *props.word).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.nums.iter().copied().position(|fv_item_3| fv_item_3 == props.i).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.nums.iter().copied().position(|fv_item_3| fv_item_3 == props.i).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.nums.iter().copied().rposition(|fv_item_4| fv_item_4 == props.i).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.nums.iter().copied().rposition(|fv_item_4| fv_item_4 == props.i).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.nums.iter().copied().position(|fv_item_5| fv_item_5 as f64 == props.f).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.nums.iter().copied().position(|fv_item_5| fv_item_5 as f64 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().position(|fv_item_6| fv_item_6 == props.f).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().position(|fv_item_6| fv_item_6 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().rposition(|fv_item_7| fv_item_7 == props.f).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().rposition(|fv_item_7| fv_item_7 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().position(|fv_item_8| fv_item_8 == fv::js_number("x")).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().position(|fv_item_8| fv_item_8 == fv::strings::js_number("x")).map_or(-1, |i| i as i64));
     out.push('|');
-    out.push_str(if props.prices.iter().copied().any(|fv_item_9| fv_item_9 == fv::js_number("x") || (fv_item_9.is_nan() && fv::js_number("x").is_nan())) { "true" } else { "false" });
+    out.push_str(if props.prices.iter().copied().any(|fv_item_9| fv_item_9 == fv::strings::js_number("x") || (fv_item_9.is_nan() && fv::strings::js_number("x").is_nan())) { "true" } else { "false" });
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().position(|fv_item_10| fv_item_10 == -0.0).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().position(|fv_item_10| fv_item_10 == -0.0).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().rposition(|fv_item_11| fv_item_11 == 0.0).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().rposition(|fv_item_11| fv_item_11 == 0.0).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().map(|fv_p| fv_p * 2.0).collect::<Vec<_>>().into_iter().rposition(|fv_item_12| fv_item_12 == props.f).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().map(|fv_p| fv_p * 2.0).collect::<Vec<_>>().into_iter().rposition(|fv_item_12| fv_item_12 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_4| fv::js_length(fv_w_4) as f64 > 0.0).collect::<Vec<_>>().into_iter().rposition(|fv_item_13| *fv_item_13 == *props.word).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_4| fv::strings::js_length(fv_w_4) as f64 > 0.0).collect::<Vec<_>>().into_iter().rposition(|fv_item_13| *fv_item_13 == *props.word).map_or(-1, |i| i as i64));
     out.push_str("</p><p>");
-    if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rev().find(|fv_w_5| fv::js_length(fv_w_5) as f64 > 1.0).as_deref() {
-        fv::escape_into(out, v);
+    if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rev().find(|fv_w_5| fv::strings::js_length(fv_w_5) as f64 > 1.0).as_deref() {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rposition(|fv_w_6| *fv_w_6 == *props.word).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rposition(|fv_w_6| *fv_w_6 == *props.word).map_or(-1, |i| i as i64));
     out.push('|');
     if let Some(v) = props.rows.iter().rev().find(|fv_r_2| fv_r_2.n as f64 > 1.0).map(|fv_value_4| &*fv_value_4.name) {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::push_int(out, props.nums.iter().copied().enumerate().rposition(|(fv_k, fv_n)| { let fv_k = fv_k as i64; fv_n as f64 > fv_k as f64 }).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.nums.iter().copied().enumerate().rposition(|(fv_k, fv_n)| { let fv_k = fv_k as i64; fv_n as f64 > fv_k as f64 }).map_or(-1, |i| i as i64));
     out.push('|');
     if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rev().find(|fv_item_14| !fv_item_14.is_empty()).as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::push_int(out, props.nums.iter().copied().rposition(|fv_item_15| fv_item_15 != 0).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.nums.iter().copied().rposition(|fv_item_15| fv_item_15 != 0).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::escape_into(out, props.rows.iter().filter(|fv_r_3| fv_r_3.n as f64 != 0.0).collect::<Vec<_>>().into_iter().rev().find(|fv_item_16| (fv_item_16.n as f64) < 0.0).map(|fv_value_5| &*fv_value_5.name).unwrap_or("none"));
+    fv::core::escape::escape_into(out, props.rows.iter().filter(|fv_r_3| fv_r_3.n as f64 != 0.0).collect::<Vec<_>>().into_iter().rev().find(|fv_item_16| (fv_item_16.n as f64) < 0.0).map(|fv_value_5| &*fv_value_5.name).unwrap_or("none"));
     out.push('|');
     if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().rev().find(|fv_entry| { let fv_w_7 = &fv_entry.1; let fv_k_2 = fv_entry.0 as i64; fv_k_2 as f64 > 0.0 && **fv_w_7 != *props.word }).map(|(_, v)| v).as_deref() {
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
     }
     out.push_str("</p><p>");
-    fv::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain(props.maybe.as_ref().map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v))).collect::<Vec<_>>().join("/"));
+    fv::core::escape::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain(props.maybe.as_ref().map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v))).collect::<Vec<_>>().join("/"));
     out.push('|');
-    fv::push_int(out, props.nums.iter().copied().chain([7i64, 8i64].iter().copied()).chain(props.nums.iter().copied()).count() as i64);
+    fv::core::numbers::push_int(out, props.nums.iter().copied().chain([7i64, 8i64].iter().copied()).chain(props.nums.iter().copied()).count() as i64);
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain([&*props.word].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v))), -1.0f64).as_deref() {
-        fv::escape_into(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain([&*props.word].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v))), -1.0f64).as_deref() {
+        fv::core::escape::escape_into(out, v);
     }
     out.push('|');
-    fv::push_int(out, props.rows.iter().chain(props.rows.iter()).collect::<Vec<_>>().into_iter().rposition(|fv_r_4| fv_r_4.n as f64 == props.i as f64).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.rows.iter().chain(props.rows.iter()).collect::<Vec<_>>().into_iter().rposition(|fv_r_4| fv_r_4.n as f64 == props.i as f64).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::push_int(out, props.prices.iter().copied().position(|fv_item_17| fv_item_17 == props.f).map_or(-1, |i| i as i64));
+    fv::core::numbers::push_int(out, props.prices.iter().copied().position(|fv_item_17| fv_item_17 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::escape_into(out, &props.prices.iter().copied().chain(props.nums.iter().copied().map(|v| v as f64)).map(|v| fv::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape::escape_into(out, &props.prices.iter().copied().chain(props.nums.iter().copied().map(|v| v as f64)).map(|v| fv::core::numbers::Js(v).to_string()).collect::<Vec<_>>().join(","));
     out.push('|');
-    if let Some(v) = fv::js_item_at(props.nums.iter().copied().map(|v| v as f64).chain(props.prices.iter().copied()).chain([2i64].iter().copied().map(|v| v as f64)), -2.0f64) {
-        fv::push_number(out, v);
+    if let Some(v) = fv::strings::js_item_at(props.nums.iter().copied().map(|v| v as f64).chain(props.prices.iter().copied()).chain([2i64].iter().copied().map(|v| v as f64)), -2.0f64) {
+        fv::core::numbers::push_number(out, v);
     }
     out.push_str("</p><ul><!--[-->");
-    for fv_r_5 in props.rows.iter().chain(fv::js_slice_items(props.rows.iter(), 1.0f64, None)) {
+    for fv_r_5 in props.rows.iter().chain(fv::strings::js_slice_items(props.rows.iter(), 1.0f64, None)) {
         out.push_str("<li>");
-        fv::escape_into(out, &fv_r_5.name);
+        fv::core::escape::escape_into(out, &fv_r_5.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ul><!--[-->");
@@ -308,7 +308,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<li>");
         out.push_str(if props.nums.iter().copied().filter(|fv_n_2| *fv_n_2 as f64 > 1.0).any(|fv_item_18| fv_item_18 == fv_v) { "true" } else { "false" });
         out.push(':');
-        fv::push_int(out, props.nums.iter().copied().rposition(|fv_item_19| fv_item_19 == fv_v).map_or(-1, |i| i as i64));
+        fv::core::numbers::push_int(out, props.nums.iter().copied().rposition(|fv_item_19| fv_item_19 == fv_v).map_or(-1, |i| i as i64));
         out.push(':');
         out.push_str(if props.prices.iter().copied().map(|fv_p_2| fv_p_2 * 2.0).any(|fv_item_20| fv_item_20 == fv_v as f64) { "true" } else { "false" });
         out.push_str("</li>");
@@ -318,21 +318,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

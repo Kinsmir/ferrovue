@@ -1,6 +1,12 @@
 use std::time::Duration;
 
-use ferrovue::{Head, Hydrate, PageHole, PageScript, Part, Route, Router, Slot};
+use ferrovue::{
+    head::Head,
+    hydrate::Hydrate,
+    page::{PageHole, PageScript, Part},
+    router::{Route, Router},
+    slots::Slot,
+};
 
 use crate::assets::Assets;
 use crate::catalogue::{self, Catalogue};
@@ -15,7 +21,7 @@ const SHOP: &str = "Ferrovue Books";
 pub struct Page {
     /// The HTTP status.
     pub status: u16,
-    /// The markup, with a [`ferrovue::hole`] where each of `holes` goes.
+    /// The markup, with a [`ferrovue::slots::hole`] where each of `holes` goes.
     pub html: String,
     /// What goes in each hole, in order.
     pub holes: Vec<Hole>,
@@ -82,7 +88,10 @@ impl Site {
     /// A book's reviews, as the island the client hydrates once it is scrolled into view: what
     /// fills the book page's hole, and a response of its own. It holds its props, so it outlives
     /// this call.
-    pub async fn reviews(&self, id: &str) -> ferrovue::Html<'static, reviews::Props<'static>> {
+    pub async fn reviews(
+        &self,
+        id: &str,
+    ) -> ferrovue::html::Html<'static, reviews::Props<'static>> {
         let list = catalogue::reviews(id, self.review_delay).await;
         reviews::into_island(reviews::Props::new(list)).hydrate(Hydrate::Visible)
     }
@@ -96,7 +105,7 @@ impl Site {
         } = self.page(location).await;
         let mut out = String::new();
         let mut holes = holes.into_iter();
-        for piece in ferrovue::split_holes(&html) {
+        for piece in ferrovue::slots::split_holes(&html) {
             out.push_str(piece);
             if let Some(hole) = holes.next() {
                 out.push_str(&self.fill(hole).await);
@@ -138,7 +147,7 @@ impl Site {
         let view = |out: &mut String| {
             let slots = books_id::Slots {
                 actions: Some(Slot::new(&actions)),
-                reviews: Some(ferrovue::hole()),
+                reviews: Some(ferrovue::slots::hole()),
             };
             books_id::render(out, &props, slots, route, &head);
         };
@@ -171,7 +180,7 @@ impl Site {
             .collect::<Vec<_>>();
         let props = picks::Props::new(SHOP, featured.clone(), books);
         let rendered = loaders::load(&Catalogue, |loads| {
-            let mut page = ferrovue::Page::new();
+            let mut page = ferrovue::page::Page::new();
             let parts = page.slot(
                 "default",
                 picks
@@ -188,7 +197,7 @@ impl Site {
             let record = page.render_to(&mut body, picks::html(&props, slots, route, &head, loads));
             body.push_str("</div>");
             loads.script_into(&mut body);
-            ferrovue::hole().render_to(&mut body);
+            ferrovue::slots::hole().render_to(&mut body);
             (head, body, record, reviews)
         })
         .await;
@@ -232,11 +241,11 @@ impl Site {
         out.push_str(&tags.body_tags_open);
         out.push_str(body);
         out.push_str(&tags.body_tags);
-        ferrovue::state_script_into(&mut out, "__pinia", stores);
+        ferrovue::state::state_script_into(&mut out, "__pinia", stores);
         self.assets.scripts_into(&mut out);
         out.push_str("</body></html>");
         assert_eq!(
-            ferrovue::split_holes(&out).len(),
+            ferrovue::slots::split_holes(&out).len(),
             holes.len() + 1,
             "one hole filled per hole left"
         );

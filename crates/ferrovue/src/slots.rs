@@ -1,11 +1,11 @@
-use crate::js_trim;
+use crate::strings::js_trim;
 
 /// What a parent puts in one of a component's slots.
 ///
 /// # Example
 ///
 /// ```
-/// use ferrovue::{slot_into, Slot};
+/// use ferrovue::slots::{slot_into, Slot};
 ///
 /// let body = |out: &mut String| out.push_str("<p>three new messages</p>");
 /// let slot = Slot::new(&body);
@@ -33,17 +33,17 @@ impl<'s> Slot<'s> {
     /// a slot is always content to Vue; to show the fallback, give the slot `None`.
     ///
     /// The closure's output is written as it is, unescaped: escape any text it writes with
-    /// [`escape_into`](crate::escape_into).
+    /// [`escape_into`](crate::core::escape::escape_into).
     ///
     /// # Example
     ///
     /// ```
-    /// use ferrovue::{slot_into, Slot};
+    /// use ferrovue::slots::{slot_into, Slot};
     ///
     /// let name = "<Ada>";
     /// let content = |out: &mut String| {
     ///     out.push_str("<b>");
-    ///     ferrovue::escape_into(out, name);
+    ///     ferrovue::core::escape::escape_into(out, name);
     ///     out.push_str("</b>");
     /// };
     /// let mut out = String::new();
@@ -88,7 +88,7 @@ impl<'s> Slot<'s> {
     /// ```
     /// let page = |out: &mut String| out.push_str("<h1>Home</h1>");
     /// let mut out = String::from("<main>");
-    /// ferrovue::Slot::new(&page).render_to(&mut out);
+    /// ferrovue::slots::Slot::new(&page).render_to(&mut out);
     /// out.push_str("</main>");
     /// assert_eq!(out, "<main><h1>Home</h1></main>");
     /// ```
@@ -125,7 +125,7 @@ fn write_hole(out: &mut String) {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{hole, slot_into, split_holes};
+/// use ferrovue::slots::{hole, slot_into, split_holes};
 ///
 /// // A layout rendered with a hole where the page goes, then sent in two pieces.
 /// let mut layout = String::from("<main>");
@@ -147,7 +147,7 @@ pub fn hole() -> Slot<'static> {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{hole, slot_into, split_holes};
+/// use ferrovue::slots::{hole, slot_into, split_holes};
 ///
 /// let mut page = String::from("<h1>Dune</h1>");
 /// slot_into(&mut page, Some(hole()), None); // the reviews, written later
@@ -173,7 +173,7 @@ pub fn split_holes(rendered: &str) -> Vec<&str> {
 /// # Example
 ///
 /// ```
-/// use ferrovue::{slot_into, Slot};
+/// use ferrovue::slots::{slot_into, Slot};
 ///
 /// let content = |out: &mut String| out.push_str("<p>given</p>");
 /// let mut out = String::new();
@@ -200,7 +200,7 @@ pub fn slot_into(
 /// # Example
 ///
 /// ```
-/// use ferrovue::{slot_into_slotted, Slot};
+/// use ferrovue::slots::{slot_into_slotted, Slot};
 ///
 /// // Content from Rust is not given the id, as static markup is not in Vue.
 /// let content = |out: &mut String| out.push_str("<p>given</p>");
@@ -283,7 +283,7 @@ pub fn is_comment(chunk: &str) -> bool {
 /// # Example
 ///
 /// ```
-/// use ferrovue::scoped_slot_into;
+/// use ferrovue::slots::scoped_slot_into;
 ///
 /// /// What a component's outlet passes; generated code writes one such struct per scoped slot.
 /// struct RowProps<'v> {
@@ -291,7 +291,7 @@ pub fn is_comment(chunk: &str) -> bool {
 /// }
 ///
 /// let row = |out: &mut String, p: &RowProps<'_>| {
-///     ferrovue::escape_into(out, p.label);
+///     ferrovue::core::escape::escape_into(out, p.label);
 ///     true
 /// };
 /// let slot: &dyn for<'v> Fn(&mut String, &RowProps<'v>) -> bool = &row;
@@ -325,7 +325,7 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 /// # Example
 ///
 /// ```
-/// use ferrovue::scoped_slot_into_slotted;
+/// use ferrovue::slots::scoped_slot_into_slotted;
 ///
 /// /// What a component's outlet passes; generated code writes one such struct per scoped slot.
 /// struct FooterProps {
@@ -336,7 +336,7 @@ pub fn scoped_slot_into<P: ?Sized, F: Fn(&mut String, &P) -> bool + ?Sized>(
 ///     out.push_str("<small");
 ///     out.push_str(slot_scope_id);
 ///     out.push('>');
-///     ferrovue::push_int(out, p.count);
+///     ferrovue::core::numbers::push_int(out, p.count);
 ///     out.push_str("</small>");
 ///     true
 /// };

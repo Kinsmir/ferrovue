@@ -56,7 +56,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -64,28 +64,28 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(418 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
     out.push_str("<div style=\"");
     if !props.shown {
         out.push_str("display:none;");
     }
     out.push_str("\"><p style=\"color:");
-    fv::escape_into(out, &props.color);
+    fv::core::escape::escape_into(out, &props.color);
     out.push_str(";font-size:");
-    fv::escape_into(out, &format!("{}px", fv::Js(props.size)));
+    fv::core::escape::escape_into(out, &format!("{}px", fv::core::numbers::Js(props.size)));
     out.push_str(";line-height:1.5;--gap:");
-    fv::push_int(out, props.size);
+    fv::core::numbers::push_int(out, props.size);
     out.push_str(";opacity:0.5;\">a</p><p style=\"margin:0;");
     if let Some(v) = props.accent.as_deref() {
         out.push_str("color:");
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
         out.push(';');
     }
     if let Some(v) = props.width {
         out.push_str("border-width:");
-        fv::push_int(out, v);
+        fv::core::numbers::push_int(out, v);
         out.push(';');
     }
     out.push_str("\">b</p><p style=\"");
@@ -98,9 +98,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("gap:1rem;");
     }
     out.push_str("webkit-line-clamp:");
-    fv::push_int(out, props.size);
+    fv::core::numbers::push_int(out, props.size);
     out.push_str(";\">c</p><p style=\"");
-    fv::escape_into(out, &props.raw);
+    fv::core::escape::escape_into(out, &props.raw);
     out.push_str("\">d</p><p style=\"top: 0\">e</p><p style=\"");
     if props.hidden {
         out.push_str("display:none;");
@@ -108,7 +108,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("display:block;");
     }
     out.push_str("\">f</p><p style=\"color:");
-    fv::escape_into(out, &props.color);
+    fv::core::escape::escape_into(out, &props.color);
     out.push(';');
     if !props.hidden {
         out.push_str("display:none;");
@@ -120,7 +120,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push_str("\">h</p><p style=\"");
     if let Some(v) = props.accent.as_deref() {
         out.push_str("width:");
-        fv::escape_into(out, v);
+        fv::core::escape::escape_into(out, v);
         out.push(';');
     }
     out.push_str("\">i</p></div>");
@@ -128,21 +128,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

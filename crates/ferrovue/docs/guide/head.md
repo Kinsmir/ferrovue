@@ -3,10 +3,10 @@ server renderer writes it.
 
 A component sets the title, meta tags and the rest of the head with
 [unhead](https://unhead.unjs.io) (`@unhead/vue` 3), as Nuxt's `useHead` and `useSeoMeta` do. The
-compiler translates each call in `<script setup>` into a push onto a [`Head`](crate::Head), in the
+compiler translates each call in `<script setup>` into a push onto a [`Head`](crate::head::Head), in the
 order Vue's server would run them: a parent's setup before its children's, the children in the
 order they render, and a component `defineAsyncComponent` loads, with everything it renders, after
-the components rendered without waiting, as Vue's server waits for it. Once the body is rendered, [`Head::render`](crate::Head::render) gives what
+the components rendered without waiting, as Vue's server waits for it. Once the body is rendered, [`Head::render`](crate::head::Head::render) gives what
 unhead's `renderSSRHead` gives for the same calls: the same tags, in the same order, deduplicated
 and escaped the same way, with the title template applied. The suite holds it to unhead's own
 renderer, over the conformance components and over hundreds of recorded heads
@@ -73,21 +73,21 @@ useSeoMeta({ ogTitle: props.title });
 #
 #
 /// Write the component's server render into `out`.
-pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
+pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
     out.reserve(28 + props.title.len() + props.summary.as_deref().map_or(0, str::len));
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.title)), ("titleTemplate", fv::HeadValue::str("%s · Books")), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("description")), ("content", if let Some(v) = props.summary.as_deref() { fv::HeadValue::str(v) } else { fv::HeadValue::Undefined })])])), ("htmlAttrs", fv::HeadValue::object([("lang", fv::HeadValue::str("en"))]))]));
-    fv_head.push_seo_meta(fv::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::HeadValue::str(&props.title))]);
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.title)), ("titleTemplate", fv::head::HeadValue::str("%s · Books")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", if let Some(v) = props.summary.as_deref() { fv::head::HeadValue::str(v) } else { fv::head::HeadValue::Undefined })])])), ("htmlAttrs", fv::head::HeadValue::object([("lang", fv::head::HeadValue::str("en"))]))]));
+    fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::head::HeadValue::str(&props.title))]);
     out.push_str("<article><h1>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape::escape_into(out, &props.title);
     out.push_str("</h1></article>");
 }
 #
 # /// The component's markup, for a maud page that shows it.
-# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
-#     fv::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_head))
+# pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl Fn(&mut String, &Props<'a>) + 'p> {
+#     fv::html::Html::markup(props, move |out: &mut String, props: &Props<'a>| render(out, props, fv_head))
 # }
 # }
-let head = ferrovue::Head::new();
+let head = ferrovue::head::Head::new();
 let mut body = String::new();
 let props = article::Props::new("Dune & Children").summary("A \"desert\" planet");
 article::render(&mut body, &props, &head);
@@ -114,15 +114,15 @@ assert_eq!(
 );
 ```
 
-The page renders the body first, then writes the head: the tags in [`HeadHtml`](crate::HeadHtml)
+The page renders the body first, then writes the head: the tags in [`HeadHtml`](crate::head::HeadHtml)
 go where their names say, and `html_attrs` and `body_attrs` into the opening tags of `<html>` and
 `<body>`. A streamed page renders its body up to its first hole before it sends anything, so the
 head is complete by then; a component rendered later, into a hole, adds nothing to it.
 
-[`Head::new`](crate::Head::new) is the head `createHead()` from `@unhead/vue/server` makes, with
+[`Head::new`](crate::head::Head::new) is the head `createHead()` from `@unhead/vue/server` makes, with
 unhead's defaults (`lang="en"`, `<meta charset="utf-8">` and the viewport);
-[`Head::without_defaults`](crate::Head::without_defaults) is `createHead({ disableDefaults: true })`.
-The page can push entries of its own with [`Head::push`](crate::Head::push), as a
+[`Head::without_defaults`](crate::head::Head::without_defaults) is `createHead({ disableDefaults: true })`.
+The page can push entries of its own with [`Head::push`](crate::head::Head::push), as a
 `useHead` in the app's root would: pushed before the body renders, a site-wide `titleTemplate` or
 stylesheet comes before every component's.
 
@@ -158,7 +158,7 @@ which run with arguments or on the client; a value the server does not compute; 
 
 # On the client
 
-The head is unhead's on the client. A component that calls `useHead` takes the [`Head`](crate::Head)
+The head is unhead's on the client. A component that calls `useHead` takes the [`Head`](crate::head::Head)
 like any other render parameter, so it is never an island of its own; on the client it runs where
 the page is hydrated as one app, by `mountPage`, which must give it unhead's client head:
 

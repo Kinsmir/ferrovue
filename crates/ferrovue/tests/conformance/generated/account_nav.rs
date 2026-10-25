@@ -30,8 +30,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
-    fv::rendered(try_render(out, props, fv_route));
+pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) {
+    fv::refused::rendered(try_render(out, props, fv_route));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -39,8 +39,8 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(210 + props.order.len());
     out.push_str("<nav>");
     {
@@ -52,9 +52,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
+        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
         out.push_str("\">account</a>");
     }
     {
@@ -66,9 +66,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "in" } else { "" }, if fv_link.exact { "here" } else { "" }]);
+        fv::class::class_into(out, false, &[if fv_link.active { "in" } else { "" }, if fv_link.exact { "here" } else { "" }]);
         out.push_str("\">home</a>");
     }
     {
@@ -78,9 +78,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "orders"]);
+        fv::class::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "orders"]);
         out.push_str("\">orders</a>");
     }
     {
@@ -92,11 +92,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
             out.push_str(" aria-current=\"page\"");
         }
         out.push_str(" href=\"");
-        fv::escape_into(out, &fv_link.href);
+        fv::core::escape::escape_into(out, &fv_link.href);
         out.push_str("\" class=\"");
-        fv::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
+        fv::class::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
         out.push_str("\">order ");
-        fv::escape_into(out, &props.order);
+        fv::core::escape::escape_into(out, &props.order);
         out.push_str("</a>");
     }
     out.push_str("</nav>");
@@ -104,6 +104,6 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::Route<'_>)
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::Route<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_route: &'p fv::router::Route<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_route)))
 }

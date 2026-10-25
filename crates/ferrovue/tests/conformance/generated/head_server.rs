@@ -34,8 +34,8 @@ impl<'a> Props<'a> {
 /// # Panics
 ///
 /// With the message of the refusal [`try_render`] returns.
-pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
-    fv::rendered(try_render(out, props, fv_head));
+pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
+    fv::refused::rendered(try_render(out, props, fv_head));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -43,19 +43,19 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::Head) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::refused::Refused> {
     out.reserve(19 + props.title.len() + props.theme.len());
-    fv_head.push(fv::HeadValue::object([("title", fv::HeadValue::str(&props.title)), ("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("theme-color")), ("content", fv::HeadValue::str(&props.theme))])])), ("link", fv::HeadValue::array([fv::HeadValue::object([("rel", fv::HeadValue::str("preload")), ("href", fv::HeadValue::str("/late.css")), ("as", fv::HeadValue::str("style")), ("tagPriority", fv::HeadValue::str("low"))])]))]));
-    fv_head.push(fv::HeadValue::object([("meta", fv::HeadValue::array([fv::HeadValue::object([("name", fv::HeadValue::str("theme-color")), ("content", fv::HeadValue::str("server")), ("tagDuplicateStrategy", fv::HeadValue::str("replace"))]), fv::HeadValue::object([("name", fv::HeadValue::str("generator")), ("content", fv::HeadValue::str(&props.title)), ("tagPriority", fv::HeadValue::str("critical"))])])), ("link", fv::HeadValue::array([fv::HeadValue::object([("rel", fv::HeadValue::str("preload")), ("href", fv::HeadValue::str("/early.css")), ("as", fv::HeadValue::str("style")), ("tagPriority", fv::HeadValue::str("high"))]), fv::HeadValue::object([("rel", fv::HeadValue::str("stylesheet")), ("href", fv::HeadValue::str(&format!("/rank/{}.css", fv::Js(props.rank)))), ("tagPriority", fv::HeadValue::Number(5.0_f64))])])), ("htmlAttrs", fv::HeadValue::object([("class", fv::HeadValue::str("served")), ("tagDuplicateStrategy", fv::HeadValue::str("merge"))]))]));
-    fv_head.push_seo_meta(fv::HeadValue::Object(Vec::new()), vec![("name", "description", fv::HeadValue::str(&props.title)), ("property", "og:title", fv::HeadValue::str(&props.title)), ("name", "robots", if let Some(v) = if props.rank as f64 > 0.0 { Some("index") } else { None } { fv::HeadValue::str(v) } else { fv::HeadValue::Null })]);
+    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.title)), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme-color")), ("content", fv::head::HeadValue::str(&props.theme))])])), ("link", fv::head::HeadValue::array([fv::head::HeadValue::object([("rel", fv::head::HeadValue::str("preload")), ("href", fv::head::HeadValue::str("/late.css")), ("as", fv::head::HeadValue::str("style")), ("tagPriority", fv::head::HeadValue::str("low"))])]))]));
+    fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme-color")), ("content", fv::head::HeadValue::str("server")), ("tagDuplicateStrategy", fv::head::HeadValue::str("replace"))]), fv::head::HeadValue::object([("name", fv::head::HeadValue::str("generator")), ("content", fv::head::HeadValue::str(&props.title)), ("tagPriority", fv::head::HeadValue::str("critical"))])])), ("link", fv::head::HeadValue::array([fv::head::HeadValue::object([("rel", fv::head::HeadValue::str("preload")), ("href", fv::head::HeadValue::str("/early.css")), ("as", fv::head::HeadValue::str("style")), ("tagPriority", fv::head::HeadValue::str("high"))]), fv::head::HeadValue::object([("rel", fv::head::HeadValue::str("stylesheet")), ("href", fv::head::HeadValue::str(&format!("/rank/{}.css", fv::core::numbers::Js(props.rank)))), ("tagPriority", fv::head::HeadValue::Number(5.0_f64))])])), ("htmlAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str("served")), ("tagDuplicateStrategy", fv::head::HeadValue::str("merge"))]))]));
+    fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("name", "description", fv::head::HeadValue::str(&props.title)), ("property", "og:title", fv::head::HeadValue::str(&props.title)), ("name", "robots", if let Some(v) = if props.rank as f64 > 0.0 { Some("index") } else { None } { fv::head::HeadValue::str(v) } else { fv::head::HeadValue::Null })]);
     out.push_str("<section>");
-    fv::escape_into(out, &props.title);
+    fv::core::escape::escape_into(out, &props.title);
     out.push_str("</section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::Head) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_head: &'p fv::head::Head) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_head)))
 }

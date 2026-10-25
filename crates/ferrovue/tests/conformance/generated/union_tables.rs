@@ -42,7 +42,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::refused::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -50,8 +50,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(287 + 7 + 7 + props.label.len());
     let s_choice = props.pick.map(|v| match v { super::types::Mood::Calm => super::types::MoodChoice::Calm, super::types::Mood::Loud => super::types::MoodChoice::Loud, super::types::Mood::QX => super::types::MoodChoice::QX }).unwrap_or(super::types::MoodChoice::Empty);
     let s_other = if props.on { match props.mood { super::types::Mood::Calm => super::types::MoodChoice::Calm, super::types::Mood::Loud => super::types::MoodChoice::Loud, super::types::Mood::QX => super::types::MoodChoice::QX } } else { super::types::MoodChoice::Empty };
@@ -60,7 +60,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape::escape_into(out, &props.label);
         out.push('"');
     }
     out.push('>');
@@ -70,13 +70,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match s_choice { super::types::MoodChoice::Calm => super::types::Mood::Calm, super::types::MoodChoice::Loud => super::types::Mood::Loud, super::types::MoodChoice::QX | super::types::MoodChoice::Empty => super::types::Mood::QX }), label: std::borrow::Cow::Borrowed(match s_other { super::types::MoodChoice::Calm => "Calm", super::types::MoodChoice::Loud => "Loud", super::types::MoodChoice::QX => "Odd 'one'", super::types::MoodChoice::Empty => "<none> & \"all\"" }) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match match s_other { super::types::MoodChoice::Calm => super::types::Mood::Calm, super::types::MoodChoice::Loud => super::types::Mood::Loud, super::types::MoodChoice::QX | super::types::MoodChoice::Empty => super::types::Mood::QX } { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     out.push_str("<p data-choice=\"");
-    fv::escape_into(out, fv::Union::as_str(s_choice));
+    fv::core::escape::escape_into(out, fv::union::Union::as_str(s_choice));
     out.push_str("\">");
-    fv::escape_into(out, match match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm } { super::types::Mood::Calm => "Calm", super::types::Mood::Loud => "Loud", super::types::Mood::QX => "Odd 'one'" });
+    fv::core::escape::escape_into(out, match match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm } { super::types::Mood::Calm => "Calm", super::types::Mood::Loud => "Loud", super::types::Mood::QX => "Odd 'one'" });
     out.push(' ');
-    fv::escape_into(out, fv::Union::as_str(s_choice));
+    fv::core::escape::escape_into(out, fv::union::Union::as_str(s_choice));
     out.push(' ');
-    fv::escape_into(out, fv::Union::as_str(s_other));
+    fv::core::escape::escape_into(out, fv::union::Union::as_str(s_other));
     out.push_str("</p>");
     if (match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }) == super::types::Mood::Loud {
         out.push_str("<i>loud next</i>");
@@ -84,19 +84,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<select><option value=\"\"");
-    if fv::Union::as_str(s_choice).is_empty() {
+    if fv::union::Union::as_str(s_choice).is_empty() {
         out.push_str(" selected");
     }
     out.push_str(">none</option><option value=\"calm\"");
-    if fv::Union::as_str(s_choice) == "calm" {
+    if fv::union::Union::as_str(s_choice) == "calm" {
         out.push_str(" selected");
     }
     out.push_str(">calm</option><option value=\"loud\"");
-    if fv::Union::as_str(s_choice) == "loud" {
+    if fv::union::Union::as_str(s_choice) == "loud" {
         out.push_str(" selected");
     }
     out.push_str(">loud</option><option value=\"&lt;q&gt;&amp;&quot;x&#39;\"");
-    if fv::Union::as_str(s_choice) == "<q>&\"x'" {
+    if fv::union::Union::as_str(s_choice) == "<q>&\"x'" {
         out.push_str(" selected");
     }
     out.push_str(">odd</option></select></section>");
@@ -104,21 +104,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }

@@ -1,7 +1,7 @@
 use std::cell::Cell;
 use std::fmt;
 
-use crate::JsTime;
+use crate::js_date::JsTime;
 
 /// A render that cannot write what Vue's `renderToString` writes for these props: a date string
 /// browsers read differently, an integer beyond the range of `i64` where the template needs one,
@@ -21,12 +21,12 @@ use crate::JsTime;
 /// #     pub const NAME: &str = "Published";
 /// #     pub struct Props<'a> { pub on: &'a str }
 /// #     pub fn render(out: &mut String, props: &Props<'_>) {
-/// #         fv::rendered(try_render(out, props));
+/// #         fv::refused::rendered(try_render(out, props));
 /// #     }
-/// #     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
-/// #         let fv_refusals = fv::Refusals::new(NAME, "components/Published.vue");
+/// #     pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::refused::Refused> {
+/// #         let fv_refusals = fv::refused::Refusals::new(NAME, "components/Published.vue");
 /// #         out.push_str("<time>");
-/// #         fv::escape_into(out, &fv_refusals.keep(fv::try_to_iso_string(fv_refusals.keep(fv::try_date_parse(props.on), 3, 25)), 3, 9));
+/// #         fv::core::escape::escape_into(out, &fv_refusals.keep(fv::dates::try_to_iso_string(fv_refusals.keep(fv::dates::try_date_parse(props.on), 3, 25)), 3, 9));
 /// #         out.push_str("</time>");
 /// #         fv_refusals.check(Ok(()))
 /// #     }
@@ -43,7 +43,7 @@ use crate::JsTime;
 /// assert_eq!(refused.file(), Some("components/Published.vue"));
 /// assert_eq!((refused.line(), refused.column()), (Some(3), Some(25)));
 /// assert!(refused.to_string().starts_with("error[FV1803]: components/Published.vue:3:25: "));
-/// # Ok::<(), ferrovue::Refused>(())
+/// # Ok::<(), ferrovue::refused::Refused>(())
 /// ```
 #[non_exhaustive]
 #[derive(Clone)]
@@ -310,7 +310,7 @@ pub fn try_int(x: f64) -> Result<i64, Refused> {
 #[cold]
 fn int_refused(x: f64) -> Refused {
     let mut shown = String::new();
-    crate::push_number(&mut shown, x);
+    ferrovue_core::numbers::push_number(&mut shown, x);
     Refused::new(
         "FV0724",
         format!(

@@ -29,7 +29,7 @@ impl<'a> Props<'a> {
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
     /// `<slot>`
-    pub default: Option<fv::Slot<'s>>,
+    pub default: Option<fv::slots::Slot<'s>>,
 }
 
 /// Write the component's server render into `out`.
@@ -38,7 +38,7 @@ pub struct Slots<'s> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
-    fv::rendered(try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE));
+    fv::refused::rendered(try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -46,30 +46,30 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::Refused> {
-    try_render_scoped(out, props, fv_slots, &fv::Attrs::NONE)
+/// The first [`fv::refused::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::refused::Refused> {
+    try_render_scoped(out, props, fv_slots, &fv::attrs::Attrs::NONE)
 }
 
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
-pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::Attrs<'_>) -> Result<(), fv::Refused> {
+pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::refused::Refused> {
     out.reserve(44 + props.label.len());
     out.push_str("<span");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"circle\"");
         out.push_str(fv_attrs.ids());
     } else {
-        fv::attrs_into(out, &[&[("class", fv::Attr::str("circle"))], fv_attrs.list()], 1, fv_attrs.ids());
+        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("circle"))], fv_attrs.list()], 1, fv_attrs.ids());
     }
     out.push_str(" data-v-333fa6b8>");
-    fv::escape_into(out, &props.label);
-    fv::slot_into_slotted(out, fv_slots.default, "data-v-333fa6b8-s", None);
+    fv::core::escape::escape_into(out, &props.label);
+    fv::slots::slot_into_slotted(out, fv_slots.default, "data-v-333fa6b8-s", None);
     out.push_str("</span>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it.
-pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::Html<'p, Props<'a>, impl fv::Renderer<Props<'a>> + 'p> {
-    fv::Html::markup(props, fv::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
+pub fn html<'p, 'a>(props: &'p Props<'a>, fv_slots: Slots<'p>) -> fv::html::Html<'p, Props<'a>, impl fv::html::Renderer<Props<'a>> + 'p> {
+    fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props<'a>| try_render(out, props, fv_slots)))
 }

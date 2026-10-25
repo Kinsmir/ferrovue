@@ -1,7 +1,16 @@
 use std::borrow::Cow;
 
 use ferrovue::{
-    Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Refused, Route, Slot, Teleports, Union,
+    head::Head,
+    html::Html,
+    i18n::I18n,
+    js_date::JsDate,
+    page::{Page, Part},
+    refused::Refused,
+    router::Route,
+    slots::Slot,
+    teleport::Teleports,
+    union::{ParseUnionError, Union},
 };
 
 use crate::domain::Tone;
@@ -203,7 +212,8 @@ fn dates_inside_lists_dictionaries_and_objects_are_js_dates_the_island_says_are_
         at,
         vec![None, Some(JsDate::INVALID)],
     )];
-    let by: ferrovue::Record<'_, JsDate> = [("x", JsDate::UNIX_EPOCH)].into_iter().collect();
+    let by: ferrovue::record::Record<'_, JsDate> =
+        [("x", JsDate::UNIX_EPOCH)].into_iter().collect();
     let props = timeline::Props::new(moments, vec![at], by);
     let island = timeline::island(&props).into_string();
     assert!(island.starts_with(concat!(
@@ -264,11 +274,11 @@ fn local_and_shared_types_and_scoped_slots() {
     );
     let row = |out: &mut String, p: &data_list::RowSlotProps<'_>| -> bool {
         out.push_str(&p.row.label);
-        ferrovue::push_int(out, p.index);
+        ferrovue::core::numbers::push_int(out, p.index);
         true
     };
     let count = |out: &mut String, p: &data_list::CountSlotProps| -> bool {
-        ferrovue::push_int(out, p.n);
+        ferrovue::core::numbers::push_int(out, p.n);
         true
     };
     let rest = |out: &mut String| out.push_str("rest");
@@ -393,7 +403,7 @@ fn twins_render_through_the_function_the_config_names() {
     };
     let slots = twins::StarRatingSlots { default: None };
     assert_eq!(
-        render(|out| crate::twins::star_rating(out, &props, slots, &ferrovue::Attrs::NONE)),
+        render(|out| crate::twins::star_rating(out, &props, slots, &ferrovue::attrs::Attrs::NONE)),
         r#"<span class="stars">3/5<!----></span>"#
     );
     assert!(render(|out| rated::render(out, &rated::Props::new(4))).contains("4/5"));

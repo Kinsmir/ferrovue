@@ -20,22 +20,22 @@ a reviewer.
 - `ferrovue.config.json`, the routes file, the store definitions and the locale files (messages are
   compiled into Rust at build time);
 - the application's Rust: the page around the components, slot closures, Rust twins and helpers,
-  the [`TrustedHtml`](crate::TrustedHtml) types and their sanitisers, the futures that fill
-  [`HtmlStream`](crate::HtmlStream) holes, and the ids given to
-  [`state_script_into`](crate::state_script_into) and [`PageRecord`](crate::PageRecord).
+  the [`TrustedHtml`](crate::trusted::TrustedHtml) types and their sanitisers, the futures that fill
+  [`HtmlStream`](crate::web::HtmlStream) holes, and the ids given to
+  [`state_script_into`](crate::state::state_script_into) and [`PageRecord`](crate::page::PageRecord).
 
 **Untrusted**, and safe to fill from a request, a database or another user:
 
 - every prop value, at every depth: strings, numbers, lists, dictionaries (keys too), optional and
   nullable values;
 - Pinia store state;
-- the route: the location given to [`Router::at`](crate::Router::at), and so the path, its
+- the route: the location given to [`Router::at`](crate::router::Router::at), and so the path, its
   parameters, the query and the hash; a `<RouterLink>`'s `to` built from props;
 - the locale name passed to the generated `i18n(locale)`, and every value given to `$t`;
 - every value given to `useHead` and `useSeoMeta`;
-- the input of [`BasicHtml::new`](crate::BasicHtml::new), [`InlineHtml::new`](crate::InlineHtml::new)
+- the input of [`BasicHtml::new`](crate::basic_html::BasicHtml::new), [`InlineHtml::new`](crate::basic_html::InlineHtml::new)
   and `Sanitised::new`;
-- the margin and query of a [`Hydrate`](crate::Hydrate), and a `<Teleport>`'s `to`.
+- the margin and query of a [`Hydrate`](crate::hydrate::Hydrate), and a `<Teleport>`'s `to`.
 
 Untrusted data is safe in the sense Vue's server renderer gives: it cannot leave the text node or
 quoted attribute value it is written into, and it cannot add an element or an attribute. It can
@@ -73,7 +73,7 @@ escaped too and stays code: see below.
 | Written | Every attribute name a template binds, the names that fall through to a child's root, the names of an element `<component :is>` renders from virtual nodes |
 | Guarantee | No attribute name comes from data. The compiler takes names from the template alone: a name chosen at run time (`:[name]`) is refused (FV0408), and so is `v-bind` of anything but an object literal (FV0410); `$attrs` holds the names some parent's template wrote. A bound name Vue's server renderer would skip as unsafe (one holding `>`, `/`, `=`, `"`, `'`, tab, line feed, form feed, carriage return or space) is refused at compile time (FV0404) |
 | Code | `objectAttrs`, `mergeProps` and `attrEntries` in `packages/ferrovue/src/attrs.ts`; `packages/ferrovue/src/fallthrough.ts` |
-| Defence in depth | The runtime that writes fallthrough attributes repeats Vue's rules for names given to [`Attrs`](crate::Attrs) by Rust code: it drops `key`, `ref`, `innerHTML`, `textContent`, `ref_key`, `ref_for`, names starting `.` and listeners (`on` followed by anything but a lower-case letter), lowers the case, maps `className`, `htmlFor`, `acceptCharset` and `httpEquiv`, writes a boolean attribute as its name, and drops a name holding any of the unsafe characters above (`dynamic_attr_into` in `crates/ferrovue/src/attrs.rs`) |
+| Defence in depth | The runtime that writes fallthrough attributes repeats Vue's rules for names given to [`Attrs`](crate::attrs::Attrs) by Rust code: it drops `key`, `ref`, `innerHTML`, `textContent`, `ref_key`, `ref_for`, names starting `.` and listeners (`on` followed by anything but a lower-case letter), lowers the case, maps `className`, `htmlFor`, `acceptCharset` and `httpEquiv`, writes a boolean attribute as its name, and drops a name holding any of the unsafe characters above (`dynamic_attr_into` in `crates/ferrovue/src/attrs.rs`) |
 | Tests | `attrs.json` holds names with each unsafe character, NUL, U+00A0, `on`, `onx` and `onClick`; `compiler.test.ts` refuses `:x'y`, `:[name]` and `v-bind="props.extra"`; `TagCasing` holds the case rules of virtual nodes to Vue |
 
 ## CSS
@@ -90,7 +90,7 @@ escaped too and stays code: see below.
 | | |
 |---|---|
 | Written | An island's wrapper, `<div data-island="Name" data-props="{…}" data-hydrate="…">` |
-| Guarantee | `data-props` is the props as JSON (serde_json, with `NaN` and `Infinity` as bare tokens), escaped with `escape_into` as it is written, so it is one attribute value whatever the props hold. Props serde_json refuses write an empty value in a release build and panic in a debug one. `data-island` is the component's name, a constant, escaped as well. `data-hydrate` is [`Hydrate::attribute`](crate::Hydrate::attribute), escaped. The client reads `data-props` with `JSON.parse` and a reviver for the non-finite tokens (`parseJson` in `packages/ferrovue/src/client.ts`), and never evaluates it |
+| Guarantee | `data-props` is the props as JSON (serde_json, with `NaN` and `Infinity` as bare tokens), escaped with `escape_into` as it is written, so it is one attribute value whatever the props hold. Props serde_json refuses write an empty value in a release build and panic in a debug one. `data-island` is the component's name, a constant, escaped as well. `data-hydrate` is [`Hydrate::attribute`](crate::hydrate::Hydrate::attribute), escaped. The client reads `data-props` with `JSON.parse` and a reviver for the non-finite tokens (`parseJson` in `packages/ferrovue/src/client.ts`), and never evaluates it |
 | Code | `island_into` in `crates/ferrovue/src/html.rs`; `escaped_into` in `crates/ferrovue/src/json.rs`; with the `dioxus` feature, `to_element` in `crates/ferrovue/src/dioxus.rs` hands the same values to Dioxus as attributes, which it escapes |
 | Tests | `island_props_cannot_leave_their_attribute`, `the_island_name_is_escaped_too` and `a_hostile_media_query_or_root_margin_cannot_leave_its_attribute` (`crates/ferrovue/src/html/tests.rs`); `written_escaped_is_what_escaping_the_json_gives` (`json.rs`); the Dioxus tests in `tests/conformance.rs` |
 
@@ -98,7 +98,7 @@ escaped too and stays code: see below.
 
 | | |
 |---|---|
-| Written | [`state_script_into`](crate::state_script_into) (Pinia state) and [`PageRecord::script_into`](crate::PageRecord::script_into) (the layout's props and every page part's component and props): `<script type="application/json" id="…">…</script>`; [`Loads::script_into`](crate::Loads::script_into) (each loader's key and result): `<script type="application/json" data-fv-loads>…</script>` |
+| Written | [`state_script_into`](crate::state::state_script_into) (Pinia state) and [`PageRecord::script_into`](crate::page::PageRecord::script_into) (the layout's props and every page part's component and props): `<script type="application/json" id="…">…</script>`; [`Loads::script_into`](crate::load::Loads::script_into) (each loader's key and result): `<script type="application/json" data-fv-loads>…</script>` |
 | Guarantee | The JSON has `<`, `>`, `&`, U+2028 and U+2029 written as `\u` escapes, so no value can end the element, open a comment or be read as markup inside it, and the body reads back as the JSON given. The `id` is escaped. The type is `application/json`, which no browser runs, so the page needs no nonce for it. A value serde_json refuses is `null` in the record, which stays readable |
 | Code | `json_script_into` and `json_escaped_into` in `crates/ferrovue/src/state.rs`; `Recorded::to_json` in `crates/ferrovue/src/page.rs`; `Loads::script_into` in `crates/ferrovue/src/load.rs`; `state_script` in `dioxus.rs` |
 | Tests | `crates/ferrovue/src/state/tests.rs`; `the_record_cannot_be_closed_by_a_prop_and_reads_back_whole` (`crates/ferrovue/src/page/tests.rs`); `the_state_script_is_one_element_whose_body_reads_back` and `the_loads_script_is_one_element_whose_body_reads_back` (`properties.rs`); `the_payload_holds_each_result_read_once_in_order_and_cannot_close_its_script` (`crates/ferrovue/src/load/tests.rs`); `pages/hostile.json` in the conformance suite |
@@ -107,7 +107,7 @@ escaped too and stays code: see below.
 
 | | |
 |---|---|
-| Written | [`Head::render`](crate::Head::render): `<title>`, `<meta>`, `<link>`, `<base>`, `<style>`, `<script>`, `<noscript>`, and the `<html>` and `<body>` attributes |
+| Written | [`Head::render`](crate::head::Head::render): `<title>`, `<meta>`, `<link>`, `<base>`, `<style>`, `<script>`, `<noscript>`, and the `<html>` and `<body>` attributes |
 | Guarantee | Exactly what unhead's `renderSSRHead` writes, which escapes less than Vue does. A title is escaped as text (`&`, `<`, `>`, `"`, `'` and `/`). An attribute value is double-quoted with only `"` escaped. Attribute names other than `data-` ones are lowered, and names are dropped when empty or holding JavaScript whitespace, `"`, `'`, `<`, `>`, `/`, `=`, a control character or DEL; `__proto__`, `constructor` and `prototype` keys are dropped. A `script` whose type ends in `json`, or is `importmap` or `speculationrules`, has `<` written as `<`. Any other `script`, `style` or `noscript` content is written as it is, with only its own closing tag (`</script`, `</style`, `</noscript`, in any case) written as `<\/…` |
 | Code | `tag_into`, `props_into`, `invalid_attr_name`, `sanitize` and `replace_close_tag_into` in `crates/ferrovue/src/head.rs` |
 | Tests | `crates/ferrovue/tests/vectors/head.json`: 460 heads recorded from unhead, hand-written ones with markup-breaking values, hostile attribute names and `<!--<script>` in scripts, and 400 drawn at random from hostile values (`packages/ferrovue/test/head-inputs.ts`); the `HeadPage`, `HeadLater` and `HeadNest` hostile fixtures, hydrated by unhead's client |
@@ -123,7 +123,7 @@ tag as it hydrates. A value still cannot leave its attribute, since `"` is escap
 | | |
 |---|---|
 | Written | The `href` of each link, its active classes, `aria-current` |
-| Guarantee | The `href` is what vue-router's `router.resolve(to).href` gives, escaped with `escape_into`. With `{ name, params }`, each parameter is encoded as vue-router encodes it (`/`, `?`, `#` and characters outside a URI percent-encoded); a query built with [`query_into`](crate::query_into) encodes keys and values (`&`, `#`, `+`, `=` in a key, a space as `+`); a hash is encoded. A string `to`, and the `path` of `{ path }`, are kept as written and resolved against the current path when they do not start with `/` |
+| Guarantee | The `href` is what vue-router's `router.resolve(to).href` gives, escaped with `escape_into`. With `{ name, params }`, each parameter is encoded as vue-router encodes it (`/`, `?`, `#` and characters outside a URI percent-encoded); a query built with [`query_into`](crate::router::query_into) encodes keys and values (`&`, `#`, `+`, `=` in a key, a space as `+`); a hash is encoded. A string `to`, and the `path` of `{ path }`, are kept as written and resolved against the current path when they do not start with `/` |
 | Code | `link`, `link_named`, `link_path`, `encode_url` and `parse_url` in `crates/ferrovue-router/src/lib.rs`; `packages/ferrovue/src/plugins/router-link.ts` |
 | Tests | `crates/ferrovue-router/tests/vectors/router.json` (recorded from vue-router: hostile parameters, queries and hashes, `javascript:alert(1)`, `https://example.com/` and `//evil.example/x` as a string `to`); `crates/ferrovue-router/tests/properties.rs`; the `Nav` and `Menu` hostile fixtures, `Links/encoded` and `RouteInfo/query-hostile` |
 
@@ -141,18 +141,18 @@ tag as it hydrates. A value still cannot leave its attribute, since `"` is escap
 | | |
 |---|---|
 | Written | `v-html` |
-| Guarantee | The only place generated code writes a value unescaped. It is accepted only on a prop typed `TrustedHtml` or `InlineHtml` (FV1502); anything else, a string or a message, is refused at compile time. Such a prop's Rust type implements [`TrustedHtml`](crate::TrustedHtml), whose contract is that every value has been through a sanitiser. ferrovue's own types: [`BasicHtml`](crate::BasicHtml) and [`InlineHtml`](crate::InlineHtml) escape their whole input as `escape_into` does and write back as tags only their fixed lists, exactly spelled, without attributes, balanced; `Sanitised` (the `ammonia` feature) is ammonia's output. Each deserialises by sanitising again, so no JSON makes one that skipped the sanitiser. `v-html` is also refused where the browser's parser would rebuild the HTML (tables, `<select>`, SVG and MathML, block HTML inside a `<p>`: FV1512 and FV1513), which keeps the server's and client's trees the same |
+| Guarantee | The only place generated code writes a value unescaped. It is accepted only on a prop typed `TrustedHtml` or `InlineHtml` (FV1502); anything else, a string or a message, is refused at compile time. Such a prop's Rust type implements [`TrustedHtml`](crate::trusted::TrustedHtml), whose contract is that every value has been through a sanitiser. ferrovue's own types: [`BasicHtml`](crate::basic_html::BasicHtml) and [`InlineHtml`](crate::basic_html::InlineHtml) escape their whole input as `escape_into` does and write back as tags only their fixed lists, exactly spelled, without attributes, balanced; `Sanitised` (the `ammonia` feature) is ammonia's output. Each deserialises by sanitising again, so no JSON makes one that skipped the sanitiser. `v-html` is also refused where the browser's parser would rebuild the HTML (tables, `<select>`, SVG and MathML, block HTML inside a `<p>`: FV1512 and FV1513), which keeps the server's and client's trees the same |
 | Code | `trusted_into` in `crates/ferrovue/src/trusted.rs`; `crates/ferrovue/src/basic_html.rs`; `crates/ferrovue/src/sanitised.rs`; the `TrustedHtml` type in `packages/ferrovue/src/typescript.ts`; `packages/ferrovue/src/vhtml.ts`; the `v-html` branch of `packages/ferrovue/src/template.ts` |
 | Tests | `crates/ferrovue/src/basic_html/tests.rs` and the `basic_html_*` and `inline_html_*` properties, which parse every output back with html5ever (`crates/ferrovue/tests/sanitised.rs`); `crates/ferrovue/src/sanitised/tests.rs` (scripts, handlers, `javascript:` URLs); the `v-html` tests in `compiler.test.ts`; `Prose` and `InlineProse` fixtures |
 
-A [`TrustedHtml`](crate::TrustedHtml) type of the application's own is outside ferrovue's
+A [`TrustedHtml`](crate::trusted::TrustedHtml) type of the application's own is outside ferrovue's
 guarantee: ferrovue writes what it holds.
 
 ## Teleports
 
 | | |
 |---|---|
-| Written | `<Teleport>` content, collected in [`Teleports`](crate::Teleports) and written by the application where each target is |
+| Written | `<Teleport>` content, collected in [`Teleports`](crate::teleport::Teleports) and written by the application where each target is |
 | Guarantee | The content is generated markup, escaped as any other. `to` only names the collection the content goes into; it is never written into the page |
 | Code | `crates/ferrovue/src/teleport.rs`; `packages/ferrovue/src/plugins/teleport.ts` |
 | Tests | `crates/ferrovue/src/teleport/tests.rs`; the teleport fixtures, compared with what Vue's server teleported |
@@ -161,7 +161,7 @@ guarantee: ferrovue writes what it holds.
 
 | | |
 |---|---|
-| Written | [`hole`](crate::hole) and [`PageHole`](crate::PageHole) write a marker that [`split_holes`](crate::split_holes) and [`HtmlStream`](crate::HtmlStream) cut the page at |
+| Written | [`hole`](crate::slots::hole) and [`PageHole`](crate::page::PageHole) write a marker that [`split_holes`](crate::slots::split_holes) and [`HtmlStream`](crate::web::HtmlStream) cut the page at |
 | Guarantee | No value ferrovue writes holds the marker, so data cannot add or move a hole. The marker is `<fv-hole"</script</style</noscript>`: escaped text and attribute values have no `<`; the state script and page record have none either; unhead's attribute values have no raw `"`, its titles no raw `<`, its JSON scripts no raw `<`, and its other `script`, `style` and `noscript` content cannot hold that element's closing tag; `BasicHtml`, `InlineHtml` and ammonia write tags as a serialiser does, with no `"` after a tag's name. What fills a hole is written as it is |
 | Code | `HOLE` in `crates/ferrovue/src/slots.rs`; `HtmlStream::new` in `crates/ferrovue/src/web.rs` |
 | Tests | `a_value_in_the_head_cannot_move_a_hole` (`web.rs`), `no_head_value_writes_the_hole_marker` (`crates/ferrovue/src/head/tests.rs`), `no_value_holds_a_hole` (`crates/ferrovue/src/sanitised/tests.rs`); `pages/hostile.json` passes `<fv-hole>` as a prop |
@@ -170,7 +170,7 @@ guarantee: ferrovue writes what it holds.
 
 `data-v-…` attributes are written as they are. They come from the compiler (hashes of the
 component's path and source) and reach components through `render_scoped` and
-[`Attrs`](crate::Attrs); `scope_attrs` joins them without escaping. Code
+[`Attrs`](crate::attrs::Attrs); `scope_attrs` joins them without escaping. Code
 that builds an `Attrs` passes the ids generated code gave it, never data.
 
 ## Rust twins, helpers and the application's own markup
@@ -179,8 +179,8 @@ A Rust twin writes its component's HTML itself, and a helper computes a value th
 ferrovue cannot check either against Vue, as [`errors_and_limits`](crate::guide::errors_and_limits#rust-twins)
 says, and their exactness is the application's assertion. A helper returns a string, number or boolean that generated code escapes
 like any other value, so a helper cannot write markup. A twin writes into the page directly, and must
-escape what it writes: [`escape_into`](crate::escape_into) for text and values, and
-[`attrs_into`](crate::attrs_into) or [`passed_attrs_into`](crate::passed_attrs_into) for the
+escape what it writes: [`escape_into`](crate::core::escape::escape_into) for text and values, and
+[`attrs_into`](crate::attrs::attrs_into) or [`passed_attrs_into`](crate::attrs::passed_attrs_into) for the
 attributes it is given. The same holds for slot closures, the page around the components and the
 content of holes: they are plain Rust, and what they push is written as it is.
 
@@ -195,7 +195,7 @@ message ([`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render
 build panics
 where Vue would throw or where data cannot be written exactly, so a mistake is found where it is
 made: props serde_json refuses, a required route parameter that is missing or empty, a plural
-number that chooses none of a message's cases. [`Page`](crate::Page) panics on a slot given twice
+number that chooses none of a message's cases. [`Page`](crate::page::Page) panics on a slot given twice
 and on a part written where Vue would give it a slot scope id, which are mistakes in the
 application's code. The router is held never to panic by properties over arbitrary locations.
 
