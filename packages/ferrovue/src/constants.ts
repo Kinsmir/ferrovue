@@ -77,7 +77,6 @@ function typedAs(decl: N): string | null {
 }
 
 function valueType(t: N): N | null {
-  if (t?.type === "TSTypeOperator") return valueType(t.typeAnnotation);
   if (t?.type === "TSMappedType") return t.typeAnnotation ?? null;
   if (t?.type !== "TSTypeReference" || t.typeName.type !== "Identifier") return null;
   const params: N[] = t.typeParameters?.params ?? [];

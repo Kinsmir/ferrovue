@@ -7972,6 +7972,96 @@ defineProps<{ level?: Level }>();
     });
   });
 
+  describe("tables whose type gives a union for their values", () => {
+    const TONE = 'export type Tone = "calm" | "loud" | "quiet";\n';
+    const BADGE = `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ tone?: Tone }>();
+</script>
+<template><b>{{ tone }}</b></template>`;
+    const reading = (tables: string, template = `<b v-if="T[tone] === 'loud'">l</b>`, setup = ""): string =>
+      rendered(
+        compile(
+          project(
+            `<script setup lang="ts">
+import Badge from "./Badge.vue";
+import { T, type Tone } from "../types/tone";
+defineProps<{ tone: Tone }>();
+${setup}
+</script>
+<template>${template}</template>`,
+            { "components/Badge.vue": BADGE, "types/tone.ts": TONE + tables },
+          ),
+        ).get("x.rs")!,
+      );
+    const ENUM = /== (?:Some\()?super::types::Tone::Loud\)? \{/;
+    const STRING = /== (?:Some\()?"loud"\)? \{/;
+
+    it.each([
+      ["`Readonly`", 'export const T: Readonly<Record<Tone, Tone>> = { calm: "loud", loud: "nope", quiet: "calm" };'],
+      ["`Partial`", 'export const T: Partial<Record<Tone, Tone>> = { calm: "loud", loud: "nope", quiet: "calm" };'],
+      ["`Required`", 'export const T: Required<Record<Tone, Tone>> = { calm: "loud", loud: "nope", quiet: "calm" };'],
+      ["a mapped type", 'export const T: { [K in Tone]: Tone } = { calm: "loud", loud: "nope", quiet: "calm" };'],
+      ["`as`", 'export const T = { calm: "loud", loud: "nope", quiet: "calm" } as Record<Tone, Tone>;'],
+      ["`satisfies`", 'export const T = { calm: "loud", loud: "nope", quiet: "calm" } satisfies Record<Tone, Tone>;'],
+    ])("refuses a value outside the union a type through %s gives, at the value", (_, table) => {
+      const e = failure(() => reading(table));
+      expect(e.code).toBe("FV0228");
+      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 2, column: table.indexOf('"nope"') + 1 });
+    });
+
+    it("refuses a value outside the union under a computed key, at the table", () => {
+      const e = failure(() => reading('export const T: Record<Tone, Tone> = { calm: "loud", ["loud"]: "nope", quiet: "calm" };'));
+      expect(e.code).toBe("FV0228");
+      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 2, column: 14 });
+    });
+
+    it("refuses a value outside the union of a table given by another constant, at the table", () => {
+      const e = failure(() => reading('const BASE = { calm: "loud", loud: "nope", quiet: "calm" };\nexport const T: Record<Tone, Tone> = BASE;'));
+      expect(e.code).toBe("FV0228");
+      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 3, column: 14 });
+    });
+
+    it("reads a table through its value's enum, where a key it lacks gives `undefined`", () => {
+      expect(reading('export const T: Partial<Record<Tone, Tone>> = { calm: "loud" };')).toMatch(ENUM);
+    });
+
+    it("reads a table holding a value that is no string of the union by the strings it holds", () => {
+      expect(reading('export const T: Record<Tone, Tone> = { calm: null as unknown as Tone, loud: "loud", quiet: "calm" };')).toMatch(STRING);
+      expect(reading('export const T: Record<Tone, Tone> = { calm: 1 as unknown as Tone, loud: "loud", quiet: "calm" };', "<p>{{ T.calm }}</p>")).toContain('out.push_str("<p>1</p>");');
+    });
+
+    it("reads a table whose values another table typed with another union shares by the strings it holds", () => {
+      const tables = 'export type Mood = "calm" | "loud";\nexport const T: Record<Tone, Tone> = { calm: "calm", loud: "loud", quiet: "quiet" };\nexport const M: Record<Tone, Mood> = { calm: T.calm, loud: "loud", quiet: "calm" };\n';
+      expect(reading(tables, `<b v-if="T[tone] === 'loud'">l</b><i>{{ M.calm }}</i>`, 'import { M } from "../types/tone";')).toMatch(STRING);
+    });
+
+    it("reads a type of the project's own named like a utility type as that type", () => {
+      expect(reading('type Partial<A, B> = B;\nexport const T: Partial<Record<Tone, Tone>, Record<string, string>> = { calm: "loud", loud: "nope", quiet: "calm" };', "<p>{{ T.loud }}</p>")).toContain(
+        'out.push_str("<p>nope</p>");',
+      );
+      expect(reading('type Record<V> = { [key: string]: V };\nexport const T: Record<Tone> = { calm: "loud", loud: "loud", quiet: "calm" } as { [K in Tone]: Tone };')).toMatch(ENUM);
+      expect(reading('type Table<K extends string, V> = { [key in K]: V };\nexport const T: Table<Tone, Tone> = { calm: "loud", loud: "loud", quiet: "calm" };')).toMatch(STRING);
+      expect(reading('type Frozen<V> = Readonly<V>;\nexport const T: Frozen<Record<Tone, Tone>> = { calm: "loud", loud: "loud", quiet: "calm" };')).toMatch(STRING);
+    });
+
+    it("keeps a list cast to a table's type a list", () => {
+      const tables = 'export const T = { calm: "loud" };\nexport const L = ["calm"] as unknown as Record<Tone, Tone>;\n';
+      expect(reading(tables, "<p>{{ L[0] }}</p>", 'import { L } from "../types/tone";')).toContain('if let Some(v) = ["calm"].first().map(|v| &**v) {');
+    });
+
+    it("hands a table of tables read by two keys to a child's union prop through the strings it holds", () => {
+      const tables = 'export const T = { calm: "loud" };\nexport const NEST = { calm: { calm: "loud", loud: "calm", quiet: "quiet" }, loud: { calm: "calm", loud: "calm", quiet: "calm" }, quiet: { calm: "quiet", loud: "loud", quiet: "loud" } };\n';
+      const out = reading(tables, '<Badge :tone="NEST[tone][tone]" />', 'import { NEST } from "../types/tone";');
+      expect(out).toContain('{ "loud" => super::types::Tone::Loud, "calm" => super::types::Tone::Calm, _ => super::types::Tone::Quiet }) })?;');
+    });
+
+    it("refuses a table's literal outside a child's union prop", () => {
+      const e = failure(() => reading('export const T = { calm: "loud", loud: "nope", quiet: "calm" };', '<Badge :tone="T[tone]" />'));
+      expect(e.code).toBe("FV0515");
+    });
+  });
+
   it("writes a constant list's field of a union as its variant, and refuses a value outside it", () => {
     const using = (value: string): string =>
       project(
