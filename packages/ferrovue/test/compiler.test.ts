@@ -7759,6 +7759,52 @@ const sign = ref<"+" | "-">(props.on ? "+" : "-");
       expect(() => using(setup, `<Badge :tone="tone" />`)).toThrow(expect.objectContaining({ code: "FV0111", at: expect.objectContaining({ line: 6, column: 24 }) }));
     });
 
+    describe("a value of a union returned under a wider annotation", () => {
+      const returned = (setup: string, template: string, files: Record<string, string> = {}): string =>
+        rendered(
+          compile(
+            project(
+              `<script setup lang="ts">
+import { computed, ref } from "vue";
+${setup}
+</script>
+<template>${template}</template>`,
+              files,
+            ),
+          ).get("x.rs")!,
+        );
+      const PROPS = `const props = defineProps<{ size: "big" | "small"; spare?: "big" | "small" }>();`;
+
+      it.each([
+        ["a function", `function label(n: number): string {\n  return props.size;\n}`, "label(1)"],
+        ["an arrow function", `const label = (): string => props.size;`, "label()"],
+        ["a function annotated as a wider union", `const label = (): "big" | "small" | "-" => props.size;`, "label()"],
+      ])("holds %s's value as a string of its return type, compared with a literal outside the union", (_, fn, call) => {
+        const out = returned(`${PROPS}\n${fn}`, `<p :class="{ dash: ${call} === '-' }">{{ ${call} }}</p>`);
+        expect(out).toContain('if fv::Union::as_str(props.size) == "-" { "dash" } else { "" }');
+        expect(out).toContain("fv::escape_into(out, fv::Union::as_str(props.size));");
+      });
+
+      it("holds a `computed`'s value as a string of its return type, optional too", () => {
+        const out = returned(
+          `${PROPS}\nconst shown = computed((): string => props.size);\nconst maybe = computed((): string | undefined => props.spare);\nconst held = ref<string>(props.size);`,
+          `<p :class="{ a: shown === '-', b: maybe === '-', c: held === '-' }">{{ shown }}</p>`,
+        );
+        expect(out).toContain("let s_shown = fv::Union::as_str(props.size);");
+        expect(out).toContain("let s_maybe = props.spare.map(fv::Union::as_str);");
+        expect(out).toContain('if s_shown == "-" { "a" } else { "" }, if s_maybe == Some("-") { "b" } else { "" }, if s_held == "-" { "c" } else { "" }');
+      });
+
+      it("holds the value of a function of a `.ts` file as a string of its return type", () => {
+        const out = returned(
+          `import { describe } from "../types/size";\n${PROPS}`,
+          `<p :class="{ dash: describe(size) === '-' }"></p>`,
+          { "types/size.ts": `export type Size = "big" | "small";\nexport function describe(size: Size): string {\n  return size;\n}\n` },
+        );
+        expect(out).toContain('if fv::Union::as_str(props.size) == "-" { "dash" } else { "" }');
+      });
+    });
+
     describe("a ref annotated as a union wider than the enum it starts from", () => {
       const wider = (members: string, setup: string, template: string): string =>
         rendered(

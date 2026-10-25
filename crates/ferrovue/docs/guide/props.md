@@ -227,7 +227,9 @@ of its annotation, which may be more than the value it starts with holds:
 `ref<Tone | "">(props.tone)` starts from a member of `Tone` and compares with `""` as with any
 member, and `ref<Tone | "" | undefined>(props.tone)` holds the enum of `Tone | ""` when
 `props.tone` is required. A `ref` is the server's own, and the island's JSON holds the props it
-starts from.
+starts from. A `ref`, a constant, a `computed` or a function whose annotation is `string`
+(`function label(): string { return props.tone; }`) holds a string of the value, which compares
+with any string.
 
 A string of a wider union, such as a `ref<Tone | "">` that holds `""` for a `<select>`'s empty
 option, is narrowed as TypeScript narrows it, and reaches a prop of `Tone` once only members of

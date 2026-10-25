@@ -233,6 +233,19 @@ interface Unproven {
 
 const UNPROVEN = new WeakMap<Ty, Unproven>();
 
+/** `v` as the string type `want` it is annotated with: a value of a generated enum is a string of
+ * `want` where `want` is `string` or a union of more literals than the enum's, and `v` itself
+ * otherwise. */
+export function annotatedStr(v: Val, want: Ty): Val {
+  const from = enumOf(v.ty);
+  const inner = want.k === "opt" ? want.of : want;
+  if (v.variant === undefined || from === undefined || inner.k !== "str" || enumOf(inner) !== undefined) return v;
+  const literals = literalsOf(inner);
+  const held = literalsOf(v.ty.k === "opt" ? v.ty.of : v.ty) ?? from.literals;
+  if (literals !== undefined && (literals.length <= held.length || !held.every((l) => literals.includes(l)))) return v;
+  return { code: v.code, ty: v.ty.k === "opt" ? { ...v.ty, of: inner } : inner };
+}
+
 /** `v`, the value of `what`, declared as `want`: where `want` is a union of string literals and
  * the compiler cannot show that `v`, computed by `node`, is among them, a value that refuses a
  * use of it as the union, where it is declared. */
