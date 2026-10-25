@@ -42,7 +42,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - uses: $/.github/actions/pnpm
-      - run: pnpm --filter ferrovue-site build
+      - run: pnpm --filter ferrovue-site site:build
       - name: The site has every guide page, the sitemap and robots.txt
         run: |
           for page in crates/ferrovue/docs/guide/*.md; do
