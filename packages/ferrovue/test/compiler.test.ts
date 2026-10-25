@@ -7787,8 +7787,8 @@ ${setup}
         ["a function annotated as a wider union", `const label = (): "big" | "small" | "-" => props.size;`, "label()"],
       ])("holds %s's value as a string of its return type, compared with a literal outside the union", (_, fn, call) => {
         const out = returned(`${PROPS}\n${fn}`, `<p :class="{ dash: ${call} === '-' }">{{ ${call} }}</p>`);
-        expect(out).toContain('if fv::Union::as_str(props.size) == "-" { "dash" } else { "" }');
-        expect(out).toContain("fv::escape_into(out, fv::Union::as_str(props.size));");
+        expect(out).toContain('if fv::props::Union::as_str(props.size) == "-" { "dash" } else { "" }');
+        expect(out).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.size));");
       });
 
       it("holds a `computed`'s value as a string of its return type, optional too", () => {
@@ -7796,8 +7796,8 @@ ${setup}
           `${PROPS}\nconst shown = computed((): string => props.size);\nconst maybe = computed((): string | undefined => props.spare);\nconst held = ref<string>(props.size);`,
           `<p :class="{ a: shown === '-', b: maybe === '-', c: held === '-' }">{{ shown }}</p>`,
         );
-        expect(out).toContain("let s_shown = fv::Union::as_str(props.size);");
-        expect(out).toContain("let s_maybe = props.spare.map(fv::Union::as_str);");
+        expect(out).toContain("let s_shown = fv::props::Union::as_str(props.size);");
+        expect(out).toContain("let s_maybe = props.spare.map(fv::props::Union::as_str);");
         expect(out).toContain('if s_shown == "-" { "a" } else { "" }, if s_maybe == Some("-") { "b" } else { "" }, if s_held == "-" { "c" } else { "" }');
       });
 
@@ -7807,7 +7807,7 @@ ${setup}
           `<p :class="{ dash: describe(size) === '-' }"></p>`,
           { "types/size.ts": `export type Size = "big" | "small";\nexport function describe(size: Size): string {\n  return size;\n}\n` },
         );
-        expect(out).toContain('if fv::Union::as_str(props.size) == "-" { "dash" } else { "" }');
+        expect(out).toContain('if fv::props::Union::as_str(props.size) == "-" { "dash" } else { "" }');
       });
     });
 
@@ -7842,8 +7842,8 @@ defineProps<{ level?: Level }>();
           `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "">(props.level);`,
           `<li :class="{ none: picked === '' }">{{ picked }}</li><Badge v-if="picked !== ''" :level="picked" />`,
         );
-        expect(out).toContain("let s_picked = fv::Union::as_str(props.level);");
-        expect(out).toContain('fv::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }]);');
+        expect(out).toContain("let s_picked = fv::props::Union::as_str(props.level);");
+        expect(out).toContain('fv::attrs::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }]);');
         expect(out).toContain(`if !s_picked.is_empty() {\n        super::badge::try_render(out, &super::badge::Props { level: Some(match s_picked { "&amp; &lt;" => ${L}::High, "'!" => ${L}::Low, _ => ${L}::Mid }) })?;`);
       });
 
@@ -7853,7 +7853,7 @@ defineProps<{ level?: Level }>();
           `const props = defineProps<{ level?: Level }>();\nconst picked = ref<Level | "" | undefined>(props.level);`,
           `<li :class="{ none: picked === '' }">{{ picked }}</li>`,
         );
-        expect(out).toContain("let s_picked = props.level.map(fv::Union::as_str);");
+        expect(out).toContain("let s_picked = props.level.map(fv::props::Union::as_str);");
         expect(out).toContain('if s_picked == Some("") { "none" } else { "" }');
       });
 

@@ -43,7 +43,7 @@ impl std::fmt::Display for UnionWiderRefKept {
 }
 
 impl std::str::FromStr for UnionWiderRefKept {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -51,20 +51,20 @@ impl std::str::FromStr for UnionWiderRefKept {
             "loud" => Ok(UnionWiderRefKept::Loud),
             "<q>&\"x'" => Ok(UnionWiderRefKept::QX),
             "" => Ok(UnionWiderRefKept::Empty),
-            _ => Err(ferrovue::ParseUnionError::new("UnionWiderRefKept", s, &["calm", "loud", "<q>&\"x'", ""])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionWiderRefKept", s, &["calm", "loud", "<q>&\"x'", ""])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionWiderRefKept {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionWiderRefKept {
+impl ferrovue::props::Union for UnionWiderRefKept {
     const ALL: &'static [Self] = &UnionWiderRefKept::ALL;
 
     fn as_str(self) -> &'static str {
@@ -107,7 +107,7 @@ impl std::fmt::Display for UnionWiderRefChosen {
 }
 
 impl std::str::FromStr for UnionWiderRefChosen {
-    type Err = ferrovue::ParseUnionError;
+    type Err = ferrovue::props::ParseUnionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
@@ -115,20 +115,20 @@ impl std::str::FromStr for UnionWiderRefChosen {
             "loud" => Ok(UnionWiderRefChosen::Loud),
             "<q>&\"x'" => Ok(UnionWiderRefChosen::QX),
             "" => Ok(UnionWiderRefChosen::Empty),
-            _ => Err(ferrovue::ParseUnionError::new("UnionWiderRefChosen", s, &["calm", "loud", "<q>&\"x'", ""])),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionWiderRefChosen", s, &["calm", "loud", "<q>&\"x'", ""])),
         }
     }
 }
 
 impl TryFrom<&str> for UnionWiderRefChosen {
-    type Error = ferrovue::ParseUnionError;
+    type Error = ferrovue::props::ParseUnionError;
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
     }
 }
 
-impl ferrovue::Union for UnionWiderRefChosen {
+impl ferrovue::props::Union for UnionWiderRefChosen {
     const ALL: &'static [Self] = &UnionWiderRefChosen::ALL;
 
     fn as_str(self) -> &'static str {
@@ -172,7 +172,7 @@ impl<'a> Props<'a> {
 ///
 /// With the message of the refusal [`try_render`] returns.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    fv::rendered(try_render(out, props));
+    fv::render::rendered(try_render(out, props));
 }
 
 /// [`render`], returning the refusal of a render that cannot write what Vue writes for these
@@ -180,12 +180,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// # Errors
 ///
-/// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
-pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
+/// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
+pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(121 + 10 + 10 + 7 + props.label.len());
-    let s_held = fv::Union::as_str(props.mark);
-    let s_picked = if props.on { fv::Union::as_str(props.mark) } else { "" };
-    let s_spared = props.spare.map(fv::Union::as_str);
+    let s_held = fv::props::Union::as_str(props.mark);
+    let s_picked = if props.on { fv::props::Union::as_str(props.mark) } else { "" };
+    let s_spared = props.spare.map(fv::props::Union::as_str);
     let s_kept = match props.mood { super::types::Mood::Calm => UnionWiderRefKept::Calm, super::types::Mood::Loud => UnionWiderRefKept::Loud, super::types::Mood::QX => UnionWiderRefKept::QX };
     let s_chosen = if props.on { match props.mood { super::types::Mood::Calm => UnionWiderRefChosen::Calm, super::types::Mood::Loud => UnionWiderRefChosen::Loud, super::types::Mood::QX => UnionWiderRefChosen::QX } } else { UnionWiderRefChosen::Empty };
     out.push_str("<section");
@@ -193,19 +193,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, &props.label);
+        fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     out.push_str("><p class=\"");
-    fv::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }, if s_held == "'!" { "bang" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }, if s_held == "'!" { "bang" } else { "" }]);
     out.push_str("\" data-held=\"");
-    fv::escape_into(out, s_held);
+    fv::core::escape_into(out, s_held);
     out.push_str("\">");
-    fv::escape_into(out, s_held);
+    fv::core::escape_into(out, s_held);
     out.push(' ');
-    fv::escape_into(out, s_picked);
+    fv::core::escape_into(out, s_picked);
     out.push(' ');
-    fv::escape_into(out, &format!("{}|{}", s_picked, s_spared.unwrap_or("undefined")));
+    fv::core::escape_into(out, &format!("{}|{}", s_picked, s_spared.unwrap_or("undefined")));
     out.push_str("</p>");
     if s_spared == Some("") {
         out.push_str("<i>empty</i>");
@@ -227,33 +227,33 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     } else {
         out.push_str("<!---->");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv::Union::as_str(s_chosen)).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::types::Mood::Calm, "loud" => super::types::Mood::Loud, _ => super::types::Mood::QX }), label: std::borrow::Cow::Borrowed(fv::Union::as_str(s_chosen)) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv::props::Union::as_str(s_chosen)).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::types::Mood::Calm, "loud" => super::types::Mood::Loud, _ => super::types::Mood::QX }), label: std::borrow::Cow::Borrowed(fv::props::Union::as_str(s_chosen)) })?;
     out.push_str("<b class=\"");
-    fv::class_into(out, false, &[if s_chosen == UnionWiderRefChosen::Empty { "none" } else { "" }, if s_kept == UnionWiderRefKept::Calm { "calm" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if s_chosen == UnionWiderRefChosen::Empty { "none" } else { "" }, if s_kept == UnionWiderRefKept::Calm { "calm" } else { "" }]);
     out.push_str("\">");
-    fv::escape_into(out, fv::Union::as_str(s_kept));
+    fv::core::escape_into(out, fv::props::Union::as_str(s_kept));
     out.push(' ');
-    fv::escape_into(out, fv::Union::as_str(s_chosen));
+    fv::core::escape_into(out, fv::props::Union::as_str(s_chosen));
     out.push_str("</b></section>");
     Ok(())
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
-pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::markup_fallible(props, render, try_render)
+pub fn html<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::markup_fallible(props, render, try_render)
 }
 
 /// The component as an island the client hydrates.
-pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::Html<'p, Props<'a>> {
-    fv::Html::island_fallible(NAME, props, render, try_render)
+pub fn island<'p, 'a>(props: &'p Props<'a>) -> fv::html::Html<'p, Props<'a>> {
+    fv::html::Html::island_fallible(NAME, props, render, try_render)
 }
 
 /// [`html`], holding the props: a handler that builds them can return it.
-pub fn into_html<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::markup_owned_fallible(props, render, try_render)
+pub fn into_html<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::markup_owned_fallible(props, render, try_render)
 }
 
 /// [`island`], holding the props.
-pub fn into_island<'a>(props: Props<'a>) -> fv::Html<'a, Props<'a>> {
-    fv::Html::island_owned_fallible(NAME, props, render, try_render)
+pub fn into_island<'a>(props: Props<'a>) -> fv::html::Html<'a, Props<'a>> {
+    fv::html::Html::island_owned_fallible(NAME, props, render, try_render)
 }
