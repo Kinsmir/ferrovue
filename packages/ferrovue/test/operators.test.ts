@@ -64,7 +64,7 @@ describe("`&&` and `||`", () => {
       'out.push_str("<p>");',
       "fv::push_int(out, props.xs.len() as i64);",
       'out.push_str("|y|");',
-      "fv::escape_into(out, props.k.as_str());",
+      "fv::escape_into(out, fv::Union::as_str(props.k));",
       'out.push_str("|y|x</p>");',
     ].join("\n"), true));
   });
@@ -280,11 +280,11 @@ describe("`??`", () => {
   it("falls back from an optional enum to a member, or to its string", () => {
     expect(lines("<p>{{ o ?? 'b' }}|{{ o ?? 'z' }}|{{ o ?? s }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::escape_into(out, props.o.unwrap_or(XO::B).as_str());",
+      "fv::escape_into(out, fv::Union::as_str(props.o.unwrap_or(XO::B)));",
       "out.push('|');",
-      'fv::escape_into(out, props.o.map(XO::as_str).unwrap_or("z"));',
+      'fv::escape_into(out, props.o.map(fv::Union::as_str).unwrap_or("z"));',
       "out.push('|');",
-      "fv::escape_into(out, props.o.map(XO::as_str).unwrap_or(&*props.s));",
+      "fv::escape_into(out, props.o.map(fv::Union::as_str).unwrap_or(&*props.s));",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -358,7 +358,7 @@ describe("`??`", () => {
   it("falls back from an optional union with no member to read, and from a float to an integer computed as a float", () => {
     expect(lines('<p>{{ (b ? o : undefined) ?? "b" }}|{{ g ?? -n }}</p>')).toMatch(like([
       'out.push_str("<p>");',
-      'fv::escape_into(out, (if props.b { props.o.map(XO::as_str) } else { None }).unwrap_or("b"));',
+      'fv::escape_into(out, (if props.b { props.o.map(fv::Union::as_str) } else { None }).unwrap_or("b"));',
       "out.push('|');",
       "fv::push_number(out, props.g.unwrap_or(-(props.n as f64)));",
       'out.push_str("</p>");',
@@ -796,11 +796,11 @@ describe("values built from object literals", () => {
     const built = "(R { t: std::borrow::Cow::<str>::Borrowed(&*props.s), e: RE::A, o: props.o.map(|v| match v { XO::X => RO::X, XO::Y => RO::Y }) })";
     expect(lines('<p>{{ one().e }}|{{ one().e === "a" }}|{{ one().o ?? "none" }}|{{ one().o === "y" }}</p>', script)).toMatch(like([
       'out.push_str("<p>");',
-      `fv::escape_into(out, ${built}.e.as_str());`,
+      `fv::escape_into(out, fv::Union::as_str(${built}.e));`,
       "out.push('|');",
       `out.push_str(if ${built}.e == RE::A { "true" } else { "false" });`,
       "out.push('|');",
-      `fv::escape_into(out, ${built}.o.map(RO::as_str).unwrap_or("none"));`,
+      `fv::escape_into(out, ${built}.o.map(fv::Union::as_str).unwrap_or("none"));`,
       "out.push('|');",
       `out.push_str(if ${built}.o == Some(RO::Y) { "true" } else { "false" });`,
       'out.push_str("</p>");',

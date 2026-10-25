@@ -1,5 +1,7 @@
 export type Align = "left" | "center" | "right";
 
+export type Shade = "warm" | "x-cool" | "<b>&'q'\"";
+
 export enum Level {
   Low = "low",
   High = "high",

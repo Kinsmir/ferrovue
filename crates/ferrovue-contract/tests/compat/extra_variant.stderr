@@ -1,0 +1,20 @@
+error[E0004]: non-exhaustive patterns: `Tone::Hot` not covered
+  --> tests/compat/../../src/generated/toned.rs
+   |
+   | const _: fn(crate::domain::Tone) = |v| match v {
+   |                                              ^ pattern `Tone::Hot` not covered
+   |
+note: `Tone` defined here
+  --> tests/compat/extra_variant.rs:5:14
+   |
+ 5 |     pub enum Tone {
+   |              ^^^^
+...
+ 8 |         Hot,
+   |         --- not covered
+   = note: the matched value is of type `Tone`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+   |
+14 ~     crate::domain::Tone::XCool => {},
+15 +     Tone::Hot => todo!()
+   |

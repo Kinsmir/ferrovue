@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 import type { Plugin } from "./plugin.ts";
 import type { Declared } from "./constants.ts";
 import type { Alias, TsProject } from "./resolve.ts";
-import { type Component, type EnumDef, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, STR } from "./model.ts";
+import { type Component, type EnumDef, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, GenError, INT, opt, RUST_KEYWORDS, STR } from "./model.ts";
 import type { Code } from "./errors.ts";
 import { formatWarning } from "./diagnostics.ts";
 import { CONFIG_SCHEMA, type Schema, TYPE_NAMES } from "./schema.ts";
@@ -62,6 +62,11 @@ export interface Config {
    * `ferrovue::JsDate` by default, or `chrono::DateTime<chrono::Utc>` with the crate's `chrono`
    * feature. */
   dateType?: string;
+  /** The application's own Rust enum for a union of string literals, by the union's `type` alias:
+   * `{ "Tone": "crate::domain::Tone" }`. Generated code uses that enum, which must implement
+   * `ferrovue::Union` and have a variant of the name ferrovue would generate for each literal, and
+   * generates no enum for the union. */
+  unions?: Record<string, string>;
   /** A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>`
    * resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as
    * vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`. */
@@ -164,6 +169,13 @@ export function loadConfig(root: string, configPath?: string, warn: (warning: Ge
 
 type Json = Record<string, unknown>;
 
+/** Whether `path` is the path of a Rust item from the crate root (`crate::a::B`) or another crate
+ * (`a::B`, `::a::B`): two or more names joined by `::`. */
+function isRustPath(path: string): boolean {
+  const segments = path.replace(/^::/, "").split("::");
+  return segments.length >= 2 && segments.every((s, i) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s) && s !== "_" && (s === "crate" ? i === 0 && !path.startsWith("::") : !RUST_KEYWORDS.has(s)));
+}
+
 const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
 const isStrings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
 
@@ -236,6 +248,15 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
     throw new GenError("FV1106", `\`builders\` in ${file} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`, { file });
   }
   for (const key of ["$schema", "stores", "trustedHtml", "dateType", "viteRoot"]) string(raw, key, key);
+  if (raw.unions !== undefined) {
+    if (!isObject(raw.unions)) return wrong("unions", 'an object of Rust paths by `type` alias, as `{ "Tone": "crate::domain::Tone" }`');
+    for (const [alias, path] of Object.entries(raw.unions)) {
+      string(raw.unions, alias, `unions.${alias}`);
+      if (!isRustPath(path as string)) {
+        refuse("FV1119", `\`unions.${alias}\` in ${file} is ${JSON.stringify(path)}, which is not the path of a Rust type: name the enum from the crate root or a crate the project depends on, as \`crate::domain::${alias}\` or \`app_domain::${alias}\``);
+      }
+    }
+  }
   if (raw.isProduction !== undefined && typeof raw.isProduction !== "boolean") wrong("isProduction", "`true` or `false`: whether `@vitejs/plugin-vue` compiles for production");
   if (raw.cssModules !== undefined) {
     const m = raw.cssModules;
@@ -342,6 +363,8 @@ export const ctx = {
   helperModule: null as string | null,
   trustedHtml: null as string | null,
   dateType: JS_DATE,
+  unions: new Map<string, string>(),
+  mappedUnions: new Map<string, EnumDef>(),
   builders: true,
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],

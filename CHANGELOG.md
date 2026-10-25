@@ -5,6 +5,30 @@ released together and share version numbers.
 
 ## [Unreleased]
 
+### Added
+
+- `unions` in `ferrovue.config.json` names an application's own Rust enum for a union of string
+  literals, by its `type` alias (`{ "Tone": "app_domain::Tone" }`), as `dateType` and
+  `trustedHtml` name types for dates and HTML. Every prop and interface field typed with the alias
+  is that enum, optional and nullable ones too, a list of the union a `Vec` of it, a child's prop of the union is handed it, and the
+  compiler generates no enum for the union. The enum implements the new trait `ferrovue::Union`
+  (`as_str`, the literal of a value, and `ALL`, every value once) and has a variant of the name
+  ferrovue would generate for each literal, so the generated `match`es and comparisons stay
+  exhaustive: next to the union, generated code writes a `match` over every variant, and an enum
+  that lacks one or has another stops the build there. An island's `data-props` and the page's
+  state write each value as `as_str` gives it, whatever the enum's own `serde` writes, and the
+  generated module holds a `#[cfg(test)]` test that each value has its literal and `ALL` lists it
+  once. FV0329 (an entry for an alias that is not a union of two or more string literals), FV0330
+  (two unions of the entry's name with other members), FV1119 (a path that is not one of a Rust
+  type) and FV1120 (an entry no prop or field is typed with) are new entries of `ERRORS` in
+  `ferrovue/compiler`. This changes the public API: `unions` is a new key of `Config` and
+  `schema.json`, and `Union` a new trait of the `ferrovue` crate, which the generated enums
+  implement. Generated code reads every enum's literal through `ferrovue::Union::as_str`, which the
+  0.11 crate lacks, so its version is 6 (`ferrovue::__compat!(6)`); the crate supports versions 2
+  to 6. The conformance components `UnionTypes` and `UnionShade` record a union whose literal
+  holds markup from Vue, and `own_unions.rs` renders them, `UnionEnums`, `UnionChild`,
+  `UnionObjects`, `UnionStep`, `UnionList` and `UnionListItem` with enums of its own.
+
 ### Changed
 
 - Tests only: the Stryker survivors the compiler's fixes left in `template.ts` and `expr.ts` are

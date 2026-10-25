@@ -53,6 +53,7 @@ crates/ferrovue/             the Rust runtime crate, which generated code calls
   tests/sanitised/           a component whose `TrustedHtml` is `ferrovue::Sanitised`
   tests/chrono_dates/        the conformance suite's `Date` components, compiled with chrono's type
   tests/own_dates/           `DateStamp`, compiled with a `dateType` whose time values need clipping
+  tests/own_unions/          the union components, compiled with `unions` naming enums of the test's own
   tests/vectors/             vectors recorded from JavaScript and Vue
   tests/properties.rs        property-based tests of the runtime
   benches/                   criterion and instruction-count benchmarks of generated renderers

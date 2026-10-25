@@ -1,4 +1,4 @@
-import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, nothing } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Val, fail, GenError, nothing, UNION_STR, unionStr } from "./model.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
 import { expr, typedBy } from "./expr.ts";
@@ -33,7 +33,7 @@ export function bindingOf(v: Val): { init: string; read: (at: string) => Val; ow
   const lone = v.lone ? { lone: true } : {};
   if (v.variant !== undefined) {
     const optional = v.ty.k === "opt";
-    return { init: bare(v.variant), read: (at) => ({ code: optional ? `${at}.map(|v| v.as_str())` : `${at}.as_str()`, ty: v.ty, variant: at, ...lone }), owned: false };
+    return { init: bare(v.variant), read: (at) => ({ code: optional ? `${at}.map(${UNION_STR})` : unionStr(at), ty: v.ty, variant: at, ...lone }), owned: false };
   }
   if (v.owned) return { init: bare(v.code), read: (at) => ({ code: v.ty.k === "opt" ? `${at}.as_ref()` : at, ty: v.ty, ...lone }), owned: true };
   if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }), owned: false };

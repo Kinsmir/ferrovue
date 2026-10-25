@@ -150,6 +150,14 @@
       "type": "string",
       "default": "ferrovue::JsDate"
     },
+    "unions": {
+      "description": "The application's own Rust enum for a union of string literals, by the union's `type` alias: `{ \"Tone\": \"crate::domain::Tone\" }`. Generated code uses that enum, which must implement `ferrovue::Union` and have a variant of the name ferrovue would generate for each literal, and generates no enum for the union.",
+      "markdownDescription": "The application's own Rust enum for a union of string literals, by the union's `type` alias: `{ \"Tone\": \"crate::domain::Tone\" }`. Generated code uses that enum, which must implement `ferrovue::Union` and have a variant of the name ferrovue would generate for each literal, and generates no enum for the union.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
     "routes": {
       "description": "A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>` resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`.",
       "markdownDescription": "A JSON file listing the app's routes as vue-router paths (`/users/:id`), which `<RouterLink>` resolves against, or `{ pages }`: a folder of pages whose file names give the routes, as vue-router's file-based routing reads them. Without it, a component cannot use `<RouterLink>`.",

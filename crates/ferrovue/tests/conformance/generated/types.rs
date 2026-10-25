@@ -56,6 +56,14 @@ impl TryFrom<&str> for Volume {
     }
 }
 
+impl ferrovue::Union for Volume {
+    const ALL: &'static [Self] = &Volume::ALL;
+
+    fn as_str(self) -> &'static str {
+        Volume::as_str(self)
+    }
+}
+
 /// `Size` in `types/lookups.ts`: `"sm" | "md" | "lg"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Size {
@@ -105,6 +113,14 @@ impl TryFrom<&str> for Size {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for Size {
+    const ALL: &'static [Self] = &Size::ALL;
+
+    fn as_str(self) -> &'static str {
+        Size::as_str(self)
     }
 }
 
@@ -160,6 +176,14 @@ impl TryFrom<&str> for Tone {
     }
 }
 
+impl ferrovue::Union for Tone {
+    const ALL: &'static [Self] = &Tone::ALL;
+
+    fn as_str(self) -> &'static str {
+        Tone::as_str(self)
+    }
+}
+
 /// `Kind` in `types/lookups.ts`: `"note" | "tip" | "alert"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Kind {
@@ -212,6 +236,14 @@ impl TryFrom<&str> for Kind {
     }
 }
 
+impl ferrovue::Union for Kind {
+    const ALL: &'static [Self] = &Kind::ALL;
+
+    fn as_str(self) -> &'static str {
+        Kind::as_str(self)
+    }
+}
+
 /// `Shape` in `types/shapes.ts`: `"circle" | "square"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Shape {
@@ -257,6 +289,14 @@ impl TryFrom<&str> for Shape {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for Shape {
+    const ALL: &'static [Self] = &Shape::ALL;
+
+    fn as_str(self) -> &'static str {
+        Shape::as_str(self)
     }
 }
 
@@ -312,6 +352,14 @@ impl TryFrom<&str> for Align {
     }
 }
 
+impl ferrovue::Union for Align {
+    const ALL: &'static [Self] = &Align::ALL;
+
+    fn as_str(self) -> &'static str {
+        Align::as_str(self)
+    }
+}
+
 /// `Level` in `types/unions.ts`: `"low" | "high"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum Level {
@@ -357,6 +405,14 @@ impl TryFrom<&str> for Level {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for Level {
+    const ALL: &'static [Self] = &Level::ALL;
+
+    fn as_str(self) -> &'static str {
+        Level::as_str(self)
     }
 }
 
@@ -412,6 +468,14 @@ impl TryFrom<&str> for StepState {
     }
 }
 
+impl ferrovue::Union for StepState {
+    const ALL: &'static [Self] = &StepState::ALL;
+
+    fn as_str(self) -> &'static str {
+        StepState::as_str(self)
+    }
+}
+
 /// `Hue` in `types/unions.ts`: `"red" | "green" | "<b>&\"hue'"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[allow(clippy::enum_variant_names, reason = "the variants are named after the union's literals")]
@@ -462,6 +526,74 @@ impl TryFrom<&str> for Hue {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for Hue {
+    const ALL: &'static [Self] = &Hue::ALL;
+
+    fn as_str(self) -> &'static str {
+        Hue::as_str(self)
+    }
+}
+
+/// `Shade` in `types/unions.ts`: `"warm" | "x-cool" | "<b>&'q'\""`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum Shade {
+    #[serde(rename = "warm")]
+    Warm,
+    #[serde(rename = "x-cool")]
+    XCool,
+    #[serde(rename = "<b>&'q'\"")]
+    BQ,
+}
+
+impl Shade {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [Shade; 3] = [Shade::Warm, Shade::XCool, Shade::BQ];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Shade::Warm => "warm",
+            Shade::XCool => "x-cool",
+            Shade::BQ => "<b>&'q'\"",
+        }
+    }
+}
+
+impl std::fmt::Display for Shade {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for Shade {
+    type Err = ferrovue::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "warm" => Ok(Shade::Warm),
+            "x-cool" => Ok(Shade::XCool),
+            "<b>&'q'\"" => Ok(Shade::BQ),
+            _ => Err(ferrovue::ParseUnionError::new("Shade", s, &["warm", "x-cool", "<b>&'q'\""])),
+        }
+    }
+}
+
+impl TryFrom<&str> for Shade {
+    type Error = ferrovue::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl ferrovue::Union for Shade {
+    const ALL: &'static [Self] = &Shade::ALL;
+
+    fn as_str(self) -> &'static str {
+        Shade::as_str(self)
     }
 }
 

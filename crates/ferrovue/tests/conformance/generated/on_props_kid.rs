@@ -60,6 +60,14 @@ impl TryFrom<&str> for OnPropsKidOnTone {
     }
 }
 
+impl ferrovue::Union for OnPropsKidOnTone {
+    const ALL: &'static [Self] = &OnPropsKidOnTone::ALL;
+
+    fn as_str(self) -> &'static str {
+        OnPropsKidOnTone::as_str(self)
+    }
+}
+
 /// The props `OnPropsKid.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -156,7 +164,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         fv::push_number(out, v);
     }
     out.push('|');
-    fv::escape_into(out, props.on_tone.map(OnPropsKidOnTone::as_str).unwrap_or("unset"));
+    fv::escape_into(out, props.on_tone.map(fv::Union::as_str).unwrap_or("unset"));
     out.push('|');
     out.push_str(if props.on_req { "true" } else { "false" });
     out.push('|');

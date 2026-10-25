@@ -54,6 +54,14 @@ impl TryFrom<&str> for SizedTone {
     }
 }
 
+impl ferrovue::Union for SizedTone {
+    const ALL: &'static [Self] = &SizedTone::ALL;
+
+    fn as_str(self) -> &'static str {
+        SizedTone::as_str(self)
+    }
+}
+
 /// The props `Sized.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -96,9 +104,9 @@ pub fn render(out: &mut String, props: &Props) {
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::Refused> {
     out.reserve(16 + 2 + 4);
     out.push_str("<b class=\"");
-    fv::class_into(out, false, &[props.size.as_str(), props.tone.map(SizedTone::as_str).unwrap_or("")]);
+    fv::class_into(out, false, &[fv::Union::as_str(props.size), props.tone.map(fv::Union::as_str).unwrap_or("")]);
     out.push_str("\">");
-    fv::escape_into(out, props.size.as_str());
+    fv::escape_into(out, fv::Union::as_str(props.size));
     out.push_str("</b>");
     Ok(())
 }

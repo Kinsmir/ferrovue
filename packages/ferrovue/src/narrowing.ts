@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, GenError, keptLiterals, literalTy, nothing, rustStr, STR, UNDEF } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, GenError, keptLiterals, literalTy, nothing, rustStr, STR, UNDEF, unionStr } from "./model.ts";
 import { ownKeyTest, pickPresent } from "./constants.ts";
 import { isObjectCall } from "./calls.ts";
 import { ctx } from "./context.ts";
@@ -223,7 +223,7 @@ export function presence(s: Scope, n: N): Presence | null {
   const of: Ty = v.ty.of;
   const def = v.variant !== undefined ? enumOf(v.ty) : undefined;
   if (def !== undefined) {
-    const option = byTruth && def.literals.includes("") ? `${atom(v.variant!)}.filter(|v| !v.as_str().is_empty())` : v.variant!;
+    const option = byTruth && def.literals.includes("") ? `${atom(v.variant!)}.filter(|v| !${unionStr("*v")}.is_empty())` : v.variant!;
     return { path, of, negated, truthy: byTruth, option, present: `${atom(option)}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}`, variant: true };
   }
   const scalar = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
@@ -287,7 +287,7 @@ export function narrowTo(s: Scope, p: Presence, name: string): Scope {
 
 /** The value a path `p` tests stands for where the test holds, bound to `name`. */
 export function narrowedVal(p: Presence, name: string): Val {
-  if (p.variant) return { code: `${name}.as_str()`, ty: p.of, variant: name };
+  if (p.variant) return { code: unionStr(name), ty: p.of, variant: name };
   return p.pick ? { code: name, ty: p.of, pick: true } : { code: name, ty: p.of };
 }
 

@@ -60,6 +60,14 @@ impl TryFrom<&str> for UnionEnumsMode {
     }
 }
 
+impl ferrovue::Union for UnionEnumsMode {
+    const ALL: &'static [Self] = &UnionEnumsMode::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsMode::as_str(self)
+    }
+}
+
 /// `other` in `UnionEnums.vue`: `"a" | "b" | "c"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionEnumsOther {
@@ -112,6 +120,14 @@ impl TryFrom<&str> for UnionEnumsOther {
     }
 }
 
+impl ferrovue::Union for UnionEnumsOther {
+    const ALL: &'static [Self] = &UnionEnumsOther::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsOther::as_str(self)
+    }
+}
+
 /// `gap` in `UnionEnums.vue`: `"" | "wide"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionEnumsGap {
@@ -157,6 +173,14 @@ impl TryFrom<&str> for UnionEnumsGap {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for UnionEnumsGap {
+    const ALL: &'static [Self] = &UnionEnumsGap::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsGap::as_str(self)
     }
 }
 
@@ -212,6 +236,14 @@ impl TryFrom<&str> for UnionEnumsMark {
     }
 }
 
+impl ferrovue::Union for UnionEnumsMark {
+    const ALL: &'static [Self] = &UnionEnumsMark::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsMark::as_str(self)
+    }
+}
+
 /// `tag` in `UnionEnums.vue`: `"h2" | "h3"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionEnumsTag {
@@ -260,6 +292,14 @@ impl TryFrom<&str> for UnionEnumsTag {
     }
 }
 
+impl ferrovue::Union for UnionEnumsTag {
+    const ALL: &'static [Self] = &UnionEnumsTag::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsTag::as_str(self)
+    }
+}
+
 /// `size` in `UnionEnums.vue`: `"sm" | "lg"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionEnumsSize {
@@ -305,6 +345,14 @@ impl TryFrom<&str> for UnionEnumsSize {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for UnionEnumsSize {
+    const ALL: &'static [Self] = &UnionEnumsSize::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsSize::as_str(self)
     }
 }
 
@@ -357,6 +405,14 @@ impl TryFrom<&str> for UnionEnumsPicked {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for UnionEnumsPicked {
+    const ALL: &'static [Self] = &UnionEnumsPicked::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsPicked::as_str(self)
     }
 }
 
@@ -438,25 +494,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(290 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
-    let s_chosen = if props.level == super::types::Level::High { "a" } else { props.mode.as_str() };
+    let s_chosen = if props.level == super::types::Level::High { "a" } else { fv::Union::as_str(props.mode) };
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &[props.align.as_str(), props.mode.as_str(), props.gap.map(UnionEnumsGap::as_str).unwrap_or("")]);
+    fv::class_into(out, false, &[fv::Union::as_str(props.align), fv::Union::as_str(props.mode), props.gap.map(fv::Union::as_str).unwrap_or("")]);
     out.push('"');
-    if props.mark.as_str().is_empty() {
+    if fv::Union::as_str(props.mark).is_empty() {
         out.push_str(" title");
     } else {
         out.push_str(" title=\"");
-        fv::escape_into(out, props.mark.as_str());
+        fv::escape_into(out, fv::Union::as_str(props.mark));
         out.push('"');
     }
     out.push_str(" style=\"text-align:");
-    fv::escape_into(out, props.align.as_str());
+    fv::escape_into(out, fv::Union::as_str(props.align));
     out.push_str(";\"");
-    if props.level.as_str().is_empty() {
+    if fv::Union::as_str(props.level).is_empty() {
         out.push_str(" data-level");
     } else {
         out.push_str(" data-level=\"");
-        fv::escape_into(out, props.level.as_str());
+        fv::escape_into(out, fv::Union::as_str(props.level));
         out.push('"');
     }
     out.push('>');
@@ -464,13 +520,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.push('<');
     out.push_str(fv_tag);
     out.push('>');
-    fv::escape_into(out, props.mark.as_str());
+    fv::escape_into(out, fv::Union::as_str(props.mark));
     out.push(' ');
-    fv::escape_into(out, &props.mode.as_str().to_uppercase());
+    fv::escape_into(out, &fv::Union::as_str(props.mode).to_uppercase());
     out.push(' ');
-    fv::escape_into(out, &format!("{}/{}", props.align.as_str(), props.size.unwrap_or(UnionEnumsSize::Lg).as_str()));
+    fv::escape_into(out, &format!("{}/{}", fv::Union::as_str(props.align), fv::Union::as_str(props.size.unwrap_or(UnionEnumsSize::Lg))));
     out.push(' ');
-    fv::push_int(out, fv::js_length(props.align.as_str()));
+    fv::push_int(out, fv::js_length(fv::Union::as_str(props.align)));
     out.push_str("</");
     out.push_str(fv_tag);
     out.push_str("><p>");
@@ -499,14 +555,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<i>");
         fv::push_number(out, match fv_other { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
         out.push(' ');
-        fv::escape_into(out, fv_other.as_str());
+        fv::escape_into(out, fv::Union::as_str(fv_other));
         out.push_str("</i>");
     } else {
         out.push_str("<i>no other</i>");
     }
-    if let Some(fv_gap) = props.gap.filter(|v| !v.as_str().is_empty()) {
+    if let Some(fv_gap) = props.gap.filter(|v| !fv::Union::as_str(*v).is_empty()) {
         out.push_str("<i>gap ");
-        fv::escape_into(out, fv_gap.as_str());
+        fv::escape_into(out, fv::Union::as_str(fv_gap));
         out.push_str("</i>");
     } else {
         out.push_str("<i>no gap</i>");
@@ -517,28 +573,28 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
         out.push_str("<!---->");
     }
     out.push_str("<s>");
-    fv::escape_into(out, props.picked.map(UnionEnumsPicked::as_str).unwrap_or("none"));
+    fv::escape_into(out, props.picked.map(fv::Union::as_str).unwrap_or("none"));
     out.push(' ');
-    fv::escape_into(out, if let Some(fv_picked) = props.picked { fv_picked.as_str() } else { "null" });
+    fv::escape_into(out, if let Some(fv_picked) = props.picked { fv::Union::as_str(fv_picked) } else { "null" });
     out.push(' ');
-    out.push_str(if props.picked.map(UnionEnumsPicked::as_str) == Some(props.mode.as_str()) { "true" } else { "false" });
+    out.push_str(if props.picked.map(fv::Union::as_str) == Some(fv::Union::as_str(props.mode)) { "true" } else { "false" });
     out.push_str("</s><ol><!--[-->");
     for fv_s_ref in props.steps.iter() {
         let fv_s = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::class_into(out, false, &[fv_s.state.as_str()]);
+        fv::class_into(out, false, &[fv::Union::as_str(fv_s.state)]);
         out.push_str("\">");
         fv::escape_into(out, match fv_s.state { super::types::StepState::Todo => "To do", super::types::StepState::Done => "Done & <dusted>", super::types::StepState::Skipped => "Skipped" });
         out.push(' ');
         fv::escape_into(out, if fv_s.state == super::types::StepState::Done { "yes" } else { "no" });
         out.push(' ');
-        fv::escape_into(out, fv_s.align.unwrap_or(super::types::Align::Left).as_str());
+        fv::escape_into(out, fv::Union::as_str(fv_s.align.unwrap_or(super::types::Align::Left)));
         out.push(' ');
         fv::escape_into(out, &fv_s.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(props.mode.as_str()), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
+    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(fv::Union::as_str(props.mode)), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
     for fv_s_ref_2 in props.steps.iter() {
         let fv_s_2 = fv_s_ref_2;

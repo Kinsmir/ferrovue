@@ -1,13 +1,14 @@
 use std::borrow::Cow;
 
 use ferrovue::{
-    Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Refused, Route, Slot, Teleports,
+    Head, Html, I18n, JsDate, Page, ParseUnionError, Part, Refused, Route, Slot, Teleports, Union,
 };
 
+use crate::domain::Tone;
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
     picker, posted, provides, rated, render_json, route_table, shell, sized, stamped, stores,
-    theme_scope, themed_button, timeline, translated, twins, types,
+    theme_scope, themed_button, timeline, toned, translated, twins, types,
 };
 
 const _: fn(&mut String, &sized::Props) = sized::render;
@@ -152,6 +153,27 @@ fn a_union_of_string_literals_is_an_enum_built_from_a_variant_or_parsed() {
     let boxed: Box<dyn std::error::Error> = Box::new(e.clone());
     assert_eq!(boxed.to_string(), e.to_string());
     assert_eq!(types::Size::try_from("xl"), Err(e));
+    assert_eq!(<types::Size as Union>::ALL, types::Size::ALL);
+    assert_eq!(Union::as_str(types::Size::Md), "md");
+}
+
+#[test]
+fn a_union_unions_names_an_enum_for_is_that_enum_written_as_its_literals() {
+    let props = toned::Props::new(Tone::XCool).other(Tone::Warm);
+    assert_eq!(
+        render(|out| toned::render(out, &props)),
+        r#"<i class="x-cool warm">c</i>"#
+    );
+    let island = toned::island(&toned::Props::new(Tone::Warm)).into_string();
+    assert!(
+        island.starts_with(
+            r#"<div data-island="Toned" data-props="{&quot;tone&quot;:&quot;warm&quot;}">"#
+        ),
+        "{island}"
+    );
+    let read = render_json("Toned", r#"{"tone": "x-cool", "other": "x-cool"}"#).unwrap();
+    assert_eq!(read, r#"<i class="x-cool x-cool">c</i>"#);
+    assert!(render_json("Toned", r#"{"tone": "cold"}"#).is_err());
 }
 
 #[test]

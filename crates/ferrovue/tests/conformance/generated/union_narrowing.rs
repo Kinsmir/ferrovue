@@ -60,6 +60,14 @@ impl TryFrom<&str> for Tone {
     }
 }
 
+impl ferrovue::Union for Tone {
+    const ALL: &'static [Self] = &Tone::ALL;
+
+    fn as_str(self) -> &'static str {
+        Tone::as_str(self)
+    }
+}
+
 /// The props `UnionNarrowing.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -109,8 +117,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(50 + 6 + 6 + props.label.len());
-    let s_tone = props.start.map(Tone::as_str).unwrap_or("");
-    let s_chosen = props.pick.map(Tone::as_str).unwrap_or("");
+    let s_tone = props.start.map(fv::Union::as_str).unwrap_or("");
+    let s_chosen = props.pick.map(fv::Union::as_str).unwrap_or("");
     let s_shown = if s_tone.is_empty() { None } else { Some(s_tone) };
     let s_on = !props.label.is_empty();
     out.push_str("<section>");

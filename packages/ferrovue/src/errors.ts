@@ -336,6 +336,14 @@ export const ERRORS = {
     title: "Prop named with a leading `$`",
     detail: "Vue keeps the names that start with `$` for its own properties: it warns that a prop named so is invalid, leaves it out of the component's props and renders what a parent gives it as an attribute. Rename the prop without the leading `$`; a prop may hold `$` later in its name (`price$`), and the fields of its interfaces anywhere.",
   },
+  FV0329: {
+    title: "`unions` entry for an alias that is not a union of string literals",
+    detail: "`unions` in `ferrovue.config.json` names the application's own Rust enum for a `type` alias or a string `enum` that is a union of two or more string literals, whose variants generated code names. An alias of another type (`string`, a single literal, `1 | 2 | 3`, `\"sm\" | string`, an object) has no such variants. Remove the alias from `unions`, or declare it as a union of string literals. See [`props`](crate::guide::props#unions-mapped-to-existing-enums).",
+  },
+  FV0330: {
+    title: "Two unions of one name that `unions` names one Rust enum for",
+    detail: "`unions` in `ferrovue.config.json` maps a union by the name of its `type` alias, so every alias of that name, in every `.ts` file and component, is the one Rust enum it names. Two aliases of that name with other members would need two sets of variants. Give the two unions the same members, or rename one of them. See [`props`](crate::guide::props#unions-mapped-to-existing-enums).",
+  },
 
   FV0401: {
     title: "Interpolation of a value that is not a string, a number or a boolean",
@@ -1102,6 +1110,14 @@ export const ERRORS = {
   FV1118: {
     title: "Deprecated command-line option",
     detail: "A warning: the option still works, and is removed in a later minor release before 1.0, and only in a major release from 1.0. The message names what to use instead. An option is deprecated for at least one minor release before it is removed.",
+  },
+  FV1119: {
+    title: "`unions` entry that is not the path of a Rust type",
+    detail: "Each entry of `unions` in `ferrovue.config.json` names the Rust enum generated code uses for a union, by a path the generated modules can reach: two or more names joined by `::`, from the crate root (`crate::domain::Tone`) or from a crate the project depends on (`app_domain::Tone`). A single name, a path through `self` or `super`, generic arguments and anything that is not a name are refused. Write the enum's full path.",
+  },
+  FV1120: {
+    title: "`unions` entry for an alias no component uses",
+    detail: "Each entry of `unions` in `ferrovue.config.json` names the Rust enum for a union by its `type` alias. An entry whose alias types no prop and no field the components reach is most often a misspelt one, or one left behind when the alias was renamed. Name the alias as its `.ts` file or component declares it, or remove the entry.",
   },
 
   FV1201: {

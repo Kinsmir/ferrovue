@@ -59,7 +59,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused
     out.reserve(214 + 4 + props.size.as_deref().map_or(0, str::len));
     let s_heading = format!("Catalogue <b> ({})", fv::Js(3i64));
     out.push_str("<section class=\"");
-    fv::class_into(out, false, &["round", props.tone.as_str()]);
+    fv::class_into(out, false, &["round", fv::Union::as_str(props.tone)]);
     out.push_str("\"><h2>");
     fv::escape_into(out, &s_heading);
     out.push_str("</h2>");

@@ -5,6 +5,9 @@
     "routes": { "pages": "pages" }
   },
   "stores": "stores",
+  "unions": {
+    "Tone": "crate::domain::Tone"
+  },
   "i18n": {
     "messages": "locales",
     "locale": "en",

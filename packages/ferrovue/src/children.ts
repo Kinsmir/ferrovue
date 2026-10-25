@@ -388,7 +388,7 @@ function enumListInto(comp: Component, v: Val, want: Ty, node: N): string {
   if (v.ty.of.k === "undef") return "Vec::new()";
   const of = v.ty.of;
   if (v.enums !== undefined) {
-    const item = ownInto(comp, enumItemVal(comp, "v", of, v.enums.def), want.of, node);
+    const item = ownInto(comp, enumItemVal("v", of, v.enums.def), want.of, node);
     return item === "v" ? `${atom(v.enums.place)}.to_vec()` : `${atom(v.enums.place)}.iter().map(|&v| ${item}).collect()`;
   }
   if (of.k !== "str" && (of.k !== "opt" || of.of.k !== "str")) return refuse();

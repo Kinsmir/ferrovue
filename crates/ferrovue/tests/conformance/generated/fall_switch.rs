@@ -58,6 +58,14 @@ impl TryFrom<&str> for FallSwitchMode {
     }
 }
 
+impl ferrovue::Union for FallSwitchMode {
+    const ALL: &'static [Self] = &FallSwitchMode::ALL;
+
+    fn as_str(self) -> &'static str {
+        FallSwitchMode::as_str(self)
+    }
+}
+
 /// The props `FallSwitch.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

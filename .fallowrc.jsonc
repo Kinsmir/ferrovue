@@ -10,6 +10,8 @@
     "crates/ferrovue/tests/closed_unions/components/**",
     "crates/ferrovue/tests/literal_props/components/**",
     "crates/ferrovue/tests/own_dates/components/**",
+    "crates/ferrovue/tests/own_unions/components/**",
+    "crates/ferrovue/tests/own_unions/types/**",
     "crates/ferrovue/tests/sanitised/components/**",
     "examples/greeting/components/**",
     "examples/dioxus/components/**",

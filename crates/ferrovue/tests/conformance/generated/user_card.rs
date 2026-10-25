@@ -66,7 +66,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::Refused> {
     out.reserve(128 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2 + 2 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"card");
-    fv::class_into(out, true, &[&*format!("card-{}", props.size.unwrap_or(super::types::Size::Md).as_str())]);
+    fv::class_into(out, true, &[&*format!("card-{}", fv::Union::as_str(props.size.unwrap_or(super::types::Size::Md)))]);
     out.push_str("\">");
     if let Some(fv_avatar) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<img src=\"");

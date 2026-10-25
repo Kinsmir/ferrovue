@@ -58,6 +58,14 @@ impl TryFrom<&str> for K {
     }
 }
 
+impl ferrovue::Union for K {
+    const ALL: &'static [Self] = &K::ALL;
+
+    fn as_str(self) -> &'static str {
+        K::as_str(self)
+    }
+}
+
 /// `tag` in `Picked.vue`: `"b" | "i" | "u"`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum PickedTag {
@@ -107,6 +115,14 @@ impl TryFrom<&str> for PickedTag {
 
     fn try_from(s: &str) -> Result<Self, Self::Error> {
         s.parse()
+    }
+}
+
+impl ferrovue::Union for PickedTag {
+    const ALL: &'static [Self] = &PickedTag::ALL;
+
+    fn as_str(self) -> &'static str {
+        PickedTag::as_str(self)
     }
 }
 

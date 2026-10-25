@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(5);
+ferrovue::__compat!(6);
 
 pub mod account_nav;
 pub mod and_chains;
@@ -228,7 +228,9 @@ pub mod union_list;
 pub mod union_list_item;
 pub mod union_narrowing;
 pub mod union_objects;
+pub mod union_shade;
 pub mod union_step;
+pub mod union_types;
 pub mod unread;
 pub mod unread_fold;
 pub mod unread_steps;
@@ -1413,9 +1415,17 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: union_objects::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_objects::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "UnionShade" => {
+            let props: union_shade::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_shade::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "UnionStep" => {
             let props: union_step::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_step::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionTypes" => {
+            let props: union_types::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_types::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Unread" => {
             let props: unread::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

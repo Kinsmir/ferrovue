@@ -60,6 +60,14 @@ impl TryFrom<&str> for OnPropsRootTone {
     }
 }
 
+impl ferrovue::Union for OnPropsRootTone {
+    const ALL: &'static [Self] = &OnPropsRootTone::ALL;
+
+    fn as_str(self) -> &'static str {
+        OnPropsRootTone::as_str(self)
+    }
+}
+
 /// The props `OnPropsRoot.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
