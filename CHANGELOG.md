@@ -370,279 +370,68 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Added
 
-- A conformance suite for applications (#45), in two calls over a `fixtures/<Component>/<case>.json`
-  directory. `await conformanceSuite({ config, components })` from `ferrovue/testing` registers
-  vitest tests that fail on a component with no fixtures, a fixture naming no component or no
-  components at all, on generated Rust that differs from what `ferrovue` writes now (with the
-  diff), on a fixture Vue renders differently from its recorded `.html` (saying where they first
-  differ), and on a recorded `.html` that hydrates with any warning or with its first node
-  replaced, once `<ClientOnly>` and async components have settled; `FERROVUE_FIXTURES_WRITE=1`
-  records the `.html` files instead. It takes the application's own `pinia`, `vueRouter` and `vueI18n` modules, as
-  `fixtureApp` now does in its options, so the fixtures install the instances the application's
-  stores and composables read. vitest is an optional peer, loaded only by `conformanceSuite`.
-  `ferrovue::conformance!("fixtures", generated::render_json, at_least = n)` writes the Rust test
-  that renders every fixture through the generated `render_json` and compares the bytes, listing
-  each fixture that differs, and fails when fewer than `n` fixtures are found;
-  `ferrovue::check_fixtures` is the same check as a function. The crate guide's new `testing` page
-  describes both, `examples/fullstack` replaces its hand-written fixture tests with them and has
-  fixtures for every component, loading ferrovue from its built package as an external, as an
-  application's vitest run does; ferrovue's own Rust conformance test uses the macro.
-- Islands that hydrate later. `island(&props).hydrate(Hydrate::Visible)` writes
-  `data-hydrate="visible"` on the island's wrapper, after `data-props`; `Hydrate::Idle`,
-  `Hydrate::Interaction` (the first `pointerenter`, `click` or `focus` within the island),
-  `Hydrate::InteractionOn(&["keydown"])`, `Hydrate::media("(min-width: 60rem)")` and
-  `Hydrate::visible_with("200px")` (a root margin) write `idle`, `interaction`,
-  `interaction:keydown`, `media:(min-width: 60rem)` and `visible:200px`, escaped as any attribute
-  is. The markup inside the wrapper is unchanged. `mountIslands` waits on such an island with Vue's
-  `hydrateOnVisible` (given the root margin, if any; one the browser rejects is reported and the
-  island hydrates at once), `hydrateOnIdle` (200 ms where the browser has no `requestIdleCallback`)
-  and `hydrateOnMediaQuery`, or its own listeners for interaction, and calls the island's loader
-  only when the trigger fires, so its chunk is fetched then. Events that reach an island waiting for
-  interaction before it has hydrated are dispatched again once it has, so the click that woke it
-  reaches its handler. It resolves once the other islands have mounted; the waiting ones join `apps`
-  as they hydrate, `unmount()` stops waiting for them, and a `data-hydrate` it does not know is
-  reported and hydrates at once. Islands without the attribute hydrate as before, and `Page` parts
-  hydrate with their page. Dioxus's `to_element` writes the same attribute. In `examples/fullstack`
-  the home page's buttons hydrate on interaction and the book page's reviews once visible, and the
-  browser test checks that their chunks are requested only on a click and after scrolling the
-  reviews into view on a short screen; a browser test of the package (`browser/lazy.test.ts`) does
-  the same for islands waiting for idle and for a media query.
-- `provide` and `inject`, resolved through the component tree at build time. A key is a string
-  literal or a `Symbol` exported from a `.ts` file and typed `InjectionKey<T>`; a value is a prop, a
-  ref, a `computed`, a constant, or an object of them under an interface (`reactive()` unwraps the
-  refs in it, as in Vue). `inject` takes a default, or a factory with `true`; under a key whose type
-  is an interface, the default may be an object of it (`inject(LookKey, { size: "md", tone: "plain"
-  })`), given as it is or returned by the factory, whose fields are values the server computes.
-  Every component that provides or injects, or renders one that does, takes the generated `Provides`
-  after its other parameters, overlays what it provides, and hands it to its children and to its
-  slots' content, which sees what the component rendering the slot provides, as Vue resolves it. A
-  page rendered from Rust passes `Provides::default()`, or the values its client app gives
-  `app.provide`. A key holding a function is client-only, for event handlers. What cannot be exact
-  is refused with codes FV1601 to FV1620: other keys, `inject(key)!`, values that may be absent, a
-  ref and a plain value under one key, setup that assigns to an injected value, a provider holding
-  `<RouterView>`, a string key injected inside a Rust twin's slot. The guide's new `provide_inject`
-  page explains it; the conformance suite has a `Tabs`/`Tab` pair and a themed button, with and
-  without providers, recorded from Vue, and `Swatch` and `SwatchShelf` cover object defaults.
-- `<component :is>` over a closed set of choices, compiled to a `match`: an imported component, an
-  HTML element's name, a prop typed as a union of string literals (an `as` prop), an object of
-  imported components or element names declared in setup or exported as a constant from a `.ts` file
-  and read by such a prop (`ICONS[name]`), and a `computed` or `?:` choosing among them. Each choice
-  gets props, fallthrough attributes, slots and scope ids as a static child would, inside
-  `<KeepAlive>` and `<Transition>` too. An element it chooses renders its content, and the slot
-  content a parent gives a `<slot>` inside it, by the rules Vue's server applies to virtual nodes
-  (`<!--v-if-->`, bare empty attributes, slot scope ids written once each). Anything open (a
-  `string`, a `Component`, a key that is not a literal union) is still refused under FV0418, with a
-  message naming what is accepted; new codes refuse a prop that may be absent (FV0420), a key the
-  object lacks (FV0421), a tag that is not an HTML element (FV0419), `v-html` and `v-text` on
-  `<component :is>` (FV0422), `v-show` and `v-model` on a `<select>` in content rendered from
-  virtual nodes (FV0423), and a `<slot>` inside a chosen element that has fallback content (FV0919)
-  or is also rendered outside one (FV0920). The conformance suite covers every form with a fixture
-  per choice (`ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, and
-  `ThemedChoice` with provide and inject), and the fuzzer writes `<component :is>` choosing between
-  a helper component and another one or an element.
-- The page head: `useHead`, `useServerHead`, `useSeoMeta` and `useServerSeoMeta` from
-  `@unhead/vue` 3 in `<script setup>`, with values the server computes: props, setup bindings,
-  getters (`title: () => props.title`), and `list.map(x => ({ … }))` for a list of tags. A component
-  that calls one, or renders a child that does, takes a `ferrovue::Head`, which collects the calls
-  in the order Vue's server runs them; after the body renders, `Head::render()` gives what unhead's
-  `renderSSRHead` gives: the tags for `<head>`, the start and end of `<body>`, and the attributes of
-  `<html>` and `<body>`, in unhead's order (its capo weights, `tagPriority`, `tagPosition`),
-  deduplicated by its keys (`key`, a meta's `name` or `property`, `canonical`, `charset`, …), with
-  the title template applied and every value escaped as unhead escapes it. `Head::new()` holds
-  unhead's defaults, as `createHead()` does, and `Head::without_defaults()` none. Conformance
-  components (`HeadPage`, `HeadArticle`, `HeadSeo`) and 458 heads recorded from unhead's server
-  renderer (`tests/vectors/head.json`, hand-written and drawn at random with markup-breaking values
-  in every field) hold it to unhead. `useHeadSafe`, options given to `useHead`, `templateParams`, a
-  `titleTemplate` function, event handlers, a `class` or `style` that may be `null` and an object
-  given to a `useSeoMeta` key are refused with codes `FV1701` to `FV1711`. `@unhead/vue` is an
-  optional peer of the npm package: `fixtureApp` and `conformanceSuite` install its server head
-  when it is installed, and record the head after the fixture's HTML; hydrating a fixture installs
-  its client head over the recorded tags, which it takes over with no change. The guide's `head`
-  page shows a page and the client; `examples/fullstack` sets its titles and meta tags from its
-  components.
-- `ferrovue::Sanitised`, with the crate's new `ammonia` feature: HTML cleaned by ammonia, to name as
-  `"trustedHtml": "ferrovue::Sanitised"` for `v-html` props. `Sanitised::new(untrusted)` cleans with
-  ammonia's default policy (no scripts, event handlers or `javascript:` URLs) and
-  `Sanitised::with(&builder, untrusted)` with an `ammonia::Builder` of your own; `ferrovue::ammonia`
-  re-exports the crate. It renders the cleaned string unchanged and serialises as that string, so an
-  island's `data-props` carries exactly the HTML the server wrote and the client's `v-html` writes
-  the same. Deserialising one cleans the string again. The guide's `escaping` page says what the
-  default policy keeps; a component compiled with it (`tests/sanitised`) checks the render and the
-  props the client receives.
-- `ferrovue::BasicHtml`, a `TrustedHtml` with no dependency and no feature: `"trustedHtml":
-  "ferrovue::BasicHtml"`. `BasicHtml::new(untrusted)` never parses its input as HTML: it escapes
-  every character and writes as tags only `<b>`, `<i>`, `<em>`, `<strong>`, `<code>`, `<br>`, `<p>`,
-  `<ul>`, `<ol>` and `<li>`, written exactly so with no attributes, closing what is left open,
-  leaving out end tags with nothing to close, and keeping blocks and list items where a browser
-  reads them back as written (32 elements deep at most). `BasicHtml::from_text(text)` escapes
-  everything and writes paragraphs and line breaks. Both serialise as the string; deserialising
-  builds it again, which gives the same HTML. Property tests check that every `<` in the output
-  starts one of those tags, balanced, and that html5ever parses it back to the same tags and text.
-  The guide's `escaping` page has a table choosing between `BasicHtml`, `Sanitised` and a type of
-  your own, and a recipe for the last with its three rules: sanitise before render, the client
-  receives the same string, sanitise again on `Deserialize`.
+- A conformance suite for applications (#45): `conformanceSuite` from `ferrovue/testing` and
+  `ferrovue::conformance!` hold each component's fixtures to Vue's render: [Testing](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html).
+- Islands that hydrate later: `island(&props).hydrate(Hydrate::Visible)`, `Idle`, `Interaction` or
+  a media query, with the island's chunk loaded when it fires: [Hydrating later](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#hydrating-later).
+- `provide` and `inject`, resolved through the component tree at build time, under a string key or
+  an `InjectionKey<T>`: [Provide and inject](https://docs.rs/ferrovue/latest/ferrovue/guide/provide_inject/index.html).
+- `<component :is>` over a closed set of choices (imported components, element names, a union
+  prop, an object of them), compiled to a `match`: [`<component :is>`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is).
+- The page head: `useHead`, `useServerHead`, `useSeoMeta` and `useServerSeoMeta` from `@unhead/vue`
+  3, collected by `ferrovue::Head`, which renders what unhead's server renders: [Head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
+- `ferrovue::Sanitised`, with the crate's new `ammonia` feature: HTML cleaned by ammonia, for
+  `v-html` props: [`Sanitised`](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#ferrovuehtmlsanitised-with-the-ammonia-feature).
+- `ferrovue::BasicHtml`, a `TrustedHtml` with no dependency that escapes its input and keeps a few
+  formatting tags: [`BasicHtml`](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#ferrovuehtmlbasichtml).
+- `InlineHtml` from `ferrovue/types` and `ferrovue::InlineHtml`, trusted HTML of inline tags only,
+  which `v-html` may write inside a `<p>`: [Where `v-html` may go](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#where-v-html-may-go).
 - Routes from a folder of pages, as vue-router's file-based routing builds them:
-  `"routes": { "pages": "client/pages" }` (or the same under `router.routes`). `index.vue`,
-  `[id].vue`, `[[id]].vue` (an optional parameter), `[...path].vue`, `(group)` folders, a
-  `name.vue` beside `name/` as its layout, `_parent.vue` and `users.edit.vue` give the paths and
-  names vue-router's plugin gives them (`/books/[id]`), held to routes recorded from
-  `vue-router/unplugin` for a set of folders that uses each convention. Each page is compiled as a
-  component named after its path (`books/[id].vue` is `BooksId`, in `books_id.rs`). The Vite plugin
-  writes `ferrovue/routes` for the client: `routes`, vue-router's records with each page loaded
-  lazily, and a default export listing the routes as a routes file does, for `routeRecords` and
-  `linkRouter`. The router matches optional parameters (`:id?`, absent from `Route::param` when the
-  location leaves them out) and routes that only group others, which it never matches itself, both
-  held to new vectors recorded from vue-router. What the server cannot build from a file's path is
-  refused with codes FV1238 to FV1245: a parameter beside text in one part of the path, repeatable
-  parameters, an optional catch-all, parameter parsers, named views, `definePage()`, a `<route>`
-  block, and a page whose component name is taken. The routing guide's new section explains it;
-  `examples/fullstack` builds its routes from `client/pages` instead of `routes.json`.
-- `InlineHtml` from `ferrovue/types`, trusted HTML of inline tags only, and its server type
-  `ferrovue::InlineHtml`. `InlineHtml::new(untrusted)` builds it as `BasicHtml::new` does, keeping
-  only `<b>`, `<i>`, `<em>`, `<strong>`, `<code>` and `<br>` as tags; `<p>`, the lists and their
-  end tags stay text. An `InlineHtml` prop is always `ferrovue::InlineHtml`, with no `trustedHtml`
-  configured, and `"trustedHtml": "ferrovue::InlineHtml"` makes every `TrustedHtml` prop inline.
-  It is the HTML `v-html` may write inside a `<p>` (below). Property tests check that building it
-  again gives the same HTML, that every `<` it writes starts one of its tags, and that html5ever
-  reads it inside a `<p>` back as written. The conformance suite records it inside a `<p>`
-  (`InlineProse`) and HTML in a `<td>`, a `<foreignObject>` and an `<mtext>` (`PlacedHtml`), each
-  hydrated in browsers.
+  `"routes": { "pages": "client/pages" }`: [File-based routes](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#file-based-routes).
+- The router matches optional parameters (`:id?`) and routes that only group others, as
+  vue-router does: [Configuring the routes](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#configuring-the-routes).
 
 ### Changed
 
-- **Breaking:** `ferrovue::RouteDef` has a `view` field, whether the route shows a component; the
-  generated `route_table.rs` writes it, and a `RouteDef` written by hand needs `view: true`.
-  `Route::link_named` takes a required parameter missing from `params` from the current location,
-  as vue-router does.
-- **Breaking:** a `provide(…)` not imported from `vue` is refused (FV0105); it used to be ignored
-  as client-only. Content of a `<RouterLink>` or of a Rust twin's slot that uses `v-show`, or
-  `v-model` on a `<select>`, is refused (FV0423): Vue renders that content from virtual nodes, and
-  ferrovue wrote it as a template would.
-- **Breaking:** the generated slot types of a component that takes `Provides` carry the context as
-  the closure's last argument, so Rust code filling those slots passes it on. A component that
-  provides, injects or calls `useHead` has no `island()`.
-- Repository hygiene. The full-stack example's README builds the client before its hydration test,
-  which reads the build's manifest, and lists `NotFound.vue` and `catalogue.rs`; the README's
-  repository layout lists every compiler module and `scripts/inspect.ts`. The greeting example
-  follows the workspace lints like the other examples. `cargo deny` skips the duplicate versions of
-  `convert_case`, `http` and `syn` that dioxus, actix-web and the move to syn 3 bring in, each with
-  its reason, so its output shows only new duplicates. The esbuild build approval, the root
-  `fallow` script and lint ignore patterns that `.gitignore` already covers are gone.
-- `scripts/ferrovue-in.ts <directory> [arguments]` runs the `ferrovue` command in a project of the
-  repository; `pnpm conformance:generate`, `pnpm conformance:check` and CI's checks of the examples
-  use it. `pnpm typecheck` also checks the conformance suite's TypeScript (stores, types, vendor
-  components), with `erasableSyntaxOnly` off for its enums. The README links repository files by
-  their GitHub URL, so the links work on crates.io and npm. The crates leave `missing_docs` to the
-  workspace lints and no longer set `homepage`, which repeated `repository`; the crates without
-  features drop their docs.rs settings, which changed nothing in their documentation. The issue
-  and pull request templates name current versions, error codes and `pnpm lint`, and the
-  full-stack example restarts its server with bacon.
-- `pnpm lint` covers the examples: oxlint checks their TypeScript and components with the
-  repository's rules, and fallow knows the full-stack example's entry points (the Vite client
-  entry, its components and its browser and adopter tests).
-- The published crates leave out the test data they do not need to build or document: the
-  conformance suite, the literal-props project, the recorded vectors and the benchmark's expected
-  HTML. The `ferrovue` crate goes from 1134 files (2.0 MiB, 386 KiB compressed) to 64 (620 KiB,
-  171 KiB compressed); `ferrovue-core` and `ferrovue-router` drop their vectors. The test and
-  benchmark targets stay in the package so it builds without warnings; they run from the
-  repository.
-- CI checks the npm dependencies with `pnpm audit` and the workflows with zizmor. An advisory that
-  reaches the npm package's dependencies or peers shows in the run without failing a pull request
-  and fails a release, as a RustSec advisory does; one in development tooling only shows. The
-  workflows check out without keeping the token, the release workflow's Node setup restores no
-  cache, and Dependabot waits seven days before proposing a new version.
-- **Breaking:** `v-html` where the browser's parser rebuilds the HTML is refused, since the page
-  then holds other nodes than the server wrote and hydration mismatches, in Vue too. On a
-  `<table>`, `<thead>`, `<tbody>`, `<tfoot>`, `<tr>` or `<colgroup>` (whose markup the parser moves
-  out of the table), a `<select>` or `<optgroup>` (whose tags it drops), an SVG element other than
-  `<foreignObject>`, `<desc>` and `<title>`, or a MathML element other than `<mi>`, `<mo>`, `<mn>`,
-  `<ms>`, `<mtext>` and an `<annotation-xml>` with a static HTML `encoding`, it is refused with
-  FV1512, which names the element to use instead. In a `<p>`, or an element inside one up to a
-  `<button>`, a table cell or another element that keeps blocks from ending the `<p>`, HTML that is
-  not `InlineHtml` is refused with FV1513, since a block in it ends the `<p>`. Slot content a child
-  places inside its own `<p>` is not seen at compile time. The escaping guide's new section lists
-  where `v-html` may go and with which type.
+- **Breaking:** `ferrovue::RouteDef` has a `view` field, which a `RouteDef` written by hand sets.
+  `Route::link_named` takes a missing required parameter from the current location: [The generated route table](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#the-generated-route-table).
+- **Breaking:** a component's slot closures take `Provides` last when it takes `Provides`, and a
+  component that provides, injects or calls `useHead` has no `island()`: [Slots](https://docs.rs/ferrovue/latest/ferrovue/guide/provide_inject/index.html#slots).
+- **Breaking:** a `provide(…)` not imported from `vue` is refused (FV0105), where it was ignored.
+- **Breaking:** `v-show`, and `v-model` on a `<select>`, in the content of a `<RouterLink>` or of a
+  Rust twin's slot are refused (FV0423), since Vue renders that content from virtual nodes.
+- **Breaking:** `v-html` where the browser's parser rebuilds the HTML is refused (FV1512), and HTML
+  in a `<p>` that is not `InlineHtml` (FV1513): [Where `v-html` may go](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#where-v-html-may-go).
+- The published crates leave out the test data they do not need: the `ferrovue` crate goes from
+  1134 files (2.0 MiB) to 64 (620 KiB).
 
 ### Fixed
 
-- `fixtureApp` from `ferrovue/testing` takes the application's own `pinia`, `vueRouter` and
-  `vueI18n` modules in its options (`{ pinia: await import("pinia") }`) and installs those. In a
-  vitest run that loads `ferrovue/testing` from `node_modules` with Node while a peer goes through
-  Vite, the instance `fixtureApp` imported itself was not the one the component's stores,
-  `useRoute()` and `useI18n()` read, and a fixture with `$stores` failed with "there was no active
-  Pinia" (#47). Without the options it imports the peers as before. The README's new section on
-  fixtures in an application's vitest run describes both the options and `server.deps.inline:
-  ["ferrovue"]`, and `examples/fullstack` tests both peers with ferrovue loaded from its built
-  package, as an application loads it.
-- A fixture's slot content given as `""` hydrates. `fixtureApp` rendered it as a static node of
-  no nodes, which Vue's hydrator compares with the slot's closing `<!--]-->` and reports as a
-  mismatch; it is now an empty text node, which Vue hydrates against nothing, and the server
-  writes the same bytes as before. A `routerView` of `""` still mismatches, in Vue too: the server
-  writes no node for the page, and the client takes the page, a component, to begin at one. The
-  conformance suite records both (`Frame/empty-slots`, `App/empty-view`), and the testing guide
-  says so.
-- The page head of a component `defineAsyncComponent` loads comes in the order Vue's server gives
-  it. Vue runs such a component's setup, and the setup of everything it renders, after the
-  components rendered without waiting, one level of nesting at a time, so its `useHead` entries
-  come after theirs and its title wins over a sibling's; ferrovue pushed them in the order of the
-  tree. The generated code renders it inside `Head::deferred()`, whose entries `Head::render` places
-  after the others, level by level. The conformance suite records it (`HeadLater`, `HeadNest`,
-  `HeadLeaf`).
-- Content Vue renders from virtual nodes (in an element `<component :is>` chooses, a
-  `<RouterLink>` or a twin's slot) writes what Vue's server writes there: attribute names in lower
-  case on HTML elements and as written on SVG elements and custom elements (`dataFoo` was written
-  as given, and a bound `:viewBox` on `<svg>` in lower case), a static `class` written before a
-  bound one first, and slot content given to a compiled component inside it rendered from virtual
-  nodes too. `:selected` on an `<option>` there is no longer refused as `v-model` (FV0423), and a
-  `<ClientOnly>` with a `#fallback` there, for which Vue's server writes an empty fragment that the
-  client then replaces, is refused (FV1511). The conformance suite records it (`TagCasing`).
-- A component whose file is named after a Rust keyword (`Type.vue`, `Match.vue`) is written to
-  `type.rs`, which its module `r#type` reads; it was written to `r#type.rs`, which did not compile.
-  A file name that is not a Rust name (`user-card.vue`), two names with the same snake case
-  (`FooBar.vue` and `Foo_bar.vue`, one of which overwrote the other), `Mod.vue` and a name a
-  module ferrovue writes already has are refused (FV0007).
-- `mountIslands` no longer dispatches the events that woke an island waiting for interaction again
-  when `unmount()` was called while its component loaded.
-- A `.vue` file that is empty or holds only a `<style>` is refused (FV0002) at line 1, column 1,
-  and Vue's message names it by its path relative to the project, where it had no location and
-  the absolute path.
+- `fixtureApp` takes the application's own `pinia`, `vueRouter` and `vueI18n` modules, so a fixture
+  with `$stores` finds its Pinia (#47): [Fixtures in your own vitest tests](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html#fixtures-in-your-own-vitest-tests).
+- A fixture's slot content given as `""` hydrates.
+- Content Vue renders from virtual nodes (in a `<RouterLink>`, a twin's slot, `<component :is>`)
+  writes attribute names and classes as Vue's server does. `<ClientOnly #fallback>` there is FV1511.
 - In content Vue renders from virtual nodes, a static `class` written before `:class` with other
-  attributes between the two is refused (FV1013): Vue writes the class where the static one
-  stands, and ferrovue where `:class` stands. A `:class` array there keeps the static names first
-  too (`class="a" :class="[x, y]"` is `class="a x y"`). Found by the fuzzer; `VnodeClass` records
-  it.
-- A setup value or a provided value that is a string built from another temporary
-  (`props.label.toLowerCase().padStart(6, "0")`) compiles: the generated Rust borrowed a value
-  dropped at the end of its statement. Setup strings built by `format!` and the like are held as
-  the `String` itself.
-- An integer setup value computed through JavaScript's arithmetic (`props.n * -1`, `(-1) * 0`)
-  keeps `-0`, so `1 / value` is `-Infinity` as in Vue; it was cast to an integer first.
-- Strings holding bidirectional controls (U+202A to U+202E, U+2066 to U+2069) in a template,
-  a constant or a setup value compile: they are escaped in the generated Rust, whose compiler
-  rejects them written out. `SetupValues` records these three.
-- A string `:class` given to a component loaded with `defineAsyncComponent` is written twice when
-  it has whitespace around it (`:class="' a '"` is `class="… a a"`), as Vue's async wrapper hands
-  it on once trimmed and once as written; ferrovue wrote it once. Where Vue merges the props first
-  (the component is its parent's root, or takes `v-bind` or a static `class` too), the class
-  arrives trimmed and is written once, as before. `AsyncClass` and `AsyncClassRoot` record both.
-- An attribute that falls through holding `??` whose fallback ends in another `??`
-  (`note ?? (tags.find(…) ?? "-")`) compiles: the generated Rust wrapped a `Cow` in another.
-  `AsyncClass` records it.
-- A component that reads Pinia stores compiles when no store's state holds a string: `stores.rs`
-  writes `Stores` without a lifetime then, and the component took `&Stores<'_>`. The
-  `literal_props` test project has such a store.
-- The messages a message links to (`@:key`, at any depth) are looked up from the locale where
-  `t()` found that message, as vue-i18n does: with `nl` falling back to `en`, an English-only
-  message linking to `common.hi` writes the English `common.hi`, where ferrovue wrote the Dutch
-  one. `Translated` records it, with a Dutch message linking through an English one.
+  attributes between the two is refused (FV1013).
+- A component whose file is named after a Rust keyword (`Type.vue`) compiles, and a file name that
+  is not a Rust name or clashes with another module is refused (FV0007).
+- A `.vue` file that is empty or holds only a `<style>` is refused (FV0002) at line 1, column 1,
+  named by its path relative to the project.
+- A setup or provided string built from another temporary
+  (`props.label.toLowerCase().padStart(6, "0")`) compiles.
+- An integer setup value computed through JavaScript's arithmetic (`props.n * -1`) keeps `-0`.
+- Strings holding bidirectional controls (U+202A to U+202E, U+2066 to U+2069) compile.
+- A string `:class` with whitespace around it, given to a component loaded with
+  `defineAsyncComponent`, is written twice, as Vue's async wrapper writes it.
+- A fallthrough attribute holding a `??` whose fallback ends in another `??` compiles.
+- A component that reads Pinia stores compiles when no store's state holds a string.
+- The messages a vue-i18n message links to (`@:key`) are looked up from the locale where `t()`
+  found that message, as vue-i18n does.
 - `.map()` over strings whose arrow returns the item on one branch and a new string on the other
-  (`words.split(" ").map((w) => (on ? w.toUpperCase() : w))`, or `$t(…)` in place of
-  `toUpperCase()`) compiles: the generated Rust returned a borrow of the item from the closure.
-  `MappedChoice` records it.
-- A `v-for` inside another, over a list the outer item holds that is filtered or mapped with a
-  value narrowed by a `v-if` around it (`shelf.tags.map((t) => note + t)` under `v-if="note"`),
-  compiles: the size the generated `render` reserves up front read that value outside the `if`.
-  `NarrowedRows` records it.
+  compiles.
+- A `v-for` inside another, over a list filtered or mapped with a value a `v-if` around it
+  narrows, compiles.
 
 ## [0.5.0] - 2026-10-05
 
