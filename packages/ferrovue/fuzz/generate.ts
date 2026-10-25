@@ -556,7 +556,8 @@ const numText = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
 function enumLines(k: Consts, exported: boolean): string[] {
   const e = exported ? "export " : "";
   const literal = (v: string): string => (exported ? JSON.stringify(v) : JSON.stringify(v).replaceAll("</", "<\\/"));
-  return [`${e}enum Tone {`, ...k.tone.map(([m, v]) => `  ${m} = ${literal(v)},`), "}", "", `${e}enum Rank {`, "  Low,", `  Mid = ${k.rank},`, "  High,", "}"];
+  const rank = k.fold ? [`const RANK_MID = ${k.rank};`, `${e}enum Rank {`, "  Low,", "  Mid = RANK_MID,", "  High = Mid + 1,", "}"] : [`${e}enum Rank {`, "  Low,", `  Mid = ${k.rank},`, "  High,", "}"];
+  return [`${e}enum Tone {`, ...k.tone.map(([m, v]) => `  ${m} = ${literal(v)},`), "}", "", ...rank];
 }
 
 function lookupLines(k: Consts, exported: boolean): string[] {

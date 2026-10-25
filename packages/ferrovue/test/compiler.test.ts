@@ -6716,6 +6716,25 @@ describe("constant lookups", () => {
     expect(out).toContain('fv::core::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
   });
 
+  it("evaluates an enum member set to a constant of the component, a string joined to one, and an earlier member, as a prop's type", () => {
+    const out = render(
+      'const B = 1;\nconst PREFIX = "x";\nenum E { A = B, C }\nenum S { A = PREFIX + "a", B = "b" }\nenum R { One = 1, Two = One + 1, Four = R.Two * 2 }\nconst D: S = S.A;\nconst F: E = E.C;\ndefineProps<{ e: E; s: S; r: R }>();',
+      "<i>{{ e }} {{ s }} {{ r }}|{{ E.A }} {{ E.C }} {{ D }} {{ F }} {{ R.Two }} {{ R.Four }}</i>",
+    );
+    expect(out).toContain("let s_f = 2i64;");
+    expect(out).toContain("fv::core::push_int(out, props.e);");
+    expect(out).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.s));");
+    expect(out).toContain("fv::core::push_int(out, props.r);");
+    expect(out).toContain('out.push_str("|1 2 xa ");\n    fv::core::push_int(out, s_f);\n    out.push_str(" 2 4</i>");');
+  });
+
+  it("evaluates an enum member named by a constant beside it as the member", () => {
+    const out = render('import { Step } from "./steps";\nconst A = 5;\nenum E { A = 1, B = A }\ndefineProps<{ step: Step }>();', "<i>{{ E.B }} {{ Step.Next }}</i>", {
+      "steps.ts": "const First = 7;\nexport enum Step { First = 1, Next = First + 1 }\n",
+    });
+    expect(out).toContain('out.push_str("<i>1 2</i>");');
+  });
+
   it("reads by integer literal keys, and keeps the literals of a `?:` and a `computed`", () => {
     const out = render(
       'import { computed } from "vue";\nconst props = defineProps<{ level: 1 | 2; on: boolean }>();\nconst NAMES = { 1: "one", 2: "two", x: "ex" };\nconst PAD = { a: "p-1", b: "p-2" };\nconst pick = computed(() => (props.on ? "a" : "b"));',

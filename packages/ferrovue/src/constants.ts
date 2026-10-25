@@ -29,6 +29,7 @@ const files = new WeakMap<Component, Map<string, Declared>>();
 const vals = new WeakMap<Const, Val>();
 const evaluated = new WeakMap<N, Const>();
 const inProgress = new WeakSet<N>();
+let enumScope: { name: string; fields: Map<string, Const>; node: N } | null = null;
 
 /** Remember the constants and enums a file declares at its top level, to evaluate when one is used. */
 export function declareConsts(home: Component, body: N[]): Map<string, Declared> {
@@ -51,6 +52,8 @@ export function constOfDecl(d: Declared): Const {
   if (done) return done;
   if (inProgress.has(d.node)) fail(d.home, "FV0201", "a constant that refers to itself", d.node);
   inProgress.add(d.node);
+  const outer = enumScope;
+  enumScope = null;
   try {
     const c = d.node.type === "TSEnumDeclaration" ? enumConst(d.home, d.node) : evaluate(d.home, d.node.init, d.node.id.name, typedAs(d.node));
     if (c.k === "object" && d.node.type !== "TSEnumDeclaration") typeValues(d.home, d.node, c);
@@ -58,6 +61,7 @@ export function constOfDecl(d: Declared): Const {
     return c;
   } finally {
     inProgress.delete(d.node);
+    enumScope = outer;
   }
 }
 
@@ -108,6 +112,16 @@ function typeValues(home: Component, decl: N, c: Const & { k: "object" }): void 
 
 function enumConst(home: Component, d: N): Const {
   const fields = new Map<string, Const>();
+  const outer = enumScope;
+  enumScope = { name: d.id.name, fields, node: d };
+  try {
+    return enumFields(home, d, fields);
+  } finally {
+    enumScope = outer;
+  }
+}
+
+function enumFields(home: Component, d: N, fields: Map<string, Const>): Const {
   let next: number | null = 0;
   for (const m of d.members) {
     const key: string = m.id.type === "Identifier" ? m.id.name : m.id.value;
@@ -162,6 +176,10 @@ function evaluate(home: Component, n: N, path: string, typed: string | null): Co
       if (["+", "-", "*", "/", "%", "**"].includes(n.operator)) return { k: "scalar", js: folded(home, n, path) };
       break;
     case "Identifier": {
+      const own = enumScope;
+      const member = own?.fields.get(n.name);
+      if (member !== undefined) return member;
+      if (own !== null && own.name === n.name) return { k: "object", fields: own.fields, node: own.node, home, name: own.name };
       const d = files.get(home)?.get(n.name);
       if (d) return constOfDecl(d);
       break;
