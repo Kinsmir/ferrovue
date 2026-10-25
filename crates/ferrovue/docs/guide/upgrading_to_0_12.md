@@ -29,7 +29,9 @@ ferrovue = "0.12"
 
 `ferrovue` depends on `ferrovue-core`, `ferrovue-router` and `ferrovue-i18n` at exactly its own
 version, so an application that names only `ferrovue` gets the other three with it. One that names
-any of them itself bumps it to 0.12 as well.
+any of them itself bumps it to 0.12 as well. A project that lists `ferrovue` in pnpm's
+`minimumReleaseAgeExclude` bumps that entry to the new version too, or pnpm holds 0.12 back until it
+is older than the minimum release age.
 
 ## 2. Generate every component again
 
@@ -100,8 +102,9 @@ assert_eq!(scores.keys().collect::<Vec<_>>(), ["10", "b"]);
 # fn main() {}
 ```
 
-The Rust of an application stops compiling at each path that moved, and rustc names the item's
-module in its suggestion. Each item and the path it has now:
+The Rust of an application stops compiling at each path that moved. For a path written in full
+(`ferrovue::state_script_into(…)`), rustc says the item is not found in `ferrovue` and suggests no
+module, so this table is the reference. Each item and the path it has now:
 
 | 0.11 | 0.12 | Feature |
 |---|---|---|
@@ -251,7 +254,10 @@ list of the union's enum: `Vec<Tone>`, `Option<Vec<Tone>>` when it is optional o
 `Vec<Option<Tone>>` for `(Tone | null)[]`. 0.11 made it a list of strings. Its constructor
 argument or setter takes `impl IntoIterator<Item = Tone>`, so `vec!["warm".into()]` becomes
 `[Tone::Warm]`, and a list of strings from a request is parsed into the enum first. The JSON of an
-island and of a page's record are unchanged. A string that the Rust caller holds where the render
+island and of a page's record are unchanged for members of the union. A fixture that gives such a
+list a string outside the union (`{"tones": ["warm", "\"><script>"]}`, often a hostile one) no
+longer loads in `check_fixtures` or `conformance!`, since the list deserializes into the enum: move
+the hostile string to a prop typed `string`, and record the fixture again. A string that the Rust caller holds where the render
 needs the union's enum (a value of a `Record<string, Tone>`, a store's state, a prop of a single
 literal) is parsed as the component renders, and one outside the union refuses the render with
 [FV0518](crate::guide::error_codes#fv0518).
