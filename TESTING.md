@@ -654,10 +654,11 @@ needs. It is too slow for every pull request; run it locally on the functions a 
 
 [Stryker](https://stryker-mutator.io) does the same for the compiler's TypeScript, configured in
 `stryker.config.json`: it mutates the modules listed under `mutate` (`attrs.ts`, `template.ts`,
-`constants.ts`, `dynamic.ts` and `expr.ts`) and runs the vitest suite against each mutant, compiler
-tests and the Vue half of conformance included. The conformance check that `generated/` is what
-the compiler writes now catches any mutant that changes the Rust of a conformance component, so a
-fixture there kills more than its HTML.
+`constants.ts`, `dynamic.ts`, and `expr.ts` with the expression modules `members.ts`,
+`operators.ts`, `logical.ts` and `conditional.ts`) and runs the vitest suite against each mutant,
+compiler tests and the Vue half of conformance included. The conformance check that `generated/` is
+what the compiler writes now catches any mutant that changes the Rust of a conformance component, so
+a fixture there kills more than its HTML.
 
 ```sh
 pnpm mutants:ts                                                    # every listed module, in full, then the check below
@@ -668,19 +669,19 @@ pnpm exec stryker run -m "packages/ferrovue/src/attrs.ts:120-140"  # the mutants
 node scripts/stryker-survivors.ts packages/ferrovue/src/attrs.ts   # hold the last report's modules (or these) to the list
 ```
 
-Per-test coverage runs each mutant against only the tests that reach it, so no test file may
-compile a component while it loads: what runs then is covered by no test, and Stryker runs the
-whole suite against every mutant it reaches (a static mutant). At four test runners on twelve
-cores, `attrs.ts` and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about
-40 and `expr.ts` about 45; two runners take about twice as long. The **Mutants** workflow runs the
-modules in those three groups, one job each, within the job's two hours. The reports are
+Per-test coverage runs each mutant against only the tests that reach it, so no test file may compile
+a component while it loads: what runs then is covered by no test, and Stryker runs the whole suite
+against every mutant it reaches (a static mutant). At four test runners on twelve cores, `attrs.ts`
+and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about 40 and `expr.ts` with
+the expression modules about 45; two runners take about twice as long. The **Mutants** workflow runs
+the modules in those three groups, one job each, within the job's two hours. The reports are
 `target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
 an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.
 Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant whose code and
-covering tests are unchanged, so a run after a small change takes a minute or two. It also reuses
-a survivor that a new conformance fixture or component now kills, since those are data the tests
-read, and a static mutant (one in a module-level constant), which no test covers alone: pass
-`--force` before trusting a survivor it reports. `pnpm mutants:ts` always passes it.
+covering tests are unchanged, so a run after a small change takes a minute or two. It also reuses a
+survivor that a new conformance fixture or component now kills, since those are data the tests read,
+and a static mutant (one in a module-level constant), which no test covers alone: pass `--force`
+before trusting a survivor it reports. `pnpm mutants:ts` always passes it.
 
 A survivor is closed by a test or listed in `stryker-equivalent.txt`, under a comment saying why
 it cannot change what the compiler writes or refuses. An entry names the file, the mutator, the
