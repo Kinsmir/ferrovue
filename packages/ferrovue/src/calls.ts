@@ -1,17 +1,17 @@
-import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, isAscii, sameTy, STR, strTy } from "./model.ts";
+import { type N, type Scope, type Val, asciiTy, BOOL, fail, isAscii, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
 import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
-import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral } from "./lists.ts";
-import { lonely, loneOf, meet, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
+import { atom, bare, binary, operand, receiver, strArg, UNARY } from "./parens.ts";
+import { computedListMethod, isBoolean, listMethod, presentLiteral } from "./lists.ts";
+import { loneOf, meet, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
 import { asF64, asWritten, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
-import { globalCall, mathCall, numberStaticCall } from "./globals.ts";
+import { globalCall, mathCall, staticCall } from "./globals.ts";
 
 const DIGITS = new Map<string, [ErrorCode, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -78,25 +78,9 @@ function memberCall(s: Scope, n: N): Val {
   const callee = n.callee;
   const args: N[] = n.arguments;
   const method = callee.property.name as string;
-  if (callee.object.type === "Identifier" && callee.object.name === "Array" && method === "isArray") {
-    const a = expr(s, args[0]);
-    const own = claim((p) => p.values?.isArray?.(a));
-    if (own) return own;
-    const is = a.ty.k === "list";
-    return { code: String(is), ty: BOOL, konst: is };
-  }
-  if (callee.object.type === "Identifier" && callee.object.name === "Object") return objectCall(s, method, args, n);
-  if (callee.object.type === "Identifier" && callee.object.name === "Number") {
-    const tested = numberStaticCall(s, method, args, n);
-    if (tested) return tested;
-  }
-  if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify" && args.length === 1) {
-    const v = expr(s, args[0]);
-    if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
-    return { code: `&*${json(s, v, args[0])}`, ty: STR };
-  }
-  if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify") {
-    return fail(comp, "FV0633", "`JSON.stringify()` with a replacer or an indentation, which the server does not write: give it one value, `JSON.stringify(x)`", n);
+  if (callee.object.type === "Identifier") {
+    const known = staticCall(s, callee.object.name, method, args, n);
+    if (known) return known;
   }
   const own = claim((p) => p.call?.(s, n));
   if (own) return own;
@@ -216,31 +200,6 @@ export function isObjectCall(n: N, method: string): boolean {
     n?.type === "CallExpression" && n.callee.type === "MemberExpression" && !n.callee.computed &&
     n.callee.object.type === "Identifier" && n.callee.object.name === "Object" && n.callee.property.name === method
   );
-}
-
-function json(s: Scope, v: Val, n: N): string {
-  if (v.lone) fail(s.comp, "FV0706", lonely("`JSON.stringify()`"), n);
-  const one = (code: string, ty: Ty): string => {
-    switch (ty.k) {
-      case "str":
-        return `fv::strings::js_json_string(${code === "v" ? "&v" : strArg(code)})`;
-      case "int":
-        return `fv::core::Js(${bare(code)}).to_string()`;
-      case "float":
-        return `fv::strings::js_json_number(${bare(code)})`;
-      case "bool":
-        return `(if ${condition(code)} { "true" } else { "false" }).to_owned()`;
-      default:
-        return claim((p) => p.values?.json?.({ code, ty })) ?? fail(s.comp, "FV0707", "`JSON.stringify()` of a string, a number, a boolean, a date or a list of those, present", n);
-    }
-  };
-  if (v.ty.k === "list") {
-    const each = one("v", v.ty.of);
-    const f = /^([\w:]+)\(v\)$/.exec(each)?.[1];
-    return `format!("[{}]", ${items(v)}.map(${f ?? `|v| ${each}`}).collect::<Vec<_>>().join(","))`;
-  }
-  const w = asWritten(v);
-  return one(w.code, w.ty);
 }
 
 function ownCall(s: Scope, callee: N, args: N[], n: N): Val | null {

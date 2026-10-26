@@ -2,7 +2,8 @@ import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT,
 import { atom, bare, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { formatted, lonely, stringOf } from "./strings.ts";
 import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
-import { spreadExtreme } from "./lists.ts";
+import { items, objectCall, spreadExtreme } from "./lists.ts";
+import { claim } from "./plugin.ts";
 import { boolOf } from "./narrowing.ts";
 import { describeTy, expr } from "./expr.ts";
 
@@ -63,9 +64,61 @@ function parsed(s: Scope, name: string, args: N[]): Val {
 
 const NUMBER_TESTS = new Set(["isNaN", "isFinite", "isInteger", "isSafeInteger"]);
 
-/** Translates `Number.isNaN`, `isFinite`, `isInteger` and `isSafeInteger`, or returns null for another method. */
-export function numberStaticCall(s: Scope, method: string, args: N[], n: N): Val | null {
-  return NUMBER_TESTS.has(method) ? numberTest(s, method, args, n, false) : null;
+/** Translates a call of a method of `Array`, `Object`, `Number` or `JSON`, or returns null for one it does not know. */
+export function staticCall(s: Scope, of: string, method: string, args: N[], n: N): Val | null {
+  switch (of) {
+    case "Array":
+      return method === "isArray" ? isArray(s, args) : null;
+    case "Object":
+      return objectCall(s, method, args, n);
+    case "Number":
+      return NUMBER_TESTS.has(method) ? numberTest(s, method, args, n, false) : null;
+    case "JSON":
+      return method === "stringify" ? stringified(s, args, n) : null;
+  }
+  return null;
+}
+
+function isArray(s: Scope, args: N[]): Val {
+  const a = expr(s, args[0]);
+  const own = claim((p) => p.values?.isArray?.(a));
+  if (own) return own;
+  const is = a.ty.k === "list";
+  return { code: String(is), ty: BOOL, konst: is };
+}
+
+function stringified(s: Scope, args: N[], n: N): Val {
+  if (args.length !== 1) {
+    return fail(s.comp, "FV0633", "`JSON.stringify()` with a replacer or an indentation, which the server does not write: give it one value, `JSON.stringify(x)`", n);
+  }
+  const v = expr(s, args[0]);
+  if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
+  return { code: `&*${json(s, v, args[0])}`, ty: STR };
+}
+
+function json(s: Scope, v: Val, n: N): string {
+  if (v.lone) fail(s.comp, "FV0706", lonely("`JSON.stringify()`"), n);
+  const one = (code: string, ty: Ty): string => {
+    switch (ty.k) {
+      case "str":
+        return `fv::strings::js_json_string(${code === "v" ? "&v" : strArg(code)})`;
+      case "int":
+        return `fv::core::Js(${bare(code)}).to_string()`;
+      case "float":
+        return `fv::strings::js_json_number(${bare(code)})`;
+      case "bool":
+        return `(if ${condition(code)} { "true" } else { "false" }).to_owned()`;
+      default:
+        return claim((p) => p.values?.json?.({ code, ty })) ?? fail(s.comp, "FV0707", "`JSON.stringify()` of a string, a number, a boolean, a date or a list of those, present", n);
+    }
+  };
+  if (v.ty.k === "list") {
+    const each = one("v", v.ty.of);
+    const f = /^([\w:]+)\(v\)$/.exec(each)?.[1];
+    return `format!("[{}]", ${items(v)}.map(${f ?? `|v| ${each}`}).collect::<Vec<_>>().join(","))`;
+  }
+  const w = asWritten(v);
+  return one(w.code, w.ty);
 }
 
 function floatTest(method: string, x: string): string {
