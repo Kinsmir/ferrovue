@@ -2,9 +2,9 @@ import { type N, type Scope, type Val, asciiTy, BOOL, fail, isAscii, sameTy, STR
 import { ctx } from "./context.ts";
 import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, operand, receiver, strArg, UNARY } from "./parens.ts";
+import { atom, bare, binary, operand, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, listMethod, presentLiteral } from "./lists.ts";
-import { loneOf, meet, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
+import { loneOf, meet, noArgStringMethod, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
 import { asF64, asWritten, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
@@ -104,26 +104,7 @@ function memberCall(s: Scope, n: N): Val {
   const typed = claim((p) => p.method?.(s, target, method, args, n));
   if (typed) return typed;
   if (target.ty.k === "str") {
-    const lone = loneOf(target);
-    const same = strTy(isAscii(target.ty));
-    switch (args.length === 0 ? method : "") {
-      case "trim":
-        return { code: `fv::strings::js_trim(${strArg(target.code)})`, ty: same, ...lone };
-      case "trimStart":
-        return { code: `fv::strings::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
-      case "trimEnd":
-      case "trimRight":
-        return { code: `fv::strings::js_trim_end(${strArg(target.code)})`, ty: same, ...lone };
-      case "trimLeft":
-        return { code: `fv::strings::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
-      case "toUpperCase":
-        return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: same, ...lone };
-      case "toLowerCase":
-        return { code: `&*${receiver(target.code)}.to_lowercase()`, ty: same, ...lone };
-      case "toString":
-        return target;
-    }
-    const m = stringMethod(s, target, method, args, n);
+    const m = (args.length === 0 ? noArgStringMethod(target, method) : null) ?? stringMethod(s, target, method, args, n);
     if (m) return m;
   }
   const digits = isNumber(target.ty) && args.length <= 1 ? DIGITS.get(method) : undefined;

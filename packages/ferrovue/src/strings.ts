@@ -366,6 +366,29 @@ export function regexOf(comp: Component, n: N, what: string, at: N = n): string 
   return `{ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new(${rustStr(pattern)}, ${rustStr(flags)})); &RE }`;
 }
 
+/** Translates a string's method called with no arguments that trims, changes case or returns the string, or returns null for another method. */
+export function noArgStringMethod(target: Val, method: string): Val | null {
+  const lone = loneOf(target);
+  const same = strTy(isAscii(target.ty));
+  switch (method) {
+    case "trim":
+      return { code: `fv::strings::js_trim(${strArg(target.code)})`, ty: same, ...lone };
+    case "trimStart":
+    case "trimLeft":
+      return { code: `fv::strings::js_trim_start(${strArg(target.code)})`, ty: same, ...lone };
+    case "trimEnd":
+    case "trimRight":
+      return { code: `fv::strings::js_trim_end(${strArg(target.code)})`, ty: same, ...lone };
+    case "toUpperCase":
+      return { code: `&*${receiver(target.code)}.to_uppercase()`, ty: same, ...lone };
+    case "toLowerCase":
+      return { code: `&*${receiver(target.code)}.to_lowercase()`, ty: same, ...lone };
+    case "toString":
+      return target;
+  }
+  return null;
+}
+
 export function stringMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   const comp = s.comp;
   const t = strArg(target.code);
