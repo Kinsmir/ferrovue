@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(6);
+ferrovue::__compat!(7);
 
 pub mod account_nav;
 pub mod and_chains;
@@ -119,6 +119,7 @@ pub mod listeners;
 pub mod lists;
 pub mod literal_enum_field;
 pub mod loaded;
+pub mod loaded_all;
 pub mod loaded_comments;
 pub mod loaded_dates;
 pub mod loaded_ranks;
@@ -858,6 +859,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                 |fv_loads| {
                     out.clear();
                     loaded::try_render(&mut out, &props, fv_loads)
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "LoadedAll" => {
+            let props: loaded_all::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::loaders::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded_all::try_render(&mut out, &props, fv_loads)
                 },
                 loaders::from_fixture(&fixture.loads),
             );

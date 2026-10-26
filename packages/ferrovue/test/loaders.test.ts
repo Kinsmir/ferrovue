@@ -29,6 +29,10 @@ export const loadSync = defineLoader("loadSync", (id: number): Promise<number> =
 export const loadDefault = defineLoader("loadDefault", async (id = 1): Promise<number> => id);
 export const loadObject = defineLoader("loadObject", async (q: { id: number }): Promise<number> => q.id);
 export const loadAgain = defineLoader("loadPost", async (): Promise<number> => 1);
+export interface Query { term: string; page?: number; lang: string | null }
+export interface Nested { q: Query }
+export const loadFound = defineLoader("loadFound", async (query: Query, max?: number): Promise<string[]> => [query.term + max]);
+export const loadNested = defineLoader("loadNested", async (n: Nested): Promise<number> => 1);
 export const loadSnake = defineLoader("load_count", async (): Promise<number> => 1);
 export async function fetchPost(id: number): Promise<Post> { return { title: String(id), tags: [] }; }
 `;
@@ -60,6 +64,31 @@ function refusal(components: Record<string, string>): GenError {
 }
 
 describe("loaders", () => {
+  it("asks for every call of `Promise.all` before the component stops where a result is missing", () => {
+    const x = project({ X: sfc("const [post, n] = await Promise.all([loadPost(props.id), loadCount()]);\nawait Promise.all([loadName(props.id, null)]);", "<h1>{{ post.title }} {{ n }}</h1>") }).get("x.rs")!;
+    expect(x).toContain("let l_0 = fv_loads.get(super::loaders::LoadPost { id: props.id, lang: None });\n    let l_1 = fv_loads.get(super::loaders::LoadCount);\n    let (Some(l_0), Some(l_1)) = (l_0, l_1) else { return Ok(()); };");
+    expect(x).toContain("let (Some(_),) = (l_2,) else { return Ok(()); };");
+  });
+
+  it("writes an object argument's fields into the key in sorted order, leaving out the absent optional ones", () => {
+    const out = project({ X: sfc("const found = await loadFound({ term: String(props.id), lang: props.nick });", "<b>{{ found.length }}</b>", "loadFound") });
+    expect(out.get("x.rs")).toContain("super::loaders::LoadFound { query: super::loaders::LoadFoundQuery { lang: props.nick.as_deref().map(String::from), page: None, term: String::from(&*fv::core::Js(props.id).to_string()) }, max: None }");
+    const loaders = out.get("loaders.rs")!;
+    expect(loaders).toContain("pub struct LoadFoundQuery {\n    pub lang: Option<String>,\n    pub page: Option<i64>,\n    pub term: String,\n}");
+    expect(loaders).toContain('        key.object();\n        key.field("lang", &self.query.lang);\n        if let Some(v) = &self.query.page {\n            key.field("page", v);\n        }\n        key.field("term", &self.query.term);\n        key.end();');
+  });
+
+  it.each([
+    ["`Promise.all` of a call that is not a loader's", "FV2001", sfc("const [a] = await Promise.all([fetchPost(1)]);", "<b>{{ a }}</b>", "fetchPost"), /`Promise.all` takes their calls/],
+    ["the results of `Promise.all` bound to an object", "FV2007", sfc("const { length } = await Promise.all([loadCount()]);", "<b>{{ length }}</b>", "loadCount"), /bound to an array of plain names/],
+    ["an object argument with a field the parameter lacks", "FV2006", sfc('const f = await loadFound({ term: "a", lang: null, sort: 1 });', "<b>{{ f.length }}</b>", "loadFound"), /has no field `sort`/],
+    ["an object parameter holding an object", "FV2003", sfc("const n = await loadNested({ q: { term: \"a\", lang: null } });", "<b>{{ n }}</b>", "loadNested"), /an object whose field `q`/],
+  ])("refuses %s", (_, code, source, message) => {
+    const e = refusal({ X: source });
+    expect(e.code).toBe(code);
+    expect(e.message).toMatch(message);
+  });
+
   it("stops the render where the component awaits a loader, until the result is in", () => {
     const out = project({ X: sfc("const post = await loadPost(props.id, props.lang);\nconst n = await loadCount();", "<h1>{{ post.title }} {{ n }}</h1>") });
     const x = out.get("x.rs")!;

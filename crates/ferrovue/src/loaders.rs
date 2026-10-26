@@ -41,15 +41,53 @@ pub trait LoadArg {
 #[doc(hidden)]
 pub struct LoadKey {
     json: String,
+    joined: bool,
 }
 
 impl LoadKey {
     fn new(name: &str) -> Self {
         let mut key = LoadKey {
             json: String::from("["),
+            joined: true,
         };
         key.json.push_str(&json_string(name));
         key
+    }
+
+    fn separate(&mut self) {
+        if self.joined {
+            self.json.push(',');
+        }
+        self.joined = true;
+    }
+
+    /// Add an object, whose fields [`field`](Self::field) adds, in the order the compiler sorted
+    /// them as JavaScript sorts strings, until [`end`](Self::end).
+    pub fn object(&mut self) -> &mut Self {
+        self.separate();
+        self.json.push('{');
+        self.joined = false;
+        self
+    }
+
+    /// Add a field of the object being written.
+    pub fn field(&mut self, name: &str, value: &(impl LoadArg + ?Sized)) -> &mut Self {
+        if self.joined {
+            self.json.push(',');
+        }
+        self.json.push_str(&json_string(name));
+        self.json.push(':');
+        self.joined = false;
+        value.arg_into(self);
+        self.joined = true;
+        self
+    }
+
+    /// End the object being written.
+    pub fn end(&mut self) -> &mut Self {
+        self.json.push('}');
+        self.joined = true;
+        self
     }
 
     /// Add an argument.
@@ -60,14 +98,14 @@ impl LoadKey {
 
     /// Add a string.
     pub fn str(&mut self, s: &str) -> &mut Self {
-        self.json.push(',');
+        self.separate();
         self.json.push_str(&json_string(s));
         self
     }
 
     /// Add an integer.
     pub fn int(&mut self, n: i64) -> &mut Self {
-        self.json.push(',');
+        self.separate();
         ferrovue_core::push_int(&mut self.json, n);
         self
     }
@@ -77,20 +115,22 @@ impl LoadKey {
         if !x.is_finite() {
             return self.null();
         }
-        self.json.push(',');
+        self.separate();
         ferrovue_core::push_number(&mut self.json, x);
         self
     }
 
     /// Add a boolean.
     pub fn bool(&mut self, b: bool) -> &mut Self {
-        self.json.push_str(if b { ",true" } else { ",false" });
+        self.separate();
+        self.json.push_str(if b { "true" } else { "false" });
         self
     }
 
     /// Add `null`, which is also what `JSON.stringify` writes for `undefined` in an array.
     pub fn null(&mut self) -> &mut Self {
-        self.json.push_str(",null");
+        self.separate();
+        self.json.push_str("null");
         self
     }
 

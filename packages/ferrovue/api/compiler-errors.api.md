@@ -1709,7 +1709,7 @@ export const ERRORS: {
     };
     readonly FV2001: {
         readonly title: "`await` of a value that is not a loader's result";
-        readonly detail: "A component's top-level `await` stops its render until the promise settles, on the server as in the browser. The server has the results only of loaders, functions declared with `defineLoader` that the Rust app implements; any other promise is the browser's alone. Declare the function as a loader, or fetch the value in Rust and pass it as a prop.";
+        readonly detail: "A component's top-level `await` stops its render until the promise settles, on the server as in the browser. The server has the results only of loaders, functions declared with `defineLoader` that the Rust app implements, awaited one by one or together by `Promise.all` of an array literal of their calls; any other promise is the browser's alone. Declare the function as a loader, or fetch the value in Rust and pass it as a prop.";
     };
     readonly FV2002: {
         readonly title: "Loader declaration the compiler cannot read";
@@ -1717,7 +1717,7 @@ export const ERRORS: {
     };
     readonly FV2003: {
         readonly title: "Loader parameter that is not a plain typed string, number or boolean";
-        readonly detail: "A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rust app computes from the same values. Each parameter is a plain name with a type: a string, a number (`Float` for a fractional one) or a boolean, which may be optional (`lang?: string`) or `null` (`lang: string | null`). Defaults, `...rest`, destructuring and object parameters are refused: pass the values one by one.";
+        readonly detail: "A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rust app computes from the same values. Each parameter is a plain name with a type: a string, a number (`Float` for a fractional one) or a boolean, which may be optional (`lang?: string`) or `null` (`lang: string | null`), or an interface of a `.ts` file whose fields are such values, written into the key with its keys sorted. Defaults, `...rest`, destructuring, objects written in place, optional objects and objects holding objects or lists are refused: pass the values one by one, or declare the object as an interface.";
     };
     readonly FV2004: {
         readonly title: "Loader result the payload cannot carry";
@@ -1733,7 +1733,7 @@ export const ERRORS: {
     };
     readonly FV2007: {
         readonly title: "Loader result bound to a pattern";
-        readonly detail: "`const post = await loadPost(id)` binds the result to a name; `const { title, tags } = await loadPost(id)` destructures the object it returns into plain names. Nested patterns, defaults, `...rest` and array patterns are refused: bind the result and read its fields.";
+        readonly detail: "`const post = await loadPost(id)` binds the result to a name; `const { title, tags } = await loadPost(id)` destructures the object it returns into plain names. `const [post, views] = await Promise.all([…])` binds each call's result to a name. Nested patterns, defaults, `...rest`, and array patterns of anything but `Promise.all` are refused: bind the result and read its fields.";
     };
 };
 

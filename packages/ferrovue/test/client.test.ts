@@ -237,6 +237,7 @@ it("keys a loader's call as the server does, leaving out the arguments not given
   expect(loadKey("loadPost", [7, undefined])).toBe('["loadPost",7]');
   expect(loadKey("loadPost", [7, undefined, "en"])).toBe('["loadPost",7,null,"en"]');
   expect(loadKey("loadPost", [7, null])).toBe('["loadPost",7,null]');
+  expect(loadKey("loadFound", [{ term: "a", lang: null, page: undefined, exact: true }, 2])).toBe('["loadFound",{"exact":true,"lang":null,"term":"a"},2]');
   expect(loadKey("loadViews", [])).toBe('["loadViews"]');
 });
 

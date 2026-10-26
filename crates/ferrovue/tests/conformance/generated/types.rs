@@ -1180,6 +1180,40 @@ impl<'a> Ranking<'a> {
 }
 
 
+/// `Query` in `components/loaders.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct Query<'a> {
+    #[serde(rename = "term")]
+    pub term: Cow<'a, str>,
+    #[serde(rename = "page")]
+    pub page: i64,
+    #[serde(rename = "exact", default, skip_serializing_if = "Option::is_none")]
+    pub exact: Option<bool>,
+    #[serde(rename = "lang")]
+    pub lang: Option<Cow<'a, str>>,
+}
+
+impl<'a> Query<'a> {
+    /// Query with its required fields, every optional one absent and every nullable one `null`.
+    pub fn new(term: impl Into<Cow<'a, str>>, page: i64) -> Self {
+        Query { term: term.into(), page, exact: None, lang: None }
+    }
+
+    /// Set `exact`, which is absent otherwise.
+    pub fn exact(mut self, exact: bool) -> Self {
+        self.exact = Some(exact);
+        self
+    }
+
+    /// Set `lang`, which is `null` otherwise.
+    pub fn lang(mut self, lang: impl Into<Cow<'a, str>>) -> Self {
+        self.lang = Some(lang.into());
+        self
+    }
+}
+
+
 /// `Role` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

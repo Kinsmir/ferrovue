@@ -9,12 +9,13 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(6);
+ferrovue::__compat!(7);
 
 pub mod blank;
 pub mod cart_badge;
 pub mod counter;
 pub mod data_list;
+pub mod found;
 pub mod greeting;
 pub mod head_note;
 pub mod modal;
@@ -38,6 +39,7 @@ pub mod types;
 pub mod i18n;
 pub mod twins;
 pub mod provides;
+pub mod loaders;
 
 /// What a fixture holds besides the props: each slot's content, and the location it renders at.
 #[cfg(test)]
@@ -135,6 +137,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_count = |out: &mut String, _: &data_list::CountSlotProps| -> bool { out.push_str(fixture.slot("count").unwrap_or_default()); true };
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             data_list::try_render(&mut out, &props, data_list::Slots { row: fixture.slot("row").map(|_| &s_row as &data_list::RowSlot), count: fixture.slot("count").map(|_| &s_count as &data_list::CountSlot), default: fixture.slot("default").map(|_| ferrovue::render::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+        }
+        "Found" => {
+            let props: found::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::loaders::load(
+                |fv_loads| {
+                    out.clear();
+                    found::try_render(&mut out, &props, fv_loads)
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
         }
         "Greeting" => {
             let props: greeting::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -87,7 +87,7 @@ Generated code calls the `ferrovue` crate, so the two must come from compatible 
 the `allow`, `mod.rs` names the version of generated code its compiler writes:
 
 ```rust
-ferrovue::__compat!(6);
+ferrovue::__compat!(7);
 ```
 
 The version is a number that changes only when generated code changes in a way the crate must
@@ -96,10 +96,10 @@ supporting something older generated code calls. Each crate accepts the versions
 stops the build at this line for any other, before the compiler reports anything else:
 
 ```text
-error: this module was generated as version 6 of ferrovue's generated code, and this `ferrovue` crate supports versions 2 to 5: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
+error: this module was generated as version 7 of ferrovue's generated code, and this `ferrovue` crate supports version 6: use the `ferrovue` npm package and the `ferrovue` crate of one release, and run `ferrovue` to generate the module again
  --> src/generated/mod.rs:12:1
    |
-12 | ferrovue::__compat!(6);
+12 | ferrovue::__compat!(7);
    | ^^^^^^^^^^^^^^^^^^^^^^
 ```
 
@@ -122,7 +122,9 @@ supports versions 2 to 5. Version 6 reads the literal of every union's enum thro
 `ferrovue.config.json` is read as a generated one is, and names every item of the crates at the
 module that defines it (`fv::html::Html`, `fv::router::Route`, `fv::core::escape_into`),
 which the 0.12 crate no longer lifts to its root: so the 0.12 crate supports version 6 alone, and
-stops a module of an earlier version at this line. The upgrade pages,
+stops a module of an earlier version at this line. Version 7 writes the keys of
+[loaders](crate::guide::loaders#keys) that take an object, with calls of the key the 0.12 crate
+lacks; the 0.13 crate supports versions 6 and 7, and a module of version 6 builds unchanged. The upgrade pages,
 [`upgrading_to_0_12`](crate::guide::upgrading_to_0_12),
 [`upgrading_to_0_11`](crate::guide::upgrading_to_0_11),
 [`upgrading_to_0_10`](crate::guide::upgrading_to_0_10),

@@ -1,9 +1,9 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, fail, nothing, rustStr, snake } from "../model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, enumOf, fail, nothing, rustStr, sameTy, snake } from "../model.ts";
 import { GenError } from "../errors.ts";
 import { ctx } from "../context.ts";
 import { type Declared } from "../constants.ts";
 import { resolveImport } from "../resolve.ts";
-import { bareDates, datePlan, markHome, readTypeFile, tyOfTs } from "../typescript.ts";
+import { bareDates, datePlan, lookupStruct, markHome, readTypeFile, tyOfTs } from "../typescript.ts";
 import { coerce, describeTy, expr, fieldVal } from "../expr.ts";
 import { heldDates } from "../lists.ts";
 import { atom, bare } from "../parens.ts";
@@ -17,6 +17,11 @@ interface LoaderParam {
   /** The argument may be left out, or given as `undefined`: `loadKey` leaves it out of the key
    * when no argument after it is given. */
   undefined: boolean;
+  /** For a parameter typed as an interface of a `.ts` file: its fields, each written into the key
+   * by its name, in the order JavaScript sorts the names. */
+  fields?: LoaderParam[];
+  /** The struct of the loader's module that holds such a parameter. */
+  struct?: string;
 }
 
 interface Loader {
@@ -97,6 +102,16 @@ function loaderOf(d: Declared, file: string): Loader {
       if (!(e instanceof GenError)) throw e;
       return refuse("a type the compiler does not translate");
     }
+    if (ty.k === "struct" && !p.optional) {
+      const st = lookupStruct(home, ty).st;
+      const fields = (st?.fields ?? []).map((f): LoaderParam => {
+        const of = f.ty.k === "opt" ? f.ty.of : f.ty;
+        if (!ARG_TYS.has(of.k) || absence(f.ty) === "either" || enumOf(f.ty) !== undefined) refuse(`an object whose field \`${f.js}\` is ${describeTy(f.ty)}`);
+        return { js: f.js, rust: f.rust, ty: f.ty, undefined: absence(f.ty) === "undefined" };
+      });
+      if (!fields.length) refuse(describeTy(ty));
+      return { js: p.name, rust: snake(p.name), ty, undefined: false, fields: fields.toSorted((a, b) => (a.js < b.js ? -1 : a.js > b.js ? 1 : 0)), struct: `${pascal(id.value)}${pascal(p.name)}` };
+    }
     if (p.optional && ty.k !== "opt") ty = { k: "opt", of: ty };
     const of = ty.k === "opt" ? ty.of : ty;
     if (!ARG_TYS.has(of.k) || absence(ty) === "either") refuse(describeTy(ty));
@@ -128,6 +143,7 @@ function argCode(s: Scope, loader: Loader, p: LoaderParam, n: N | undefined, at:
     fail(s.comp, "FV2006", `\`${loader.name}\` takes \`${p.js}\`, which the call does not give`, call);
   }
   if (n.type === "SpreadElement") fail(s.comp, "FV2006", `an argument of \`${loader.name}\` spread from a list, whose length the compiler does not know: give each argument`, n);
+  if (p.fields !== undefined) return objectArg(s, loader, p, n, at);
   const v: Val = expr({ ...s, settingUpAt: at }, n);
   const want = p.ty;
   const wrong = (): never => fail(s.comp, "FV2006", `\`${p.js}\` of \`${loader.name}\` is ${describeTy(want)}, and the call gives ${describeTy(v.ty)}`, n);
@@ -152,20 +168,76 @@ function argCode(s: Scope, loader: Loader, p: LoaderParam, n: N | undefined, at:
   }
 }
 
+function objectArg(s: Scope, loader: Loader, p: LoaderParam, n: N, at: number): string {
+  const fields = p.fields!;
+  if (n.type === "ObjectExpression") {
+    const given = new Map<string, N>();
+    for (const q of n.properties) {
+      if (q.type !== "ObjectProperty" || q.computed) fail(s.comp, "FV2006", `\`${p.js}\` of \`${loader.name}\` is an object of plain keys: \`{ slug: props.slug }\``, q);
+      const key: string = q.key.type === "Identifier" ? q.key.name : String(q.key.value);
+      if (!fields.some((f) => f.js === key)) fail(s.comp, "FV2006", `\`${p.js}\` of \`${loader.name}\` has no field \`${key}\``, q);
+      given.set(key, q.value);
+    }
+    const inits = fields.map((f) => `${f.rust}: ${argCode(s, loader, f, given.get(f.js), at, n)}`);
+    return `super::loaders::${p.struct!} { ${inits.join(", ")} }`;
+  }
+  const v = expr({ ...s, settingUpAt: at }, n);
+  if (v.ty.k !== "struct" || !sameTy(markHome(v.ty, "types"), markHome(p.ty, "types"))) {
+    fail(s.comp, "FV2006", `\`${p.js}\` of \`${loader.name}\` is ${describeTy(p.ty)}, and the call gives ${describeTy(v.ty)}`, n);
+  }
+  const inits = fields.map((f) => {
+    const read = fieldVal(s.comp, v.code, v.ty, f.js, n);
+    const of = f.ty.k === "opt" ? f.ty.of : f.ty;
+    const code = of.k === "str" ? (f.ty.k === "opt" ? `${atom(read.code)}.map(String::from)` : `String::from(${bare(read.code)})`) : bare(read.code);
+    return `${f.rust}: ${code}`;
+  });
+  return `super::loaders::${p.struct!} { ${inits.join(", ")} }`;
+}
+
 /** `let Some(s_x) = fv_loads.get(…) else { return Ok(()); };`: the component stops where Vue's server
  * awaits, until `load` has the result. */
-function awaitLet(s: Scope, loader: Loader, args: N[], at: number, call: N, lets: string[]): string {
+function callValue(s: Scope, loader: Loader, args: N[], at: number, call: N): string {
   if (args.length > loader.params.length) fail(s.comp, "FV2006", `\`${loader.name}\` takes ${loader.params.length} argument${loader.params.length === 1 ? "" : "s"}, and the call gives ${args.length}`, call);
   const fields = loader.params.map((p, i) => {
     const code = argCode(s, loader, p, args[i], at, call);
     return code === p.rust ? p.rust : `${p.rust}: ${code}`;
   });
-  const own = scopeOf(loaders, s);
-  const name = `l_${own.count++}`;
   runOf(loaders).readers.add(s.comp);
-  const value = `super::loaders::${loader.struct}${fields.length ? ` { ${fields.join(", ")} }` : ""}`;
+  return `super::loaders::${loader.struct}${fields.length ? ` { ${fields.join(", ")} }` : ""}`;
+}
+
+function awaitLet(s: Scope, loader: Loader, args: N[], at: number, call: N, lets: string[]): string {
+  const value = callValue(s, loader, args, at, call);
+  const name = `l_${scopeOf(loaders, s).count++}`;
   lets.push(`let Some(${name}) = fv_loads.get(${value}) else { return Ok(()); };`);
   return name;
+}
+
+/** The loaders' calls of \`await Promise.all([…])\`, each asked for before the component stops
+ * where the first result is missing, as Vue's server starts them all at once. */
+function allOf(s: Scope, n: N): { loader: Loader; args: N[]; call: N }[] | null {
+  const call = n?.type === "AwaitExpression" ? n.argument : null;
+  const callee = call?.type === "CallExpression" ? call.callee : null;
+  if (callee?.type !== "MemberExpression" || callee.object.type !== "Identifier" || callee.object.name !== "Promise" || callee.computed || callee.property.name !== "all") return null;
+  const [list] = call.arguments;
+  if (call.arguments.length !== 1 || list?.type !== "ArrayExpression") fail(s.comp, "FV2001", "`Promise.all` awaits an array literal of loaders' calls: `await Promise.all([loadPost(slug), loadViews(slug)])`", call);
+  const own = scopeOf(loaders, s);
+  return list.elements.map((el: N) => {
+    const found = el?.type === "CallExpression" && el.callee.type === "Identifier" ? own.locals.get(el.callee.name) : undefined;
+    if (found === undefined) fail(s.comp, "FV2001", "only loaders' results are awaited on the server, and `Promise.all` takes their calls: declare each function with `defineLoader`", el ?? list);
+    return { loader: loaderOf(found.d, found.file), args: el.arguments, call: el };
+  });
+}
+
+function awaitAll(s: Scope, calls: { loader: Loader; args: N[]; call: N }[], at: number, lets: string[], bound: (i: number) => boolean): string[] {
+  const own = scopeOf(loaders, s);
+  const names = calls.map(({ loader, args, call }) => {
+    const name = `l_${own.count++}`;
+    lets.push(`let ${name} = fv_loads.get(${callValue(s, loader, args, at, call)});`);
+    return name;
+  });
+  if (names.length) lets.push(`let (${names.map((n, i) => `Some(${bound(i) ? n : "_"})`).join(", ")}${names.length === 1 ? "," : ""}) = (${names.join(", ")}${names.length === 1 ? "," : ""}) else { return Ok(()); };`);
+  return names;
 }
 
 /** The result `name` holds, `&Output`, as the value the template reads. */
@@ -196,11 +268,32 @@ function argTy(ty: Ty): string {
   return ty.k === "opt" ? `Option<${one}>` : one;
 }
 
+function objectSource(l: Loader): string {
+  return l.params
+    .filter((p) => p.fields !== undefined)
+    .map((p) => `/// \`${p.js}\` of a call of \`${l.name}\`, in ${l.home.file}: its fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ${p.struct!} {
+${p.fields!.map((f) => `    pub ${f.rust}: ${argTy(f.ty)},`).join("\n")}
+}
+
+`)
+    .join("");
+}
+
+function objectKey(p: LoaderParam): string {
+  const fields = p.fields!.map((f) =>
+    f.undefined ? `        if let Some(v) = &self.${p.rust}.${f.rust} {\n            key.field(${rustStr(f.js)}, v);\n        }` : `        key.field(${rustStr(f.js)}, &self.${p.rust}.${f.rust});`,
+  );
+  return `        key.object();\n${fields.join("\n")}\n        key.end();`;
+}
+
 function loaderSource(l: Loader, home: Component): string {
-  const fields = l.params.map((p) => `    pub ${p.rust}: ${argTy(p.ty)},`).join("\n");
+  const fields = l.params.map((p) => `    pub ${p.rust}: ${p.struct ?? argTy(p.ty)},`).join("\n");
   const firstOptional = l.params.findIndex((_, i) => l.params.slice(i).every((q) => q.undefined));
   const args = l.params
     .map((p, i) => {
+      if (p.fields !== undefined) return objectKey(p);
       const push = `key.arg(&self.${p.rust});`;
       if (firstOptional < 0 || i < firstOptional) return `        ${push}`;
       const given = l.params.slice(i).map((q) => `self.${q.rust}.is_some()`).join(" || ");
@@ -210,7 +303,7 @@ function loaderSource(l: Loader, home: Component): string {
   const plan = datePlan(home, l.out);
   const dates = plan === null ? "" : `\n    const DATES: &'static str = ${rustStr(plan)};`;
   if (plan !== null) ctx.datePlans.loaders.set(l.name, plan);
-  return `/// A call of \`${l.name}\`, in ${l.home.file}: its arguments.
+  return `${objectSource(l)}/// A call of \`${l.name}\`, in ${l.home.file}: its arguments.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ${l.struct}${fields ? ` {\n${fields}\n}` : ";"}
 
@@ -302,6 +395,17 @@ export const loaders: Plugin<LoadersRun, LoadersScope> = {
   },
   scriptBinding(s, d, lets) {
     const init = d.init;
+    const all = allOf(s, init);
+    if (all !== null) {
+      if (d.id.type !== "ArrayPattern" || d.id.elements.length > all.length || d.id.elements.some((el: N) => el !== null && el.type !== "Identifier")) {
+        fail(s.comp, "FV2007", "the results of `Promise.all` are bound to an array of plain names, one for each call: `const [post, views] = await Promise.all([…])`", d.id);
+      }
+      const names = awaitAll(s, all, d.start, lets, (i) => (d.id.elements[i] ?? null) !== null);
+      d.id.elements.forEach((el: N, i: number) => {
+        if (el !== null) s.setup.set(el.name, resultVal(names[i]!, all[i]!.loader.out));
+      });
+      return true;
+    }
     const call = callOf(s, init);
     if (!call) {
       if (init?.type !== "AwaitExpression") return false;
@@ -339,6 +443,11 @@ export const loaders: Plugin<LoadersRun, LoadersScope> = {
     return true;
   },
   scriptStatement(s, st, lets) {
+    const all = allOf(s, st.expression);
+    if (all !== null) {
+      awaitAll(s, all, st.start, lets, () => false);
+      return true;
+    }
     const call = callOf(s, st.expression);
     if (!call) return false;
     awaitLet(s, call.loader, call.args, st.start, st.expression.argument, lets);
