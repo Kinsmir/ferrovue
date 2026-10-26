@@ -4250,6 +4250,18 @@ import P from "./P.vue";
       /^components\/X\.vue:6:16: `P` is not an HTML element `<component :is>` renders/,
     ],
     [
+      "an element rendering a component by `is=\"vue:…\"` without its required prop, at the element",
+      `<script setup lang="ts">
+import P from "./P.vue";
+</script>
+<template>
+  <section>
+    <div is="vue:P" />
+  </section>
+</template>`,
+      /^components\/X\.vue:6:5: P requires `p`/,
+    ],
+    [
       "a dynamic component over an optional prop",
       `<script setup lang="ts">
 defineProps<{ tag?: "b" | "i" }>();

@@ -597,8 +597,10 @@ function written(comp: Component, node: N): N {
   const tagged = (name: string | null): N => name && templateNode(comp, (el) => (plain(el.tag) === plain(name) ? el : null));
   const directive = (name: string | null): N => name && templateNode(comp, (el) => el.props.find((p: N) => p.type === 7 && plain(p.name) === plain(name)));
   switch (callee) {
-    case "_ssrRenderComponent":
-      return tagged(assetName(call.arguments[0], /^_component_/));
+    case "_ssrRenderComponent": {
+      const name = assetName(call.arguments[0], /^_component_/);
+      return tagged(name) ?? (name === null ? null : isAttribute(comp, (value) => value.startsWith("vue:") && plain(value.slice(4)) === plain(name), true));
+    }
     case "_resolveComponent":
       return tagged(call.arguments[0]?.value ?? null);
     case "_resolveDirective":

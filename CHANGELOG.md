@@ -15,8 +15,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
-- FV0419 points at a static `is` attribute that names no HTML element, where 0.12.0 gave no line:
-  [FV0419](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0419).
+- FV0419 points at a static `is` attribute that names no HTML element, and FV0506 at an element that renders a component by `is="vue:…"`.
+  0.12.0 gave both no line: [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
 - A `?:` whose test is known when compiling compares as the type of both branches, and an array literal holds integers beside `Float`s.
   0.12.0 refused them with FV0637 and FV0611: [FV0611](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0611).
 - A narrowed or optional value of a union's enum, a `computed` or a `ref` of a string `enum` and `""` annotated as the union, a table read by a key built with `||` or `?:`, and lists a `.map()`, `.filter()` or array literal builds reach a child's union prop through `match`es over variants.
