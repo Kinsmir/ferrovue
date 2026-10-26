@@ -4,13 +4,14 @@ import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
-import { formatted, lonely, loneOf, meet, regexTest, stringMethod, stringOf, stringsEqual, writesAscii } from "./strings.ts";
+import { lonely, loneOf, meet, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
 import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
-import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
+import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
+import { globalCall, numberStaticCall } from "./globals.ts";
 
 const DIGITS = new Map<string, [ErrorCode, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -26,7 +27,6 @@ export function call(s: Scope, n: N): Val {
 }
 
 function namedCall(s: Scope, n: N): Val {
-  const comp = s.comp;
   const callee = n.callee;
   const args: N[] = n.arguments;
   const rendered = renderHelperCall(s, callee.name, args, n);
@@ -37,40 +37,8 @@ function namedCall(s: Scope, n: N): Val {
   if (mine) return mine;
   if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
   const global = !s.locals.has(callee.name) && !s.setup.has(callee.name);
-  if (callee.name === "String" && global) {
-    if (args.length !== 1) return fail(comp, "FV0723", "`String()` takes one value", n);
-    const a = expr(s, args[0]);
-    if (a.ty.k === "str") return a;
-    if (isNumber(a.ty)) return { code: `&*fv::core::Js(${bare(asWritten(a).code)}).to_string()`, ty: asciiTy() };
-    if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: asciiTy() };
-    return formatted(comp, [stringOf(comp, a, args[0], "`String()`", "FV0723")], n, "`String()`");
-  }
-  if ((callee.name === "encodeURIComponent" || callee.name === "encodeURI") && global) {
-    const name = `\`${callee.name}()\``;
-    if (args.length !== 1) return fail(comp, "FV0723", `${name} takes one value`, n);
-    const a = expr(s, args[0]);
-    if (a.lone) fail(comp, "FV0706", `${lonely(name)}; it throws a \`URIError\` on a half`, n);
-    const text = a.ty.k === "str" ? a : formatted(comp, [stringOf(comp, a, args[0], name, "FV0723")], n, name);
-    return { code: `&*fv::core::js_${callee.name === "encodeURI" ? "encode_uri" : "encode_uri_component"}(${strArg(text.code)})`, ty: STR };
-  }
-  if (callee.name === "Number" && args.length === 1) {
-    const a = expr(s, args[0]);
-    if (a.ty.k === "str") return { code: `fv::strings::js_number(${strArg(a.code)})`, ty: FLOAT };
-    if (isNumber(a.ty)) return a;
-    if (a.ty.k === "bool") return { code: `i64::from(${bare(a.code)})`, ty: INT };
-    return fail(comp, "FV0701", "`Number()` takes a string, a number or a boolean that is present", n);
-  }
-  if ((callee.name === "parseInt" && (args.length === 1 || args.length === 2)) || (callee.name === "parseFloat" && args.length === 1)) {
-    const a = expr(s, args[0]);
-    if (a.ty.k !== "str") fail(comp, "FV0702", `\`${callee.name}()\` takes a string`, args[0]);
-    if (callee.name === "parseFloat") return { code: `fv::strings::js_parse_float(${strArg(a.code)})`, ty: FLOAT };
-    const radix = args[1];
-    if (radix && !(radix.type === "NumericLiteral" && (radix.value === 10 || radix.value === 16))) {
-      fail(comp, "FV0703", "`parseInt()` takes a radix of 10 or 16, written as a literal", radix);
-    }
-    return { code: `fv::strings::js_parse_int(${strArg(a.code)}, ${radix ? radix.value : 0})`, ty: FLOAT };
-  }
-  if ((callee.name === "isNaN" || callee.name === "isFinite") && global) return numberTest(s, callee.name, args, n, true);
+  const known = globalCall(s, callee.name, args, n, global);
+  if (known) return known;
   if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
   return refuseUnavailable(s, callee.name, n, true);
 }
@@ -118,7 +86,10 @@ function memberCall(s: Scope, n: N): Val {
     return { code: String(is), ty: BOOL, konst: is };
   }
   if (callee.object.type === "Identifier" && callee.object.name === "Object") return objectCall(s, method, args, n);
-  if (callee.object.type === "Identifier" && callee.object.name === "Number" && NUMBER_TESTS.has(method)) return numberTest(s, method, args, n, false);
+  if (callee.object.type === "Identifier" && callee.object.name === "Number") {
+    const tested = numberStaticCall(s, method, args, n);
+    if (tested) return tested;
+  }
   if (callee.object.type === "Identifier" && callee.object.name === "JSON" && method === "stringify" && args.length === 1) {
     const v = expr(s, args[0]);
     if (v.ty.k === "bool") return { code: `if ${condition(v.code)} { "true" } else { "false" }`, ty: STR };
@@ -241,8 +212,6 @@ function memberCall(s: Scope, n: N): Val {
   return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);
 }
 
-const NUMBER_TESTS = new Set(["isNaN", "isFinite", "isInteger", "isSafeInteger"]);
-
 const ROUNDED_BY_EACH = new Set(
   "acos acosh asin asinh atan atan2 atanh cbrt cos cosh exp expm1 hypot log log10 log1p log2 sin sinh tan tanh".split(" "),
 );
@@ -273,46 +242,6 @@ export function builtin(s: Scope, what: string, n: N): never {
   const name = /^\w+/.exec(what)![0];
   const of = OF_BUILTINS[name];
   return fail(s.comp, "FV0633", `\`${what}\` is not supported: ${of ? `of \`${name}\`, the server translates ${of}` : `the server does not translate \`${name}\``}`, n);
-}
-
-function floatTest(method: string, x: string): string {
-  switch (method) {
-    case "isNaN":
-      return `${receiver(x)}.is_nan()`;
-    case "isFinite":
-      return `${receiver(x)}.is_finite()`;
-    case "isInteger":
-      return `${receiver(x)}.fract() == 0.0`;
-    default:
-      return /^[\w.]+$/.test(x) ? `${x}.fract() == 0.0 && ${x}.abs() <= 9_007_199_254_740_991.0` : `matches!(${bare(x)}, v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0)`;
-  }
-}
-
-function intTest(method: string, x: string): string {
-  if (method === "isSafeInteger") return `(-9_007_199_254_740_991..=9_007_199_254_740_991).contains(&${operand(x, UNARY)})`;
-  return String(method !== "isNaN");
-}
-
-function numberTest(s: Scope, method: string, args: N[], n: N, global: boolean): Val {
-  const name = global ? `\`${method}()\`` : `\`Number.${method}()\``;
-  if (args.length !== 1) return fail(s.comp, "FV0718", `${name} takes one number`, n);
-  const v = expr(s, args[0]);
-  if (isNumber(v.ty)) {
-    if (v.num !== undefined) {
-      const konst = (Number as unknown as Record<string, (x: number) => boolean>)[method]!(v.num);
-      return { code: String(konst), ty: BOOL, konst };
-    }
-    return boolOf(v.ty.k === "int" ? intTest(method, v.code) : floatTest(method, v.code));
-  }
-  if (!global && v.ty.k === "opt" && isNumber(v.ty.of)) {
-    const each = v.ty.of.k === "int" ? intTest(method, "v") : floatTest(method, "v");
-    if (each === "false") return { code: "false", ty: BOOL, konst: false };
-    return boolOf(each === "true" ? `${atom(v.code)}.is_some()` : `${atom(v.code)}.is_some_and(|v| ${each})`);
-  }
-  if (global) {
-    return fail(s.comp, "FV0718", `${name} converts its argument as \`Number()\` does, which the server does for a number only: write \`Number.${method}(Number(x))\` for a string, or pass a present number`, args[0]);
-  }
-  return fail(s.comp, "FV0718", `${name} of ${describeTy(v.ty)}, for which it is \`false\` whatever it holds, since it does not convert its argument: pass a number, present or optional`, args[0]);
 }
 
 export function isObjectCall(n: N, method: string): boolean {
