@@ -369,6 +369,9 @@ export interface Component {
    * its attributes hold; `""` stands for a name not known when compiling. */
   listenerAttrs: Set<string>;
   idsInAttrs: boolean;
+  /** A `<textarea>`, or an `<input>` with `v-model`, at the root, which reads `value` and `type`
+   * from the attributes passed to the component. */
+  rootControl?: { node: N; tag: string };
 }
 
 export function blankComponent(name: string, module: string, file: string, structs: Map<string, Struct> = new Map()): Component {

@@ -51,6 +51,49 @@ function directedContent(s: Scope, n: N): void {
   fail(s.comp, "FV0425", `${what} among the attributes it merges: bind each attribute by its name, and write the content inside the element`, held);
 }
 
+function rootControlKnown(s: Scope, names: readonly string[]): boolean {
+  const control = s.comp.rootControl;
+  if (control === undefined) return false;
+  const passed = names.find((name) => s.comp.attrNames.has(name));
+  if (passed !== undefined) {
+    const what = control.tag === "textarea" ? "a `<textarea>`" : "an `<input>` with `v-model`";
+    const reads = control.tag === "textarea" ? "renders as its content the `value`" : `reads its \`type\` and \`value\` from the attributes`;
+    fail(s.comp, "FV0424", `${what} at the component's root ${reads} passed to the component, and a parent passes \`${passed}\`: pass it as a prop, or wrap the element in another, such as a \`<div>\`, which then takes those attributes`, control.node);
+  }
+  return true;
+}
+
+function unpassedValue(s: Scope, n: N): N {
+  const test = n?.type === "ConditionalExpression" ? n.test : null;
+  if (test?.type !== "BinaryExpression" || test.operator !== "in" || test.left.type !== "StringLiteral" || test.right.type !== "Identifier" || !(s.temps.has(test.right.name) || s.comp.rootControl !== undefined)) return n;
+  rootControlKnown(s, [test.left.value]);
+  return n.alternate;
+}
+
+function modelAttrs(s: Scope, n: N): N {
+  const [set, merged] = n.expressions as N[];
+  if (n.expressions.length !== 2 || set?.type !== "AssignmentExpression" || set.left.type !== "Identifier") fail(s.comp, "FV0006", "this expression cannot be rendered on the server", n);
+  rootControlKnown(s, ["type", "value"]);
+  const temp: string = set.left.name;
+  const props = mergedParts(set.right).filter((p) => p.type === "ObjectExpression").flatMap((p) => p.properties);
+  const typed = props.find((p: N) => p.type === "ObjectProperty" && !p.computed && (p.key.name ?? p.key.value) === "type");
+  const type = typed === undefined ? null : typed.value.type === "StringLiteral" ? (typed.value.value as string) : undefined;
+  const model = (call: N): N => {
+    if (type === undefined || type === "radio") {
+      fail(s.comp, "FV0424", `an \`<input>\` with \`v-model\` at the component's root reads its \`${type === "radio" ? "value" : "type"}\` from the attributes passed to the component: write a literal \`type\` other than \`radio\`, or wrap it in another element`, s.comp.rootControl?.node ?? call);
+    }
+    const key = type === "checkbox" ? "checked" : "value";
+    if (key === "checked" && expr(s, call.arguments[1]).ty.k !== "bool") fail(s.comp, "FV0424", "an `<input type=\"checkbox\">` with `v-model` at the component's root takes a boolean model: wrap it in another element to bind a list", call);
+    return { type: "ObjectExpression", properties: [{ type: "ObjectProperty", computed: false, key: { type: "Identifier", name: key }, value: call.arguments[1] }], loc: call.loc, __fv: call.__fv };
+  };
+  const replace = (x: N): N[] => {
+    if (x?.type === "Identifier" && x.name === temp) return mergedParts(set.right);
+    if (x?.type === "CallExpression" && x.callee.type === "Identifier" && x.callee.name === "_ssrGetDynamicModelProps") return [model(x)];
+    return [x];
+  };
+  return { ...merged, arguments: mergedParts(merged).flatMap(replace) };
+}
+
 function selectsByModel(n: N): boolean {
   if (n?.type === "CallExpression" && n.callee.type === "Identifier" && /^_ssrLoose(?:Equal|Contain)$/.test(n.callee.name)) return true;
   if (n?.type === "CallExpression") return n.arguments.some(selectsByModel);
@@ -66,7 +109,7 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     const a: N[] = n.arguments;
     switch (n.callee.name) {
       case "_ssrInterpolate":
-        interpolate(s, e, shown(s, a[0], "text"), a[0]);
+        interpolate(s, e, shown(s, unpassedValue(s, a[0]), "text"), a[0]);
         return;
       case "_ssrRenderAttr":
         if (a[0].type !== "StringLiteral") fail(s.comp, "FV0417", "attribute names are literal", n);
@@ -78,9 +121,14 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         renderDynamicAttr(s, e, a[0].value, attrShown(s, a[0].value, a[1]), n);
         return;
       case "_ssrRenderAttrs":
-        if (a.length > 1) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
+        if (a.length > 1 && !(a[1].type === "StringLiteral" && a[1].value === "textarea" && rootControlKnown(s, ["value"]))) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
+        if (a[0].type === "SequenceExpression") {
+          renderAttrs(s, e, modelAttrs(s, a[0]));
+          return;
+        }
         if (a[0].type === "AssignmentExpression") {
-          directedContent(s, a[0]);
+          if (a.length > 1) s.temps.add(a[0].left.name);
+          else directedContent(s, a[0]);
           renderAttrs(s, e, a[0].right);
           return;
         }

@@ -2625,6 +2625,34 @@ defineProps<{ cats: Cat[] }>();
     });
   });
 
+  describe("form fields at the root", () => {
+    const field = (template: string, script = "const text = defineModel<string>({ required: true });\nconst on = defineModel<boolean>(\"on\", { required: true });"): string => `<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`;
+    const parent = (attrs: string): string => `<script setup lang="ts">\nimport F from "./F.vue";\n</script>\n<template><F model-value="a" :on="true" ${attrs} /></template>`;
+
+    it.each([
+      ["a `<textarea>` with content", "<textarea>hi</textarea>", 'out.push_str(">hi</textarea>");'],
+      ["a `<textarea>` with `v-model`", '<textarea v-model="text"></textarea>', "fv::core::escape_into(out, &props.model_value);"],
+      ["a `<textarea>` in a `v-if` branch", '<textarea v-if="on">hi</textarea><p v-else>none</p>', 'out.push_str(">hi</textarea>");'],
+      ["an `<input>` with `v-model`", '<input v-model="text">', '("value", fv::attrs::Attr::str(&props.model_value))'],
+      ["a text `<input>` with `v-model`", '<input type="text" v-model="text">', '("type", fv::attrs::Attr::str("text"))'],
+      ["a checkbox with `v-model`", '<input type="checkbox" v-model="on">', '("checked", fv::attrs::Attr::Bool(props.on))'],
+    ])("renders %s whose parents pass neither `value` nor `type`", (_, template, rust) => {
+      const out = compile(island(parent('class="c" title="t"'), { F: field(template) })).get("f.rs")!;
+      expect(out).toContain(rust);
+      expect(out).toContain("fv_attrs");
+    });
+
+    it.each([
+      ["a `<textarea>`", "<textarea>hi</textarea>", 'value="v"', "value"],
+      ["an `<input>` with `v-model`", '<input v-model="text">', 'type="radio"', "type"],
+      ["an `<input>` with `v-model`", '<input type="checkbox" v-model="on">', 'value="v"', "value"],
+    ])("refuses %s at the root where a parent passes the attribute it reads", (_, template, attrs, name) => {
+      const e = refusal(island(parent(attrs), { F: field(template) }));
+      expect(e.code).toBe("FV0424");
+      expect(e.message).toMatch(new RegExp(`^components/F\\.vue:5:11: .* at the component's root .* a parent passes \\\`${name}\\\``));
+    });
+  });
+
   const refused: [string, string, RegExp][] = [
     [
       "a value imported from a module that resolves to no `.ts` file of the project",
@@ -5849,76 +5877,6 @@ defineProps<{ tag: "b" | "i" }>();
       /X\.vue:4:1: the `<template>` is read from `\.\/x\.html`: write the template inside the `<template>` block of the component/,
     ],
     [
-      "a root textarea",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><textarea>hi</textarea></template>`,
-      /X\.vue:6:11: a `<textarea>` at the component's root renders as its content a `value` among the attributes passed to the component: wrap it in an element, such as a `<div>`, which then takes those attributes/,
-    ],
-    [
-      "a root textarea with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><textarea v-model="text"></textarea></template>`,
-      /X\.vue:6:11: a `<textarea>` at the component's root/,
-    ],
-    [
-      "a root textarea in a v-if branch",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><textarea v-if="on">hi</textarea><p v-else>none</p></template>`,
-      /X\.vue:6:11: a `<textarea>` at the component's root/,
-    ],
-    [
-      "a textarea in a root Transition",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><Transition><textarea>hi</textarea></Transition></template>`,
-      /X\.vue:6:23: a `<textarea>` at the component's root/,
-    ],
-    [
-      "a root input with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><input v-model="text"></template>`,
-      /X\.vue:6:11: an `<input>` with `v-model` at the component's root reads its `type` and `value` from the attributes passed to the component: wrap it in an element/,
-    ],
-    [
-      "a root text input with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><input type="text" v-model="text"></template>`,
-      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
-    ],
-    [
-      "a root checkbox with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><input type="checkbox" v-model="on"></template>`,
-      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
-    ],
-    [
       "a root input of a bound type with v-model",
       `<script setup lang="ts">
 const text = defineModel<string>({ required: true });
@@ -6259,13 +6217,6 @@ defineProps<{ chip: Chip }>();
     "a template written in pug": "FV0008",
     "a template in another language than HTML": "FV0008",
     "a template read from another file": "FV0009",
-    "a root textarea": "FV0424",
-    "a root textarea with v-model": "FV0424",
-    "a root textarea in a v-if branch": "FV0424",
-    "a textarea in a root Transition": "FV0424",
-    "a root input with v-model": "FV0424",
-    "a root text input with v-model": "FV0424",
-    "a root checkbox with v-model": "FV0424",
     "a root input of a bound type with v-model": "FV0424",
     "a textarea given v-bind of an object": "FV0424",
     "an input with v-model given an attribute named at run time": "FV0424",

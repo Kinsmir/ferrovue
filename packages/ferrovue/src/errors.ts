@@ -418,7 +418,7 @@ export const ERRORS = {
   },
   FV0424: {
     title: "`<textarea>` or `<input v-model>` at the root, or given merged attributes",
-    detail: "Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler does not translate that reading. Wrap a root `<textarea>` or `<input v-model>` in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name.",
+    detail: "Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler translates a root `<textarea>`, and a root `<input v-model>` of a literal `type` other than `radio` (a checkbox with a boolean model), where no parent passes `value` or `type`; it refuses the rest. Pass such a value as a prop, wrap the control in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name. See [`generated_code`](crate::guide::generated_code#fallthrough-attributes).",
   },
   FV0425: {
     title: "Element with no content given a custom directive and attributes that may hold its content",

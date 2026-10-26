@@ -178,6 +178,11 @@ pub mod records;
 pub mod regressions;
 pub mod relative_time;
 pub mod renamed_props;
+pub mod root_checkbox;
+pub mod root_controls;
+pub mod root_input;
+pub mod root_textarea;
+pub mod root_textarea_text;
 pub mod route_info;
 pub mod row_chip;
 pub mod scoped_card;
@@ -1185,6 +1190,26 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "RenamedProps" => {
             let props: renamed_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             renamed_props::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootCheckbox" => {
+            let props: root_checkbox::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_checkbox::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootControls" => {
+            let props: root_controls::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_controls::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootInput" => {
+            let props: root_input::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_input::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootTextarea" => {
+            let props: root_textarea::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_textarea::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootTextareaText" => {
+            let props: root_textarea_text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_textarea_text::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "RouteInfo" => {
             let props: route_info::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

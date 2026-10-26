@@ -343,6 +343,14 @@ to, a value read from `$attrs` (it has no type), `$attrs` in a component whose `
 scope ids, and attributes passed to a root `<Transition>` or `<KeepAlive>` around a `v-if` (which
 Vue's server drops but its client keeps) are refused at compile time.
 
+A `<textarea>` at the root takes its content from a `value` passed to the component, and an
+`<input v-model>` at the root reads `type` and `value` from what it is passed. Both are written as
+Vue writes them when no parent passes those attributes, which the compiler knows from every
+component that renders it: the content of the `<textarea>`, or its `v-model`, and the model's
+`value` or, for `type="checkbox"` with a boolean model, `checked`, merged with the attributes that
+do arrive. A parent that passes `value` or `type`, a bound or `radio` `type`, and a checkbox bound to
+a list are refused ([FV0424](crate::guide::error_codes#fv0424)).
+
 # `<component :is>`
 
 `<component :is>` compiles when every value it can take is known when compiling. Each of these is

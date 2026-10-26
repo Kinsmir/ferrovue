@@ -36,9 +36,6 @@ function refuseMergedControl(comp: Component, { node, merged }: { node: N; merge
   const what = node.tag === "textarea" ? "a `<textarea>`" : "an `<input>` with `v-model`";
   const reads = node.tag === "textarea" ? "renders as its content a `value` among" : "reads its `type` and `value` from";
   const at = vueErrorNode({ loc: node.loc }, comp.templateStart);
-  if (merged.name === "bind" && !merged.loc.source) {
-    fail(comp, "FV0424", `${what} at the component's root ${reads} the attributes passed to the component: wrap it in an element, such as a \`<div>\`, which then takes those attributes`, at);
-  }
   if (merged.name !== "bind") fail(comp, "FV0424", `${what} given the custom directive \`v-${merged.name}\` ${reads} the attributes the directive gives it: put the directive on another element`, at);
   const by = merged.arg ? "an attribute named at run time" : "`v-bind` of an object";
   return fail(comp, "FV0424", `${what} given ${by} ${reads} the attributes it merges: bind each attribute by its name`, at);
@@ -409,7 +406,9 @@ export function readComponent(file: string, root: string, name = basename(file, 
   comp.templateStart = { line: start.line, column: start.column };
   if (compiled.map) comp.templateMap = new SourceMapConsumer(compiled.map);
   if (compiled.errors.length) fail(comp, "FV0005", String(compiled.errors[0]), vueErrorNode(compiled.errors[0], comp.templateStart));
-  if (controls[0]) refuseMergedControl(comp, controls[0]);
+  const control = controls[0];
+  if (control !== undefined && control.merged.name === "bind" && !control.merged.loc.source) comp.rootControl = { node: vueErrorNode({ loc: control.node.loc }, comp.templateStart), tag: control.node.tag };
+  else if (control !== undefined) refuseMergedControl(comp, control);
   for (const m of compiled.code.matchAll(/_ssrRenderSlot\(_ctx\.\$slots, "([^"]+)"/g)) {
     if (!comp.slotNames.includes(m[1]!)) comp.slotNames.push(m[1]!);
   }
