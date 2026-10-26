@@ -794,9 +794,10 @@ packages/ferrovue/src/members.ts: ConditionalExpression: base.ty.k === "list" =>
 # field of the hole (`fieldVal` writes `name.field…`), which the pattern matches.
 packages/ferrovue/src/members.ts: StringLiteral: `^${name}(?:\\.[\\w#]+)+$` => `` in const place = ["list", "record", "struct"].includes(inner. … & new RegExp(`^${name}(?:\\.[\\w#]+)+$`).test(inner.code);
 
-# expr.ts, `expr`, and members.ts, `optionalChain`, `null`, `undefined` and an absent base of `?.`:
-# the code of a value typed `null` or `undefined` is never written: each place that takes such a
-# value tests its type with `nothing` and writes its own `None`, `"null"` or `"undefined"`.
+# expr.ts, `literalOf` and `identifierOf`, and members.ts, `optionalChain`, `null`, `undefined` and
+# an absent base of `?.`: the code of a value typed `null` or `undefined` is never written: each
+# place that takes such a value tests its type with `nothing` and writes its own `None`, `"null"` or
+# `"undefined"`.
 packages/ferrovue/src/members.ts: StringLiteral: "None" => "" in if (nothing(base.ty)) return { code: "None", ty: UNDEF };
 packages/ferrovue/src/expr.ts: StringLiteral: "None" => "" in return { code: "None", ty: NULL };
 packages/ferrovue/src/expr.ts: StringLiteral: "None" => "" in if (n.name === "undefined") return { code: "None", ty: UNDEF };
@@ -1047,7 +1048,7 @@ packages/ferrovue/src/conditional.ts: LogicalOperator: optStr(a) && optStr(b) =>
 # the two options is that type.
 packages/ferrovue/src/conditional.ts: ConditionalExpression: sameTy(a.ty, b.ty) => false in if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
 
-# expr.ts, `expr` (`await`): a scope without `within` is a template's, where Vue's parser refuses
+# expr.ts, `unsupported`: a scope without `within` is a template's, where Vue's parser refuses
 # `await` outside an async function (FV0002) and the list methods refuse an async callback by its
 # shape (FV0805, FV0829, FV0830), so `await` reaches this line only inside a `computed`, a
 # function or the setup.

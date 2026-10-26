@@ -406,6 +406,32 @@ function byOption(s: Scope, n: N, v: Val, narrowed: NonNullable<ReturnType<typeo
   return { ...v, asEnum: { of: v.code, into, home: from, over } };
 }
 
+const KINDS = new Map<string, (s: Scope, n: N) => Val>([
+  ["TemplateLiteral", (s, n) => templateOf(s, n)],
+  ["ArrayExpression", (s, n) => arrayOf(s, n)],
+  ["OptionalMemberExpression", (s, n) => optionalChain(s, n)],
+  ["OptionalCallExpression", (s, n) => optionalChain(s, n)],
+  ["StringLiteral", (_, n) => literalOf(n)],
+  ["NumericLiteral", (_, n) => literalOf(n)],
+  ["BooleanLiteral", (_, n) => literalOf(n)],
+  ["NullLiteral", (_, n) => literalOf(n)],
+  ["Identifier", (s, n) => identifierOf(s, n)],
+  ["MemberExpression", (s, n) => memberOf(s, n)],
+  ["CallExpression", (s, n) => call(s, n)],
+  ["LogicalExpression", (s, n) => logicalOf(s, n)],
+  ["UnaryExpression", (s, n) => unaryOf(s, n)],
+  ["BinaryExpression", (s, n) => binaryOf(s, n)],
+  ["ConditionalExpression", (s, n) => conditionalOf(s, n)],
+  ["TSAsExpression", (s, n) => stated(s, n)],
+  ["TSSatisfiesExpression", (s, n) => stated(s, n)],
+  ["FvLet", (s, n) => letIn(s, n)],
+  ["FvSet", (s, n) => assignedLet(s, n)],
+  ["FvLoop", (s, n) => loopIn(s, n)],
+  ["FvStep", (s, n) => loopStep(s, n)],
+  ["NewExpression", (s, n) => constructed(s, n)],
+  ["ObjectExpression", (s, n) => untypedObject(s, n)],
+]);
+
 function exprOf(s: Scope, n: N): Val {
   const comp = s.comp;
   const path = pathOf(n);
@@ -415,88 +441,66 @@ function exprOf(s: Scope, n: N): Val {
   }
   const named = constOf(s, n);
   if (named) return namedVal(named, { comp, node: n });
-  switch (n.type) {
-    case "TemplateLiteral": {
-      const parts: (string | Val)[] = [];
-      n.quasis.forEach((q: N, i: number) => {
-        parts.push(q.value.cooked as string);
-        if (i < n.expressions.length) parts.push(shown(s, n.expressions[i], "template"));
-      });
-      return formatted(comp, parts, n, "a template literal");
-    }
-    case "ArrayExpression": {
-      if (n.elements.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
-      if (n.elements.some((el: N) => el?.type === "SpreadElement")) return spreadLiteral(s, n);
-      const values = n.elements.map((el: N) => {
-        if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
-        return expr(s, el);
-      });
-      const numbers = values.every((v: Val) => isNumber(v.ty)) && values.some((v: Val) => v.ty.k === "float");
-      const of = numbers ? FLOAT : values.map((v: Val) => v.ty).reduce(joinTy);
-      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || (!numbers && values.some((v: Val) => !sameTy(v.ty, of)))) {
-        fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
-      }
-      const code = `[${values.map((v: Val) => bare(numbers ? asF64(v) : v.code)).join(", ")}]`;
-      return { code, ty: { k: "list", of }, ...loneOf(...values), literal: { of: code, items: values } };
-    }
-    case "OptionalMemberExpression":
-    case "OptionalCallExpression":
-      return optionalChain(s, n);
-    case "StringLiteral":
-      return { code: rustStr(n.value), ty: literalTy("str", [n.value]) };
-    case "NumericLiteral":
-      return numberVal(n.value, Number.isSafeInteger(n.value));
-    case "BooleanLiteral":
-      return { code: String(n.value), ty: BOOL, konst: n.value };
-    case "NullLiteral":
-      return { code: "None", ty: NULL };
-    case "Identifier": {
-      if (n.name === "undefined") return { code: "None", ty: UNDEF };
-      const local = s.locals.get(n.name) ?? s.setup.get(n.name);
-      if (local) return local;
-      if (s.clientOnly.has(n.name)) return refuseClientOnly(s, n.name, n);
-      if (n.name === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
-      if (n.name === "Infinity" || n.name === "NaN") return numberVal(Number(n.name), false);
-      if (n.name === "Intl") return localeRefusal(s, "`Intl`", n);
-      if (BUILTINS.has(n.name)) return builtin(s, n.name, n);
-      return refuseUnavailable(s, n.name, n);
-    }
-    case "MemberExpression":
-      return memberOf(s, n);
-    case "CallExpression":
-      return call(s, n);
-    case "LogicalExpression":
-      return logicalOf(s, n);
-    case "UnaryExpression":
-      return unaryOf(s, n);
-    case "BinaryExpression":
-      return binaryOf(s, n);
-    case "ConditionalExpression":
-      return conditionalOf(s, n);
-    case "TSAsExpression":
-    case "TSSatisfiesExpression":
-      return stated(s, n);
-    case "FvLet":
-      return letIn(s, n);
-    case "FvSet":
-      return assignedLet(s, n);
-    case "FvLoop":
-      return loopIn(s, n);
-    case "FvStep":
-      return loopStep(s, n);
-    case "NewExpression": {
-      const own = claim((p) => p.construct?.(s, n));
-      if (own) return own;
-      const made = n.callee.type === "Identifier" ? n.callee.name : n.callee.type === "MemberExpression" && !n.callee.computed ? `${n.callee.object.name ?? "…"}.${n.callee.property.name}` : "…";
-      return fail(comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
-    }
-    case "ObjectExpression":
-      return untypedObject(s, n);
-    default:
-      if (n.type === "RegExpLiteral") return fail(comp, "FV0710", `a regular expression ${placeIn(s)}, which the server does not run`, n);
-      if (n.type === "AwaitExpression" && s.within !== undefined) {
-        return fail(comp, "FV0625", `\`await\` inside an expression is not supported ${placeIn(s)}`, n, "await a loader as a statement of its own, `const x = await loadX(…)`, and read `x`");
-      }
-      return fail(comp, "FV0625", `${nodeName(n)} is not supported ${placeIn(s)}`, n);
+  return (KINDS.get(n.type) ?? unsupported)(s, n);
+}
+
+function literalOf(n: N): Val {
+  if (n.type === "StringLiteral") return { code: rustStr(n.value), ty: literalTy("str", [n.value]) };
+  if (n.type === "NumericLiteral") return numberVal(n.value, Number.isSafeInteger(n.value));
+  if (n.type === "BooleanLiteral") return { code: String(n.value), ty: BOOL, konst: n.value };
+  return { code: "None", ty: NULL };
+}
+
+function identifierOf(s: Scope, n: N): Val {
+  if (n.name === "undefined") return { code: "None", ty: UNDEF };
+  const local = s.locals.get(n.name) ?? s.setup.get(n.name);
+  if (local) return local;
+  if (s.clientOnly.has(n.name)) return refuseClientOnly(s, n.name, n);
+  if (n.name === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
+  if (n.name === "Infinity" || n.name === "NaN") return numberVal(Number(n.name), false);
+  if (n.name === "Intl") return localeRefusal(s, "`Intl`", n);
+  if (BUILTINS.has(n.name)) return builtin(s, n.name, n);
+  return refuseUnavailable(s, n.name, n);
+}
+
+function templateOf(s: Scope, n: N): Val {
+  const parts: (string | Val)[] = [];
+  n.quasis.forEach((q: N, i: number) => {
+    parts.push(q.value.cooked as string);
+    if (i < n.expressions.length) parts.push(shown(s, n.expressions[i], "template"));
+  });
+  return formatted(s.comp, parts, n, "a template literal");
+}
+
+function arrayOf(s: Scope, n: N): Val {
+  const comp = s.comp;
+  if (n.elements.length === 0) return { code: "[]", ty: { k: "list", of: UNDEF } };
+  if (n.elements.some((el: N) => el?.type === "SpreadElement")) return spreadLiteral(s, n);
+  const values = n.elements.map((el: N) => {
+    if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
+    return expr(s, el);
+  });
+  const numbers = values.every((v: Val) => isNumber(v.ty)) && values.some((v: Val) => v.ty.k === "float");
+  const of = numbers ? FLOAT : values.map((v: Val) => v.ty).reduce(joinTy);
+  if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || (!numbers && values.some((v: Val) => !sameTy(v.ty, of)))) {
+    fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
   }
+  const code = `[${values.map((v: Val) => bare(numbers ? asF64(v) : v.code)).join(", ")}]`;
+  return { code, ty: { k: "list", of }, ...loneOf(...values), literal: { of: code, items: values } };
+}
+
+function constructed(s: Scope, n: N): Val {
+  const own = claim((p) => p.construct?.(s, n));
+  if (own) return own;
+  const made = n.callee.type === "Identifier" ? n.callee.name : n.callee.type === "MemberExpression" && !n.callee.computed ? `${n.callee.object.name ?? "…"}.${n.callee.property.name}` : "…";
+  return fail(s.comp, "FV0624", `\`new ${made}(…)\` builds an object the server has no twin for: compute the value in Rust and pass it as a prop`, n);
+}
+
+function unsupported(s: Scope, n: N): Val {
+  const comp = s.comp;
+  if (n.type === "RegExpLiteral") return fail(comp, "FV0710", `a regular expression ${placeIn(s)}, which the server does not run`, n);
+  if (n.type === "AwaitExpression" && s.within !== undefined) {
+    return fail(comp, "FV0625", `\`await\` inside an expression is not supported ${placeIn(s)}`, n, "await a loader as a statement of its own, `const x = await loadX(…)`, and read `x`");
+  }
+  return fail(comp, "FV0625", `${nodeName(n)} is not supported ${placeIn(s)}`, n);
 }
