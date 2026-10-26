@@ -65,10 +65,17 @@ export interface Val {
   /** For a list of a generated enum's values, or an optional one, the Rust place of the list of
    * enums, where `code` and `iter` hold its strings. */
   enums?: { place: string; def: EnumDef };
+  /** For a list a `.map()` computes, whose items are values of the generated enum `def`: an
+   * iterator over the enums, while `code` is `of`. */
+  variants?: { of: string; iter: string; def: EnumDef };
+  /** For an array literal, the values of its items, while `code` is `of`. */
+  literal?: { of: string; items: Val[] };
   /** For a string value made of literals the compiler knows, as a lookup table's arms: the Rust
    * expression of the same value as the generated enum `def`, null when a literal is outside it.
-   * It holds while `code` is `of`. */
-  asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null };
+   * It holds while `code` is `of`. `home` is a generated enum whose members hold every literal the
+   * value may be, and `over` gives one `match` over the variants it is made from, each arm the code
+   * `arm` gives the literal the value is there. */
+  asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null; home?: EnumDef; over?: (arm: (literal: string) => string | null) => string | null };
   /** For a value of a generated enum held by `of`, where a `v-if` narrows it to the members
    * `kept`: binds in the test, for each member, the Rust code `arm` gives it, and gives the name
    * the code is bound to. */
@@ -362,6 +369,9 @@ export interface Component {
    * its attributes hold; `""` stands for a name not known when compiling. */
   listenerAttrs: Set<string>;
   idsInAttrs: boolean;
+  /** A `<textarea>`, or an `<input>` with `v-model`, at the root, which reads `value` and `type`
+   * from the attributes passed to the component. */
+  rootControl?: { node: N; tag: string };
 }
 
 export function blankComponent(name: string, module: string, file: string, structs: Map<string, Struct> = new Map()): Component {
@@ -590,8 +600,10 @@ function written(comp: Component, node: N): N {
   const tagged = (name: string | null): N => name && templateNode(comp, (el) => (plain(el.tag) === plain(name) ? el : null));
   const directive = (name: string | null): N => name && templateNode(comp, (el) => el.props.find((p: N) => p.type === 7 && plain(p.name) === plain(name)));
   switch (callee) {
-    case "_ssrRenderComponent":
-      return tagged(assetName(call.arguments[0], /^_component_/));
+    case "_ssrRenderComponent": {
+      const name = assetName(call.arguments[0], /^_component_/);
+      return tagged(name) ?? (name === null ? null : isAttribute(comp, (value) => value.startsWith("vue:") && plain(value.slice(4)) === plain(name), true));
+    }
     case "_resolveComponent":
       return tagged(call.arguments[0]?.value ?? null);
     case "_resolveDirective":
@@ -643,6 +655,16 @@ export function directiveOwner(comp: Component, node: N): N {
     return null;
   };
   return visit(comp.templateAst);
+}
+
+/** Where the template's first static `is` attribute whose value `test` takes is written, or where
+ * its element starts with `element`. */
+export function isAttribute(comp: Component, test: (value: string) => boolean, element = false): N {
+  const found = templateNode(comp, (el) => {
+    const is = el.props.find((p: N) => p.type === 6 && p.name === "is" && p.value !== undefined && test(p.value.content));
+    return is === undefined ? null : element ? el : is;
+  });
+  return found;
 }
 
 function templateNode(comp: Component, test: (el: N) => N): N {
@@ -791,7 +813,22 @@ export function isDeclared(ty: Ty): boolean {
 
 function derived(from: readonly Ty[], ty: Ty): Ty {
   if (from.some((t) => DECLARED.has(t))) DECLARED.add(ty);
+  const names = new Map<string, string>();
+  for (const t of from) for (const [literal, name] of NAMES.get(t) ?? []) names.set(literal, name);
+  if (names.size) NAMES.set(ty, names);
   return ty;
+}
+
+const NAMES = new WeakMap<Ty, ReadonlyMap<string, string>>();
+
+/** Record the names an `enum` gives the literals of the string type `ty`. */
+export function nameLiterals(ty: Ty, names: ReadonlyMap<string, string>): void {
+  NAMES.set(ty, names);
+}
+
+/** The name of the `enum` member each literal of the string type `ty` comes from, where it comes from one. */
+export function literalNames(ty: Ty): ReadonlyMap<string, string> | undefined {
+  return NAMES.get(ty);
 }
 
 /** A Rust enum generated for a union of string literals. */

@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalsOf, literalTy, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalNames, literalsOf, literalTy, nameLiterals, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { atom, bare, binary } from "./parens.ts";
@@ -35,7 +35,17 @@ export function namedBy(type: N, ty: Ty): Ty {
     fail(hint.home, "FV0329", `\`unions\` in ferrovue.config.json names a Rust enum for \`${hint.name}\`, which is not a union of two or more string literals: remove \`${hint.name}\` from \`unions\`, or declare it as one, as \`type ${hint.name} = "a" | "b"\``, hint.node);
   }
   if (hint !== undefined && union && !HINTS.has(inner)) HINTS.set(inner, hint);
+  const literals = literalsOf(inner);
+  if (hint?.members !== undefined && literals !== undefined && literals.length === hint.members.length && literalNames(inner) === undefined) {
+    nameLiterals(inner, new Map(literals.map((l, i) => [String(l), hint.members![i]!])));
+  }
   return ty;
+}
+
+function membersOf(ty: Ty, literals: readonly string[]): { members?: readonly string[] } {
+  const names = literalNames(ty);
+  if (names === undefined) return {};
+  return { members: literals.map((l) => names.get(l) ?? l) };
 }
 
 function pascal(name: string): string {
@@ -128,8 +138,8 @@ export function enumField(comp: Component, owner: string, field: string, node: N
 function enumScalar(comp: Component, owner: string, field: string, node: N, ty: Ty): Ty {
   const inner = ty.k === "opt" ? ty.of : ty;
   const literals = literalsOf(inner);
-  if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
-  const hint = HINTS.get(inner) ?? { name: `${pascal(owner)}${pascal(field)}`, module: comp.module, home: comp, node, key: node, what: field };
+  if (inner.k !== "str" || literals === undefined || literals.length < 2 || enumOf(inner) !== undefined) return ty;
+  const hint = HINTS.get(inner) ?? { name: `${pascal(owner)}${pascal(field)}`, module: comp.module, home: comp, node, key: node, what: field, ...membersOf(inner, literals as readonly string[]) };
   const made = enumTy(defineEnum(hint, literals as readonly string[]));
   return ty.k === "opt" ? { ...ty, of: made } : made;
 }
@@ -165,7 +175,7 @@ export function refField(comp: Component, local: string, node: N, ty: Ty): Ty {
   const inner = ty.k === "opt" ? ty.of : ty;
   const literals = literalsOf(inner);
   if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
-  const hint = HINTS.get(inner) ?? { name: `${pascal(comp.name)}${pascal(local)}`, module: comp.module, home: comp, node, key: node, what: local };
+  const hint = HINTS.get(inner) ?? { name: `${pascal(comp.name)}${pascal(local)}`, module: comp.module, home: comp, node, key: node, what: local, ...membersOf(inner, literals as readonly string[]) };
   return nameable(hint, literals as readonly string[]) ? enumField(comp, comp.name, local, node, ty) : ty;
 }
 
@@ -204,10 +214,10 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
     if (sameEnum(from, def) && kept.length === from.literals.length) return v.variant;
     if (!kept.every((l) => def.literals.includes(l))) return null;
     if (kept.length === 1 && !optional) return variantPath(comp, def, kept[0]!);
-    const one = optional ? null : overVariants(comp, v, kept, (l) => (def.literals.includes(l) ? variantPath(comp, def, l) : null));
-    if (one !== null) return one;
     const made = v.asEnum !== undefined && v.asEnum.of === v.code ? v.asEnum.into(def, node) : null;
     if (made !== null) return made;
+    const one = optional ? null : overVariants(comp, v, kept, (l) => (def.literals.includes(l) ? variantPath(comp, def, l) : null));
+    if (one !== null) return one;
     const left = from.literals.filter((l) => !kept.includes(l));
     const arms = kept.map((l, i) => `${[l, ...(i === kept.length - 1 ? left : [])].map((k) => variantPath(comp, from, k)).join(" | ")} => ${variantPath(comp, def, l)}`);
     return over(v.variant, arms.join(", "));
@@ -216,10 +226,7 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
   const literals = literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty);
   if (literals === undefined || !literals.every((l) => typeof l === "string" && def.literals.includes(l))) return null;
   const strings = literals as readonly string[];
-  if (!isDeclared(optional ? (v.ty as { of: Ty }).of : v.ty)) {
-    if (strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
-    return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
-  }
+  if (!isDeclared(optional ? (v.ty as { of: Ty }).of : v.ty) && strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
   const refused = `${REFUSALS}.keep(Err::<(), _>(fv::render::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
   const parse = (on: string): string => {
     const subject = /^&\*+[\w.]+$/.test(on) ? on.replace(/^&\*+/, "") : atom(on);
@@ -279,14 +286,47 @@ export function variantBinder(comp: Component, v: Val, kept: readonly string[], 
   const test = (): string | null => {
     const used = asked.filter((a) => reads(a.name));
     if (!used.length) return null;
-    const tuple = (parts: string[]): string => (parts.length === 1 ? parts[0]! : `(${parts.join(", ")})`);
-    const some = (l: string): string => `Some(${bare(tuple(used.map((a) => a.codes[kept.indexOf(l)]!)))})`;
+    const tuple = (parts: string[]): string => (parts.length === 1 ? bare(parts[0]!) : `(${parts.map(bare).join(", ")})`);
+    const some = (l: string): string => `Some(${tuple(used.map((a) => a.codes[kept.indexOf(l)]!))})`;
     const pattern = `Some(${tuple(used.map((a) => a.name))})`;
     const outer = v.bound;
     if (outer !== undefined && outer.of === v.variant) return `let ${pattern} = ${outer.bind((l) => (kept.includes(l) ? some(l) : "None"))}`;
     return `let ${pattern} = match ${v.variant} { ${armsOver(comp, from, from.literals, (l) => (kept.includes(l) ? some(l) : "None"))} }`;
   };
   return { val: { ...v, bound: { of: v.variant!, kept, bind } }, test };
+}
+
+/** Where a `v-if` tests an optional value of a generated enum, held by `source`, and narrows it to
+ * its members `kept`: the value as the branch reads it, bound to `name`, which binds the code each
+ * conversion of it needs to a name made from `hint`, and the test that binds them, one `match` over
+ * `Some` of each variant and `None`; null when the branch reads no conversion. */
+export function optionBinder(comp: Component, source: string, def: EnumDef, of: Ty, name: string, hint: string, reads: (name: string) => boolean): { val: Val; test: () => string | null } {
+  const kept = (literalsOf(of) ?? def.literals) as readonly string[];
+  const asked: { name: string; codes: string[] }[] = [];
+  const bind = (arm: (literal: string) => string): string => {
+    const codes = kept.map(arm);
+    const known = asked.find((a) => a.codes.join("\0") === codes.join("\0"));
+    if (known !== undefined) return known.name;
+    const made = fresh("n", hint);
+    asked.push({ name: made, codes });
+    return made;
+  };
+  const test = (): string | null => {
+    const used = asked.filter((a) => reads(a.name));
+    if (!used.length) return null;
+    const self = reads(name);
+    const names = [...(self ? [name] : []), ...used.map((a) => a.name)];
+    const tuple = (parts: string[]): string => (parts.length === 1 ? bare(parts[0]!) : `(${parts.map(bare).join(", ")})`);
+    const grouped = new Map<string, string[]>();
+    for (const l of def.literals) {
+      const i = kept.indexOf(l);
+      const code = i < 0 ? "None" : `Some(${tuple([...(self ? [variantPath(comp, def, l)] : []), ...used.map((a) => a.codes[i]!)])})`;
+      grouped.set(code, [...(grouped.get(code) ?? []), `Some(${variantPath(comp, def, l)})`]);
+    }
+    grouped.set("None", [...(grouped.get("None") ?? []), "None"]);
+    return `let Some(${tuple(names)}) = match ${source} { ${[...grouped].map(([c, patterns]) => `${patterns.join(" | ")} => ${c}`).join(", ")} }`;
+  };
+  return { val: { code: unionStr(name), ty: of, variant: name, bound: { of: name, kept, bind } }, test };
 }
 
 interface Unproven {

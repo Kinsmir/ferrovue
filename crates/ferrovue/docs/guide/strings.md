@@ -136,10 +136,40 @@ assert_eq!(ferrovue::strings::js_substr("ferrovue", -3.0, None), "vue");
 assert_eq!(ferrovue::strings::js_code_point_at("🦀", 0.0), Some(0x1F980));
 ```
 
-The patterns are strings: a regular expression (`.replace(/x/g, …)`, `.split(/,/)`) and a
-replacement function are refused, as are `.toLocaleUpperCase()` and `.toLocaleLowerCase()`, since
+A pattern is a string, or a regular expression literal of the subset below. A replacement function
+is refused, as are `.toLocaleUpperCase()` and `.toLocaleLowerCase()`, since
 the server's locale is not the browser's, and `.localeCompare()` and `.toLocaleString()`, which
 format with `Intl` ([`dates_and_prices`](crate::guide::dates_and_prices)).
+
+# Regular expressions
+
+`.replace()`, `.replaceAll()` and `.split()` take a regular expression literal, and a literal's
+`.test(s)` tests a string, in a subset whose matching is JavaScript's without the `u` flag, over
+UTF-16 code units: [`JsRegex`](crate::strings::JsRegex) runs it, held once for the program's life,
+and the vectors it is tested against are recorded from V8.
+
+| Part | The subset holds |
+|---|---|
+| Characters | literals, `\t`, `\n`, `\v`, `\f`, `\r`, `\0`, `\xHH`, `\uHHHH`, and a `\` before a character of the syntax |
+| Classes | `.` (any unit but a line terminator), `[abc]`, `[a-z]`, `[^…]`, `\d`, `\w`, `\s` and `\D`, `\W`, `\S`, also inside a class |
+| Assertions | `^` and `$` (the start and end of the string), `\b` and `\B` |
+| Quantifiers | `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}`, greedy or lazy (`*?`) |
+| Flags | `g` (every match, for `.replace()`; `.replaceAll()` needs it) and `i` (case folded as JavaScript folds it without `u`) |
+
+A replacement reads `$&`, `` $` ``, `$'` and `$$` as JavaScript reads them; `$1` is written as it is,
+since the subset has no groups. Everything else is refused where it is written
+([FV0710](crate::guide::error_codes#fv0710)): groups, alternation (`a|b`), backreferences,
+lookarounds, the flags `m`, `s`, `u`, `y` and `d`, a regular expression held in a constant, and
+methods other than `.test()`. A regular expression whose match may begin or end between the halves
+of a surrogate pair (`.` alone, an empty match) gives a string that may hold half of one, which is
+refused where that matters, as below.
+
+```
+let slug = ferrovue::strings::JsRegex::new("[^a-z0-9]+", "g");
+assert_eq!(slug.replace("the rust book", "-"), "the-rust-book");
+assert!(ferrovue::strings::JsRegex::new("^\\d+$", "").test("2026"));
+assert_eq!(ferrovue::strings::JsRegex::new(r"\s*,\s*", "").split("a , b,c", None), ["a", "b", "c"]);
+```
 
 # Halves of surrogate pairs
 

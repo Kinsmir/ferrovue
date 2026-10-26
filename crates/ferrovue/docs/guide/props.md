@@ -18,6 +18,9 @@ a public field per prop, and a struct for every interface or object type alias t
 | `Size[]`, `("sm" \| "md")[]` | `Vec<Size>`, a list of the union's enum | `impl IntoIterator<Item = Size>` |
 | `number[]`, `Row[]`, `(Size \| null)[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, `Vec<Option<Size>>`, … | the `Vec` |
 | `interface Row { … }`, `type Row = { … }` | a struct `Row<'a>` beside `Props`, or in `types.rs` when imported from a `.ts` file | the struct |
+| `owner: { name: string }`, `{ … }[]`, written in place as a field's type | a struct named after the type and the field, `CardOwner<'a>` (for a prop, after the component: `ButtonOwner`) | the struct |
+| `{ [K in Side]: T }`, `Record<Side, T>` with `Side` a union of names, as a field's type | a struct with a field for each member, named as above | the struct |
+| `Card["size"]` | the type of the field it names | as that type |
 | `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::props::Record<'a, T>`](crate::props::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
@@ -25,6 +28,30 @@ a public field per prop, and a struct for every interface or object type alias t
 | `x?: T`, `x: T \| undefined` | `Option<T>` | a setter, `.x(value)` |
 | `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
 | `T`, of `<script setup generic="T extends Row">` | the type of its constraint, `Row<'a>` | as the constraint |
+
+# Props from a `.ts` file
+
+`defineProps<P>()` may name an interface or object type alias imported from a `.ts` file by a
+relative path (`import type { CardProps } from "../types/card"`), an interface of the component
+that extends one, or an intersection (`CardProps & { note: string }`). The component's `Props`
+holds the fields of all of them, and `withDefaults` applies as for props declared in place. A type
+imported through an alias, or the `Props` of another `.vue` file, is refused
+([FV0327](crate::guide::error_codes#fv0327)).
+
+The browser build reads the same type: Vue's compiler, in `@vitejs/plugin-vue`, reads the file
+through TypeScript's JavaScript API, which TypeScript 7 does not have, or through the file system
+named by its `script.fs` option. `ferrovue/vite` sets `script.fs` where the options name none. A
+build without ferrovue's Vite plugin, on TypeScript 7, names it in `vite.config.ts`:
+
+```ts
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import vue from "@vitejs/plugin-vue";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
+});
+```
 
 A `number` is an integer on the server, which is what most props are: counts, ids, indexes. Declare
 a prop that may hold a fraction as `Float`. [`numbers`](crate::guide::numbers) explains how both are
@@ -58,6 +85,10 @@ that is absent renders as `false`, which is the cast Vue applies.
 A destructured prop may take a new name, with a default or without one
 (`const { label: text, size: s = "md" } = defineProps<…>()`). The template and script code read it
 by that name, and its field in `Props` keeps the prop's name, `label` and `size`.
+
+`||` after an optional string, number, boolean or union, read by its name or a field
+(`note || "none"`, `count || 1`), gives the right side where the value is absent or falsy:
+`props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or("none")`.
 
 # Unions of string literals
 
@@ -202,7 +233,9 @@ it better, the compiler uses the enum:
 - `size ?? 'md'` and a default from `withDefaults` are `props.size.unwrap_or(ButtonSize::Md)`, still
   the enum, and a default outside the union is refused
   ([FV0322](crate::guide::error_codes#fv0322)); `v-if="size"` narrows it to the variant;
-- a `computed` that returns the value as it is (`computed(() => props.size)`) holds the enum;
+- a `computed` that returns the value as it is (`computed(() => props.size)`) holds the enum, and
+  so does one annotated as the union (`computed((): Size => (wide ? "lg" : "md"))`) whose body gives
+  members of it;
 - handed to a child's prop of the same union, the enum is copied; to one of another union that holds
   all its members, a `match` maps one to the other; to a `string` prop, it is `as_str()`. A literal of
   the union, a `?:` of members, a lookup table's value and a `computed` typed as the union reach a
@@ -211,7 +244,10 @@ it better, the compiler uses the enum:
 - a `v-for` item of a list of the union is the enum, so a child's union prop, a lookup table and
   `===` read the variant; the list handed to a child's list of the same union is copied, and
   `.join()`, `.includes()`, `.length`, `.filter()`, `.map()` and the other list methods read its
-  items' strings.
+  items' strings. A `.filter()` of it, a `.map()` whose arrow gives a value of a union, held in a
+  `computed` or not, and an array literal of members (`[tone, "calm"]`) reach a child's list of a
+  union, or an object literal's, as a `Vec` of its enum, each item converted by a `match` over
+  variants.
 
 A string the Rust caller holds as a string where the render needs a union's enum, such as a value of
 a `Record<string, Size>`, a field of a store's state or a prop of a single literal handed to a
@@ -226,11 +262,15 @@ members it holds, a lookup table's value, or a `?:` or `??` of these, each turne
 `match` over variants that names every one: `ref<Choice>(props.pick ?? "")` is
 `props.pick.map(|v| match v { Tone::Calm => Choice::Calm, … }).unwrap_or(Choice::Empty)`. Any
 other value keeps the `ref` a string, checked against its annotation as the next paragraph says,
-and so does a union whose literals give a variant no name. Either way the `ref` holds the members
+and so does a union one of whose literals gives a variant no name. A literal of a string `enum`
+takes its member's name (`Mark.Bang = "'!"` is the variant `Bang` of `ref<Mark | "">`), and a
+string the template hands a child's union prop is parsed into its enum as the component renders. Either way the `ref` holds the members
 of its annotation, which may be more than the value it starts with holds:
 `ref<Tone | "">(props.tone)` starts from a member of `Tone` and compares with `""` as with any
 member, and `ref<Tone | "" | undefined>(props.tone)` holds the enum of `Tone | ""` when
-`props.tone` is required. A `ref` is the server's own, and the island's JSON holds the props it
+`props.tone` is required, and `ref<Tone | "" | undefined>(props.tone)` holds an `Option` of it
+when `props.tone` is optional: `||`, `?:`, `=== ""` and `v-if` read it through one `match` over
+`Some` of each variant and `None`. A `ref` is the server's own, and the island's JSON holds the props it
 starts from. A `ref`, a constant, a `computed` or a function whose annotation is `string`
 (`function label(): string { return props.tone; }`) holds a string of the value, which compares
 with any string.
@@ -836,9 +876,18 @@ let class = match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg =>
 # assert_eq!(class, "p-2");
 ```
 
-A key of a union of string literals is its enum, so the `match` names every variant. A key the
-compiler holds as a string (a `computed` that builds it, a `?:` of literals) is matched as a string,
-and so is an integer union.
+A key may also be built from such a value by `.toUpperCase()`, `.toLowerCase()` or a template
+literal (`ICONS[kind.toUpperCase()]`, `` LABELS[`size-${size}`] ``): each member is mapped as
+JavaScript maps it when compiling, and the `match` is over the value's members. A constant number,
+declared in the component or imported, reads the key JavaScript writes for it (`O[0.5]` is
+`O["0.5"]`, `O[1e21]` is `O["1e+21"]`). A key built from a string of any value, or from two unions
+in one template literal, is refused ([FV0222](crate::guide::error_codes#fv0222)).
+
+A key of a union of string literals is its enum, so the `match` names every variant. So does a key
+built from one by `||`, `?:` or `&&` (`NEXT[tone || "calm"]`): the `match` is over the variants of
+the enum it is made from, each arm the value the key reads there, and a `?:` of literals reads the
+table in each branch. A key the compiler holds as a string (a `computed` that builds it without an
+annotation) is matched as a string, and so is an integer union.
 
 A table whose values are members of a union (`Record<Tone, Tone>`, `Partial<Record<Tone, Tone>>`,
 or an untyped table of its literals) reaches a child's union prop, an object literal's union field
@@ -864,7 +913,8 @@ let next = match tone { Tone::Calm => Tone::Loud, Tone::Loud => Tone::Quiet, Ton
 A table typed with a `type` alias or an `enum` for its values holds the alias's enum, written once
 to `types.rs` for a `.ts` file, so `NEXT[tone] === "loud"` and another table read by it,
 `LABEL[NEXT[tone]]`, compare and match its variants too. A value outside that union is refused
-([FV0228](crate::guide::error_codes#fv0228)), as TypeScript refuses it.
+([FV0228](crate::guide::error_codes#fv0228)), as TypeScript refuses it, whether the table is typed
+with `Record` directly or through a `type` alias of its own (`type Next = Record<Tone, Tone>`).
 
 Each member reads the value the object holds for it: a string, a number, a boolean, `null`, a list
 of them, or an object read on by field (`THEME[tone].fg`, `THEME[tone].weight`). The values of

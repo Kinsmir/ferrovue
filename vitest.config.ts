@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vitest/config";
@@ -8,7 +8,7 @@ const conformance = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/confo
 };
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
   css: { modules: { generateScopedName: conformance.cssModules.generateScopedName } },
   resolve: { alias: [{ find: /^ferrovue$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
   test: {

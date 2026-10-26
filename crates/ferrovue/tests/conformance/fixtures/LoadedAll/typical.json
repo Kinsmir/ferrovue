@@ -1,0 +1,13 @@
+{
+  "term": "rust",
+  "page": 1,
+  "exact": true,
+  "query": { "term": "vue", "page": 2, "lang": "en" },
+  "$loads": {
+    "[\"loadHits\",{\"exact\":true,\"lang\":null,\"page\":1,\"term\":\"rust\"}]": ["one", "two"],
+    "[\"loadTotal\",{\"lang\":\"en\",\"page\":2,\"term\":\"vue\"}]": 12,
+    "[\"loadArticle\",\"rust\"]": { "title": "T", "tags": [], "author": null },
+    "[\"loadViews\"]": 3,
+    "[\"loadTotal\",{\"lang\":\"en\",\"page\":2,\"term\":\"vue\"},2]": 24
+  }
+}

@@ -1,5 +1,6 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, BOOL, enumOf, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
 import { GenError } from "./errors.ts";
+import { enumItemVal, enumListVal } from "./enums.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
@@ -66,6 +67,14 @@ export function items(v: Val): string {
   return `${atom(v.code)}.iter().copied()`;
 }
 
+function enumSource(list: Val): { iter: string; def: EnumDef } | null {
+  const of = list.ty.k === "list" ? list.ty.of : undefined;
+  if (of === undefined || of.k === "opt") return null;
+  if (list.variants?.of === list.code) return { iter: list.variants.iter, def: list.variants.def };
+  if (list.enums !== undefined && list.iter !== undefined && list.iter === enumListVal(list.enums.place, list.ty, list.enums.def).iter) return { iter: `${atom(list.enums.place)}.iter().copied()`, def: list.enums.def };
+  return null;
+}
+
 export function computed(iter: string, of: Ty, lone?: boolean): Val {
   return { code: `${iter}.collect::<Vec<_>>()`, ty: { k: "list", of }, iter, ...(lone ? { lone } : {}) };
 }
@@ -114,7 +123,7 @@ export function itemVal(of: Ty, param: string, byRef: boolean, lone?: boolean): 
   return { code, ty: of, ...(lone ? { lone } : {}) };
 }
 
-export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: string, body: (inner: Scope) => string): { closure: string; enumerate: boolean } {
+export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method: string, body: (inner: Scope) => string, itemOf?: (param: string) => Val): { closure: string; enumerate: boolean } {
   const comp = s.comp;
   if (fn?.type !== "ArrowFunctionExpression" || fn.async || fn.params.length > 2) {
     fail(comp, "FV0805", `\`.${method}()\` takes an arrow function of the item, and of its index: \`x => …\`, \`(x, i) => …\`, or \`Boolean\``, fn);
@@ -123,7 +132,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   if (index && index.type !== "Identifier") fail(comp, "FV0807", "an arrow function's index is a plain name", index);
   const p = fresh(of.k === "str" ? "s" : "a", item?.type === "Identifier" ? jsHint(item.name) : "item");
   const i = fresh("i", index ? jsHint(index.name) : "index");
-  const v = itemVal(of, p, byRef, list.lone);
+  const v = itemOf?.(p) ?? itemVal(of, p, byRef, list.lone);
   const locals = new Map(s.locals);
   const bound: string[] = [];
   if (item?.type === "Identifier") {
@@ -723,7 +732,11 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
   switch (method) {
     case "filter": {
       const { closure, enumerate } = arrow(s, fn, target, of, true, method, (inner) => cond(inner, fn.body));
-      return computed(enumerate ? `${it}.enumerate().filter(${closure}).map(|(_, v)| v)` : `${it}.filter(${closure})`, of, target.lone);
+      const made = computed(enumerate ? `${it}.enumerate().filter(${closure}).map(|(_, v)| v)` : `${it}.filter(${closure})`, of, target.lone);
+      const src = enumSource(target);
+      if (src === null) return made;
+      const kept = arrow(s, fn, target, of, true, method, (inner) => cond(inner, fn.body), (p) => enumItemVal(`*${p}`, of, src.def));
+      return { ...made, variants: { of: made.code, iter: kept.enumerate ? `${src.iter}.enumerate().filter(${kept.closure}).map(|(_, v)| v)` : `${src.iter}.filter(${kept.closure})`, def: src.def } };
     }
     case "map": {
       let out: Val | undefined;
@@ -731,12 +744,32 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
       const body = returns && fn.body ? typedBy(fn.body, returns) : fn.body;
       const { closure, enumerate } = arrow(s, fn, target, of, false, method, (inner) => {
         out = expr({ ...inner, mapping: true }, body);
-        if (out.ty.k === "int" && out.f64 !== undefined && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
+        if (out.ty.k === "int" && out.f64 !== undefined && (out.num === undefined || Object.is(out.num, -0)) && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
         return mapped(inner, out, fn.body);
       });
       const each = !enumerate && /^\|(\w+)\| \1$/.test(closure) ? it : `${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`;
       if (out!.owned) return { code: `${each}.collect::<Vec<_>>()`, ty: { k: "list", of: out!.ty }, owned: true, ...(out!.lone ? { lone: true } : {}) };
-      return computed(each, out!.ty, out!.lone);
+      const made = computed(each, out!.ty, out!.lone);
+      const src = enumSource(target);
+      if (out!.ty.k !== "str" || (src === null && out!.variant === undefined)) return made;
+      let def: EnumDef | undefined;
+      const variants = arrow(
+        s,
+        fn,
+        target,
+        of,
+        false,
+        method,
+        (inner) => {
+          const v = expr({ ...inner, mapping: true }, body);
+          if (v.variant !== undefined && v.ty.k !== "opt") def = enumOf(v.ty);
+          return bare(def === undefined ? "()" : v.variant!);
+        },
+        src === null ? undefined : (p) => enumItemVal(p, of, src.def),
+      );
+      const from = src === null ? it : src.iter;
+      const iter = !variants.enumerate && /^\|(\w+)\| \1$/.test(variants.closure) ? from : `${from}${variants.enumerate ? ".enumerate()" : ""}.map(${variants.closure})`;
+      return def === undefined ? made : { ...made, variants: { of: made.code, iter, def } };
     }
     case "some":
     case "every": {

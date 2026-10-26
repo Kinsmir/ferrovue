@@ -170,6 +170,42 @@ assert!(iso.ends_with('Z'));
 assert!(ferrovue::date::JsDate::now().is_valid());
 ```
 
+## Relative time
+
+"3 hours ago" depends on when the page is rendered, so the component takes the moment as a prop and
+computes the rest, as the conformance suite's `RelativeTime` does:
+
+```ts
+// text.ts
+export function relativeTime(now: Date, then: Date): string {
+  const seconds = Math.round((now.getTime() - then.getTime()) / 1000);
+  if (Number.isNaN(seconds)) return "at an unknown time";
+  if (seconds < 0) return "in the future";
+  if (seconds < 45) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  const days = Math.round(hours / 24);
+  return days === 1 ? "yesterday" : `${days} days ago`;
+}
+```
+
+```vue
+<script setup lang="ts">
+import { relativeTime } from "./text";
+defineProps<{ now: Date; then: Date }>();
+</script>
+
+<template>
+  <time>{{ relativeTime(now, then) }}</time>
+</template>
+```
+
+The server passes [`JsDate::now()`](crate::date::JsDate::now) as `now`, and the island's props carry
+it, so the browser hydrates with the moment the server rendered, and the text matches. To keep it
+current after that, the browser updates `now` on a timer once the island is mounted.
+
 # Date props
 
 A prop the component types `Date` is a date the server hands it whole. It may be optional

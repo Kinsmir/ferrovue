@@ -10,7 +10,7 @@ import type { ResolvedConfig } from 'vite';
 // @public
 export function cssModulesMismatch(root: string, css: ResolvedConfig["css"] | undefined, cwd: string, configFile?: string): string | null;
 
-// @public
+// @public (undocumented)
 function ferrovue(options?: FerrovueOptions): Plugin_2;
 export default ferrovue;
 

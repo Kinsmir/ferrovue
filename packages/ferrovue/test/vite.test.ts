@@ -420,3 +420,22 @@ it("says what is missing when `ferrovue/routes` is imported without the plugin",
 it("says what is missing when `ferrovue/islands` is imported without the plugin", async () => {
   await expect(import("../src/islands.ts")).rejects.toThrow(/written by the Vite plugin: add `ferrovue\(\)` from `ferrovue\/vite`/);
 });
+
+it("builds a component whose props type is imported from a `.ts` file, giving plugin-vue a file system to read it", async () => {
+  writeFileSync(join(root, "components", "props.ts"), "export interface HelloProps { name: string; on?: boolean }\n");
+  writeFileSync(join(root, "components", "Hello.vue"), good.replace("defineProps<{ name: string }>();", 'import type { HelloProps } from "./props";\ndefineProps<HelloProps>();'));
+  writeFileSync(join(root, "main.ts"), 'import Hello from "./components/Hello.vue";\nObject.assign(globalThis, { Hello });\n');
+  const built = (plugins: Parameters<typeof build>[0] extends infer C ? (C extends { plugins?: infer P } ? P : never) : never) =>
+    build({ root, configFile: false, logLevel: "silent", plugins, build: { write: false, rolldownOptions: { input: join(root, "main.ts"), external: ["vue"] } } });
+  await expect(built([vuePlugin()])).rejects.toThrow(/No fs option provided to `compileScript`/);
+  const out = (await built([vuePlugin(), ferrovue({ root })])) as Rolldown.RolldownOutput;
+  const code = out.output.filter((o): o is Rolldown.OutputChunk => o.type === "chunk").map((c) => c.code).join("\n");
+  expect(code).toMatch(/on:\{type:Boolean/);
+});
+
+it("keeps a file system plugin-vue's options already name", () => {
+  const fs = { fileExists: () => false, readFile: () => undefined };
+  const vue = vuePlugin({ script: { fs } });
+  (ferrovue({ root }).configResolved as (c: unknown) => void)({ root, plugins: [vue], resolve: { alias: [] }, css: {}, command: "build", isProduction: true });
+  expect((vue.api as { options: { script: { fs: unknown } } }).options.script.fs).toBe(fs);
+});

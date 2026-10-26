@@ -1,4 +1,4 @@
-import { type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, keptLiterals, literalTy, nothing, rustStr, STR, UNDEF, unionStr } from "./model.ts";
+import { type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, keptLiterals, literalsOf, literalTy, nothing, rustStr, STR, UNDEF, unionStr, variantPath } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ownKeyTest, pickPresent } from "./constants.ts";
 import { isObjectCall } from "./calls.ts";
@@ -176,6 +176,8 @@ export interface Presence {
   negated: boolean;
   truthy: boolean;
   variant?: true;
+  /** For an optional value of a generated enum, the Rust expression of the `Option` the test reads. */
+  source?: { code: string; def: EnumDef };
 }
 
 export function presence(s: Scope, n: N): Presence | null {
@@ -224,8 +226,10 @@ export function presence(s: Scope, n: N): Presence | null {
   const of: Ty = v.ty.of;
   const def = v.variant !== undefined ? enumOf(v.ty) : undefined;
   if (def !== undefined) {
-    const option = byTruth && def.literals.includes("") ? `${atom(v.variant!)}.filter(|v| !${unionStr("*v")}.is_empty())` : v.variant!;
-    return { path, of, negated, truthy: byTruth, option, present: `${atom(option)}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}`, variant: true };
+    const empty = byTruth && (literalsOf(of) ?? def.literals).includes("");
+    const option = empty ? `${atom(v.variant!)}.filter(|v| *v != ${variantPath(s.comp, def, "")})` : v.variant!;
+    const kept = empty ? keptLiterals(of, (l) => l !== "") : of;
+    return { path, of: kept, negated, truthy: byTruth, option, present: `${atom(option)}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}`, variant: true, source: { code: v.variant!, def } };
   }
   const scalar = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
   const filtered = byTruth && scalar;
@@ -248,7 +252,7 @@ function ownKeyPresence(s: Scope, call: N, negated: boolean): Presence | null {
  * string literal, either way round, or by its truth, and by `!` of either, with the path it
  * narrows, the value the path holds and whether the test holds for a literal. Null when `n`
  * tests no such value, or, unless `always`, when it narrows none. */
-export function literalNarrowing(s: Scope, n: N, always = false): { yes: Scope; no: Scope; path: string; v: Val; holds: (literal: string | number) => boolean } | null {
+export function literalNarrowing(s: Scope, n: N, always = false): { yes: Scope; no: Scope; path: string; v: Val; holds: (literal: string | number) => boolean; absent: boolean } | null {
   let test = unparenthesized(n);
   let negated = false;
   while (test.type === "UnaryExpression" && test.operator === "!") {
@@ -280,7 +284,7 @@ export function literalNarrowing(s: Scope, n: N, always = false): { yes: Scope; 
   };
   const [yes, no] = [narrowed(holds), narrowed((l) => !holds(l))];
   if (yes === s && no === s && !always) return null;
-  return negated ? { yes: no, no: yes, path, v, holds: (l) => !holds(l) } : { yes, no, path, v, holds };
+  return negated ? { yes: no, no: yes, path, v, holds: (l) => !holds(l), absent: true } : { yes, no, path, v, holds, absent: false };
 }
 
 export function narrowTo(s: Scope, p: Presence, name: string): Scope {

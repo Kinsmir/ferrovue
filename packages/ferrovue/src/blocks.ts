@@ -1,5 +1,6 @@
 import { type Component, type Fn, type N, type Scope, type Val, fail, nothing, UNION_STR, unionStr } from "./model.ts";
 import { GenError } from "./errors.ts";
+import { enumListVal } from "./enums.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
 import { expr, typedBy } from "./expr.ts";
@@ -35,6 +36,10 @@ export function bindingOf(v: Val): { init: string; read: (at: string) => Val; ow
   if (v.variant !== undefined) {
     const optional = v.ty.k === "opt";
     return { init: bare(v.variant), read: (at) => ({ code: optional ? `${at}.map(${UNION_STR})` : unionStr(at), ty: v.ty, variant: at, ...lone }), owned: false };
+  }
+  if (v.variants?.of === v.code && v.ty.k === "list") {
+    const { def } = v.variants;
+    return { init: `${v.variants.iter}.collect::<Vec<_>>()`, read: (at) => ({ ...enumListVal(at, v.ty, def), ...lone }), owned: true };
   }
   if (v.owned) return { init: bare(v.code), read: (at) => ({ code: v.ty.k === "opt" ? `${at}.as_ref()` : at, ty: v.ty, ...lone }), owned: true };
   if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }), owned: false };

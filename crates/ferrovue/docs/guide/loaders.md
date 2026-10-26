@@ -64,7 +64,10 @@ A loader's name, the first argument of `defineLoader`, is its name in Rust and i
 page's payload, so it is unique in the project. The result may be destructured into plain names
 (`const { title, tags } = await loadPost(props.slug)`), and a component may await several loaders,
 one after the other, each call's arguments read from the props, from constants, from `computed`s
-and from the results awaited before it.
+and from the results awaited before it. `await Promise.all([loadPost(slug), loadViews(slug)])`
+awaits several at once, its results bound to an array of names (`const [post, views] = …`): the
+render asks for every call of the array before it stops where one result is missing, so the app
+runs them together, as Vue's server does.
 
 # The Rust side
 
@@ -381,7 +384,13 @@ A call's key is `JSON.stringify([name, ...args])`, which the client computes fro
 `loadPost("ferrovue", undefined)` are one call; `null` is always written. A loader takes strings,
 numbers (`Float` for a fractional one) and booleans, which may be optional (`lang?: string`, an
 `Option` that is left out when `None`) or `null` (`lang: string | null`, written as `null` when
-`None`), so that both sides write the same key.
+`None`), so that both sides write the same key. A parameter may also be an interface of a `.ts`
+file whose fields are such values (`loadFound(query: Query)`): the call passes an object literal of
+its fields or a value of the interface, the `loaders` module holds it as a struct of its own
+(`LoadFoundQuery`), and the key writes its fields with their names sorted, as `JSON.stringify`
+writes an object whose keys are sorted, leaving out an optional one that is absent:
+`loadFound({ term: "vue", lang: null })` is `["loadFound",{"lang":null,"term":"vue"}]`, whatever
+order the literal gives its keys.
 
 A loader's result is its `Output`: the type its `Promise<T>` names, translated as a prop's type is
 (see [`props`](crate::guide::props)), with `'static` lifetimes, since the result outlives the call.

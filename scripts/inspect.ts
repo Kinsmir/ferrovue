@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
@@ -14,7 +14,8 @@ const name = basename(file, ".vue");
 const source = readFileSync(file, "utf8");
 
 const { descriptor } = parse(source, { filename: file });
-const script = descriptor.script || descriptor.scriptSetup ? compileScript(descriptor, { id: name }) : null;
+const fs = { fileExists: existsSync, readFile: (f: string): string => readFileSync(f, "utf8"), realpath: realpathSync };
+const script = descriptor.script || descriptor.scriptSetup ? compileScript(descriptor, { id: name, fs }) : null;
 const scopeId = descriptor.styles.some((st) => st.scoped)
   ? `data-v-${createHash("sha256").update(`c/${name}.vue${source}`).digest("hex").slice(0, 8)}`
   : undefined;

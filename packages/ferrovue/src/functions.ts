@@ -149,7 +149,9 @@ export function callFunction(s: Scope, name: string, fn: Fn, args: N[], n: N): V
   const home = fn.file === null ? undefined : fn.home;
   const given = args.map((a, i) => {
     const t = annotation(params[i]);
-    return expr(s, t ? typedBy(a, t, true, home) : a);
+    const v = expr(s, t ? typedBy(a, t, true, home) : a);
+    const want = t ? returnTy(fn.home, t) : null;
+    return want ? annotatedStr(v, want) : v;
   });
   const names = given.map(() => `arg#${++temps}`);
   const cs = calleeScope(s, fn);

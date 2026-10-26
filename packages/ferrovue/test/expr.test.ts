@@ -138,9 +138,9 @@ describe("names the server cannot evaluate", () => {
       "<p>{{ y }}</p>",
       "FV0710 a regular expression in setup, which the server does not run (setup reads it as `x` at components/X.vue:3:11) (the template reads it as `y` at components/X.vue:5:17)",
     ],
-    ["a regular expression in a `computed`", "import { computed } from 'vue';\nconst c = computed(() => /a/.test('a'));", "<p>{{ c }}</p>", "FV0710 a regular expression in a `computed`, which the server does not run (the template reads it as `c` at components/X.vue:5:17)"],
-    ["a regular expression in a function", "function f() { return /a/.test('a'); }", "<p>{{ f() }}</p>", "FV0710 a regular expression in a function, which the server does not run (in `f()`, called at components/X.vue:4:17)"],
-    ["a regular expression in a template", "", "<p>{{ /a/.test('a') }}</p>", "FV0710 a regular expression in a template, which the server does not run"],
+    ["a regular expression in a `computed`", "import { computed } from 'vue';\nconst c = computed(() => /a/.exec('a'));", "<p>{{ c }}</p>", "FV0710 a regular expression in a `computed`, which the server does not run (the template reads it as `c` at components/X.vue:5:17)"],
+    ["a regular expression in a function", "function f() { return /a/.exec('a'); }", "<p>{{ f() }}</p>", "FV0710 a regular expression in a function, which the server does not run (in `f()`, called at components/X.vue:4:17)"],
+    ["a regular expression in a template", "", "<p>{{ /a/.exec('a') }}</p>", "FV0710 a regular expression in a template, which the server does not run"],
     ["a class in a `computed`", "import { computed } from 'vue';\nconst c = computed(() => class {});", "<p>{{ c }}</p>", "FV0625 a class is not supported in a `computed` (the template reads it as `c` at components/X.vue:5:17)"],
     ["a class in a function", "function f() { return class {}; }", "<p>{{ f() }}</p>", "FV0625 a class is not supported in a function (in `f()`, called at components/X.vue:4:17)"],
     ["a class in setup", "const c = class {};", "<p>{{ c }}</p>", "FV0625 a class is not supported in setup (the template reads it as `c` at components/X.vue:4:17)"],
@@ -419,8 +419,9 @@ describe("items read by `[…]`", () => {
     });
   }
 
-  it("refuses `[…]` of an object", () => {
-    expect(refusals("interface C { a: string }\ndefineProps<{ c: C }>();", "<p>{{ c['a'] }}</p>")).toEqual(["FV0612 computed member access of an object: `[…]` reads an item of a list, by an integer index"]);
+  it("reads a field of an object by a literal key, and refuses a key of another kind", () => {
+    expect(render("interface C { a: string }\ndefineProps<{ c: C; k: string }>();", "<p>{{ c['a'] }}</p>")).toMatch(like("fv::core::escape_into(out, &props.c.a);"));
+    expect(refusals("interface C { a: string }\ndefineProps<{ c: C; k: string }>();", "<p>{{ c[k] }}</p>")).toEqual(["FV0612 computed member access of an object: `[…]` reads an item of a list, by an integer index"]);
   });
 });
 
@@ -587,12 +588,14 @@ describe("array literals", () => {
     expect(loop("b: boolean", "[b, true]")).toMatch(like("for x_ref in [props.b, true].iter() {"));
     expect(loop("n: number", "[n, 2]")).toMatch(like("for x_ref in [props.n, 2i64].iter() {"));
     expect(loop("n: number", "[n / 2, 1.5]")).toMatch(like("for x_ref in [props.n as f64 / 2.0, 1.5f64].iter() {"));
+    expect(loop("n: number", "[n, 1.5]")).toMatch(like("for x_ref in [props.n as f64, 1.5f64].iter() {"));
+    expect(loop("s: string[]", "s.map(() => -1).flatMap((b) => [b, 10 * 0, 0.5])")).toMatch(like("[fv_b as f64, 0.0f64, 0.5f64]"));
+    expect(loop("s: string[]", "s.map(() => -1)")).toMatch(like(".map(|_| -1i64)"));
     expect(loop("l: string[]", "[...l, 'a']")).toMatch(like('for x_cow in props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain([std::borrow::Cow::<str>::Borrowed("a")]) {'));
   });
 
   const one = "FV0611 an array literal holds strings, numbers or booleans, all of one type";
   const refused: [string, string, string][] = [
-    ["n: number", "[n, 1.5]", one],
     ["s: string; n: number", "[s, n]", one],
     ["s: string; b: boolean", "[b, s]", one],
     ["s?: string", "[s]", one],
@@ -774,7 +777,7 @@ describe("values built from object literals in place", () => {
   it("builds a list of a union's members as a list of its enum, and reads it", () => {
     const script = 'type Tone = "calm" | "loud";\ninterface Mix { tones: Tone[] }\nconst props = defineProps<{ t: Tone }>();\nfunction mix(): Mix { return { tones: [props.t, "loud"] }; }';
     expect(render(script, '<p>{{ mix().tones.join(",") }}</p>')).toMatch(like(
-      'fv::core::escape_into(out, &((Mix { tones: [fv::props::Union::as_str(props.t), "loud"].iter().map(|v| match &**v { "calm" => Tone::Calm, _ => Tone::Loud }).collect() }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));',
+      'fv::core::escape_into(out, &((Mix { tones: vec![props.t, Tone::Loud] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));',
     ));
   });
 
@@ -828,10 +831,12 @@ describe("`||`, `??` and `?:` of strings, numbers and booleans", () => {
     ["t || 'x'", "fv::core::escape_into(out, { let a = &*props.t; if !a.is_empty() { a } else { \"x\" } });"],
     ["m || 1", "fv::core::push_int(out, { let a = props.m; if a != 0 { a } else { 1i64 } });"],
     ["t || undefined", "if let Some(v) = Some(&*props.t).filter(|v| !v.is_empty()) {"],
-    ["s || t", "FV0617 `||` between these types"],
-    ["s || 'x'", "FV0617 `||` between these types"],
-    ["n || m", "FV0617 `||` between these types"],
-    ["n || 0", "FV0617 `||` between these types"],
+    ["s || t", "fv::core::escape_into(out, props.s.as_deref().filter(|v| !v.is_empty()).unwrap_or(&props.t));"],
+    ["s || 'x'", "fv::core::escape_into(out, props.s.as_deref().filter(|v| !v.is_empty()).unwrap_or(\"x\"));"],
+    ["n || m", "fv::core::push_int(out, props.n.filter(|v| *v != 0).unwrap_or(props.m));"],
+    ["n || 0", "fv::core::push_int(out, props.n.filter(|v| *v != 0).unwrap_or(0i64));"],
+    ["e || 'b'", "fv::core::escape_into(out, if let Some(n1) = props.e { fv::props::Union::as_str(n1) } else { \"b\" });"],
+    ["(b || c) === true", "out.push_str(if props.b.unwrap_or(false) || props.c { \"true\" } else { \"false\" });"],
     ["(ns ?? [1]).length", "fv::core::push_int(out, (if let Some(n1) = props.ns.as_ref() { n1.to_vec() } else { [1i64].to_vec() }).len() as i64);"],
     ["e ?? 'z'", "fv::core::escape_into(out, props.e.map(fv::props::Union::as_str).unwrap_or(\"z\"));"],
     ["s ?? t", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(&*props.t));"],
@@ -1086,6 +1091,80 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).not.toContain("_ => super::t::TT::");
     expect(out).toMatch(like("t: Some(props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }).unwrap_or(match props.other {"));
     expect(out).toMatch(like("t: if props.on { props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }) } else { None }"));
+  });
+
+  it("reads a `?:` whose test is known when compiling as the type of both branches, where a member of a union and a string are compared with a literal outside the union", () => {
+    const out = render('defineProps<{ t: "a&b" | "md"; s: string }>();', `<p>{{ (Number.isNaN(1.5) ? s : t) !== '-' }}|{{ (Number.isNaN(1) ? 'x' : t) === 'x' }}</p>`);
+    expect(out).toMatch(like('out.push_str(if fv::props::Union::as_str(props.t) != "-" { "true" } else { "false" });'));
+    expect(out).toMatch(like('out.push_str(if fv::props::Union::as_str(props.t) == "x" { "true" } else { "false" });'));
+  });
+
+  it("holds a `computed` annotated as a union as its enum, so a child's union prop takes it with no `_` arm", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
+    const out = render(
+      'import { computed } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ on: boolean; n: number; tone: Tone }>();\nconst a = computed((): Tone => (props.on ? "loud" : "calm"));\nconst b = computed((): Tone => { if (props.n > 2) return "quiet"; return props.on ? "calm" : "loud"; });\nconst c = computed<Tone>(() => (props.on ? "calm" : props.tone));',
+      '<T :t="a" /><T :t="b" /><T :t="c" />{{ a }}',
+      child,
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("let s_a = if props.on { Tone::Loud } else { Tone::Calm };"));
+    expect(out).toMatch(like("let s_b = if props.n as f64 > 2.0 { Tone::Quiet } else { if props.on { Tone::Calm } else { Tone::Loud } };"));
+    expect(out).toMatch(like("let s_c = if props.on { Tone::Calm } else { props.tone };"));
+    expect(out).toMatch(like("t: match s_a { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }"));
+    expect(out).toMatch(like("fv::core::escape_into(out, fv::props::Union::as_str(s_a));"));
+  });
+
+  it("hands a child's list of a union a `.map()`, a `.filter()` and an array literal of its values as lists of enums", () => {
+    const files = {
+      "T.vue": sfc('defineProps<{ ts: ("calm" | "loud" | "quiet")[] }>();', "<b>{{ ts.join() }}</b>"),
+      "tones.ts": 'export type Tone = "calm" | "loud" | "quiet";\nexport interface Row { name: string; tone: Tone }\nexport interface Card { tones: Tone[] }\n',
+      "C.vue": sfc('import type { Card } from "./tones";\ndefineProps<{ card: Card }>();', "<b>{{ card.tones.join() }}</b>"),
+    };
+    const out = render(
+      'import { computed } from "vue";\nimport T from "./T.vue";\nimport C from "./C.vue";\nimport type { Row, Tone } from "./tones";\nconst props = defineProps<{ rows: Row[]; tones: Tone[]; tone: Tone }>();\nconst loud = computed(() => props.tones.filter((t) => t !== "calm"));',
+      `<T :ts="rows.map((r) => r.tone)" /><T :ts="tones.map((t) => t)" /><T :ts="loud" /><T :ts="[tone, 'calm']" /><C :card="{ tones: [tone, 'quiet'] }" />`,
+      { files },
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("ts: props.rows.iter().map(|fv_r| fv_r.tone).map(|v| match v { super::types::Tone::Calm => super::t::TTs::Calm, super::types::Tone::Loud => super::t::TTs::Loud, super::types::Tone::Quiet => super::t::TTs::Quiet }).collect()"));
+    expect(out).toMatch(like("let s_loud = props.tones.iter().copied().filter(|fv_t| *fv_t != super::types::Tone::Calm).collect::<Vec<_>>();"));
+    expect(out).toMatch(like("card: super::types::Card { tones: vec![props.tone, super::types::Tone::Quiet] }"));
+  });
+
+  it("reads an optional `ref` of a union through `match`es over `Some` of each variant and `None`", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" }>();', "<b>{{ t }}</b>") } };
+    const out = render(
+      'import { ref } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud";\nconst props = defineProps<{ start?: Tone }>();\nconst m = ref<Tone | "" | undefined>(props.start);',
+      `<T :t="m || 'loud'" /><T :t="m ? m : 'calm'" /><T v-if="m" :t="m" /><i v-if="m === ''">e</i><T v-else-if="m !== undefined" :t="m" />`,
+      child,
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("t: match s_m { Some(XM::Calm) => super::t::TT::Calm, Some(XM::Loud) | Some(XM::Empty) | None => super::t::TT::Loud }"));
+    expect(out).toMatch(like("t: match s_m { Some(XM::Calm) | Some(XM::Empty) | None => super::t::TT::Calm, Some(XM::Loud) => super::t::TT::Loud }"));
+    expect(out).toMatch(like("if let Some(n1) = match s_m { Some(XM::Calm) => Some(super::t::TT::Calm), Some(XM::Loud) => Some(super::t::TT::Loud), Some(XM::Empty) | None => None } {"));
+    expect(out.match(/Some\(XM::Empty\) \| None => None/g)).toHaveLength(2);
+  });
+
+  it("hands a function's `string` parameter a value of a union's enum as its string, which compares with any literal", () => {
+    const out = render(
+      'import { computed } from "vue";\nconst props = defineProps<{ on: boolean }>();\nconst t = computed((): "sm" | "md" => (props.on ? "sm" : "md"));\nfunction odd(s: string): boolean { return s === "ß"; }',
+      "<p>{{ odd(t) }}</p>",
+    );
+    expect(out).toMatch(like('let n1 = fv::props::Union::as_str(s_t);'));
+    expect(out).toMatch(like('n1 == "ß"'));
+  });
+
+  it("reads a table by a key built with `||` or `?:` through one `match` over the enum the key is made from", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
+    const out = render(
+      'import { ref } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ start?: Tone; on: boolean }>();\nconst tone = ref<Tone | "">(props.start ?? "");\nconst NEXT: Record<Tone, Tone> = { calm: "loud", loud: "quiet", quiet: "calm" };\nconst PAD = { calm: "p-1", loud: "p-2", quiet: "p-3" } as const;',
+      `<T :t="NEXT[tone || 'calm']" /><T :t="NEXT[on ? 'loud' : 'quiet']" />{{ PAD[tone || 'loud'] }}`,
+      child,
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("t: match s_tone { XTone::Calm | XTone::Empty => super::t::TT::Loud, XTone::Loud => super::t::TT::Quiet, XTone::Quiet => super::t::TT::Calm }"));
+    expect(out).toMatch(like("t: if props.on { super::t::TT::Quiet } else { super::t::TT::Calm }"));
+    expect(out).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud | XTone::Empty => "p-2", XTone::Quiet => "p-3" });'));
   });
 
   it("reads the left side of `??` on its right with the type its declaration gives", () => {

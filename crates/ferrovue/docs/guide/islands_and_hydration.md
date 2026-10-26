@@ -497,6 +497,35 @@ Where the links go:
   holes filled by then, and a hole's parts name themselves with [`Part::name`](crate::page::Part::name).
   Keep one `Preloads` for the page so nothing is linked twice.
 
+# The page shell
+
+[`Document`](crate::page::Document) writes the page around a render written at once: the doctype,
+`<html>` and `<body>` with the attributes the [`Head`](crate::head::Head) gives them, the head's tags,
+a `modulepreload` for each chunk the entry imports and the islands need, and the entry's
+`<script type="module">` at the end of `<body>`:
+
+```rust
+# let manifest = r#"{ "client/main.ts": { "file": "assets/main.js", "isEntry": true } }"#;
+use ferrovue::head::Head;
+use ferrovue::page::{Chunks, Document};
+
+let chunks = Chunks::from_manifest(manifest, "{}")?;
+let head = Head::new();
+let body = String::from("<main>…</main>"); // the components, rendered first, pushing to `head`
+let page = Document::new(head.render())
+    .with_entry(&chunks, "client/main.ts")
+    .with_islands(&chunks, ["Counter"]) // the page's `record.island_names()`, or your own
+    .render(&body);
+assert!(page.starts_with("<!DOCTYPE html>\n<html lang=\"en\">"));
+assert!(page.ends_with("<script type=\"module\" src=\"/assets/main.js\"></script>\n</body>\n</html>\n"));
+# Ok::<(), ferrovue::page::ManifestError>(())
+```
+
+Render the components before the document: the head holds what they pushed only once they have
+rendered, including what components `defineAsyncComponent` loads push after the rest, as Vue's
+server orders it. A streamed page writes its shell itself, as [`streaming`](crate::guide::streaming)
+says, since its head goes out before its content is known.
+
 # Hydrating the whole app
 
 The other way is the ordinary Vue SSR setup: the server renders the whole page body from one root

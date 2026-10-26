@@ -8,9 +8,36 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Added
+
+- `defineProps<P>()` reads `P` imported from a `.ts` file by a relative path, an interface that extends one, or an intersection of them.
+  `ferrovue/vite` gives `@vitejs/plugin-vue` the file system to read them: [Props from a `.ts` file](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#props-from-a-ts-file).
+- Lookup tables read by a constant number of the component and by keys built from a union by `.toUpperCase()`, `.toLowerCase()` or a template literal.
+  0.12.0 refused them with FV0222: [Lookup tables](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#lookup-tables).
+- `<component :is>` of a `defineModel` typed as a union, read by its local or by its prop, and of a prop of a type imported from a `.ts` file.
+  0.12.0 refused them with FV0418: [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html).
+- A `<textarea>`, and an `<input v-model>` of a literal `type`, at a component's root where no parent passes it `value` or `type`.
+  0.12.0 refused them with FV0424: [Fallthrough attributes](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#fallthrough-attributes).
+- Prop types written in place: object types, mapped types and `Record`s over a union of names, and indexed types (`Card["size"]`).
+  0.12.0 refused them with FV0310, FV0313 and FV0316; tuples stay refused: [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
+- Loaders awaited together by `Promise.all`, and loader parameters typed as an interface, written into the key with sorted keys.
+  Generated code is version 7, which the 0.12 crate refuses; the 0.13 crate builds version 6 too: [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html).
+- `ferrovue::page::Document` writes the page shell around a render, and `ferrovue::html::splice` writes components into trusted `v-html`.
+  The guide adds a relative-time recipe: [The page shell](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#the-page-shell).
+- Regular expression literals of a subset in `.replace()`, `.replaceAll()`, `.split()` and `.test()`, matched as JavaScript matches them, run by `ferrovue::strings::JsRegex`.
+  Groups, alternation and other flags stay refused with FV0710: [Regular expressions](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#regular-expressions).
+- `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
+  0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
+
 ### Fixed
 
-- A narrowed value of a union's enum reaches a child's union prop through one `match` over its variants.
+- FV0228 checks a table typed through a `type` alias of a `Record` of a union (`const T: Table = { … }`).
+  0.12.0 refused a value outside the union only where a child's prop read it: [Lookup tables](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#lookup-tables).
+- FV0419 points at a static `is` attribute that names no HTML element, and FV0506 at an element that renders a component by `is="vue:…"`.
+  0.12.0 gave both no line: [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
+- A `?:` whose test is known when compiling, and `x + ""` of a union, compare as strings; an array literal holds integers beside `Float`s, and `.map(() => -1)` integers.
+  0.12.0 refused them with FV0637, FV0611 and FV0511: [FV0611](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0611).
+- A narrowed or optional value of a union's enum, a `computed` or a `ref` of a string `enum` and `""` annotated as the union, a table read by a key built with `||` or `?:`, and lists a `.map()`, `.filter()` or array literal builds reach a child's union prop through `match`es over variants.
   0.12.0's code matched its string with a `_` arm, or gave a variant the test rules out the last member's arm: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
 - A `ref` of a union whose starting value folds to a constant (`ref<Tone | "">(K === "x" ? "loud" : "")`) reaches a child's union prop as the variant of its member, and `""` as `Empty`.
   0.12.0 refused the member with FV0515, or FV0635 in an object literal: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).

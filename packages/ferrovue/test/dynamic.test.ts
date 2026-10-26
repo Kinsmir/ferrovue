@@ -400,10 +400,15 @@ describe("the names `<component :is>` reads, against the setup's and the props'"
     expect(refusals('const _ctx = { x: "em" };', '<component :is="x" />')).toEqual([NOT_ONE]);
   });
 
-  it("refuses the prop a model declares, whose type it does not read", () => {
-    const untyped = `FV0418 ${OPEN}; \`modelValue\` is not typed as a union of string literals, as \`"h1" | "h2"\``;
-    expect(refusals('const m = defineModel<"b" | "i">({ required: true });', '<component :is="modelValue" />')).toEqual([untyped]);
-    expect(refusals('defineProps<{ x: string }>();\nconst m = defineModel<"b" | "i">({ required: true });', '<component :is="modelValue" />')).toEqual([untyped]);
+  it("reads a model typed as a union by its local and by the prop it declares", () => {
+    for (const script of ['const m = defineModel<"b" | "i">({ required: true });', 'defineProps<{ x: string }>();\nconst m = defineModel<"b" | "i">({ required: true });']) {
+      for (const is of ["m", "modelValue"]) expect(render(script, `<component :is="${is}" />`)).toMatch(/match props\.model_value \{ XModelValue::B => "b", XModelValue::I => "i" \}/);
+    }
+    expect(render('const h = defineModel<"h1" | "h2">("h", { default: "h2" });', '<component :is="h" />')).toContain("props.h.unwrap_or(XH::H2)");
+  });
+
+  it("refuses a model that may be absent", () => {
+    expect(refusals('const m = defineModel<"b" | "i">();', '<component :is="m" />')[0]).toMatch(/^FV0420 /);
   });
 
   it("refuses a field of a store's hook", () => {

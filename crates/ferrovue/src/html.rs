@@ -970,6 +970,116 @@ pub fn trusted_into(out: &mut String, html: &impl TrustedHtml) {
     out.push_str(html.trusted_html());
 }
 
+/// Trusted HTML with components written in place of the elements that mark where they go: a
+/// [`TrustedHtml`] for `v-html`, made by [`splice`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(transparent)]
+pub struct Spliced(String);
+
+impl Spliced {
+    /// The HTML.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TrustedHtml for Spliced {
+    fn trusted_html(&self) -> &str {
+        &self.0
+    }
+}
+
+/// `html` with each element written exactly `<tag attr="value"></tag>`, with `attr` its only
+/// attribute and no content, as a sanitiser writes one it keeps, replaced by what `part` writes
+/// for its `value` (the attribute's text, its character references read). Where `part` returns
+/// `false`, the element stays as it was. Everything else is kept as it is written.
+///
+/// `part` writes HTML of its own, such as a component's [`Html`]: the result is as trusted as
+/// `html` and what `part` writes.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::html::{TrustedHtml, splice};
+///
+/// struct Cleaned(String);
+/// impl TrustedHtml for Cleaned {
+///     fn trusted_html(&self) -> &str {
+///         &self.0
+///     }
+/// }
+///
+/// let marked = Cleaned(String::from(r#"<p>Look:</p><div data-part="chart &amp; key"></div><div data-part="x"></div>"#));
+/// let spliced = splice(&marked, "data-part", |name, out| {
+///     if name != "chart & key" {
+///         return false;
+///     }
+///     out.push_str("<figure>chart</figure>");
+///     true
+/// });
+/// assert_eq!(spliced.as_str(), "<p>Look:</p><figure>chart</figure><div data-part=\"x\"></div>");
+/// ```
+#[must_use]
+pub fn splice(
+    html: &(impl TrustedHtml + ?Sized),
+    attr: &str,
+    mut part: impl FnMut(&str, &mut String) -> bool,
+) -> Spliced {
+    let html = html.trusted_html();
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(at) = rest.find('<') {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        let Some((value, len)) = marker(rest, attr) else {
+            out.push('<');
+            rest = &rest[1..];
+            continue;
+        };
+        let start = out.len();
+        if part(&value, &mut out) {
+            rest = &rest[len..];
+        } else {
+            out.truncate(start);
+            out.push_str(&rest[..len]);
+            rest = &rest[len..];
+        }
+    }
+    out.push_str(rest);
+    Spliced(out)
+}
+
+fn marker(text: &str, attr: &str) -> Option<(String, usize)> {
+    let tag_len = text[1..].find(|c: char| !c.is_ascii_alphanumeric() && c != '-')? + 1;
+    let tag = &text[1..tag_len];
+    if tag.is_empty() || !tag.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        return None;
+    }
+    let after = text[tag_len..]
+        .strip_prefix(' ')?
+        .strip_prefix(attr)?
+        .strip_prefix("=\"")?;
+    let quote = after.find('"')?;
+    let close = format!("></{tag}>");
+    let tail = after[quote + 1..].strip_prefix(close.as_str())?;
+    let value = &after[..quote];
+    if value.contains('<') {
+        return None;
+    }
+    Some((unescape(value), text.len() - tail.len()))
+}
+
+fn unescape(value: &str) -> String {
+    value
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&nbsp;", "\u{a0}")
+        .replace("&amp;", "&")
+}
+
 /// HTML cleaned by [ammonia](https://docs.rs/ammonia): a [`TrustedHtml`] for `v-html`, with the
 /// `ammonia` feature.
 ///

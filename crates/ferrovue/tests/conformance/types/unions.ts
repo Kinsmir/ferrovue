@@ -20,3 +20,8 @@ const SIDE = "ri";
 export const END = `${SIDE}ght` as const;
 
 export type Hue = "red" | "green" | "<b>&\"hue'";
+
+export interface HueSet {
+  hues: Hue[];
+  note: string;
+}

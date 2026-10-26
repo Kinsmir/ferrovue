@@ -79,8 +79,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(125 + 17 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
-    let s_m_a_x = 3i64;
+    out.reserve(120 + 17 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
     let s_shown = fv::strings::js_trim(&props.query);
     let s_total = props.items.len() as i64;
     let s_panels = &Vec::<Panel<'_>>::new();
@@ -88,9 +87,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, s_shown);
     out.push_str(" (");
     fv::core::push_int(out, s_total);
-    out.push_str(" of max ");
-    fv::core::push_int(out, s_m_a_x);
-    out.push_str(")</p>");
+    out.push_str(" of max 3)</p>");
     if s_panels.len() as i64 != 0 {
         out.push_str("<p><!--[-->");
         for fv_panel_ref in s_panels.iter() {

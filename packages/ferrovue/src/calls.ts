@@ -4,7 +4,7 @@ import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
-import { formatted, lonely, loneOf, meet, stringMethod, stringOf, stringsEqual, writesAscii } from "./strings.ts";
+import { formatted, lonely, loneOf, meet, regexTest, stringMethod, stringOf, stringsEqual, writesAscii } from "./strings.ts";
 import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
@@ -154,6 +154,7 @@ export function call(s: Scope, n: N): Val {
       const copy = expr(s, callee.object);
       if (copy.ty.k === "list") return listMethod(s, copy, method === "sort" ? "toSorted" : "toReversed", args, n)!;
     }
+    if (callee.object.type === "RegExpLiteral" && method === "test") return regexTest(s, callee.object, args, n);
     const map = callee.object.type === "Identifier" || callee.object.type === "MemberExpression" ? constOf(s, callee.object) : null;
     if (map?.sym.k === "const" && map.sym.c.k === "map") return mapCall(s, map, method, args, n);
     const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && callee.object.type === "ArrayExpression";

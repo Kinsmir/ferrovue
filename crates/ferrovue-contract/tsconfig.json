@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": []
+    "types": [],
+    "paths": {
+      "ferrovue": ["../../packages/ferrovue/src/client.ts"]
+    }
   },
   "include": ["**/*.ts"]
 }

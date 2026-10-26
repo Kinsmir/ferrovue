@@ -1,0 +1,13 @@
+{
+  "term": "</script><b>\"x\"</b>",
+  "page": -3,
+  "exact": false,
+  "query": { "term": " &<>", "page": 9007199254740991, "exact": true, "lang": "\"" },
+  "$loads": {
+    "[\"loadHits\",{\"exact\":false,\"lang\":null,\"page\":-3,\"term\":\"</script><b>\\\"x\\\"</b>\"}]": ["<i>", "</script>"],
+    "[\"loadTotal\",{\"exact\":true,\"lang\":\"\\\"\",\"page\":9007199254740991,\"term\":\" &<>\"}]": -1,
+    "[\"loadArticle\",\"</script><b>\\\"x\\\"</b>\"]": { "title": "<t>", "tags": [], "author": null },
+    "[\"loadViews\"]": 7,
+    "[\"loadTotal\",{\"exact\":true,\"lang\":\"\\\"\",\"page\":9007199254740991,\"term\":\" &<>\"},2]": 1
+  }
+}

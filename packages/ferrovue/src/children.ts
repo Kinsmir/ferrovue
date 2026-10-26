@@ -2,7 +2,7 @@ import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumItems, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
-import { enumItemVal, intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
+import { enumItemVal, exactlyEnum, intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
 import { bareDates, markHome } from "./typescript.ts";
 import { items } from "./lists.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
@@ -386,6 +386,13 @@ function enumListInto(comp: Component, v: Val, want: Ty, node: N): string {
     const item = ownInto(comp, enumItemVal("v", of, v.enums.def), want.of, node);
     return item === "v" ? `${atom(v.enums.place)}.to_vec()` : `${atom(v.enums.place)}.iter().map(|&v| ${item}).collect()`;
   }
+  if (v.variants?.of === v.code) {
+    const item = ownInto(comp, enumItemVal("v", of, v.variants.def), want.of, node);
+    const copied = /^(.*)\.iter\(\)\.copied\(\)$/s.exec(v.variants.iter)?.[1];
+    if (item === "v") return copied !== undefined ? `${copied}.to_vec()` : `${v.variants.iter}.collect()`;
+    return `${v.variants.iter}.map(|v| ${item}).collect()`;
+  }
+  if (v.literal?.of === v.code && v.literal.items.every(exactlyEnum)) return `vec![${v.literal.items.map((item) => bare(ownInto(comp, item, want.of, node))).join(", ")}]`;
   if (of.k !== "str" && (of.k !== "opt" || of.of.k !== "str")) return refuse();
   const each: Val = of.k === "str" ? { code: v.iter !== undefined ? "&*v" : "&**v", ty: of } : { code: v.iter !== undefined ? "v" : "v.as_deref()", ty: of };
   const iter = v.iter ?? `${atom(v.code)}.iter()`;

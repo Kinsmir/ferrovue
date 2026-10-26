@@ -138,6 +138,18 @@ A fixture is a JSON object of props plus optional keys:
 | `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare` | Props named like listeners (`on1`, `onText` bound as `:on-text`): a number, a string, booleans with and without a default, a `Float`, a union with `""`, a required boolean and a required number, passed on unchanged where Vue passes the props as written (`0`, `""`, `false`, `-0`, `NaN`), and left out when falsy where `mergeProps` joins them: on a component's root, beside `v-bind` of an object literal, and `v-bind` of a child's own `Props` beside a listener |
 | `UnionNarrowing`, `NarrowedTone` | A `ref<Tone \| "">` and a `computed` annotated `Tone \| ""` handed to a child's `Tone` prop once narrowed as TypeScript narrows them: `\|\| undefined`, `=== ''` and `!== ''` either way round in `?:`, a test of its truth, `v-if` / `v-else-if` / `v-else`, `&&` in a `v-if`, and a `computed` annotated `Tone \| undefined`; members holding markup-breaking characters, the empty string, and a hostile label |
 | `UnionNarrowedMatch`, `UnionMoodCard` | A `ref<Mood \| "">` narrowed and handed to a child's optional and required `Mood` props as one `match` over its enum's variants: `\|\| undefined` and `\|\|` with a member, `=== ''` and `!== ''` in `?:`, a `?:` around a `\|\|`, a table read by the ref and by the key `v-if` narrows, an object literal's union fields, `v-if` / `v-else-if` / `v-else`, a `?:` and `\|\|` inside a `v-if` that narrows the ref, and two tests of it in a `v-if` of `&&`; each member, one with markup in it, the empty string, and a hostile label |
+| `UnionComputedHeld` | `computed`s annotated as `Mood`, held as its enum and handed to a child's required and optional `Mood` props and to an object literal's union fields with no `_` arm: a `?:` of members, a body with an `if` and a `return`, a table's value, and a `?:` of a member and a prop; written in text and `data-`, and compared with `===`; each member, one with markup in it, and a hostile label |
+| `UnionKeyedByOr` | Lookup tables of `Mood` from `types/tables.ts` read by a key built with `\|\|` from a `ref<Mood \| "">` and with `?:` of the ref and of literals, handed to a child's required and optional `Mood` props and to an object literal's union field, and written in text, `data-` and through a table of booleans and a `Partial` table with `??`: each member, one with markup in it, the empty string, and a hostile label |
+| `UnionListBuilt`, `UnionHueSet` | Lists of `Hue` built and handed to a child's list of `Hue` and to an object literal's list field as `Vec`s of the enum: a `.map()` of an interface's union field and of the items themselves, `.filter()` by the item and by its index, both held in `computed`s and read by `v-for`, and array literals of a prop and members; no item, each member, one with markup in it, and a hostile label and name |
+| `UnionOptionalRef` | A `ref<Mood \| "" \| undefined>` seeded from an optional prop, held as an `Option` of its enum and read through one `match` over `Some` of each variant and `None`: `\|\|` with a member, `?:` of its truth, `=== ''` and `=== undefined` in `?:`, a table read by a key built with `\|\|`, an object literal's union fields, `v-if` of its truth, `v-if` / `v-else-if` of `=== ''` and `!== undefined`, written in text and `data-`; `\|\|` after an optional string and an optional number; each member, one with markup in it, the prop absent, and hostile strings |
+| `FoldedWide` | A `?:` whose test is known when compiling, of a member of a union and a string, compared with a literal outside the union and read through a string method; array literals of integers beside `Float`s, from props, literals and a `.flatMap()`, written, joined and searched with `.includes()`; `-0`, the largest integer and a hostile label |
+| `ImportedProps`, `ImportedPropsMixed` | Props read from an interface and an object type alias imported from `types/imported.ts` (which imports `Mood` from another `.ts` file), with `withDefaults`, and from an interface of the component that extends one, joined with `&` to a type literal; an optional boolean Vue casts to `false`, a union, a list and numbers; empty strings and lists, and hostile strings in every field |
+| `LookupKeys` | Lookup tables read by keys built when rendering: constant numbers of the component (`0.5`, `1e21`, `-0`) read by the string JavaScript writes for them, a union mapped by `.toUpperCase()` and `.toLowerCase()` (with characters beyond ASCII), by template literals around it and around `.toUpperCase()` of it, a key the table lacks with `??`, and a table of a union's members read by a template literal of a prop of the union and handed to a child's union prop; each member, one with markup in it, and a hostile label |
+| `ModelIs` | `<component :is>` of a required `defineModel` of a union, read by its local and by `modelValue` in a `?:`, and of a named model with a default, which the fixture gives and leaves out; each member, and a hostile label |
+| `RootTextarea`, `RootTextareaText`, `RootInput`, `RootCheckbox`, `RootControls` | A `<textarea>` with `v-model` and one with content of its own, an `<input v-model>` with no `type` and a checkbox with a boolean model, each the component's root, rendered alone and by a parent that passes them attributes other than `value` and `type` (a class, a title, `placeholder`, `name`, `disabled`, an `id` built from a prop); empty values, a newline, and hostile strings that close the `<textarea>` |
+| `InlineTypes` | Object types written in place as a prop's and an interface's field types, nested, in a list and optional; a mapped type over a union and a `Record` keyed by one, read by name and by a `v-for` item's union field; an optional mapped type read with `?.`; an indexed type of an interface from a `.ts` file; empty lists and strings, and hostile strings in every field |
+| `LoadedAll` | Loaders awaited together by `Promise.all`, bound to names, to a hole and to nothing, and loaders taking an object of an interface, from an object literal (an optional boolean prop Vue casts to `false`, a `null`) and from a prop of the interface (an optional field left out, a nullable one), each key written with sorted fields; empty strings and lists, and hostile strings in the keys and the results |
+| `RegexText` | Regular expression literals of the subset in `.replace()` with `g` and `i`, chained in a `computed`, `.replaceAll()` with `$&`, `.split()` with and without a limit read by `v-for` and `.length`, `.test()` in a class binding and in text, `\b`, anchors, classes and escapes; empty strings, characters beyond ASCII and outside the BMP, line separators and hostile strings |
 | `UnionLogic` | A string of a union read through `\|\|`, `&&`, `??` and `?:` where a child's union prop or a lookup table takes it: a test of a literal narrowing a table's key on the right of `\|\|` and `&&`, the falsy member left out by `\|\|` with a member to fall back to, an optional member falling back to another by `??`, members and `undefined` chosen by `?:`, and a list of the union built in an object literal; members holding markup-breaking characters, the empty string, absent values, and a hostile label |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
@@ -205,7 +217,7 @@ A fixture is a JSON object of props plus optional keys:
 | `UnionObjects`, `UnionStep` | Unions of string literals with the features beside them: object literals typed with `Step` from `types/unions.ts` whose union fields take a literal, a prop of the same enum, a `?:` of a prop and a literal, a folded constant and an optional prop, in a `computed`, a `.map()` callback and a child's prop; `Object.hasOwn()` of a `Record<string, string>` constant, `.get()` and `.has()` of a constant `Map` and a lookup table by an enum key, with `&&`, `\|\|` and `!==` narrowing |
 | `UnionList`, `UnionListItem` | Lists of a union of string literals, each a `Vec` of its enum: `Hue[]` from `types/unions.ts` (a member with markup in it), optional, with a `() => []` default, of optional items, and of a union written in place; `.join()` in text and attributes, `.length`, `.includes()`, `.indexOf()`, `.some()`, `.filter()` and `.map()`, `String()` of the list and a template literal of one of optional items; `v-for` items handed to a child's prop of the same union and of a wider one, read through a lookup table, `===`, `.toUpperCase()` and `??`; the list handed to a child's list of the union, with `?? []`, a `computed` that filters it and a `.map()` of it; a `Record<string, Hue>` whose values reach a child's union prop parsed as it renders (FV0518 for a string outside the union, in `conformance.rs`) |
 | `UnionTables`, `UnionBadge` | Lookup tables of a union's members from `types/tables.ts` (`Record<Mood, Mood>`, `Record<MoodChoice, Mood>`, `Partial<Record<Mood, Mood>>`, an untyped `as const` one) read by a prop of the union and handed to a child's union prop, read by another table and compared with `===`; `ref`s of `type MoodChoice = Mood \| ""`, which no prop uses, seeded with `??` of an optional prop and `""` and with a `?:` of a prop and `""`, read by tables, written in text and `data-`, and bound with `v-model` to a `<select>`; a member with markup in it |
-| `UnionWiderRef`, `UnionMark` | `ref`s annotated as a union wider than the value they start from: `Mark \| ""` of a string `enum` from `types/marks.ts`, one of whose literals names no variant (`"'!"`), held as a string of the wider union, and `Mood \| ""` and `Mood \| "" \| undefined`, held as an enum of their own; started from a prop, an optional prop and a `?:` of a prop and `""`; compared with `""` and with a member, narrowed by `===`, `!==`, `\|\|` and `v-if` / `v-else-if` and handed to a child's union prop, written in text, `data-` and a template literal; members with markup in them |
+| `UnionWiderRef`, `UnionMark` | `ref`s annotated as a union wider than the value they start from: `Mark \| ""` of a string `enum` from `types/marks.ts`, one of whose literals has no letter or digit (`"'!"`), held as an enum whose variants the `enum`'s members name, and `Mood \| ""` and `Mood \| "" \| undefined`, held as an enum of their own; started from a prop, an optional prop and a `?:` of a prop and `""`; compared with `""` and with a member, narrowed by `===`, `!==`, `\|\|` and `v-if` / `v-else-if` and handed to a child's union prop, written in text, `data-` and a template literal; members with markup in them |
 | `UnionReturned` | Values of a union returned under a wider annotation: a `function` and an arrow function annotated `string`, one annotated `Mood \| "-"`, and `computed`s annotated `string` and `string \| undefined`, of `Mood` from `types/tables.ts` and the string `enum` `Mark`; compared with a literal outside the union and with a prop, tested by `v-if`, written in text, `data-` and a template literal; members with markup in them |
 | `LiteralEnumField` | A field typed as a union of string literals, present and optional, of a value a setup function builds from an object literal: read in text and attributes, compared with `===` and `!==`, under `??` and in `v-if` |
 | `Catalog` | Constants imported from `types/catalog.ts`, evaluated at build time: an object read by field and nested field, a list of strings, a list of numbers, lists of objects (one typed by an interface) in `types.rs`; enums imported and declared in the component, string and numeric, as a prop's type and read by member and by number |
@@ -236,21 +248,21 @@ when it names a component that is not in `components/` with fixtures of its own.
 
 | README row | Components |
 |---|---|
-| Prop types | `Text`, `Attrs`, `Numbers`, `Narrowing`, `Nullable`, `UserCard`, `UserList`, `Tree`, `Records`, `Rated`, `Prose`, `InlineProse`, `Dashboard`, `DatePost`, `DateRows`, `DateThread`, `UnionEnums`, `UnionChild`, `UnionList`, `UnionTypes`, `UnionShade` |
+| Prop types | `InlineTypes`, `Text`, `Attrs`, `Numbers`, `Narrowing`, `Nullable`, `UserCard`, `UserList`, `Tree`, `Records`, `Rated`, `Prose`, `InlineProse`, `Dashboard`, `DatePost`, `DateRows`, `DateThread`, `UnionEnums`, `UnionChild`, `UnionList`, `UnionTypes`, `UnionShade` |
 | Shared types | `UserCard`, `UserList`, `DataTable`, `RowChip`, `Dashboard`, `Cart`, `Catalog`, `UnionEnums` |
-| Constants | `Catalog`, `EnumMembers`, `Constants`, `Lookups`, `OwnKeys`, `DigitGroups`, `UnionEnums`, `UnionObjects`, `UnionTables` |
-| Props | `Defaults`, `Destructured`, `RenamedProps`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider` |
-| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar`, `DollarNames`, `UnionTables`, `UnionWiderRef`, `UnionReturned` |
+| Constants | `Catalog`, `EnumMembers`, `Constants`, `Lookups`, `OwnKeys`, `DigitGroups`, `UnionEnums`, `UnionObjects`, `UnionTables`, `UnionKeyedByOr`, `LookupKeys` |
+| Props | `Defaults`, `Destructured`, `RenamedProps`, `PropsObject`, `Model`, `ModelParent`, `Picker`, `Glyph`, `Divider`, `ImportedProps`, `ImportedPropsMixed` |
+| Setup | `Setup`, `SetupValues`, `Lifecycle`, `Pending`, `EmptyBranch`, `Unread`, `UnreadVar`, `DollarNames`, `UnionTables`, `UnionWiderRef`, `UnionReturned`, `UnionComputedHeld` |
 | Statements | `Statements`, `UnreadSteps`, `Loops`, `LoopEdges` |
 | Functions | `Formatters`, `RelativeTime`, `LocalFunctions`, `DigitGroups` |
 | Object literals | `ObjectLiterals`, `ObjectShapes`, `UnionObjects`, `LiteralEnumField` |
-| Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates`, `LoadedStamps` |
+| Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates`, `LoadedStamps`, `LoadedAll` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
-| Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
+| Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups`, `RegexText` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
-| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic` |
-| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays` |
+| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic`, `UnionOptionalRef` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays`, `UnionListBuilt`, `FoldedWide` |
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
@@ -259,11 +271,11 @@ when it names a component that is not in `components/` with fixtures of its own.
 | `v-bind()` in `<style>` | `CssVars`, `CssVarsPage`, `CssVarsRoot`, `CssVarsLeaf`, `CssVarsShow`, `CssVarsBound`, `CssVarsTag`, `CssVarsLink`, `CssVarsWait`, `CssVarsLater`, `CssVarsBranch`, `CssVarsShapes` |
 | CSS modules | `Moduled`, `ModuledChip` |
 | Components | `UserList`, `Dashboard`, `Listened`, `Listeners`, `ListenLeaf`, `ListenSale`, `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare`, `ModelParent`, `Tree`, `KebabTree`, `Deferred`, `AsyncClass` |
-| `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice`, `UnionEnums`, `RenamedProps` |
+| `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice`, `UnionEnums`, `RenamedProps`, `ModelIs` |
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
 | Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe` |
-| Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot` |
+| Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls` |
 | Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
 | Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo` |
 | Pinia | `Badge`, `Cart`, `Counter`, `Session` |
@@ -437,8 +449,13 @@ What it generates, with random nesting:
   numeric one read both ways), or the enums declared in the component, and a string enum as a
   prop type; lookup tables keyed by the enum's members (`[Tone.Loud]: …`), beside the enum or in
   the component, read by an enum prop (or an optional one with `?? Tone.Loud`): strings, a table
-  that lacks some members (narrowed with `v-if`, `typeof` and `!==`, or read with `??`), and
-  objects read on by field;
+  that lacks some members (narrowed with `v-if`, `typeof` and `!==`, or read with `??`),
+  objects read on by field, tables read by keys built from the key by `.toUpperCase()` and a
+  template literal, and a table read by a number constant (`BY_NUM[HALF]`);
+- props declared by an interface imported from a `.ts` file (`defineProps<FzProps>()`), alone or
+  joined with `&` to a type literal, where the props' types are their own; a required
+  `defineModel` of a union of element names read by `<component :is>` by its local and by
+  `modelValue`;
 - `provide` with a string key and with `InjectionKey`s (a plain value, a number and a `computed`),
   a child that injects all three with defaults and a child that provides its own values to its slot
   content; `useHead` (`title`, `titleTemplate`, `htmlAttrs`, `bodyAttrs`, `meta`, `link`, plain
@@ -814,6 +831,9 @@ and what ferrovue generates (or the error it refuses with).
   fixture (plus a hostile one), and record as above. The suite fails if a component has no fixtures.
 - **A new router case:** add it to `crates/ferrovue-router/tests/vectors/router.json` and run
   `pnpm vectors:record`.
+- **A new regular expression case:** add `[pattern, flags, op, input, arg, null]` to
+  `tests/vectors/regex.json` (`op` is `test`, `replace` or `split`) and run `pnpm vectors:record`,
+  which writes what V8 answers, or `null` where the subset refuses the pattern.
 - **A new string or number case:** add its inputs to `tests/vectors/strings.json`, `parse.json`,
   `compare.json`, `keys.json` or `json.json` (any expected value) and run `pnpm vectors:record`,
   which writes what JavaScript answers.

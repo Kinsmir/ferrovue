@@ -8,6 +8,210 @@ use ferrovue as fv;
 /// The component's name, as `data-island` carries it.
 pub const NAME: &str = "UnionWiderRef";
 
+/// `held` in `UnionWiderRef.vue`: `"&amp; &lt;" | "'!" | "0x1F" | "<i>\"&'" | ""`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum UnionWiderRefHeld {
+    #[serde(rename = "&amp; &lt;")]
+    Amp,
+    #[serde(rename = "'!")]
+    Bang,
+    #[serde(rename = "0x1F")]
+    Hex,
+    #[serde(rename = "<i>\"&'")]
+    Tag,
+    #[serde(rename = "")]
+    Empty,
+}
+
+impl UnionWiderRefHeld {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [UnionWiderRefHeld; 5] = [UnionWiderRefHeld::Amp, UnionWiderRefHeld::Bang, UnionWiderRefHeld::Hex, UnionWiderRefHeld::Tag, UnionWiderRefHeld::Empty];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            UnionWiderRefHeld::Amp => "&amp; &lt;",
+            UnionWiderRefHeld::Bang => "'!",
+            UnionWiderRefHeld::Hex => "0x1F",
+            UnionWiderRefHeld::Tag => "<i>\"&'",
+            UnionWiderRefHeld::Empty => "",
+        }
+    }
+}
+
+impl std::fmt::Display for UnionWiderRefHeld {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for UnionWiderRefHeld {
+    type Err = ferrovue::props::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "&amp; &lt;" => Ok(UnionWiderRefHeld::Amp),
+            "'!" => Ok(UnionWiderRefHeld::Bang),
+            "0x1F" => Ok(UnionWiderRefHeld::Hex),
+            "<i>\"&'" => Ok(UnionWiderRefHeld::Tag),
+            "" => Ok(UnionWiderRefHeld::Empty),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionWiderRefHeld", s, &["&amp; &lt;", "'!", "0x1F", "<i>\"&'", ""])),
+        }
+    }
+}
+
+impl TryFrom<&str> for UnionWiderRefHeld {
+    type Error = ferrovue::props::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl ferrovue::props::Union for UnionWiderRefHeld {
+    const ALL: &'static [Self] = &UnionWiderRefHeld::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionWiderRefHeld::as_str(self)
+    }
+}
+
+/// `picked` in `UnionWiderRef.vue`: `"&amp; &lt;" | "'!" | "0x1F" | "<i>\"&'" | ""`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum UnionWiderRefPicked {
+    #[serde(rename = "&amp; &lt;")]
+    Amp,
+    #[serde(rename = "'!")]
+    Bang,
+    #[serde(rename = "0x1F")]
+    Hex,
+    #[serde(rename = "<i>\"&'")]
+    Tag,
+    #[serde(rename = "")]
+    Empty,
+}
+
+impl UnionWiderRefPicked {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [UnionWiderRefPicked; 5] = [UnionWiderRefPicked::Amp, UnionWiderRefPicked::Bang, UnionWiderRefPicked::Hex, UnionWiderRefPicked::Tag, UnionWiderRefPicked::Empty];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            UnionWiderRefPicked::Amp => "&amp; &lt;",
+            UnionWiderRefPicked::Bang => "'!",
+            UnionWiderRefPicked::Hex => "0x1F",
+            UnionWiderRefPicked::Tag => "<i>\"&'",
+            UnionWiderRefPicked::Empty => "",
+        }
+    }
+}
+
+impl std::fmt::Display for UnionWiderRefPicked {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for UnionWiderRefPicked {
+    type Err = ferrovue::props::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "&amp; &lt;" => Ok(UnionWiderRefPicked::Amp),
+            "'!" => Ok(UnionWiderRefPicked::Bang),
+            "0x1F" => Ok(UnionWiderRefPicked::Hex),
+            "<i>\"&'" => Ok(UnionWiderRefPicked::Tag),
+            "" => Ok(UnionWiderRefPicked::Empty),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionWiderRefPicked", s, &["&amp; &lt;", "'!", "0x1F", "<i>\"&'", ""])),
+        }
+    }
+}
+
+impl TryFrom<&str> for UnionWiderRefPicked {
+    type Error = ferrovue::props::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl ferrovue::props::Union for UnionWiderRefPicked {
+    const ALL: &'static [Self] = &UnionWiderRefPicked::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionWiderRefPicked::as_str(self)
+    }
+}
+
+/// `spared` in `UnionWiderRef.vue`: `"&amp; &lt;" | "'!" | "0x1F" | "<i>\"&'" | ""`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum UnionWiderRefSpared {
+    #[serde(rename = "&amp; &lt;")]
+    Amp,
+    #[serde(rename = "'!")]
+    Bang,
+    #[serde(rename = "0x1F")]
+    Hex,
+    #[serde(rename = "<i>\"&'")]
+    Tag,
+    #[serde(rename = "")]
+    Empty,
+}
+
+impl UnionWiderRefSpared {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [UnionWiderRefSpared; 5] = [UnionWiderRefSpared::Amp, UnionWiderRefSpared::Bang, UnionWiderRefSpared::Hex, UnionWiderRefSpared::Tag, UnionWiderRefSpared::Empty];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            UnionWiderRefSpared::Amp => "&amp; &lt;",
+            UnionWiderRefSpared::Bang => "'!",
+            UnionWiderRefSpared::Hex => "0x1F",
+            UnionWiderRefSpared::Tag => "<i>\"&'",
+            UnionWiderRefSpared::Empty => "",
+        }
+    }
+}
+
+impl std::fmt::Display for UnionWiderRefSpared {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for UnionWiderRefSpared {
+    type Err = ferrovue::props::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "&amp; &lt;" => Ok(UnionWiderRefSpared::Amp),
+            "'!" => Ok(UnionWiderRefSpared::Bang),
+            "0x1F" => Ok(UnionWiderRefSpared::Hex),
+            "<i>\"&'" => Ok(UnionWiderRefSpared::Tag),
+            "" => Ok(UnionWiderRefSpared::Empty),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionWiderRefSpared", s, &["&amp; &lt;", "'!", "0x1F", "<i>\"&'", ""])),
+        }
+    }
+}
+
+impl TryFrom<&str> for UnionWiderRefSpared {
+    type Error = ferrovue::props::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl ferrovue::props::Union for UnionWiderRefSpared {
+    const ALL: &'static [Self] = &UnionWiderRefSpared::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionWiderRefSpared::as_str(self)
+    }
+}
+
 /// `kept` in `UnionWiderRef.vue`: `"calm" | "loud" | "<q>&\"x'" | ""`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum UnionWiderRefKept {
@@ -183,9 +387,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(121 + 10 + 10 + 7 + props.label.len());
-    let s_held = fv::props::Union::as_str(props.mark);
-    let s_picked = if props.on { fv::props::Union::as_str(props.mark) } else { "" };
-    let s_spared = props.spare.map(fv::props::Union::as_str);
+    let s_held = match props.mark { super::types::Mark::Amp => UnionWiderRefHeld::Amp, super::types::Mark::Bang => UnionWiderRefHeld::Bang, super::types::Mark::Hex => UnionWiderRefHeld::Hex, super::types::Mark::Tag => UnionWiderRefHeld::Tag };
+    let s_picked = if props.on { match props.mark { super::types::Mark::Amp => UnionWiderRefPicked::Amp, super::types::Mark::Bang => UnionWiderRefPicked::Bang, super::types::Mark::Hex => UnionWiderRefPicked::Hex, super::types::Mark::Tag => UnionWiderRefPicked::Tag } } else { UnionWiderRefPicked::Empty };
+    let s_spared = props.spare.map(|v| match v { super::types::Mark::Amp => UnionWiderRefSpared::Amp, super::types::Mark::Bang => UnionWiderRefSpared::Bang, super::types::Mark::Hex => UnionWiderRefSpared::Hex, super::types::Mark::Tag => UnionWiderRefSpared::Tag });
     let s_kept = match props.mood { super::types::Mood::Calm => UnionWiderRefKept::Calm, super::types::Mood::Loud => UnionWiderRefKept::Loud, super::types::Mood::QX => UnionWiderRefKept::QX };
     let s_chosen = if props.on { match props.mood { super::types::Mood::Calm => UnionWiderRefChosen::Calm, super::types::Mood::Loud => UnionWiderRefChosen::Loud, super::types::Mood::QX => UnionWiderRefChosen::QX } } else { UnionWiderRefChosen::Empty };
     out.push_str("<section");
@@ -197,31 +401,31 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     out.push_str("><p class=\"");
-    fv::attrs::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }, if s_held == "'!" { "bang" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if s_picked == UnionWiderRefPicked::Empty { "none" } else { "" }, if s_held == UnionWiderRefHeld::Bang { "bang" } else { "" }]);
     out.push_str("\" data-held=\"");
-    fv::core::escape_into(out, s_held);
+    fv::core::escape_into(out, fv::props::Union::as_str(s_held));
     out.push_str("\">");
-    fv::core::escape_into(out, s_held);
+    fv::core::escape_into(out, fv::props::Union::as_str(s_held));
     out.push(' ');
-    fv::core::escape_into(out, s_picked);
+    fv::core::escape_into(out, fv::props::Union::as_str(s_picked));
     out.push(' ');
-    fv::core::escape_into(out, &format!("{}|{}", s_picked, s_spared.unwrap_or("undefined")));
+    fv::core::escape_into(out, &format!("{}|{}", fv::props::Union::as_str(s_picked), s_spared.map(fv::props::Union::as_str).unwrap_or("undefined")));
     out.push_str("</p>");
-    if s_spared == Some("") {
+    if s_spared == Some(UnionWiderRefSpared::Empty) {
         out.push_str("<i>empty</i>");
     } else {
-        if let Some(fv_spared) = s_spared {
-            super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(match fv_spared { "&amp; &lt;" => super::types::Mark::Amp, "'!" => super::types::Mark::Bang, "0x1F" => super::types::Mark::Hex, _ => super::types::Mark::Tag }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        if let Some(fv_spared) = match s_spared { Some(UnionWiderRefSpared::Amp) => Some(super::types::Mark::Amp), Some(UnionWiderRefSpared::Bang) => Some(super::types::Mark::Bang), Some(UnionWiderRefSpared::Hex) => Some(super::types::Mark::Hex), Some(UnionWiderRefSpared::Tag) => Some(super::types::Mark::Tag), Some(UnionWiderRefSpared::Empty) | None => None } {
+            super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_spared), label: std::borrow::Cow::Borrowed(&*props.label) })?;
         } else {
             out.push_str("<i>absent</i>");
         }
     }
-    if !s_picked.is_empty() {
-        super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(match s_picked { "&amp; &lt;" => super::types::Mark::Amp, "'!" => super::types::Mark::Bang, "0x1F" => super::types::Mark::Hex, _ => super::types::Mark::Tag }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    if let Some(fv_picked) = match s_picked { UnionWiderRefPicked::Amp => Some(super::types::Mark::Amp), UnionWiderRefPicked::Bang => Some(super::types::Mark::Bang), UnionWiderRefPicked::Hex => Some(super::types::Mark::Hex), UnionWiderRefPicked::Tag => Some(super::types::Mark::Tag), UnionWiderRefPicked::Empty => None } {
+        super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_picked), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<!---->");
     }
-    super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(s_held).filter(|v| !v.is_empty()).map(|v| match v { "&amp; &lt;" => super::types::Mark::Amp, "'!" => super::types::Mark::Bang, "0x1F" => super::types::Mark::Hex, _ => super::types::Mark::Tag }), label: std::borrow::Cow::Borrowed(&*format!("{}!", s_held)) })?;
+    super::union_mark::try_render(out, &super::union_mark::Props { mark: match s_held { UnionWiderRefHeld::Amp => Some(super::types::Mark::Amp), UnionWiderRefHeld::Bang => Some(super::types::Mark::Bang), UnionWiderRefHeld::Hex => Some(super::types::Mark::Hex), UnionWiderRefHeld::Tag => Some(super::types::Mark::Tag), UnionWiderRefHeld::Empty => None }, label: std::borrow::Cow::Borrowed(&*format!("{}!", fv::props::Union::as_str(s_held))) })?;
     if let Some(fv_kept) = match s_kept { UnionWiderRefKept::Calm => Some(super::types::Mood::Calm), UnionWiderRefKept::Loud => Some(super::types::Mood::Loud), UnionWiderRefKept::QX => Some(super::types::Mood::QX), UnionWiderRefKept::Empty => None } {
         super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv_kept), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     } else {

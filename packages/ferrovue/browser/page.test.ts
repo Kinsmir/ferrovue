@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type Page } from "playwright";
@@ -33,7 +33,7 @@ beforeAll(async () => {
     configFile: false,
     root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
-    plugins: [vue()],
+    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
     resolve: { alias: [{ find: /^ferrovue$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     build: { write: false, minify: false, rolldownOptions: { input: join(import.meta.dirname, "page-entry.ts"), output: { codeSplitting: false } } },
   }).finally(() => {

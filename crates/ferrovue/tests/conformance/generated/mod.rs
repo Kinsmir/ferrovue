@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(6);
+ferrovue::__compat!(7);
 
 pub mod account_nav;
 pub mod and_chains;
@@ -81,6 +81,7 @@ pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
 pub mod flattened;
+pub mod folded_wide;
 pub mod form;
 pub mod form_root;
 pub mod form_wrapped;
@@ -100,7 +101,10 @@ pub mod head_server;
 pub mod head_theme;
 pub mod head_theme_page;
 pub mod hollow;
+pub mod imported_props;
+pub mod imported_props_mixed;
 pub mod inline_prose;
+pub mod inline_types;
 pub mod kebab_tree;
 pub mod keywords;
 pub mod lifecycle;
@@ -115,12 +119,14 @@ pub mod listeners;
 pub mod lists;
 pub mod literal_enum_field;
 pub mod loaded;
+pub mod loaded_all;
 pub mod loaded_comments;
 pub mod loaded_dates;
 pub mod loaded_ranks;
 pub mod loaded_stamp;
 pub mod loaded_stamps;
 pub mod local_functions;
+pub mod lookup_keys;
 pub mod lookups;
 pub mod loop_edges;
 pub mod loops;
@@ -132,6 +138,7 @@ pub mod meter;
 pub mod mixed_ternary;
 pub mod modal;
 pub mod model;
+pub mod model_is;
 pub mod model_parent;
 pub mod moduled;
 pub mod moduled_chip;
@@ -170,9 +177,15 @@ pub mod quiet_leaf;
 pub mod rank_line;
 pub mod rated;
 pub mod records;
+pub mod regex_text;
 pub mod regressions;
 pub mod relative_time;
 pub mod renamed_props;
+pub mod root_checkbox;
+pub mod root_controls;
+pub mod root_input;
+pub mod root_textarea;
+pub mod root_textarea_text;
 pub mod route_info;
 pub mod row_chip;
 pub mod scoped_card;
@@ -227,9 +240,13 @@ pub mod typeof_tests;
 pub mod union_badge;
 pub mod union_child;
 pub mod union_choice_tag;
+pub mod union_computed_held;
 pub mod union_enums;
 pub mod union_folded_ref;
+pub mod union_hue_set;
+pub mod union_keyed_by_or;
 pub mod union_list;
+pub mod union_list_built;
 pub mod union_list_item;
 pub mod union_logic;
 pub mod union_mark;
@@ -237,6 +254,7 @@ pub mod union_mood_card;
 pub mod union_narrowed_match;
 pub mod union_narrowing;
 pub mod union_objects;
+pub mod union_optional_ref;
 pub mod union_placing;
 pub mod union_returned;
 pub mod union_shade;
@@ -653,6 +671,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: flattened::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             flattened::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "FoldedWide" => {
+            let props: folded_wide::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            folded_wide::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -760,9 +782,21 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             hollow::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "ImportedProps" => {
+            let props: imported_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            imported_props::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ImportedPropsMixed" => {
+            let props: imported_props_mixed::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            imported_props_mixed::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "InlineProse" => {
             let props: inline_prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             inline_prose::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "InlineTypes" => {
+            let props: inline_types::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            inline_types::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "KebabTree" => {
             let props: kebab_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -826,6 +860,22 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
                 |fv_loads| {
                     out.clear();
                     loaded::try_render(&mut out, &props, fv_loads)
+                },
+                loaders::from_fixture(&fixture.loads),
+            );
+            let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+            match std::future::Future::poll(std::pin::pin!(loading), &mut cx) {
+                std::task::Poll::Ready(done) => done.map_err(|e| e.to_string())?.map_err(|e| e.to_string())?,
+                std::task::Poll::Pending => return Err(String::from("a fixture's loader is still running")),
+            }
+        }
+        "LoadedAll" => {
+            let props: loaded_all::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let loading = ferrovue::loaders::load(
+                |fv_loads| {
+                    out.clear();
+                    loaded_all::try_render(&mut out, &props, fv_loads)
                 },
                 loaders::from_fixture(&fixture.loads),
             );
@@ -924,6 +974,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             local_functions::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "LookupKeys" => {
+            let props: lookup_keys::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            lookup_keys::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "Lookups" => {
             let props: lookups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lookups::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -974,6 +1028,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Model" => {
             let props: model::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ModelIs" => {
+            let props: model_is::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            model_is::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "ModelParent" => {
             let props: model_parent::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1144,6 +1202,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: records::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             records::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "RegexText" => {
+            let props: regex_text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            regex_text::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "Regressions" => {
             let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             regressions::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1155,6 +1217,26 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "RenamedProps" => {
             let props: renamed_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             renamed_props::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootCheckbox" => {
+            let props: root_checkbox::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_checkbox::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootControls" => {
+            let props: root_controls::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_controls::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootInput" => {
+            let props: root_input::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_input::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootTextarea" => {
+            let props: root_textarea::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_textarea::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootTextareaText" => {
+            let props: root_textarea_text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_textarea_text::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "RouteInfo" => {
             let props: route_info::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1424,6 +1506,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: union_choice_tag::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_choice_tag::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "UnionComputedHeld" => {
+            let props: union_computed_held::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_computed_held::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "UnionEnums" => {
             let props: union_enums::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_enums::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1432,9 +1518,21 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: union_folded_ref::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_folded_ref::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "UnionHueSet" => {
+            let props: union_hue_set::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_hue_set::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionKeyedByOr" => {
+            let props: union_keyed_by_or::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_keyed_by_or::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "UnionList" => {
             let props: union_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_list::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionListBuilt" => {
+            let props: union_list_built::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_list_built::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionListItem" => {
             let props: union_list_item::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1463,6 +1561,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionObjects" => {
             let props: union_objects::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_objects::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionOptionalRef" => {
+            let props: union_optional_ref::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_optional_ref::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionPlacing" => {
             let props: union_placing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

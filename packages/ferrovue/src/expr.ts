@@ -1,6 +1,6 @@
 import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, falsyLiteral, FLOAT, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
-import { enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants, refuseOutside } from "./enums.ts";
+import { annotatedStr, enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
@@ -306,8 +306,9 @@ function whenAbsent(s: Scope, p: Presence, left: N): N | null {
   if (!p.truthy) return null;
   const at = { loc: left.loc, __fv: left.__fv, start: left.start, end: left.end };
   if (p.pick) return { type: "Identifier", name: "undefined", ...at };
-  if (!alwaysTruthy(p.of)) return null;
-  const none = absence(expr(s, left).ty);
+  const whole = expr(s, left).ty;
+  if (!alwaysTruthy(whole.k === "opt" ? whole.of : p.of)) return null;
+  const none = absence(whole);
   if (none === "undefined") return { type: "Identifier", name: "undefined", ...at };
   return none === "null" ? { type: "NullLiteral", ...at } : null;
 }
@@ -457,7 +458,8 @@ function byVariant(s: Scope, n: N, v: Val): Val {
   const conditional = n.type === "ConditionalExpression";
   const narrowed = literalNarrowing(s, conditional ? n.test : n.left, true);
   const from = narrowed === null ? undefined : enumOf(narrowed.v.ty);
-  if (narrowed === null || from === undefined || narrowed.v.variant === undefined || narrowed.v.ty.k === "opt") return v;
+  if (narrowed === null || from === undefined || narrowed.v.variant === undefined) return v;
+  if (narrowed.v.ty.k === "opt") return byOption(s, n, v, narrowed, from);
   const { path, v: tested, holds } = narrowed;
   const kept = (literalsOf(tested.ty) ?? from.literals) as readonly string[];
   const branch = (l: string): N => (conditional ? (holds(l) ? n.consequent : n.alternate) : holds(l) === (n.operator === "||") ? n.left : n.right);
@@ -482,7 +484,103 @@ function byVariant(s: Scope, n: N, v: Val): Val {
     };
     return overVariants(s.comp, tested, kept, arm) ?? before?.(def, node) ?? intoEnum(s.comp, { code: v.code, ty: v.ty }, def, node);
   };
-  return { ...v, asEnum: { of: v.code, into } };
+  const over = (pick: (literal: string) => string | null): string | null => {
+    if (optional) return null;
+    return overVariants(s.comp, tested, kept, (l) => {
+      const one: Scope = { ...s, narrowed: new Map(s.narrowed).set(path, { ...tested, ty: keptLiterals(enumTy(from), (k) => k === l) }) };
+      ctx.trying++;
+      try {
+        const taken = expr(one, branch(l));
+        const literals = taken.ty.k === "str" ? literalsOf(taken.ty) : undefined;
+        return literals?.length === 1 && typeof literals[0] === "string" ? pick(literals[0]) : null;
+      } catch (e) {
+        if (e instanceof GenError) return null;
+        throw e;
+      } finally {
+        ctx.trying--;
+      }
+    });
+  };
+  return { ...v, asEnum: { of: v.code, into, home: from, over } };
+}
+
+/** `v`, the value of `test ? a : b`, `a || b` or `a && b` where the test narrows an optional
+ * value of a generated enum: one `match` over `Some` of each variant and `None`, each arm the value
+ * the branch it takes gives. */
+function byOption(s: Scope, n: N, v: Val, narrowed: NonNullable<ReturnType<typeof literalNarrowing>>, from: EnumDef): Val {
+  const conditional = n.type === "ConditionalExpression";
+  const { path, v: tested, holds, absent } = narrowed;
+  const kept = (literalsOf(tested.ty.k === "opt" ? tested.ty.of : tested.ty) ?? from.literals) as readonly string[];
+  const branch = (l: string | null): N => {
+    const yes = l === null ? absent : holds(l);
+    return conditional ? (yes ? n.consequent : n.alternate) : yes === (n.operator === "||") ? n.left : n.right;
+  };
+  const optional = v.ty.k === "opt";
+  const arms = (code: (taken: Val) => string | null): string | null => {
+    const grouped = new Map<string, string[]>();
+    for (const l of [...kept, null]) {
+      const one: Val = l === null ? { code: "None", ty: UNDEF } : { code: unionStr(variantPath(s.comp, from, l)), ty: keptLiterals(enumTy(from), (k) => k === l), variant: variantPath(s.comp, from, l) };
+      ctx.trying++;
+      let c: string | null;
+      try {
+        c = code(expr({ ...s, narrowed: new Map(s.narrowed).set(path, one) }, branch(l)));
+      } catch (e) {
+        if (e instanceof GenError) return null;
+        throw e;
+      } finally {
+        ctx.trying--;
+      }
+      if (c === null) return null;
+      const patterns = l === null ? ["None", ...from.literals.filter((k) => !kept.includes(k)).map((k) => `Some(${variantPath(s.comp, from, k)})`)] : [`Some(${variantPath(s.comp, from, l)})`];
+      grouped.set(c, [...(grouped.get(c) ?? []), ...patterns]);
+    }
+    return `match ${tested.variant} { ${[...grouped].map(([c, patterns]) => `${patterns.join(" | ")} => ${bare(c)}`).join(", ")} }`;
+  };
+  const into = (def: EnumDef, node: N): string | null =>
+    arms((taken) => {
+      if (nothing(taken.ty)) return optional ? "None" : null;
+      if ((taken.ty.k === "opt" ? taken.ty.of : taken.ty).k !== "str" || (taken.ty.k === "opt" && !optional)) return null;
+      const code = intoEnum(s.comp, taken, def, node);
+      return code === null || !optional || taken.ty.k === "opt" ? code : `Some(${bare(code)})`;
+    });
+  const over = (pick: (literal: string) => string | null): string | null =>
+    optional
+      ? null
+      : arms((taken) => {
+          const literals = taken.ty.k === "str" ? literalsOf(taken.ty) : undefined;
+          return literals?.length === 1 && typeof literals[0] === "string" ? pick(literals[0]) : null;
+        });
+  return { ...v, asEnum: { of: v.code, into, home: from, over } };
+}
+
+function fieldByKey(s: Scope, base: Val, key: N, n: N): Val | null {
+  const k = expr(s, key);
+  const literal = knownLiteral(k);
+  if (literal !== undefined) {
+    ctx.trying++;
+    try {
+      return fieldVal(s.comp, base.code, base.ty, literal, n);
+    } catch (e) {
+      if (e instanceof GenError) return null;
+      throw e;
+    } finally {
+      ctx.trying--;
+    }
+  }
+  const def = k.variant !== undefined && k.ty.k === "str" ? enumOf(k.ty) : undefined;
+  if (def === undefined) return null;
+  const kept = (literalsOf(k.ty) ?? def.literals) as readonly string[];
+  const fields = kept.map((l) => fieldVal(s.comp, base.code, base.ty, l, n));
+  if (!fields.every((f) => sameTy(f.ty, fields[0]!.ty) && !f.owned && f.iter === undefined)) return null;
+  const arm = (f: Val): string => (f.ty.k === "str" && f.code.startsWith("&*") ? `std::ops::Deref::deref(&${f.code.slice(2)})` : bare(f.code));
+  const code = overVariants(s.comp, k, kept, (l) => arm(fields[kept.indexOf(l)]!)) ?? `match ${k.variant} { ${kept.map((l, i) => `${variantPath(s.comp, def, l)} => ${arm(fields[i]!)}`).join(", ")} }`;
+  return { code, ty: fields[0]!.ty };
+}
+
+function pickedBy(v: Val, pick: (literal: string) => string | null): string | null {
+  const literal = knownLiteral(v);
+  if (literal !== undefined) return pick(literal);
+  return v.asEnum?.of === v.code && v.asEnum.over !== undefined ? v.asEnum.over(pick) : null;
 }
 
 function exprOf(s: Scope, n: N): Val {
@@ -507,7 +605,7 @@ function exprOf(s: Scope, n: N): Val {
         let at = base.iter.indexOf(".map(");
         while (at > 0 && !enclosed(base.iter.slice(at + 4))) at = base.iter.indexOf(".map(", at + 1);
         const mapped = at > 0 ? base.iter.slice(0, at) : base.iter;
-        const held = /^(.*)\.iter\(\)$/s.exec(mapped)?.[1];
+        const held = /^(.*)\.(?:into_)?iter\(\)$/s.exec(mapped)?.[1];
         return { code: held !== undefined ? `${atom(held)}.len() as i64` : `${atom(mapped)}.count() as i64`, ty: INT };
       }
       return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(base.iter)}.count() as i64`, ty: INT };
@@ -522,7 +620,8 @@ function exprOf(s: Scope, n: N): Val {
     const joinable = (t: Ty) => t.k === "str" || isNumber(t);
     if ((a.ty.k === "str" || b.ty.k === "str") && joinable(a.ty) && joinable(b.ty)) {
       meet(comp, a, b, "`+`", n, "join");
-      return formatted(comp, [a, b], n, "`+`");
+      const joined = formatted(comp, [a, b], n, "`+`");
+      return joined.variant !== undefined ? annotatedStr(joined, STR) : joined;
     }
     if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int", refusalAt(comp, n));
     return fail(comp, "FV0608", "`+` joins a string to a string or a number, or adds two numbers", n);
@@ -578,11 +677,13 @@ function exprOf(s: Scope, n: N): Val {
         if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
         return expr(s, el);
       });
-      const of = values.map((v: Val) => v.ty).reduce(joinTy);
-      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || values.some((v: Val) => !sameTy(v.ty, of))) {
+      const numbers = values.every((v: Val) => isNumber(v.ty)) && values.some((v: Val) => v.ty.k === "float");
+      const of = numbers ? FLOAT : values.map((v: Val) => v.ty).reduce(joinTy);
+      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || (!numbers && values.some((v: Val) => !sameTy(v.ty, of)))) {
         fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
       }
-      return { code: `[${values.map((v: Val) => bare(v.code)).join(", ")}]`, ty: { k: "list", of }, ...loneOf(...values) };
+      const code = `[${values.map((v: Val) => bare(numbers ? asF64(v) : v.code)).join(", ")}]`;
+      return { code, ty: { k: "list", of }, ...loneOf(...values), literal: { of: code, items: values } };
     }
     case "OptionalMemberExpression":
     case "OptionalCallExpression":
@@ -626,6 +727,10 @@ function exprOf(s: Scope, n: N): Val {
             fail(comp, "FV0612", "`[…]` reads a part of a `[key, value]` pair by a literal index: `pair[0]` is its key and `pair[1]` its value", n);
           }
           return entryPart(base, n.property.value);
+        }
+        if (base.ty.k === "struct") {
+          const byKey = fieldByKey(s, base, n.property, n);
+          if (byKey !== null) return byKey;
         }
         return fail(comp, "FV0612", `computed member access of ${describeTy(base.ty)}: \`[…]\` reads an item of a list, by an integer index`, n);
       }
@@ -750,6 +855,9 @@ function exprOf(s: Scope, n: N): Val {
           const src = a.ty.k === "opt" ? atom(a.code) : `Some(${bare(a.code)})`;
           return { code: `${src}.filter(|v| ${truthy({ code: "*v", ty: inner })})`, ty: opt(inner) };
         }
+        if (a.ty.k === "opt" && pathOf(n.left) !== null && ["str", "int", "float", "bool"].includes(a.ty.of.k)) {
+          return expr(s, { ...n, type: "ConditionalExpression", test: n.left, consequent: n.left, alternate: n.right });
+        }
         if (a.ty.k === "str" && b.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
           return { code: `&*{ let a = ${asCow(a)}; if !a.is_empty() { a } else { ${asCow(b)} } }`, ty: STR, ...loneOf(a, b) };
         }
@@ -847,10 +955,16 @@ function exprOf(s: Scope, n: N): Val {
       const k = known(t);
       if (k !== undefined) {
         const chosen = expr(s, k ? n.consequent : n.alternate);
-        if (!untypedEmpty(chosen)) return chosen;
+        const held = chosen.variant !== undefined && chosen.ty.k === "str" ? enumOf(chosen.ty) : undefined;
+        if (!untypedEmpty(chosen) && held === undefined) return chosen;
         ctx.trying++;
         try {
           const other = expr(s, k ? n.alternate : n.consequent);
+          if (held !== undefined) {
+            if (other.ty.k !== "str" || enumOf(other.ty) !== undefined) return chosen;
+            const theirs = literalsOf(other.ty);
+            return annotatedStr(chosen, theirs === undefined ? STR : literalTy("str", [...new Set([...(literalsOf(chosen.ty) ?? held.literals), ...theirs])]));
+          }
           return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
         } catch (e) {
           if (!(e instanceof GenError)) throw e;
@@ -905,7 +1019,11 @@ function exprOf(s: Scope, n: N): Val {
           const [x, y] = both!.map((v) => intoEnum(comp, v, def, node));
           return x == null || y == null ? null : choose(x, y);
         };
-        return { code, ty: joinTy(a.ty, b.ty), ...lone, ...(both ? { asEnum: { of: code, into } } : {}) };
+        const over = (pick: (literal: string) => string | null): string | null => {
+          const [x, y] = both!.map((v) => pickedBy(v, pick));
+          return x == null || y == null ? null : choose(x, y);
+        };
+        return { code, ty: joinTy(a.ty, b.ty), ...lone, ...(both ? { asEnum: { of: code, into, over } } : {}) };
       }
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);

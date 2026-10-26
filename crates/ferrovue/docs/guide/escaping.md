@@ -188,6 +188,38 @@ content, other elements such as `<form>` and `<button>` (keeping their text), ev
 `rel="noopener noreferrer"`. It closes elements left open, so the HTML cannot reach past the
 element it is written into. A policy of your own can allow more, such as `class` on some tags.
 
+## Components inside `v-html`
+
+HTML from a CMS may say where a component goes, with an element the sanitiser keeps, such as
+`<div data-part="gallery"></div>` (an attribute the sanitiser's policy allows).
+[`splice`](crate::html::splice) writes a component's markup in place of each such element, and
+gives a [`Spliced`](crate::html::Spliced), a `TrustedHtml` the `trustedHtml` type may convert from:
+
+```rust
+use ferrovue::html::{TrustedHtml, splice};
+
+# struct Cleaned(String);
+# impl TrustedHtml for Cleaned {
+#     fn trusted_html(&self) -> &str {
+#         &self.0
+#     }
+# }
+let body = Cleaned(String::from(r#"<p>Our trip</p><div data-part="gallery"></div>"#));
+let spliced = splice(&body, "data-part", |name, out| match name {
+    "gallery" => {
+        out.push_str("<figure class=\"gallery\">…</figure>"); // a component's `html(&props)`, rendered
+        true
+    }
+    _ => false,
+});
+assert_eq!(spliced.as_str(), r#"<p>Our trip</p><figure class="gallery">…</figure>"#);
+```
+
+An element is replaced only as a sanitiser writes it, `<tag attr="value"></tag>` with that one
+attribute and no content; any other is kept as it is, and so is one whose name `part` declines.
+The browser writes the same string with `v-html`, so the component's markup is static there: a
+component that responds to the user goes beside the HTML, as an island of its own.
+
 ## A type of your own
 
 A type of your own implements [`TrustedHtml`](crate::html::TrustedHtml), with three rules:

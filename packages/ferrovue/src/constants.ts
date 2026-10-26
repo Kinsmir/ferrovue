@@ -1,4 +1,4 @@
-import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, FLOAT, INT, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { aliasEnum, knownLiteral, matchOver, overVariants } from "./enums.ts";
 
@@ -76,18 +76,21 @@ function typedAs(decl: N): string | null {
   return null;
 }
 
-function valueType(t: N): N | null {
+function valueType(home: Component, t: N, seen: Set<string> = new Set()): N | null {
   if (t?.type === "TSMappedType") return t.typeAnnotation ?? null;
   if (t?.type !== "TSTypeReference" || t.typeName.type !== "Identifier") return null;
   const params: N[] = t.typeParameters?.params ?? [];
-  if (["Readonly", "Partial", "Required"].includes(t.typeName.name) && params.length === 1) return valueType(params[0]);
-  return t.typeName.name === "Record" && params.length === 2 ? params[1] : null;
+  const name: string = t.typeName.name;
+  if (["Readonly", "Partial", "Required"].includes(name) && params.length === 1) return valueType(home, params[0], seen);
+  if (name === "Record") return params.length === 2 ? params[1] : null;
+  const alias = params.length === 0 && !seen.has(name) ? home.aliases.get(name) : undefined;
+  return alias === undefined ? null : valueType(home, alias, new Set(seen).add(name));
 }
 
 function typeValues(home: Component, decl: N, c: Const & { k: "object" }): void {
   const names: N[] = [decl.id.typeAnnotation?.typeAnnotation];
   for (let n = decl.init; n?.type === "TSAsExpression" || n?.type === "TSSatisfiesExpression"; n = n.expression) names.push(n.typeAnnotation);
-  const value = names.map(valueType).find((t) => t !== null);
+  const value = names.map((t) => valueType(home, t)).find((t) => t !== null);
   if (!value) return;
   let def: EnumDef | undefined;
   try {
@@ -481,14 +484,19 @@ export function constOf(s: Scope, n: N): Named | null {
     const what = n.computed ? `${base.what}[${JSON.stringify(key)}]` : `${base.what}.${key}`;
     return { sym: step(s, base, key, n, chain, []), what };
   }
-  const v = expr(s, n.property);
+  const v = homeVariant(expr(s, n.property), n.property);
   const path = pathOf(n.property);
   const what = `${base.what}[${path === null ? "…" : path.replace(/^(?:_ctx|\$props|\$setup)\./, "").replace(new RegExp(`^${s.propsIdent ?? "\\$^"}\\.`), "")}]`;
   const keys = literalsOf(v.ty);
-  const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.code) ? (JSON.parse(v.code) as string) : v.ty.k === "int" && v.num !== undefined && v.code === `${v.num}i64` ? String(v.num) : null;
+  const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.code) ? (JSON.parse(v.code) as string) : v.ty.k === "int" && v.num !== undefined && v.code === `${v.num}i64` ? String(v.num) : v.ty.k === "float" && v.num !== undefined && /^-?[0-9.e+-]+f64$/.test(v.code) ? String(v.num) : floatConst(s, n.property);
   if (fixed !== null) return { sym: step(s, base, fixed, n, chain, []), what: `${base.what}[${JSON.stringify(fixed)}]` };
   if (v.ty.k === "opt" || nothing(v.ty)) {
     return fail(s.comp, "FV0223", `\`${base.what}\` read by a key that may be absent, where JavaScript reads the field \`undefined\`: narrow the key with \`v-if\` first, or give it a default`, n.property);
+  }
+  const mapped = keys === undefined && v.ty.k === "str" ? mappedKey(s, n.property) : null;
+  if (mapped !== null) {
+    const among = literalsOf(mapped.on.ty)!;
+    return { sym: { k: "pick", on: mapped.on, keys: among, arms: among.map((k) => step(s, base, mapped.key(k), n, chain, [mapped.key(k)])) }, what };
   }
   if (keys === undefined || (v.ty.k !== "str" && v.ty.k !== "int")) {
     const is = v.ty.k === "str" ? "a `string`, which may name a field every object has, as `toString` or `constructor`" : v.ty.k === "int" ? "a `number`" : describeTy(v.ty);
@@ -501,6 +509,55 @@ export function constOf(s: Scope, n: N): Named | null {
     return { sym: { k: "pick", on: v, keys: kept, arms: arms.filter((a) => a.k !== "none") }, what };
   }
   return { sym: { k: "pick", on: v, keys, arms }, what };
+}
+
+function homeVariant(v: Val, node: N): Val {
+  const home = v.variant === undefined && v.asEnum?.of === v.code ? v.asEnum.home : undefined;
+  const keys = literalsOf(v.ty);
+  if (home === undefined || v.ty.k !== "str" || keys === undefined || !keys.every((k) => typeof k === "string" && home.literals.includes(k))) return v;
+  const variant = v.asEnum!.into(home, node);
+  return variant === null ? v : { ...v, ty: keptLiterals(enumTy(home), (k) => keys.includes(k)), variant };
+}
+
+function floatConst(s: Scope, n: N): string | null {
+  const c = n.type === "Identifier" && !s.locals.has(n.name) ? s.consts.get(n.name) : undefined;
+  return c?.k === "scalar" && typeof c.js === "number" ? String(c.js) : null;
+}
+
+/** A key built from a value of a union of literals by \`.toUpperCase()\`, \`.toLowerCase()\` or a
+ * template literal: the value it is built from, and the key each of its literals gives. */
+function mappedKey(s: Scope, n: N): { on: Val; key: (literal: string | number) => string } | null {
+  let inner = n;
+  while (inner.type === "ParenthesizedExpression" || inner.type === "TSNonNullExpression") inner = inner.expression;
+  const method = inner.type === "CallExpression" && inner.arguments.length === 0 && inner.callee.type === "MemberExpression" && !inner.callee.computed ? (inner.callee.property.name as string) : null;
+  if (method === "toUpperCase" || method === "toLowerCase") {
+    const from = keyOf(s, inner.callee.object);
+    return from === null ? null : { on: from.on, key: (l) => (method === "toUpperCase" ? from.key(l).toUpperCase() : from.key(l).toLowerCase()) };
+  }
+  if (inner.type === "TemplateLiteral") {
+    const parts = inner.expressions.map((e: N) => keyOf(s, e));
+    const open = parts.filter((p: ReturnType<typeof keyOf>) => p !== null && literalsOf(p.on.ty)!.length > 1);
+    if (parts.some((p: ReturnType<typeof keyOf>) => p === null) || open.length !== 1) return null;
+    const one = open[0]!;
+    const fixed = (p: NonNullable<ReturnType<typeof keyOf>>): string => p.key(literalsOf(p.on.ty)![0]!);
+    return { on: one.on, key: (l) => inner.quasis.map((q: N, i: number) => (q.value.cooked as string) + (i < parts.length ? (parts[i] === one ? one.key(l) : fixed(parts[i])) : "")).join("") };
+  }
+  return null;
+}
+
+function keyOf(s: Scope, n: N): { on: Val; key: (literal: string | number) => string } | null {
+  const mapped = mappedKey(s, n);
+  if (mapped !== null) return mapped;
+  let v: Val;
+  try {
+    v = expr(s, n);
+  } catch (e) {
+    if (e instanceof GenError) return null;
+    throw e;
+  }
+  const literals = literalsOf(v.ty);
+  if ((v.ty.k !== "str" && v.ty.k !== "int") || literals === undefined || !literals.length) return null;
+  return { on: v, key: (l) => String(l) };
 }
 
 /** For a constant object read by a key known only when rendering, which is \`undefined\` for some
@@ -557,8 +614,11 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
       else groups.push([[key], values[i]!]);
     });
     if (groups.length === 1) return groups[0]![1];
-    const def = sym.on.variant !== undefined && sym.on.ty.k !== "opt" ? enumOf(sym.on.ty) : undefined;
     const named = sym.keys as readonly string[];
+    const over = sym.on.asEnum?.of === sym.on.code ? sym.on.asEnum.over : undefined;
+    const composed = over === undefined ? null : over((k) => (named.includes(k) ? values[named.indexOf(k)]! : null));
+    if (composed !== null) return composed;
+    const def = sym.on.variant !== undefined && sym.on.ty.k !== "opt" ? enumOf(sym.on.ty) : undefined;
     const one = def !== undefined && named.length < def.literals.length && named.every((k) => def.literals.includes(k)) ? overVariants(at.comp, sym.on, named, (k) => (named.includes(k) ? values[named.indexOf(k)]! : null)) : null;
     if (one !== null) return one;
     const last = groups.findIndex(([, code]) => code === values[values.length - 1]);
@@ -574,14 +634,22 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
   }
   const code = picked(codes);
   const literals = arms.map((a) => (nothing(a.ty) ? null : knownLiteral(a)));
-  if (ty.k === "list" || literals.some((l) => l === undefined)) return { code, ty, ...slice };
+  const nested = (a: Val): boolean => a.ty.k === "str" && a.asEnum?.of === a.code;
+  if (ty.k === "list" || literals.some((l, i) => l === undefined && !nested(arms[i]!))) return { code, ty, ...slice };
   const optional = ty.k === "opt";
-  const into = (def: EnumDef): string | null => {
-    if (!literals.every((l) => l === null || def.literals.includes(l!))) return null;
-    return picked(literals.map((l) => (l === null ? "None" : optional ? `Some(${variantPath(at.comp, def, l!)})` : variantPath(at.comp, def, l!))));
+  const into = (def: EnumDef, node: N): string | null => {
+    const made = literals.map((l, i) => {
+      if (l === undefined) {
+        const inner = arms[i]!.asEnum!.into(def, node);
+        return inner === null ? null : optional ? `Some(${bare(inner)})` : inner;
+      }
+      if (l !== null && !def.literals.includes(l)) return null;
+      return l === null ? "None" : optional ? `Some(${variantPath(at.comp, def, l)})` : variantPath(at.comp, def, l);
+    });
+    return made.some((m) => m === null) ? null : picked(made as string[]);
   };
   const typed = valueEnum(sym.arms);
-  const variant = typed === undefined ? null : into(typed);
+  const variant = typed === undefined ? null : into(typed, at.node);
   if (typed !== undefined && variant !== null) return { code, ty: withAbsence(enumTy(typed), optional ? absence(ty) : null), variant, asEnum: { of: code, into } };
   return { code, ty, asEnum: { of: code, into } };
 }

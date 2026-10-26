@@ -42,3 +42,14 @@ export const loadClosed = defineLoader("loadClosed", async (name: string): Promi
 export const loadDays = defineLoader("loadDays", async (): Promise<Date[]> => missing("days"));
 
 export const loadThread = defineLoader("loadThread", async (id: number): Promise<Thread> => missing(`thread ${id}`));
+
+export interface Query {
+  term: string;
+  page: number;
+  exact?: boolean;
+  lang: string | null;
+}
+
+export const loadHits = defineLoader("loadHits", async (query: Query): Promise<string[]> => missing(`hits ${query.term}`));
+
+export const loadTotal = defineLoader("loadTotal", async (query: Query, scale?: number): Promise<number> => missing(`total ${query.term} ${scale}`));

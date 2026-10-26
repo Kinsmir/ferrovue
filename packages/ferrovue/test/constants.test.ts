@@ -636,3 +636,24 @@ describe("enums a component declares", () => {
     expect(refusals('import { B } from "./c";\nenum E { A = B, C = 1 }', "<p>{{ E.C }}</p>", { "c.ts": "export const B = 1;" })).toEqual([`FV0207 ${EVALUATES} (the template reads it as \`E\` at components/X.vue:5:17)`]);
   });
 });
+
+describe("lookup keys built when rendering", () => {
+  const script = 'defineProps<{ k: "a" | "b"; s: string }>();\nconst HALF = 0.5;\nconst O = { "0.5": "half", A: "big a", B: "big b", xa: "x of a", xb: "x of b", "A!": "shout" };';
+
+  it("reads a key that is a constant `Float` of the component by the string JavaScript writes for it", () => {
+    expect(render(script, "<p>{{ O[HALF] }}</p>")).toContain('out.push_str("<p>half</p>");');
+  });
+
+  it("reads keys built from a union by `toUpperCase()`, `toLowerCase()` and template literals through a `match` over the union", () => {
+    const out = render(script, "<p>{{ O[k.toUpperCase()] }}|{{ O[`x${k.toLowerCase()}`] }}|{{ O[`${k.toUpperCase()}!`] ?? '-' }}</p>");
+    expect(out).toContain('match props.k { XK::A => "big a", XK::B => "big b" }');
+    expect(out).toContain('match props.k { XK::A => "x of a", XK::B => "x of b" }');
+    expect(out).toContain('match props.k { XK::A => Some("shout"), XK::B => None }');
+  });
+
+  it("refuses a key built from a string of any value, or from two unions", () => {
+    const string = "FV0222 `O` read by a key that is a `string`, which may name a field every object has, as `toString` or `constructor`: type the key as a union of string literals, as `\"sm\" | \"md\" | \"lg\"`, or an `enum` of them";
+    expect(refusals(script, "<p>{{ O[s.toUpperCase()] }}</p>")).toEqual([string]);
+    expect(refusals(script, "<p>{{ O[`${k}${k}`] }}</p>")).toEqual([string]);
+  });
+});

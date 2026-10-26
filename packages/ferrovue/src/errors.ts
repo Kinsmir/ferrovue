@@ -176,7 +176,7 @@ export const ERRORS = {
   FV0221: { title: "Constant list's object type named as a Rust type", retired: "0.10.0" },
   FV0222: {
     title: "Constant object read by a key that is not a union of literals",
-    detail: "A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, or an `enum` of them. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`\"sm\" | \"md\" | \"lg\"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).",
+    detail: "A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, an `enum` of them, or a key built from one by `.toUpperCase()`, `.toLowerCase()` or a template literal. A constant number reads the key JavaScript writes for it. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`\"sm\" | \"md\" | \"lg\"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).",
   },
   FV0223: {
     title: "Constant object read by a key that may be absent",
@@ -216,8 +216,8 @@ export const ERRORS = {
     detail: "`defineProps(['title'])` and `defineProps({ title: String })` declare props by run-time values, which give the compiler no Rust type for each prop. Declare them with a type: `defineProps<{ title: string }>()`, with `withDefaults` for defaults. See [`props`](crate::guide::props).",
   },
   FV0304: {
-    title: "Props type not declared in the component",
-    detail: "The props' Rust struct is built from the type `defineProps` names, which must be a type literal (`defineProps<{ count: number }>()`) or an interface declared in the same `<script setup>` block. An interface imported from another file and a type built with `Pick`, `Omit` or `&` are refused. Declare the interface in the component, or write the fields in place.",
+    title: "Props type the compiler does not resolve",
+    detail: "The props' Rust struct is built from the type `defineProps` names: a type literal (`defineProps<{ count: number }>()`), an interface or object type alias the component declares or imports from a `.ts` file, an interface that extends such types, or an intersection of them (`Base & { count: number }`), each prop declared once. A type built with `Partial`, `Pick`, `Omit` or another generic type, and an interface of a `.ts` file that extends another, are refused. Write the fields out in such a type, or declare them in place.",
   },
   FV0305: {
     title: "`defineModel` without a type",
@@ -241,7 +241,7 @@ export const ERRORS = {
   },
   FV0310: {
     title: "Object type written in place",
-    detail: "Each object in a prop's type becomes a named Rust struct, and an object type written in place (`user: { name: string }`) has no name to give it. Declare it as an interface (`interface User { name: string }`) and name that, or write `{ [key: string]: T }` for a dictionary.",
+    detail: "Each object in a prop's type becomes a named Rust struct. An object type written in place as a field's type, alone, in a list, optional or as a `Record`'s value (`user: { name: string }`), is named after the type and the field that hold it (`CardUser`); one written elsewhere, such as in a union of two objects or as a type argument, has no name to give it, and neither has one whose name the component already gives another type. Declare it as an interface (`interface User { name: string }`) and name that, or write `{ [key: string]: T }` for a dictionary.",
   },
   FV0311: {
     title: "Type that may be both `null` and `undefined`",
@@ -253,7 +253,7 @@ export const ERRORS = {
   },
   FV0313: {
     title: "`Record` not keyed by `string`",
-    detail: "A `Record` is a `ferrovue::props::Record` in Rust, keyed by strings, so `Record<number, T>` and a `Record` keyed by a union of literals are refused. Key it by `string`, or declare an interface with the fields.",
+    detail: "A `Record` keyed by `string` is a `ferrovue::props::Record` in Rust. One keyed by a union of string literals that are names (`Record<Side, string>`), as a field's type, is a struct with a field for each, as a mapped type `{ [K in Side]: string }` is. `Record<number, T>` and a union whose literals are not names are refused. Key it by `string`, or declare an interface with the fields.",
   },
   FV0314: {
     title: "Type alias that refers to itself",
@@ -265,7 +265,7 @@ export const ERRORS = {
   },
   FV0316: {
     title: "Unsupported type",
-    detail: "A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. Write the type as one of those: a tuple as an interface with a field for each part, or a list of such objects. See [`props`](crate::guide::props).",
+    detail: "A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. An indexed type reads a field of an interface by its name (`Card[\"size\"]`), and a mapped type over a union of string literals that are names, written as a field's type, is a struct with a field for each. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. A tuple's items reach the browser as an array, which a Rust struct would write as an object. Write the type as one of those: a tuple as an interface with a field for each part, or a list of such objects. See [`props`](crate::guide::props).",
   },
   FV0317: {
     title: "`Record` of unsupported values",
@@ -308,8 +308,8 @@ export const ERRORS = {
     detail: "A prop or a field of an interface becomes a Rust field, whose type is translated from its TypeScript type. A field written with no type (`defineProps<{ tag }>()`, `interface Row { id }`) has no Rust type. Give the field a type, as `tag: string`. See [`props`](crate::guide::props).",
   },
   FV0327: {
-    title: "Props or events of an imported type",
-    detail: "Vue reads the props of `defineProps<P>()` and the events of `defineEmits<E>()` from the type itself, and the compiler resolves that type when the component declares it. A type imported from another file (`import type { P } from \"./p\"`), an intersection with one or an interface that extends one is refused. Declare the props in the component, as `defineProps<{ label: string }>()` or an interface of the component; their fields may have types imported from a `.ts` file, as `defineProps<{ row: Row }>()`. See [`props`](crate::guide::props).",
+    title: "Props of a type Vue's compiler cannot resolve",
+    detail: "Vue reads the props of `defineProps<P>()` from the type itself, and its compiler reads a type imported from a `.ts` file by a relative path (`import type { P } from \"./p\"`). A type imported through an alias (`@/types`), which it resolves only with TypeScript's own module resolution, and the `Props` of another `.vue` file are refused. Import the type by a relative path, move it into a `.ts` file both components import, or declare the props in the component. See [`props`](crate::guide::props#props-from-a-ts-file).",
   },
   FV0328: {
     title: "Prop named with a leading `$`",
@@ -394,7 +394,7 @@ export const ERRORS = {
   },
   FV0418: {
     title: "`<component :is>` over a value that is not a closed set",
-    detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.",
+    detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop or a `defineModel` typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.",
   },
   FV0419: {
     title: "`<component :is>` naming something other than an HTML element",
@@ -418,7 +418,7 @@ export const ERRORS = {
   },
   FV0424: {
     title: "`<textarea>` or `<input v-model>` at the root, or given merged attributes",
-    detail: "Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler does not translate that reading. Wrap a root `<textarea>` or `<input v-model>` in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name.",
+    detail: "Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s `type` and `value`, from the attributes it merges into the element: those passed to the component, when the element is its root, and those of a `v-bind` of an object, an attribute named at run time or a custom directive. The compiler translates a root `<textarea>`, and a root `<input v-model>` of a literal `type` other than `radio` (a checkbox with a boolean model), where no parent passes `value` or `type`; it refuses the rest. Pass such a value as a prop, wrap the control in an element, such as a `<div>`, which then takes the attributes passed to the component, and bind each attribute of the control by its name. See [`generated_code`](crate::guide::generated_code#fallthrough-attributes).",
   },
   FV0425: {
     title: "Element with no content given a custom directive and attributes that may hold its content",
@@ -540,7 +540,7 @@ export const ERRORS = {
   },
   FV0611: {
     title: "Array literal of different types",
-    detail: "A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.",
+    detail: "A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (integers beside a `Float` are held as `Float`s, and items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.",
   },
   FV0612: {
     title: "Computed member access",
@@ -564,7 +564,7 @@ export const ERRORS = {
   },
   FV0617: {
     title: "`||` between unsupported types",
-    detail: "`||` gives its first operand that is truthy, of whatever type, and the server holds the result in one Rust type. It is supported between two booleans, two strings, two numbers of one kind, before `undefined`, and after a `Date`. Convert one operand so both share a type, or choose with `?:`.",
+    detail: "`||` gives its first operand that is truthy, of whatever type, and the server holds the result in one Rust type. It is supported between two booleans, two strings, two numbers of one kind, before `undefined`, after a `Date`, and after an optional string, number or boolean read by its name or a field, before a value of its type. Convert one operand so both share a type, or choose with `?:`.",
   },
   FV0618: {
     title: "Unsupported unary operator",
@@ -685,7 +685,7 @@ export const ERRORS = {
   },
   FV0710: {
     title: "Regular expression",
-    detail: "The server does not run regular expressions, in a template, a `computed` or a function: JavaScript's syntax and matching differ from Rust's `regex` in flags, lookbehind, Unicode classes and `lastIndex`. `.replace()`, `.split()`, `.includes()` and the other string methods take a string pattern. Use `.replaceAll(\"x\", \"y\")` for a fixed pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings).",
+    detail: "The server runs a subset of regular expressions, with JavaScript's matching over UTF-16 code units: a literal in `.replace()`, `.replaceAll()` (with `g`), `.split()` and `.test()`, holding characters, `.`, classes, `\\d`, `\\w`, `\\s`, `^`, `$`, `\\b`, the quantifiers `*`, `+`, `?` and `{n,m}`, and the flags `g` and `i`. Groups, alternation, backreferences, lookarounds, other flags, a regular expression held in a constant and its other methods are refused. Write the pattern within the subset, use a string pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings#regular-expressions).",
   },
   FV0711: {
     title: "String method given a value that is not a present string",
@@ -1701,7 +1701,7 @@ export const ERRORS = {
   },
   FV2001: {
     title: "`await` of a value that is not a loader's result",
-    detail: "A component's top-level `await` stops its render until the promise settles, on the server as in the browser. The server has the results only of loaders, functions declared with `defineLoader` that the Rust app implements; any other promise is the browser's alone. Declare the function as a loader, or fetch the value in Rust and pass it as a prop.",
+    detail: "A component's top-level `await` stops its render until the promise settles, on the server as in the browser. The server has the results only of loaders, functions declared with `defineLoader` that the Rust app implements, awaited one by one or together by `Promise.all` of an array literal of their calls; any other promise is the browser's alone. Declare the function as a loader, or fetch the value in Rust and pass it as a prop.",
   },
   FV2002: {
     title: "Loader declaration the compiler cannot read",
@@ -1709,7 +1709,7 @@ export const ERRORS = {
   },
   FV2003: {
     title: "Loader parameter that is not a plain typed string, number or boolean",
-    detail: "A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rust app computes from the same values. Each parameter is a plain name with a type: a string, a number (`Float` for a fractional one) or a boolean, which may be optional (`lang?: string`) or `null` (`lang: string | null`). Defaults, `...rest`, destructuring and object parameters are refused: pass the values one by one.",
+    detail: "A call's arguments are its key, `JSON.stringify([name, ...args])`, which the Rust app computes from the same values. Each parameter is a plain name with a type: a string, a number (`Float` for a fractional one) or a boolean, which may be optional (`lang?: string`) or `null` (`lang: string | null`), or an interface of a `.ts` file whose fields are such values, written into the key with its keys sorted. Defaults, `...rest`, destructuring, objects written in place, optional objects and objects holding objects or lists are refused: pass the values one by one, or declare the object as an interface.",
   },
   FV2004: {
     title: "Loader result the payload cannot carry",
@@ -1725,7 +1725,7 @@ export const ERRORS = {
   },
   FV2007: {
     title: "Loader result bound to a pattern",
-    detail: "`const post = await loadPost(id)` binds the result to a name; `const { title, tags } = await loadPost(id)` destructures the object it returns into plain names. Nested patterns, defaults, `...rest` and array patterns are refused: bind the result and read its fields.",
+    detail: "`const post = await loadPost(id)` binds the result to a name; `const { title, tags } = await loadPost(id)` destructures the object it returns into plain names. `const [post, views] = await Promise.all([…])` binds each call's result to a name. Nested patterns, defaults, `...rest`, and array patterns of anything but `Promise.all` are refused: bind the result and read its fields.",
   },
 } as const satisfies Record<`FV${number}`, ErrorDoc>;
 

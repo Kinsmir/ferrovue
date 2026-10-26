@@ -2589,7 +2589,7 @@ defineProps<{ cats: Cat[] }>();
       expect(compile(cats("", "<component :is=\"tag\" />", "defineProps<{ tag: \"h1\" | \"h2\" }>();")).get("x.rs")).toContain("pub fn render");
     });
 
-    it("refuses props or events of a type imported from another file where the macro reads it, and compiles the forms that declare them", () => {
+    it("reads props of a type imported from a `.ts` file by a relative path, and refuses the forms Vue or the compiler cannot resolve", () => {
       const caught = (project: string): unknown => {
         try {
           compile(project);
@@ -2600,26 +2600,91 @@ defineProps<{ cats: Cat[] }>();
       };
       const lib = "export interface Cat { id: string }\nexport type Pick = { id?: string };\nexport interface Events { (e: \"save\"): void }\n";
       const imported = (declared: string, setup: string) => withFile(cats(`import type { Cat, Pick, Events } from "./lib";\n${declared}`, "<p>x</p>", setup), "lib.ts", lib);
-      const refusedAt = [
-        ["", "defineProps<Cat>();", 5, 13, "Cat"],
-        ["", 'withDefaults(defineProps<Pick>(), { id: "a" });', 5, 26, "Pick"],
-        ["", "defineProps<Cat & { n: number }>();", 5, 13, "Cat"],
-        ["interface Props extends Cat { n: number }", "defineProps<Props>();", 4, 25, "Cat"],
-        ["type Props = Partial<Cat>;", "defineProps<Props>();", 4, 22, "Cat"],
-        ["", "defineProps<{ n: number }>();\ndefineEmits<Events>();", 6, 13, "Events"],
-      ] as const;
-      for (const [declared, setup, line, column, name] of refusedAt) {
-        const e = caught(imported(declared, setup));
-        expect(e, setup).toBeInstanceOf(GenError);
-        expect(e, setup).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line, column }, message: expect.stringContaining(`\`${name}\`, imported from \`./lib\``) });
+      const aliased = withFile(cats('import type { Cat } from "@/lib";', "<p>x</p>", "defineProps<Cat>();"), "lib.ts", lib);
+      expect(caught(aliased)).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line: 4, column: 13 }, message: expect.stringContaining("`Cat`, imported from `@/lib`, which Vue's compiler resolves only by a relative path") });
+      expect(caught(imported("type Props = Partial<Cat>;", "defineProps<Props>();"))).toMatchObject({ code: "FV0304", at: { file: "components/X.vue", line: 5, column: 13 } });
+      const fromVue = island('<script setup lang="ts">\nimport type { Props } from "./Y.vue";\ndefineProps<Props>();\n</script>\n<template><p>{{ id }}</p></template>', {
+        Y: '<script setup lang="ts">\nexport interface Props { id: string }\ndefineProps<Props>();\n</script>\n<template><b>{{ id }}</b></template>',
+      });
+      expect(caught(fromVue)).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line: 3, column: 13 }, message: expect.stringContaining("imported from `Y.vue`") });
+      expect(caught(imported("", "defineProps<Cat & { id: string }>();"))).toMatchObject({ code: "FV0304", message: expect.stringContaining("`id` is declared twice") });
+      for (const [declared, setup, fields] of [
+        ["", "defineProps<Cat>();", ["pub id: Cow<'a, str>,"]],
+        ["", 'withDefaults(defineProps<Pick>(), { id: "a" });', ["pub id: Option<Cow<'a, str>>,"]],
+        ["", "defineProps<Cat & { n: number }>();", ["pub id: Cow<'a, str>,", "pub n: i64,"]],
+        ["interface Props extends Cat { n: number }", "defineProps<Props>();", ["pub n: i64,", "pub id: Cow<'a, str>,"]],
+        ["", "defineProps<{ n: number }>();\ndefineEmits<Events>();", ["pub n: i64,"]],
+        ["", "defineProps<{ cat: Cat; pick?: Pick }>();", ["pub cat: super::types::Cat<'a>,"]],
+        ["interface Props { cat: Cat }", "defineProps<Props>();", ["pub cat: super::types::Cat<'a>,"]],
+        ["", "const cat = defineModel<Cat>({ required: true });", ["pub model_value: super::types::Cat<'a>,"]],
+      ] as const) {
+        const out = compile(imported(declared, setup)).get("x.rs")!;
+        const props = out.slice(out.indexOf("pub struct Props"), out.indexOf("\n}\n", out.indexOf("pub struct Props")));
+        for (const field of fields) expect(props, setup).toContain(field);
       }
-      for (const [declared, setup] of [
-        ["", "defineProps<{ cat: Cat; pick?: Pick }>();"],
-        ["interface Props { cat: Cat }", "defineProps<Props>();"],
-        ["", "const cat = defineModel<Cat>({ required: true });"],
-      ]) {
-        expect(compile(imported(declared!, setup!)).get("x.rs"), setup).toContain("pub fn render");
+    });
+  });
+
+  describe("types written in place", () => {
+    const of = (props: string, template = "<p>x</p>", before = ""): string => `<script setup lang="ts">\n${before}defineProps<${props}>();\n</script>\n<template>${template}</template>`;
+    const caught = (source: string): GenError => {
+      try {
+        compile(island(source));
+      } catch (e) {
+        if (e instanceof GenError) return e;
+        throw e;
       }
+      throw new Error("compiled without an error");
+    };
+
+    it("names an object type in place after the type and the field that hold it, alone, in a list and optional", () => {
+      const out = compile(island(of("{ owner: { name: string; tags?: { t: string }[] }; rows: { k: string }[]; box?: { on: boolean } }", "<p>{{ owner.name }}{{ rows.length }}{{ box?.on }}</p>"))).get("x.rs")!;
+      for (const decl of ["pub struct XOwner<'a> {", "pub struct XOwnerTags<'a> {", "pub struct XRows<'a> {", "pub struct XBox {", "pub owner: XOwner<'a>,", "pub rows: Vec<XRows<'a>>,", "pub r#box: Option<XBox>,"]) expect(out).toContain(decl);
+    });
+
+    it("reads a mapped type and a `Record` over a union of names as a struct, by name and by a value of the union", () => {
+      const out = compile(island(of("{ side: Side; widths: { [K in Side]: number }; labels: Record<Side, string> }", "<p>{{ widths.left }}{{ labels[side] }}</p>", 'type Side = "left" | "right";\n'))).get("x.rs")!;
+      expect(out).toContain("pub widths: XWidths,");
+      expect(out).toContain("match props.side { Side::Left => std::ops::Deref::deref(&props.labels.left), Side::Right => std::ops::Deref::deref(&props.labels.right) }");
+    });
+
+    it("reads an indexed type as the field it names", () => {
+      expect(compile(island(of('{ size: Card["size"] }', "<p>{{ size }}</p>", 'interface Card { size: "sm" | "lg" }\n'))).get("x.rs")).toContain("pub size: CardSize,");
+    });
+
+    it("refuses an object type in place it cannot name, a mapped type over literals that are not names, and a tuple", () => {
+      expect(caught(of("{ pick: { a: string } | { b: string } }"))).toMatchObject({ code: "FV0310" });
+      expect(caught(of('{ m: { [K in "a-b" | "c"]: string } }'))).toMatchObject({ code: "FV0316" });
+      expect(caught(of("{ owner: { name: string } }", "<p>x</p>", "interface XOwner { id: number }\n"))).toMatchObject({ code: "FV0310", message: expect.stringContaining("named `XOwner`") });
+      expect(caught(of("{ pair: [string, number] }"))).toMatchObject({ code: "FV0316" });
+    });
+  });
+
+  describe("form fields at the root", () => {
+    const field = (template: string, script = "const text = defineModel<string>({ required: true });\nconst on = defineModel<boolean>(\"on\", { required: true });"): string => `<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`;
+    const parent = (attrs: string): string => `<script setup lang="ts">\nimport F from "./F.vue";\n</script>\n<template><F model-value="a" :on="true" ${attrs} /></template>`;
+
+    it.each([
+      ["a `<textarea>` with content", "<textarea>hi</textarea>", 'out.push_str(">hi</textarea>");'],
+      ["a `<textarea>` with `v-model`", '<textarea v-model="text"></textarea>', "fv::core::escape_into(out, &props.model_value);"],
+      ["a `<textarea>` in a `v-if` branch", '<textarea v-if="on">hi</textarea><p v-else>none</p>', 'out.push_str(">hi</textarea>");'],
+      ["an `<input>` with `v-model`", '<input v-model="text">', '("value", fv::attrs::Attr::str(&props.model_value))'],
+      ["a text `<input>` with `v-model`", '<input type="text" v-model="text">', '("type", fv::attrs::Attr::str("text"))'],
+      ["a checkbox with `v-model`", '<input type="checkbox" v-model="on">', '("checked", fv::attrs::Attr::Bool(props.on))'],
+    ])("renders %s whose parents pass neither `value` nor `type`", (_, template, rust) => {
+      const out = compile(island(parent('class="c" title="t"'), { F: field(template) })).get("f.rs")!;
+      expect(out).toContain(rust);
+      expect(out).toContain("fv_attrs");
+    });
+
+    it.each([
+      ["a `<textarea>`", "<textarea>hi</textarea>", 'value="v"', "value"],
+      ["an `<input>` with `v-model`", '<input v-model="text">', 'type="radio"', "type"],
+      ["an `<input>` with `v-model`", '<input type="checkbox" v-model="on">', 'value="v"', "value"],
+    ])("refuses %s at the root where a parent passes the attribute it reads", (_, template, attrs, name) => {
+      const e = refusal(island(parent(attrs), { F: field(template) }));
+      expect(e.code).toBe("FV0424");
+      expect(e.message).toMatch(new RegExp(`^components/F\\.vue:5:11: .* at the component's root .* a parent passes \\\`${name}\\\``));
     });
   });
 
@@ -3286,8 +3351,8 @@ const props = defineProps<{ a: string }>();
       `<script setup lang="ts">
 const props = defineProps<{ a: string }>();
 </script>
-<template><i>{{ a.replace(/x/g, "y") }}</i></template>`,
-      /`\.replace\(\)` with a regular expression/,
+<template><i>{{ a.replace(/x|z/g, "y") }}</i></template>`,
+      /`\/x\|z\/g` in `\.replace\(\)` holds `\|`, outside the regular expressions the server runs/,
     ],
     [
       "replace with a function",
@@ -4236,6 +4301,30 @@ defineProps<{ wide: boolean }>();
 </script>
 <template><div><component :is="wide ? 'my-wide' : 'b'" /></div></template>`,
       /`my-wide` is not an HTML element `<component :is>` renders/,
+    ],
+    [
+      "a static `is` naming an imported component, at the attribute",
+      `<script setup lang="ts">
+import P from "./P.vue";
+</script>
+<template>
+  <div>
+    <component is="P" />
+  </div>
+</template>`,
+      /^components\/X\.vue:6:16: `P` is not an HTML element `<component :is>` renders/,
+    ],
+    [
+      "an element rendering a component by `is=\"vue:…\"` without its required prop, at the element",
+      `<script setup lang="ts">
+import P from "./P.vue";
+</script>
+<template>
+  <section>
+    <div is="vue:P" />
+  </section>
+</template>`,
+      /^components\/X\.vue:6:5: P requires `p`/,
     ],
     [
       "a dynamic component over an optional prop",
@@ -5823,76 +5912,6 @@ defineProps<{ tag: "b" | "i" }>();
       /X\.vue:4:1: the `<template>` is read from `\.\/x\.html`: write the template inside the `<template>` block of the component/,
     ],
     [
-      "a root textarea",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><textarea>hi</textarea></template>`,
-      /X\.vue:6:11: a `<textarea>` at the component's root renders as its content a `value` among the attributes passed to the component: wrap it in an element, such as a `<div>`, which then takes those attributes/,
-    ],
-    [
-      "a root textarea with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><textarea v-model="text"></textarea></template>`,
-      /X\.vue:6:11: a `<textarea>` at the component's root/,
-    ],
-    [
-      "a root textarea in a v-if branch",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><textarea v-if="on">hi</textarea><p v-else>none</p></template>`,
-      /X\.vue:6:11: a `<textarea>` at the component's root/,
-    ],
-    [
-      "a textarea in a root Transition",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><Transition><textarea>hi</textarea></Transition></template>`,
-      /X\.vue:6:23: a `<textarea>` at the component's root/,
-    ],
-    [
-      "a root input with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><input v-model="text"></template>`,
-      /X\.vue:6:11: an `<input>` with `v-model` at the component's root reads its `type` and `value` from the attributes passed to the component: wrap it in an element/,
-    ],
-    [
-      "a root text input with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><input type="text" v-model="text"></template>`,
-      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
-    ],
-    [
-      "a root checkbox with v-model",
-      `<script setup lang="ts">
-const text = defineModel<string>({ required: true });
-const on = defineModel<boolean>("on", { required: true });
-defineProps<{ kind: "text" | "checkbox" }>();
-</script>
-<template><input type="checkbox" v-model="on"></template>`,
-      /X\.vue:6:11: an `<input>` with `v-model` at the component's root/,
-    ],
-    [
       "a root input of a bound type with v-model",
       `<script setup lang="ts">
 const text = defineModel<string>({ required: true });
@@ -6233,13 +6252,6 @@ defineProps<{ chip: Chip }>();
     "a template written in pug": "FV0008",
     "a template in another language than HTML": "FV0008",
     "a template read from another file": "FV0009",
-    "a root textarea": "FV0424",
-    "a root textarea with v-model": "FV0424",
-    "a root textarea in a v-if branch": "FV0424",
-    "a textarea in a root Transition": "FV0424",
-    "a root input with v-model": "FV0424",
-    "a root text input with v-model": "FV0424",
-    "a root checkbox with v-model": "FV0424",
     "a root input of a bound type with v-model": "FV0424",
     "a textarea given v-bind of an object": "FV0424",
     "an input with v-model given an attribute named at run time": "FV0424",
@@ -6781,14 +6793,16 @@ describe("constant lookups", () => {
     expect(out).toContain('match props.j { K::B => "B", K::A | K::C => "A" }');
   });
 
-  it("reads the union's last member in the `_` arm of a key held as a string, whatever the `??` default and however the values group", () => {
+  it("holds a key annotated as a union as its enum, and matches every variant whatever the `??` default and however the values group", () => {
     const out = render(
       'import { computed } from "vue";\nconst props = defineProps<{ on: boolean; off: boolean }>();\nconst T = { a: "A", b: "B", c: "C" } as const;\nconst U = { a: "A", b: "B", c: "A" } as const;\nconst k = computed((): "a" | "b" | "c" => (props.on ? "b" : "c"));\nconst x = computed((): "a" | "c" | undefined => (props.off ? undefined : props.on ? "a" : "c"));',
       "<i>{{ U[k] }} {{ T[x ?? 'c'] }} {{ T[x ?? 'a'] }}</i>",
     );
-    expect(out).toContain('match s_k { "b" => "B", _ => "A" }');
-    expect(out).toContain('match s_x.unwrap_or("c") { "a" => "A", _ => "C" }');
-    expect(out).toContain('match s_x.unwrap_or("a") { "a" => "A", _ => "C" }');
+    expect(out).toContain("let s_k = if props.on { XK::B } else { XK::C };");
+    expect(out).toContain('match s_k { XK::B => "B", XK::A | XK::C => "A" }');
+    expect(out).toContain('match s_x.unwrap_or(XX::C) { XX::A => "A", XX::C => "C" }');
+    expect(out).toContain('match s_x.unwrap_or(XX::A) { XX::A => "A", XX::C => "C" }');
+    expect(out).not.toContain("_ =>");
   });
 
   it("tests an enum key in a table of booleans and in `v-if` of a table that lacks members, with every arm of a `match` inside it named", () => {
@@ -6820,11 +6834,11 @@ describe("constant lookups", () => {
       'const B = 1;\nconst PREFIX = "x";\nenum E { A = B, C }\nenum S { A = PREFIX + "a", B = "b" }\nenum R { One = 1, Two = One + 1, Four = R.Two * 2 }\nconst D: S = S.A;\nconst F: E = E.C;\ndefineProps<{ e: E; s: S; r: R }>();',
       "<i>{{ e }} {{ s }} {{ r }}|{{ E.A }} {{ E.C }} {{ D }} {{ F }} {{ R.Two }} {{ R.Four }}</i>",
     );
-    expect(out).toContain("let s_f = 2i64;");
+    expect(out).not.toContain("let s_f");
     expect(out).toContain("fv::core::push_int(out, props.e);");
     expect(out).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.s));");
     expect(out).toContain("fv::core::push_int(out, props.r);");
-    expect(out).toContain('out.push_str("|1 2 xa ");\n    fv::core::push_int(out, s_f);\n    out.push_str(" 2 4</i>");');
+    expect(out).toContain('out.push_str("|1 2 xa 2 2 4</i>");');
   });
 
   it("evaluates an enum member named by a constant beside it as the member", () => {
@@ -6840,7 +6854,7 @@ describe("constant lookups", () => {
       "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
     );
     expect(out).toContain('fv::core::escape_into(out, match props.level { 1 => "one", _ => "two" });');
-    expect(out).toContain('fv::core::escape_into(out, match if props.on { "b" } else { "a" } { "b" => "p-2", _ => "p-1" });');
+    expect(out).toContain('fv::core::escape_into(out, if props.on { "p-2" } else { "p-1" });');
     expect(out).toContain('fv::core::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
   });
 
@@ -7357,7 +7371,7 @@ describe("refusals inside a computed or a function", () => {
     const [regex, literal, called, ...rest] = refusals(`<script setup lang="ts">
 import { computed } from "vue";
 const props = defineProps<{ s: string }>();
-const clean = computed(() => props.s.replace(/x/g, ""));
+const clean = computed(() => props.s.replace(/x|z/g, ""));
 const shape = computed(() => ({ a: props.s }));
 function pair(t: string): string {
   return [t, 1].join();
@@ -7685,7 +7699,7 @@ const T = { a: "A", b: "B", c: "C" } as const;
     expect(out).toContain('match s_key { XK::A => "A", XK::B => "B", XK::C => "C" }');
   });
 
-  it("hands a child's prop of a union the enum, a conversion of another enum or of known strings, or the string", () => {
+  it("hands a child's prop of a union the enum, a conversion of another enum, of a `computed` annotated as a union or of known strings, or the string", () => {
     const out = rendered(
       compile(
         island(
@@ -7709,7 +7723,7 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     expect(out).toContain("k: match props.k { K::A => super::y::YK::A, K::B => super::y::YK::B, K::C => super::y::YK::C }");
     expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
     expect(out).toContain("s: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.k))");
-    expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
+    expect(out).toContain("q: match s_pick { K::A => super::y::YQ::A, K::B => super::y::YQ::B, K::C => super::y::YQ::C }");
     expect(out).toContain("r: if props.on { super::y::YR::A } else { super::y::YR::B }");
     expect(out).toContain("lit: super::y::YLit::C");
   });
@@ -7773,8 +7787,8 @@ defineProps<{ tone?: Tone }>();
 
     it("takes a `computed` annotated as the union, whose body narrows the value to it", () => {
       const out = narrowed(`<Badge :tone="shown" />`, `const shown = computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value));`);
-      expect(out).toContain("let s_shown = if s_tone == XTone::Empty { None } else { Some(fv::props::Union::as_str(s_tone)) };");
-      expect(out).toContain("tone: s_shown.map(|v| match v {");
+      expect(out).toContain(`let s_shown = match s_tone { XTone::Calm => Some(${TONE}::Calm), XTone::Loud => Some(${TONE}::Loud), XTone::Empty => None };`);
+      expect(out).toContain("super::badge::Props { tone: s_shown }");
     });
 
     it("keeps an annotated `computed` the compiler cannot show is the union where the template reads it as a string", () => {
@@ -8124,25 +8138,37 @@ defineProps<{ level?: Level }>();
         );
       const L = "super::types::Level";
 
-      it("holds a string of the wider union where a literal of it names no variant, and compares it with the literal it adds", () => {
+      it("names the variants of the wider union by the `enum`'s members where its literals name none, and compares it with the literal it adds", () => {
         const out = wider(
           `High = "&amp; &lt;", Low = "'!", Mid = "0x1F"`,
           `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "">(props.level);`,
           `<li :class="{ none: picked === '' }">{{ picked }}</li><Badge v-if="picked !== ''" :level="picked" />`,
         );
-        expect(out).toContain("let s_picked = fv::props::Union::as_str(props.level);");
-        expect(out).toContain('fv::attrs::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }]);');
-        expect(out).toContain(`if !s_picked.is_empty() {\n        super::badge::try_render(out, &super::badge::Props { level: Some(match s_picked { "&amp; &lt;" => ${L}::High, "'!" => ${L}::Low, _ => ${L}::Mid }) })?;`);
+        expect(out).toContain(`let s_picked = match props.level { ${L}::High => XPicked::High, ${L}::Low => XPicked::Low, ${L}::Mid => XPicked::Mid };`);
+        expect(out).toContain('fv::attrs::class_into(out, false, &[if s_picked == XPicked::Empty { "none" } else { "" }]);');
+        expect(out).toContain(`if let Some(fv_picked) = match s_picked { XPicked::High => Some(${L}::High), XPicked::Low => Some(${L}::Low), XPicked::Mid => Some(${L}::Mid), XPicked::Empty => None } {`);
+        expect(out).not.toContain("_ =>");
       });
 
-      it("holds a string of the wider union started from an optional value of the enum", () => {
+      it("holds an `Option` of the wider union's enum started from an optional value of the enum", () => {
         const out = wider(
           `High = "&amp; &lt;", Low = "'!", Mid = "0x1F"`,
           `const props = defineProps<{ level?: Level }>();\nconst picked = ref<Level | "" | undefined>(props.level);`,
           `<li :class="{ none: picked === '' }">{{ picked }}</li>`,
         );
-        expect(out).toContain("let s_picked = props.level.map(fv::props::Union::as_str);");
-        expect(out).toContain('if s_picked == Some("") { "none" } else { "" }');
+        expect(out).toContain(`let s_picked = props.level.map(|v| match v { ${L}::High => XPicked::High, ${L}::Low => XPicked::Low, ${L}::Mid => XPicked::Mid });`);
+        expect(out).toContain('if s_picked == Some(XPicked::Empty) { "none" } else { "" }');
+      });
+
+      it("holds a string of the wider union where a literal it adds names no variant, and parses it into the child's enum", () => {
+        const out = wider(
+          `High = "&amp; &lt;", Low = "'!"`,
+          `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "!">(props.level);`,
+          `<Badge v-if="picked !== '!'" :level="picked" />`,
+        );
+        expect(out).toContain("let s_picked = fv::props::Union::as_str(props.level);");
+        expect(out).toContain(`level: Some(match s_picked.parse::<${L}>() { Ok(fv_u) => fv_u, Err(fv_e) => {`);
+        expect(out).not.toContain("_ =>");
       });
 
       it("holds the wider union's enum, seeded from a present value where the annotation is optional", () => {
@@ -8191,10 +8217,22 @@ ${setup}
       ["a mapped type", 'export const T: { [K in Tone]: Tone } = { calm: "loud", loud: "nope", quiet: "calm" };'],
       ["`as`", 'export const T = { calm: "loud", loud: "nope", quiet: "calm" } as Record<Tone, Tone>;'],
       ["`satisfies`", 'export const T = { calm: "loud", loud: "nope", quiet: "calm" } satisfies Record<Tone, Tone>;'],
+      ["a `type` alias", 'type Table = Partial<Record<Tone, Tone>>;\nexport const T: Table = { calm: "loud", loud: "nope", quiet: "calm" };'],
     ])("refuses a value outside the union a type through %s gives, at the value", (_, table) => {
       const e = failure(() => reading(table));
       expect(e.code).toBe("FV0228");
-      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 2, column: table.indexOf('"nope"') + 1 });
+      const last = table.split("\n").at(-1)!;
+      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 1 + table.split("\n").length, column: last.indexOf('"nope"') + 1 });
+    });
+
+    it.each([
+      ["`Record`", "const OWN: Record<Tone, Tone> = { calm: \"loud\", loud: \"nope\", quiet: \"calm\" };"],
+      ["a `type` alias of its own", "type Own = Record<Tone, Tone>;\nconst OWN: Own = { calm: \"loud\", loud: \"nope\", quiet: \"calm\" };"],
+    ])("refuses a value outside an imported union a component's own table typed through %s gives, at the value", (_, setup) => {
+      const e = failure(() => reading('export const T = { calm: "loud" };', "<Badge :tone=\"OWN[tone]\" />", setup));
+      expect(e.code).toBe("FV0228");
+      const last = setup.split("\n").at(-1)!;
+      expect(e.at).toMatchObject({ file: "components/X.vue", line: 4 + setup.split("\n").length, column: last.indexOf('"nope"') + 1 });
     });
 
     it("refuses a value outside the union under a computed key, at the table", () => {
@@ -8237,10 +8275,11 @@ ${setup}
       expect(reading(tables, "<p>{{ L[0] }}</p>", 'import { L } from "../types/tone";')).toContain('if let Some(v) = ["calm"].first().map(|v| &**v) {');
     });
 
-    it("hands a table of tables read by two keys to a child's union prop through the strings it holds", () => {
+    it("hands a table of tables read by two keys to a child's union prop through a `match` over its key", () => {
       const tables = 'export const T = { calm: "loud" };\nexport const NEST = { calm: { calm: "loud", loud: "calm", quiet: "quiet" }, loud: { calm: "calm", loud: "calm", quiet: "calm" }, quiet: { calm: "quiet", loud: "loud", quiet: "loud" } };\n';
       const out = reading(tables, '<Badge :tone="NEST[tone][tone]" />', 'import { NEST } from "../types/tone";');
-      expect(out).toContain('{ "loud" => super::types::Tone::Loud, "calm" => super::types::Tone::Calm, _ => super::types::Tone::Quiet }) })?;');
+      expect(out).toContain("tone: Some(match props.tone { super::types::Tone::Calm => match props.tone { super::types::Tone::Calm => super::types::Tone::Loud, super::types::Tone::Loud => super::types::Tone::Calm, super::types::Tone::Quiet => super::types::Tone::Quiet },");
+      expect(out).not.toContain("_ =>");
     });
 
     it("refuses a table's literal outside a child's union prop", () => {

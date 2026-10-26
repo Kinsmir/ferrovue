@@ -68,6 +68,36 @@ impl fv::loaders::Load for LoadDays {
     fn args(&self, _key: &mut fv::loaders::LoadKey) {}
 }
 
+/// `query` of a call of `loadHits`, in components/loaders.ts: its fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadHitsQuery {
+    pub exact: Option<bool>,
+    pub lang: Option<String>,
+    pub page: i64,
+    pub term: String,
+}
+
+/// A call of `loadHits`, in components/loaders.ts: its arguments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadHits {
+    pub query: LoadHitsQuery,
+}
+
+impl fv::loaders::Load for LoadHits {
+    const NAME: &'static str = "loadHits";
+    type Output = Vec<std::borrow::Cow<'static, str>>;
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
+        key.object();
+        if let Some(v) = &self.query.exact {
+            key.field("exact", v);
+        }
+        key.field("lang", &self.query.lang);
+        key.field("page", &self.query.page);
+        key.field("term", &self.query.term);
+        key.end();
+    }
+}
+
 /// A call of `loadNote`, in components/loaders.ts: its arguments.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadNote {
@@ -126,6 +156,40 @@ impl fv::loaders::Load for LoadThread {
     }
 }
 
+/// `query` of a call of `loadTotal`, in components/loaders.ts: its fields.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadTotalQuery {
+    pub exact: Option<bool>,
+    pub lang: Option<String>,
+    pub page: i64,
+    pub term: String,
+}
+
+/// A call of `loadTotal`, in components/loaders.ts: its arguments.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LoadTotal {
+    pub query: LoadTotalQuery,
+    pub scale: Option<i64>,
+}
+
+impl fv::loaders::Load for LoadTotal {
+    const NAME: &'static str = "loadTotal";
+    type Output = i64;
+    fn args(&self, key: &mut fv::loaders::LoadKey) {
+        key.object();
+        if let Some(v) = &self.query.exact {
+            key.field("exact", v);
+        }
+        key.field("lang", &self.query.lang);
+        key.field("page", &self.query.page);
+        key.field("term", &self.query.term);
+        key.end();
+        if self.scale.is_some() {
+            key.arg(&self.scale);
+        }
+    }
+}
+
 /// A call of `loadViews`, in components/loaders.ts: its arguments.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoadViews;
@@ -154,6 +218,9 @@ pub trait Loaders: Sync {
     /// `loadDays`, in components/loaders.ts.
     fn load_days(&self, call: LoadDays) -> impl std::future::Future<Output = Result<<LoadDays as fv::loaders::Load>::Output, Self::Error>> + Send;
 
+    /// `loadHits`, in components/loaders.ts.
+    fn load_hits(&self, call: LoadHits) -> impl std::future::Future<Output = Result<<LoadHits as fv::loaders::Load>::Output, Self::Error>> + Send;
+
     /// `loadNote`, in components/loaders.ts.
     fn load_note(&self, call: LoadNote) -> impl std::future::Future<Output = Result<<LoadNote as fv::loaders::Load>::Output, Self::Error>> + Send;
 
@@ -166,6 +233,9 @@ pub trait Loaders: Sync {
     /// `loadThread`, in components/loaders.ts.
     fn load_thread(&self, call: LoadThread) -> impl std::future::Future<Output = Result<<LoadThread as fv::loaders::Load>::Output, Self::Error>> + Send;
 
+    /// `loadTotal`, in components/loaders.ts.
+    fn load_total(&self, call: LoadTotal) -> impl std::future::Future<Output = Result<<LoadTotal as fv::loaders::Load>::Output, Self::Error>> + Send;
+
     /// `loadViews`, in components/loaders.ts.
     fn load_views(&self, call: LoadViews) -> impl std::future::Future<Output = Result<<LoadViews as fv::loaders::Load>::Output, Self::Error>> + Send;
 }
@@ -177,10 +247,12 @@ pub fn dispatch<'a, L: Loaders>(loaders: &'a L, call: fv::loaders::LoadCall) -> 
         <LoadClosed as fv::loaders::Load>::NAME => call.run(|c: LoadClosed| loaders.load_closed(c)),
         <LoadComments as fv::loaders::Load>::NAME => call.run(|c: LoadComments| loaders.load_comments(c)),
         <LoadDays as fv::loaders::Load>::NAME => call.run(|c: LoadDays| loaders.load_days(c)),
+        <LoadHits as fv::loaders::Load>::NAME => call.run(|c: LoadHits| loaders.load_hits(c)),
         <LoadNote as fv::loaders::Load>::NAME => call.run(|c: LoadNote| loaders.load_note(c)),
         <LoadOpened as fv::loaders::Load>::NAME => call.run(|c: LoadOpened| loaders.load_opened(c)),
         <LoadRanking as fv::loaders::Load>::NAME => call.run(|c: LoadRanking| loaders.load_ranking(c)),
         <LoadThread as fv::loaders::Load>::NAME => call.run(|c: LoadThread| loaders.load_thread(c)),
+        <LoadTotal as fv::loaders::Load>::NAME => call.run(|c: LoadTotal| loaders.load_total(c)),
         <LoadViews as fv::loaders::Load>::NAME => call.run(|c: LoadViews| loaders.load_views(c)),
         name => unreachable!("no loader is called `{name}`"),
     }
@@ -212,6 +284,10 @@ pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::
             let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadDays as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
+        <LoadHits as fv::loaders::Load>::NAME => call.run(|c: LoadHits| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadHits as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
+        }),
         <LoadNote as fv::loaders::Load>::NAME => call.run(|c: LoadNote| {
             let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadNote as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
@@ -226,6 +302,10 @@ pub fn from_fixture(results: &std::collections::HashMap<String, Box<serde_json::
         }),
         <LoadThread as fv::loaders::Load>::NAME => call.run(|c: LoadThread| {
             let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadThread as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
+            async move { found }
+        }),
+        <LoadTotal as fv::loaders::Load>::NAME => call.run(|c: LoadTotal| {
+            let found = results.get(&fv::loaders::load_key(&c)).ok_or_else(|| format!("the fixture has no result for {}", fv::loaders::load_key(&c))).and_then(|raw| serde_json::from_str::<<LoadTotal as fv::loaders::Load>::Output>(raw.get()).map_err(|e| e.to_string()));
             async move { found }
         }),
         <LoadViews as fv::loaders::Load>::NAME => call.run(|c: LoadViews| {

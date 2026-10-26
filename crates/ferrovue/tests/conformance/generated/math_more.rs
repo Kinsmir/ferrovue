@@ -41,9 +41,8 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(534);
+    out.reserve(532);
     let s_root = props.x.sqrt();
-    let s_kilo = 1024i64;
     out.push_str("<section data-sign=\"");
     fv::core::push_number(out, fv::core::js_sign(props.x));
     out.push_str("\" style=\"width:");
@@ -72,9 +71,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     fv::core::push_number(out, fv::core::js_sign(props.x - 1.0));
     out.push_str("|-1</p><p>3.141592653589793|2.718281828459045|0.6931471805599453|2.302585092994046|1.4426950408889634|0.4342944819032518|1.4142135623730951|0.7071067811865476|");
     fv::core::escape_into(out, &fv::core::js_to_fixed(props.x * std::f64::consts::PI, 2));
-    out.push_str("</p><p>");
-    fv::core::push_int(out, s_kilo);
-    out.push_str("|9007199254740992|-27|1000000000000000|1|1|");
+    out.push_str("</p><p>1024|9007199254740992|-27|1000000000000000|1|1|");
     fv::core::push_number(out, props.n as f64 * 256.0);
     out.push_str("|-9007199254740992</p><p>9007199254740991|-9007199254740991|2.220446049250313e-16|1.7976931348623157e+308|5e-324|Infinity|-Infinity|NaN</p>");
     if fv::core::js_sign(props.x) < 0.0 {

@@ -106,6 +106,30 @@ fn arguments_are_written_by_their_type() {
     );
 }
 
+#[test]
+fn objects_are_written_with_their_fields_in_the_order_given() {
+    struct Object;
+    impl Load for Object {
+        const NAME: &'static str = "object";
+        type Output = ();
+        fn args(&self, key: &mut LoadKey) {
+            key.arg("a")
+                .object()
+                .field("lang", &None::<&str>)
+                .field("n", &2_i64)
+                .field("slug", "x\"y")
+                .end()
+                .object()
+                .end()
+                .arg(&true);
+        }
+    }
+    assert_eq!(
+        load_key(&Object),
+        r#"["object","a",{"lang":null,"n":2,"slug":"x\"y"},{},true]"#
+    );
+}
+
 struct Wait {
     name: &'static str,
     ms: u64,

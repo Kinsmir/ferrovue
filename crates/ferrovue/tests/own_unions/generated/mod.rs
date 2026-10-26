@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(6);
+ferrovue::__compat!(7);
 
 pub mod union_child;
 pub mod union_enums;

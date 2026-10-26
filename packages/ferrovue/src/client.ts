@@ -33,11 +33,13 @@ function scanLoads(store: LoadStore): void {
 /** The key of a loader's call, which the server writes each result under: `JSON.stringify` of the
  * loader's name and its arguments, without the arguments left out at the end (or given as
  * `undefined` there), so that `loadPost(1)` and `loadPost(1, undefined)` are one call, as they are
- * to the loader. */
+ * to the loader. An object argument is written with its keys in sorted order, as the server writes it. */
 export function loadKey(name: string, args: readonly unknown[]): string {
   let given = args.length;
   while (given > 0 && args[given - 1] === undefined) given--;
-  return JSON.stringify([name, ...args.slice(0, given)]);
+  return JSON.stringify([name, ...args.slice(0, given)], (_, value: unknown) =>
+    value !== null && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries(Object.entries(value).toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : value,
+  );
 }
 
 /** A function a component awaits in `<script setup>` for its data (`const post = await
