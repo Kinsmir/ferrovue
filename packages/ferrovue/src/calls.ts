@@ -29,11 +29,15 @@ function namedCall(s: Scope, n: N): Val {
   const mine = ownCall(s, callee, args, n);
   if (mine) return mine;
   if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
-  const global = !s.locals.has(callee.name) && !s.setup.has(callee.name);
-  const known = globalCall(s, callee.name, args, n, global);
+  return globalNamedCall(s, callee.name, args, n);
+}
+
+function globalNamedCall(s: Scope, name: string, args: N[], n: N): Val {
+  const global = !s.locals.has(name) && !s.setup.has(name);
+  const known = globalCall(s, name, args, n, global);
   if (known) return known;
-  if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
-  return refuseUnavailable(s, callee.name, n, true);
+  if (global && BUILTINS.has(name)) return builtin(s, `${name}()`, n);
+  return refuseUnavailable(s, name, n, true);
 }
 
 function renderHelperCall(s: Scope, name: string, args: N[], n: N): Val | null {
@@ -81,6 +85,10 @@ function namedObjectCall(s: Scope, name: string, method: string, args: N[], n: N
   if (own) return own;
   const mine = name === "$setup" || name === "_ctx" ? setupCall(s, name, method, args, n) : null;
   if (mine) return mine;
+  return globalObjectCall(s, name, method, args, n);
+}
+
+function globalObjectCall(s: Scope, name: string, method: string, args: N[], n: N): Val | null {
   if (name === "Math") return mathCall(s, method, args, n);
   if (BUILTINS.has(name) && !s.locals.has(name) && !s.setup.has(name)) return builtin(s, `${name}.${method}()`, n);
   return null;
@@ -95,14 +103,18 @@ function methodCall(s: Scope, object: N, method: string, args: N[], n: N): Val {
 }
 
 function literalReceiverCall(s: Scope, object: N, method: string, args: N[], n: N): Val | null {
-  if ((method === "sort" || method === "reverse") && object.type === "ArrayExpression") {
-    const copy = expr(s, object);
-    if (copy.ty.k === "list") return listMethod(s, copy, method === "sort" ? "toSorted" : "toReversed", args, n)!;
-  }
+  const copied = sortedCopy(s, object, method, args, n);
+  if (copied) return copied;
   if (object.type === "RegExpLiteral" && method === "test") return regexTest(s, object, args, n);
   const map = object.type === "Identifier" || object.type === "MemberExpression" ? constOf(s, object) : null;
   if (map?.sym.k === "const" && map.sym.c.k === "map") return mapCall(s, map, method, args, n);
   return null;
+}
+
+function sortedCopy(s: Scope, object: N, method: string, args: N[], n: N): Val | null {
+  if ((method !== "sort" && method !== "reverse") || object.type !== "ArrayExpression") return null;
+  const copy = expr(s, object);
+  return copy.ty.k === "list" ? listMethod(s, copy, method === "sort" ? "toSorted" : "toReversed", args, n)! : null;
 }
 
 function valueMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val {

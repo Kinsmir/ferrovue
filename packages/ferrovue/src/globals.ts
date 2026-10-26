@@ -194,16 +194,15 @@ function extreme(s: Scope, method: "max" | "min", vals: Val[], ints: boolean, n:
   return { code, ty: FLOAT };
 }
 
+const TO_INTEGER = new Set(["floor", "ceil", "trunc"]);
+
 function unaryMath(s: Scope, method: string, x: Val, ints: boolean, n: N): Val | null {
+  if (TO_INTEGER.has(method)) return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
   switch (method) {
     case "abs":
       return ints ? intFromF64(`${receiver(asF64(x))}.abs()`, refusalAt(s.comp, n)) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
     case "round":
       return { code: `fv::core::js_round(${bare(asF64(x))})`, ty: FLOAT };
-    case "floor":
-    case "ceil":
-    case "trunc":
-      return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
     case "sqrt":
       return x.num !== undefined ? numberVal(Math.sqrt(x.num), false) : { code: `${receiver(asF64(x))}.sqrt()`, ty: FLOAT };
     case "sign":

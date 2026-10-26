@@ -842,7 +842,7 @@ function sameItem(s: Scope, target: Val, of: Ty, x: Val, v: string, code: "FV080
   return of.k === "bool" ? binary(v, "==", x.code) : `${v} == ${x.code}`;
 }
 
-export function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
+function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   if (target.ty.k !== "list") return null;
   const of = target.ty.of;
   if (of.k === "entry" && (method === "includes" || method === "join")) {
