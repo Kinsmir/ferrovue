@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, INT, kept, REFUSALS } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, kept, REFUSALS } from "./model.ts";
+import type { ErrorCode } from "./errors.ts";
 import { AS, atom, bare, binary, FLIPPED, operand, UNARY } from "./parens.ts";
 import { expr } from "./expr.ts";
 
@@ -141,4 +142,38 @@ export function power(s: Scope, base: N, exponent: N, n: N, what: string): Val {
   const r = exactPower(a.num, b.num);
   if (r === null) return fail(s.comp, "FV0720", `${what} of ${String(a.num)} and ${String(b.num)}, which is not an integer to a whole power from 0 with a result within ±2⁵³: ${engines}`, n);
   return numberVal(r, true);
+}
+
+const DIGITS = new Map<string, [ErrorCode, number, string]>([
+  ["toFixed", ["FV0705", 0, "number of digits"]],
+  ["toPrecision", ["FV0716", 1, "precision"]],
+  ["toExponential", ["FV0717", 0, "number of digits"]],
+]);
+
+/** Translates `.toFixed()`, `.toPrecision()`, `.toExponential()` and `.toString()` of a number, or returns null for another method or receiver. */
+export function numberMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
+  if (!isNumber(target.ty)) return null;
+  const digits = args.length <= 1 ? DIGITS.get(method) : undefined;
+  if (digits) return withDigits(s, target, method, args[0], digits, n);
+  if (method === "toString" && args.length === 0) return jsString(target);
+  return null;
+}
+
+function literalDigits(a: N | undefined): number | undefined {
+  if (a === undefined || (a.type === "Identifier" && a.name === "undefined")) return undefined;
+  return a.type === "NumericLiteral" ? Math.trunc(a.value) : NaN;
+}
+
+function withDigits(s: Scope, target: Val, method: string, a: N | undefined, [code, low, what]: [ErrorCode, number, string], n: N): Val {
+  const given = literalDigits(a);
+  if (given !== undefined && !(given >= low && given <= 100)) fail(s.comp, code, `\`.${method}()\` takes a literal ${what}, from ${low} to 100`, n);
+  const x = bare(asF64(target));
+  if (method === "toFixed") return { code: `&*fv::core::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
+  if (method === "toExponential") return { code: `&*fv::core::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
+  if (given === undefined) return jsString(target);
+  return { code: `&*fv::core::js_to_precision(${x}, ${given})`, ty: asciiTy() };
+}
+
+function jsString(target: Val): Val {
+  return { code: `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
 }

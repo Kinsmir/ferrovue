@@ -1,23 +1,16 @@
-import { type N, type Scope, type Val, asciiTy, BOOL, fail, isAscii, sameTy, STR, strTy } from "./model.ts";
+import { type N, type Scope, type Val, BOOL, fail, isAscii, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
-import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, operand, strArg, UNARY } from "./parens.ts";
 import { computedListMethod, isBoolean, listMethod, presentLiteral } from "./lists.ts";
 import { loneOf, meet, noArgStringMethod, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
-import { asF64, asWritten, isNumber } from "./numbers.ts";
+import { numberMethod } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
 import { globalCall, mathCall, staticCall } from "./globals.ts";
-
-const DIGITS = new Map<string, [ErrorCode, number, string]>([
-  ["toFixed", ["FV0705", 0, "number of digits"]],
-  ["toPrecision", ["FV0716", 1, "precision"]],
-  ["toExponential", ["FV0717", 0, "number of digits"]],
-]);
 
 export function call(s: Scope, n: N): Val {
   const callee = n.callee;
@@ -107,21 +100,8 @@ function memberCall(s: Scope, n: N): Val {
     const m = (args.length === 0 ? noArgStringMethod(target, method) : null) ?? stringMethod(s, target, method, args, n);
     if (m) return m;
   }
-  const digits = isNumber(target.ty) && args.length <= 1 ? DIGITS.get(method) : undefined;
-  if (digits) {
-    const [code, low, what] = digits;
-    const a = args[0];
-    const given = a === undefined || (a.type === "Identifier" && a.name === "undefined") ? undefined : a.type === "NumericLiteral" ? Math.trunc(a.value) : NaN;
-    if (given !== undefined && !(given >= low && given <= 100)) fail(comp, code, `\`.${method}()\` takes a literal ${what}, from ${low} to 100`, n);
-    const x = bare(asF64(target));
-    if (method === "toFixed") return { code: `&*fv::core::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
-    if (method === "toExponential") return { code: `&*fv::core::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
-    if (given === undefined) return { code: `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
-    return { code: `&*fv::core::js_to_precision(${x}, ${given})`, ty: asciiTy() };
-  }
-  if (isNumber(target.ty) && method === "toString" && args.length === 0) {
-    return { code: `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
-  }
+  const numbered = numberMethod(s, target, method, args, n);
+  if (numbered) return numbered;
   if (target.owned) refuseInPlace(comp, `\`.${method}()\``, n);
   if (target.ty.k === "list") {
     const inPlace = target.iter === undefined && !target.lone && (target.ty.of.k === "str" || target.ty.of.k === "int");
