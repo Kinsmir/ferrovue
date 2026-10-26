@@ -59,6 +59,10 @@ A destructured prop may take a new name, with a default or without one
 (`const { label: text, size: s = "md" } = defineProps<…>()`). The template and script code read it
 by that name, and its field in `Props` keeps the prop's name, `label` and `size`.
 
+`||` after an optional string, number, boolean or union, read by its name or a field
+(`note || "none"`, `count || 1`), gives the right side where the value is absent or falsy:
+`props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or("none")`.
+
 # Unions of string literals
 
 A prop, a `defineModel`, a field of an interface or a `ref` typed as a union of two or more string
@@ -235,7 +239,9 @@ and so does a union whose literals give a variant no name. Either way the `ref` 
 of its annotation, which may be more than the value it starts with holds:
 `ref<Tone | "">(props.tone)` starts from a member of `Tone` and compares with `""` as with any
 member, and `ref<Tone | "" | undefined>(props.tone)` holds the enum of `Tone | ""` when
-`props.tone` is required. A `ref` is the server's own, and the island's JSON holds the props it
+`props.tone` is required, and `ref<Tone | "" | undefined>(props.tone)` holds an `Option` of it
+when `props.tone` is optional: `||`, `?:`, `=== ""` and `v-if` read it through one `match` over
+`Some` of each variant and `None`. A `ref` is the server's own, and the island's JSON holds the props it
 starts from. A `ref`, a constant, a `computed` or a function whose annotation is `string`
 (`function label(): string { return props.tone; }`) holds a string of the value, which compares
 with any string.

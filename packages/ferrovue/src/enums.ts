@@ -279,14 +279,47 @@ export function variantBinder(comp: Component, v: Val, kept: readonly string[], 
   const test = (): string | null => {
     const used = asked.filter((a) => reads(a.name));
     if (!used.length) return null;
-    const tuple = (parts: string[]): string => (parts.length === 1 ? parts[0]! : `(${parts.join(", ")})`);
-    const some = (l: string): string => `Some(${bare(tuple(used.map((a) => a.codes[kept.indexOf(l)]!)))})`;
+    const tuple = (parts: string[]): string => (parts.length === 1 ? bare(parts[0]!) : `(${parts.map(bare).join(", ")})`);
+    const some = (l: string): string => `Some(${tuple(used.map((a) => a.codes[kept.indexOf(l)]!))})`;
     const pattern = `Some(${tuple(used.map((a) => a.name))})`;
     const outer = v.bound;
     if (outer !== undefined && outer.of === v.variant) return `let ${pattern} = ${outer.bind((l) => (kept.includes(l) ? some(l) : "None"))}`;
     return `let ${pattern} = match ${v.variant} { ${armsOver(comp, from, from.literals, (l) => (kept.includes(l) ? some(l) : "None"))} }`;
   };
   return { val: { ...v, bound: { of: v.variant!, kept, bind } }, test };
+}
+
+/** Where a `v-if` tests an optional value of a generated enum, held by `source`, and narrows it to
+ * its members `kept`: the value as the branch reads it, bound to `name`, which binds the code each
+ * conversion of it needs to a name made from `hint`, and the test that binds them, one `match` over
+ * `Some` of each variant and `None`; null when the branch reads no conversion. */
+export function optionBinder(comp: Component, source: string, def: EnumDef, of: Ty, name: string, hint: string, reads: (name: string) => boolean): { val: Val; test: () => string | null } {
+  const kept = (literalsOf(of) ?? def.literals) as readonly string[];
+  const asked: { name: string; codes: string[] }[] = [];
+  const bind = (arm: (literal: string) => string): string => {
+    const codes = kept.map(arm);
+    const known = asked.find((a) => a.codes.join("\0") === codes.join("\0"));
+    if (known !== undefined) return known.name;
+    const made = fresh("n", hint);
+    asked.push({ name: made, codes });
+    return made;
+  };
+  const test = (): string | null => {
+    const used = asked.filter((a) => reads(a.name));
+    if (!used.length) return null;
+    const self = reads(name);
+    const names = [...(self ? [name] : []), ...used.map((a) => a.name)];
+    const tuple = (parts: string[]): string => (parts.length === 1 ? bare(parts[0]!) : `(${parts.map(bare).join(", ")})`);
+    const grouped = new Map<string, string[]>();
+    for (const l of def.literals) {
+      const i = kept.indexOf(l);
+      const code = i < 0 ? "None" : `Some(${tuple([...(self ? [variantPath(comp, def, l)] : []), ...used.map((a) => a.codes[i]!)])})`;
+      grouped.set(code, [...(grouped.get(code) ?? []), `Some(${variantPath(comp, def, l)})`]);
+    }
+    grouped.set("None", [...(grouped.get("None") ?? []), "None"]);
+    return `let Some(${tuple(names)}) = match ${source} { ${[...grouped].map(([c, patterns]) => `${patterns.join(" | ")} => ${c}`).join(", ")} }`;
+  };
+  return { val: { code: unionStr(name), ty: of, variant: name, bound: { of: name, kept, bind } }, test };
 }
 
 interface Unproven {

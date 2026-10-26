@@ -1,5 +1,5 @@
 import { type N, type Scope, type Val, enumOf, fail, literalsOf, namesSelf, nodeName } from "./model.ts";
-import { variantBinder } from "./enums.ts";
+import { optionBinder, variantBinder } from "./enums.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
@@ -394,8 +394,11 @@ function statement(s: Scope, e: Emitter, st: N): void {
       e.open(`if ${p.pattern(name)}`);
       const at = e.lines.length - 1;
       const [present, absent] = p.negated ? [st.alternate, st.consequent] : [st.consequent, st.alternate];
-      statements(narrowTo(s, p, name), e, branch(present));
-      if (!e.reads(name, at + 1)) e.replace(at, p.pattern(name), condition(p.present));
+      const over = p.source === undefined ? null : optionBinder(s.comp, p.source.code, p.source.def, p.of, name, jsHint(p.path), (n) => e.reads(n, at + 1));
+      statements(over === null ? narrowTo(s, p, name) : { ...s, narrowed: new Map(s.narrowed).set(p.path, over.val) }, e, branch(present));
+      const binds = over?.test() ?? null;
+      if (binds !== null) e.replace(at, p.pattern(name), binds);
+      else if (!e.reads(name, at + 1)) e.replace(at, p.pattern(name), condition(p.present));
       if (absent) {
         e.close(" else {");
         statements(s, e, branch(absent));

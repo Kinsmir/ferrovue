@@ -306,8 +306,9 @@ function whenAbsent(s: Scope, p: Presence, left: N): N | null {
   if (!p.truthy) return null;
   const at = { loc: left.loc, __fv: left.__fv, start: left.start, end: left.end };
   if (p.pick) return { type: "Identifier", name: "undefined", ...at };
-  if (!alwaysTruthy(p.of)) return null;
-  const none = absence(expr(s, left).ty);
+  const whole = expr(s, left).ty;
+  if (!alwaysTruthy(whole.k === "opt" ? whole.of : p.of)) return null;
+  const none = absence(whole);
   if (none === "undefined") return { type: "Identifier", name: "undefined", ...at };
   return none === "null" ? { type: "NullLiteral", ...at } : null;
 }
@@ -457,7 +458,8 @@ function byVariant(s: Scope, n: N, v: Val): Val {
   const conditional = n.type === "ConditionalExpression";
   const narrowed = literalNarrowing(s, conditional ? n.test : n.left, true);
   const from = narrowed === null ? undefined : enumOf(narrowed.v.ty);
-  if (narrowed === null || from === undefined || narrowed.v.variant === undefined || narrowed.v.ty.k === "opt") return v;
+  if (narrowed === null || from === undefined || narrowed.v.variant === undefined) return v;
+  if (narrowed.v.ty.k === "opt") return byOption(s, n, v, narrowed, from);
   const { path, v: tested, holds } = narrowed;
   const kept = (literalsOf(tested.ty) ?? from.literals) as readonly string[];
   const branch = (l: string): N => (conditional ? (holds(l) ? n.consequent : n.alternate) : holds(l) === (n.operator === "||") ? n.left : n.right);
@@ -499,6 +501,55 @@ function byVariant(s: Scope, n: N, v: Val): Val {
       }
     });
   };
+  return { ...v, asEnum: { of: v.code, into, home: from, over } };
+}
+
+/** `v`, the value of `test ? a : b`, `a || b` or `a && b` where the test narrows an optional
+ * value of a generated enum: one `match` over `Some` of each variant and `None`, each arm the value
+ * the branch it takes gives. */
+function byOption(s: Scope, n: N, v: Val, narrowed: NonNullable<ReturnType<typeof literalNarrowing>>, from: EnumDef): Val {
+  const conditional = n.type === "ConditionalExpression";
+  const { path, v: tested, holds, absent } = narrowed;
+  const kept = (literalsOf(tested.ty.k === "opt" ? tested.ty.of : tested.ty) ?? from.literals) as readonly string[];
+  const branch = (l: string | null): N => {
+    const yes = l === null ? absent : holds(l);
+    return conditional ? (yes ? n.consequent : n.alternate) : yes === (n.operator === "||") ? n.left : n.right;
+  };
+  const optional = v.ty.k === "opt";
+  const arms = (code: (taken: Val) => string | null): string | null => {
+    const grouped = new Map<string, string[]>();
+    for (const l of [...kept, null]) {
+      const one: Val = l === null ? { code: "None", ty: UNDEF } : { code: unionStr(variantPath(s.comp, from, l)), ty: keptLiterals(enumTy(from), (k) => k === l), variant: variantPath(s.comp, from, l) };
+      ctx.trying++;
+      let c: string | null;
+      try {
+        c = code(expr({ ...s, narrowed: new Map(s.narrowed).set(path, one) }, branch(l)));
+      } catch (e) {
+        if (e instanceof GenError) return null;
+        throw e;
+      } finally {
+        ctx.trying--;
+      }
+      if (c === null) return null;
+      const patterns = l === null ? ["None", ...from.literals.filter((k) => !kept.includes(k)).map((k) => `Some(${variantPath(s.comp, from, k)})`)] : [`Some(${variantPath(s.comp, from, l)})`];
+      grouped.set(c, [...(grouped.get(c) ?? []), ...patterns]);
+    }
+    return `match ${tested.variant} { ${[...grouped].map(([c, patterns]) => `${patterns.join(" | ")} => ${bare(c)}`).join(", ")} }`;
+  };
+  const into = (def: EnumDef, node: N): string | null =>
+    arms((taken) => {
+      if (nothing(taken.ty)) return optional ? "None" : null;
+      if ((taken.ty.k === "opt" ? taken.ty.of : taken.ty).k !== "str" || (taken.ty.k === "opt" && !optional)) return null;
+      const code = intoEnum(s.comp, taken, def, node);
+      return code === null || !optional || taken.ty.k === "opt" ? code : `Some(${bare(code)})`;
+    });
+  const over = (pick: (literal: string) => string | null): string | null =>
+    optional
+      ? null
+      : arms((taken) => {
+          const literals = taken.ty.k === "str" ? literalsOf(taken.ty) : undefined;
+          return literals?.length === 1 && typeof literals[0] === "string" ? pick(literals[0]) : null;
+        });
   return { ...v, asEnum: { of: v.code, into, home: from, over } };
 }
 
@@ -773,6 +824,9 @@ function exprOf(s: Scope, n: N): Val {
           const inner: Ty = keptLiterals(a.ty.k === "opt" ? a.ty.of : a.ty, (l) => !falsyLiteral(l));
           const src = a.ty.k === "opt" ? atom(a.code) : `Some(${bare(a.code)})`;
           return { code: `${src}.filter(|v| ${truthy({ code: "*v", ty: inner })})`, ty: opt(inner) };
+        }
+        if (a.ty.k === "opt" && pathOf(n.left) !== null && ["str", "int", "float", "bool"].includes(a.ty.of.k)) {
+          return expr(s, { ...n, type: "ConditionalExpression", test: n.left, consequent: n.left, alternate: n.right });
         }
         if (a.ty.k === "str" && b.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
           return { code: `&*{ let a = ${asCow(a)}; if !a.is_empty() { a } else { ${asCow(b)} } }`, ty: STR, ...loneOf(a, b) };

@@ -620,7 +620,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<i>no other</i>");
     }
-    if let Some(fv_gap) = props.gap.filter(|v| !fv::props::Union::as_str(*v).is_empty()) {
+    if let Some(fv_gap) = props.gap.filter(|v| *v != UnionEnumsGap::Empty) {
         out.push_str("<i>gap ");
         fv::core::escape_into(out, fv::props::Union::as_str(fv_gap));
         out.push_str("</i>");

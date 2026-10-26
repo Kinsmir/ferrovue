@@ -8,9 +8,14 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Added
+
+- `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
+  0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
+
 ### Fixed
 
-- A narrowed value of a union's enum, a `computed` annotated as the union, a table read by a key built with `||` or `?:`, and lists of the union a `.map()`, a `.filter()` or an array literal builds reach a child's union prop through `match`es over variants.
+- A narrowed value of a union's enum, an optional one, a `computed` annotated as the union, a table read by a key built with `||` or `?:`, and lists a `.map()`, a `.filter()` or an array literal builds reach a child's union prop through `match`es over variants.
   0.12.0's code matched its string with a `_` arm, or gave a variant the test rules out the last member's arm: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
 - A `ref` of a union whose starting value folds to a constant (`ref<Tone | "">(K === "x" ? "loud" : "")`) reaches a child's union prop as the variant of its member, and `""` as `Empty`.
   0.12.0 refused the member with FV0515, or FV0635 in an object literal: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).

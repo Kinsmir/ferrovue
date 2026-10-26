@@ -828,10 +828,12 @@ describe("`||`, `??` and `?:` of strings, numbers and booleans", () => {
     ["t || 'x'", "fv::core::escape_into(out, { let a = &*props.t; if !a.is_empty() { a } else { \"x\" } });"],
     ["m || 1", "fv::core::push_int(out, { let a = props.m; if a != 0 { a } else { 1i64 } });"],
     ["t || undefined", "if let Some(v) = Some(&*props.t).filter(|v| !v.is_empty()) {"],
-    ["s || t", "FV0617 `||` between these types"],
-    ["s || 'x'", "FV0617 `||` between these types"],
-    ["n || m", "FV0617 `||` between these types"],
-    ["n || 0", "FV0617 `||` between these types"],
+    ["s || t", "fv::core::escape_into(out, props.s.as_deref().filter(|v| !v.is_empty()).unwrap_or(&props.t));"],
+    ["s || 'x'", "fv::core::escape_into(out, props.s.as_deref().filter(|v| !v.is_empty()).unwrap_or(\"x\"));"],
+    ["n || m", "fv::core::push_int(out, props.n.filter(|v| *v != 0).unwrap_or(props.m));"],
+    ["n || 0", "fv::core::push_int(out, props.n.filter(|v| *v != 0).unwrap_or(0i64));"],
+    ["e || 'b'", "fv::core::escape_into(out, if let Some(n1) = props.e { fv::props::Union::as_str(n1) } else { \"b\" });"],
+    ["(b || c) === true", "out.push_str(if props.b.unwrap_or(false) || props.c { \"true\" } else { \"false\" });"],
     ["(ns ?? [1]).length", "fv::core::push_int(out, (if let Some(n1) = props.ns.as_ref() { n1.to_vec() } else { [1i64].to_vec() }).len() as i64);"],
     ["e ?? 'z'", "fv::core::escape_into(out, props.e.map(fv::props::Union::as_str).unwrap_or(\"z\"));"],
     ["s ?? t", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(&*props.t));"],
@@ -1118,6 +1120,20 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like("ts: props.rows.iter().map(|fv_r| fv_r.tone).map(|v| match v { super::types::Tone::Calm => super::t::TTs::Calm, super::types::Tone::Loud => super::t::TTs::Loud, super::types::Tone::Quiet => super::t::TTs::Quiet }).collect()"));
     expect(out).toMatch(like("let s_loud = props.tones.iter().copied().filter(|fv_t| *fv_t != super::types::Tone::Calm).collect::<Vec<_>>();"));
     expect(out).toMatch(like("card: super::types::Card { tones: vec![props.tone, super::types::Tone::Quiet] }"));
+  });
+
+  it("reads an optional `ref` of a union through `match`es over `Some` of each variant and `None`", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" }>();', "<b>{{ t }}</b>") } };
+    const out = render(
+      'import { ref } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud";\nconst props = defineProps<{ start?: Tone }>();\nconst m = ref<Tone | "" | undefined>(props.start);',
+      `<T :t="m || 'loud'" /><T :t="m ? m : 'calm'" /><T v-if="m" :t="m" /><i v-if="m === ''">e</i><T v-else-if="m !== undefined" :t="m" />`,
+      child,
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("t: match s_m { Some(XM::Calm) => super::t::TT::Calm, Some(XM::Loud) | Some(XM::Empty) | None => super::t::TT::Loud }"));
+    expect(out).toMatch(like("t: match s_m { Some(XM::Calm) | Some(XM::Empty) | None => super::t::TT::Calm, Some(XM::Loud) => super::t::TT::Loud }"));
+    expect(out).toMatch(like("if let Some(n1) = match s_m { Some(XM::Calm) => Some(super::t::TT::Calm), Some(XM::Loud) => Some(super::t::TT::Loud), Some(XM::Empty) | None => None } {"));
+    expect(out.match(/Some\(XM::Empty\) \| None => None/g)).toHaveLength(2);
   });
 
   it("reads a table by a key built with `||` or `?:` through one `match` over the enum the key is made from", () => {

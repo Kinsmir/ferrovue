@@ -564,7 +564,7 @@ export const ERRORS = {
   },
   FV0617: {
     title: "`||` between unsupported types",
-    detail: "`||` gives its first operand that is truthy, of whatever type, and the server holds the result in one Rust type. It is supported between two booleans, two strings, two numbers of one kind, before `undefined`, and after a `Date`. Convert one operand so both share a type, or choose with `?:`.",
+    detail: "`||` gives its first operand that is truthy, of whatever type, and the server holds the result in one Rust type. It is supported between two booleans, two strings, two numbers of one kind, before `undefined`, after a `Date`, and after an optional string, number or boolean read by its name or a field, before a value of its type. Convert one operand so both share a type, or choose with `?:`.",
   },
   FV0618: {
     title: "Unsupported unary operator",

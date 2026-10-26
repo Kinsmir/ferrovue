@@ -70,8 +70,13 @@ describe("`&&` and `||`", () => {
     ].join("\n"), true));
   });
 
-  it("refuses `||` of an optional union of literals, which may be absent", () => {
-    expect(refusals(PROPS, "<p>{{ o || 'z' }}</p>")).toEqual(["FV0617 `||` between these types"]);
+  it("gives the right side of `||` where an optional value on its left is absent or falsy", () => {
+    expect(lines("<p>{{ o || 'z' }}|{{ os || os }}</p>")).toMatch(like([
+      'out.push_str("<p>");',
+      'fv::core::escape_into(out, if let Some(n1) = props.o { fv::props::Union::as_str(n1) } else { "z" });',
+      "out.push('|');",
+      "if let Some(v) = if let Some(n2) = props.os.as_deref().filter(|v| !v.is_empty()) { Some(n2) } else { props.os.as_deref() } {",
+    ].join("\n")));
   });
 
   it("chooses between booleans, strings and numbers with `||`", () => {
@@ -141,7 +146,6 @@ describe("`&&` and `||`", () => {
     ["`||` of an empty string and a number", "<p>{{ '' || n }}</p>", "FV0617 `||` between these types"],
     ["`||` of a computed string and a number", "<p>{{ `a${s}` || n }}</p>", "FV0617 `||` between these types"],
     ["`||` of a number and a computed string", "<p>{{ n || `a${s}` }}</p>", "FV0617 `||` between these types"],
-    ["`||` of two optional strings", "<p>{{ os || os }}</p>", "FV0617 `||` between these types"],
     ["`||` of two optional objects", "<p>{{ (q || q)?.t }}</p>", "FV0617 `||` between these types"],
     ["`&&` of an optional date and a string", "<p>{{ (b ? on : on) && 'x' }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is an optional `Date`"],
     ["`&&` of an optional date and a boolean", "<p>{{ (c ? on : undefined) && b }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is an optional `Date`"],
