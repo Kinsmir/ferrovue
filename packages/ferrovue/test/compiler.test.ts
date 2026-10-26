@@ -7874,6 +7874,68 @@ defineProps<{ card: Card }>();
     });
   });
 
+  describe("a `ref` of a union whose starting value folds to a constant, handed to a child's union", () => {
+    const T = "super::types::Tone";
+    const folded = (start: string, template: string): string =>
+      rendered(
+        compile(
+          project(
+            `<script setup lang="ts">
+import { ref } from "vue";
+import Badge from "./Badge.vue";
+import Chip from "./Chip.vue";
+import Pick from "./Pick.vue";
+import type { Tone } from "../types/tone";
+const K = "y";
+const tone = ref<Tone | "">(${start});
+</script>
+<template>${template}</template>`,
+            {
+              "types/tone.ts": `export type Tone = "calm" | "loud" | "quiet";
+export interface Card { tone: Tone; other?: Tone }
+`,
+              "components/Badge.vue": `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ tone: Tone; other?: Tone }>();
+</script>
+<template><b>{{ tone }}{{ other }}</b></template>`,
+              "components/Chip.vue": `<script setup lang="ts">
+import type { Card } from "../types/tone";
+defineProps<{ card: Card }>();
+</script>
+<template><b>{{ card.tone }}</b></template>`,
+              "components/Pick.vue": `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ pick: Tone | "" }>();
+</script>
+<template><b>{{ pick }}</b></template>`,
+            },
+          ),
+        ).get("x.rs")!,
+      );
+
+    it("gives a member the constant folds to as its variant", () => {
+      const out = folded(`K === "x" ? "calm" : "loud"`, `<Badge :tone="tone || 'calm'" :other="tone || undefined" />`);
+      expect(out).toContain(`tone: ${T}::Loud, other: Some(${T}::Loud)`);
+    });
+
+    it("gives the empty string the constant folds to `Empty`, and leaves it out by `||`", () => {
+      const out = folded(`K === "x" ? "loud" : ""`, `<Pick :pick="tone" /><Badge :tone="tone || 'calm'" :other="tone || undefined" />`);
+      expect(out).toContain("pick: super::pick::PickPick::Empty");
+      expect(out).toContain(`tone: ${T}::Calm, other: None`);
+    });
+
+    it("works out a comparison of the folded value with a literal", () => {
+      const out = folded(`K === "x" ? "loud" : ""`, `<Badge :tone="tone === '' ? 'quiet' : tone" /><p>{{ tone !== '' }}</p>`);
+      expect(out).toContain(`tone: ${T}::Quiet`);
+      expect(out).not.toMatch(/XTone::\w+ [!=]= XTone::/);
+    });
+
+    it("gives an object literal's union field the member the constant folds to", () => {
+      expect(folded(`K === "x" ? "calm" : "quiet"`, `<Chip :card="{ tone: tone || 'loud' }" />`)).toContain(`tone: ${T}::Quiet, other: None`);
+    });
+  });
+
   describe("lookup tables and refs of a union", () => {
     const TYPES = `export type Tone = "calm" | "loud" | "quiet";
 export type Choice = Tone | "";

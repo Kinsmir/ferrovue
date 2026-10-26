@@ -197,6 +197,8 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
   const optional = v.ty.k === "opt";
   const from = enumOf(v.ty);
   const over = (on: string, arms: string): string => (optional ? `${atom(on)}.map(|v| match v { ${arms} })` : on.startsWith("{") ? `{ let v = ${on}; match v { ${arms} } }` : `match ${on} { ${arms} }`);
+  const literal = knownLiteral(v);
+  if (literal !== undefined) return def.literals.includes(literal) ? variantPath(comp, def, literal) : null;
   if (v.variant !== undefined && from !== undefined) {
     const kept = (literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty) ?? from.literals) as readonly string[];
     if (sameEnum(from, def) && kept.length === from.literals.length) return v.variant;
@@ -210,8 +212,6 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
     const arms = kept.map((l, i) => `${[l, ...(i === kept.length - 1 ? left : [])].map((k) => variantPath(comp, from, k)).join(" | ")} => ${variantPath(comp, def, l)}`);
     return over(v.variant, arms.join(", "));
   }
-  const literal = knownLiteral(v);
-  if (literal !== undefined) return def.literals.includes(literal) ? variantPath(comp, def, literal) : null;
   if (v.asEnum !== undefined && v.asEnum.of === v.code) return v.asEnum.into(def, node);
   const literals = literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty);
   if (literals === undefined || !literals.every((l) => typeof l === "string" && def.literals.includes(l))) return null;
