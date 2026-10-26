@@ -110,8 +110,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(197 + 12 + props.label.as_deref().map_or(0, str::len));
-    let s_t_o_p = 2i64;
+    out.reserve(192 + 12 + props.label.as_deref().map_or(0, str::len));
     out.push_str("<section class=\"tone");
     fv::attrs::class_into(out, true, &[fv::props::Union::as_str(props.tone)]);
     out.push_str("\" data-rank=\"");
@@ -138,10 +137,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str("]</p>");
         }
     }
-    if props.rank as f64 == s_t_o_p as f64 {
-        out.push_str("<b>top ");
-        fv::core::push_int(out, s_t_o_p);
-        out.push_str("</b>");
+    if props.rank as f64 == 2.0 {
+        out.push_str("<b>top 2</b>");
     } else {
         out.push_str("<!---->");
     }

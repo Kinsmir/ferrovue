@@ -106,17 +106,16 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(87 + 3 + props.label.len() + props.parts.iter().map(|v| v.len()).sum::<usize>());
-    let s_l_i_m_i_t = 3i64;
     out.push_str("<!--[--><p title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\" data-wide=\"");
-    out.push_str(if (if s_l_i_m_i_t as f64 > 5.0 { &*props.label } else { fv::props::Union::as_str(props.tone) }) != "-" { "true" } else { "false" });
+    out.push_str(if fv::props::Union::as_str(props.tone) != "-" { "true" } else { "false" });
     out.push_str("\">");
     out.push_str(if fv::props::Union::as_str(props.tone) != "-" { "true" } else { "false" });
     out.push('|');
-    out.push_str(if (if (s_l_i_m_i_t as f64) < 5.0 { fv::props::Union::as_str(props.tone) } else { &props.label }) == "md" { "true" } else { "false" });
+    out.push_str(if fv::props::Union::as_str(props.tone) == "md" { "true" } else { "false" });
     out.push('|');
-    fv::core::escape_into(out, &(if s_l_i_m_i_t as f64 > 5.0 { &*props.label } else { fv::props::Union::as_str(props.tone) }).to_uppercase());
+    fv::core::escape_into(out, &fv::props::Union::as_str(props.tone).to_uppercase());
     out.push_str("</p><!--[-->");
     for fv_x_ref in [props.n as f64, 1.5f64, props.f, -0.0f64].iter() {
         let fv_x = *fv_x_ref;

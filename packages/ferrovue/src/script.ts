@@ -220,6 +220,14 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     }
   };
   const locals = declareConsts(comp, ast);
+  for (const [local, d] of locals) {
+    try {
+      const c = constOfDecl(d);
+      if (c.k === "scalar" && typeof c.js === "number") scope.consts.set(local, c);
+    } catch (e) {
+      if (!(e instanceof GenError)) throw e;
+    }
+  }
   const lets: string[] = [];
   const lazies = new Map<string, string>();
   const asyncs = asyncChildren(comp, ast);

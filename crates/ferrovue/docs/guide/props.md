@@ -860,6 +860,13 @@ let class = match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg =>
 # assert_eq!(class, "p-2");
 ```
 
+A key may also be built from such a value by `.toUpperCase()`, `.toLowerCase()` or a template
+literal (`ICONS[kind.toUpperCase()]`, `` LABELS[`size-${size}`] ``): each member is mapped as
+JavaScript maps it when compiling, and the `match` is over the value's members. A constant number,
+declared in the component or imported, reads the key JavaScript writes for it (`O[0.5]` is
+`O["0.5"]`, `O[1e21]` is `O["1e+21"]`). A key built from a string of any value, or from two unions
+in one template literal, is refused ([FV0222](crate::guide::error_codes#fv0222)).
+
 A key of a union of string literals is its enum, so the `match` names every variant. So does a key
 built from one by `||`, `?:` or `&&` (`NEXT[tone || "calm"]`): the `match` is over the variants of
 the enum it is made from, each arm the value the key reads there, and a `?:` of literals reads the

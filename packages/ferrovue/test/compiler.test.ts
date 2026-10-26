@@ -6848,11 +6848,11 @@ describe("constant lookups", () => {
       'const B = 1;\nconst PREFIX = "x";\nenum E { A = B, C }\nenum S { A = PREFIX + "a", B = "b" }\nenum R { One = 1, Two = One + 1, Four = R.Two * 2 }\nconst D: S = S.A;\nconst F: E = E.C;\ndefineProps<{ e: E; s: S; r: R }>();',
       "<i>{{ e }} {{ s }} {{ r }}|{{ E.A }} {{ E.C }} {{ D }} {{ F }} {{ R.Two }} {{ R.Four }}</i>",
     );
-    expect(out).toContain("let s_f = 2i64;");
+    expect(out).not.toContain("let s_f");
     expect(out).toContain("fv::core::push_int(out, props.e);");
     expect(out).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.s));");
     expect(out).toContain("fv::core::push_int(out, props.r);");
-    expect(out).toContain('out.push_str("|1 2 xa ");\n    fv::core::push_int(out, s_f);\n    out.push_str(" 2 4</i>");');
+    expect(out).toContain('out.push_str("|1 2 xa 2 2 4</i>");');
   });
 
   it("evaluates an enum member named by a constant beside it as the member", () => {

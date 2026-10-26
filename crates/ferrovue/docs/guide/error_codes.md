@@ -264,7 +264,7 @@ Constant list's object type named as a Rust type. Retired in 0.10.0: the compile
 
 Constant object read by a key that is not a union of literals.
 
-A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, or an `enum` of them. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`"sm" | "md" | "lg"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).
+A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, an `enum` of them, or a key built from one by `.toUpperCase()`, `.toLowerCase()` or a template literal. A constant number reads the key JavaScript writes for it. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`"sm" | "md" | "lg"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).
 
 ## FV0223
 

@@ -12,6 +12,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 - `defineProps<P>()` reads `P` imported from a `.ts` file by a relative path, an interface that extends one, or an intersection of them.
   0.12.0 refused them with FV0327 and FV0304: [Props from a `.ts` file](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#props-from-a-ts-file).
+- Lookup tables read by a constant number of the component and by keys built from a union by `.toUpperCase()`, `.toLowerCase()` or a template literal.
+  0.12.0 refused them with FV0222: [Lookup tables](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#lookup-tables).
 - `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
   0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 

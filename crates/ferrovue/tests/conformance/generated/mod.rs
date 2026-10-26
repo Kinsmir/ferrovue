@@ -124,6 +124,7 @@ pub mod loaded_ranks;
 pub mod loaded_stamp;
 pub mod loaded_stamps;
 pub mod local_functions;
+pub mod lookup_keys;
 pub mod lookups;
 pub mod loop_edges;
 pub mod loops;
@@ -943,6 +944,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "LocalFunctions" => {
             let props: local_functions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             local_functions::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "LookupKeys" => {
+            let props: lookup_keys::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            lookup_keys::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Lookups" => {
             let props: lookups::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

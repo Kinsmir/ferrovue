@@ -488,10 +488,15 @@ export function constOf(s: Scope, n: N): Named | null {
   const path = pathOf(n.property);
   const what = `${base.what}[${path === null ? "…" : path.replace(/^(?:_ctx|\$props|\$setup)\./, "").replace(new RegExp(`^${s.propsIdent ?? "\\$^"}\\.`), "")}]`;
   const keys = literalsOf(v.ty);
-  const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.code) ? (JSON.parse(v.code) as string) : v.ty.k === "int" && v.num !== undefined && v.code === `${v.num}i64` ? String(v.num) : null;
+  const fixed = v.ty.k === "str" && /^"[^"\\]*"$/.test(v.code) ? (JSON.parse(v.code) as string) : v.ty.k === "int" && v.num !== undefined && v.code === `${v.num}i64` ? String(v.num) : v.ty.k === "float" && v.num !== undefined && /^-?[0-9.e+-]+f64$/.test(v.code) ? String(v.num) : floatConst(s, n.property);
   if (fixed !== null) return { sym: step(s, base, fixed, n, chain, []), what: `${base.what}[${JSON.stringify(fixed)}]` };
   if (v.ty.k === "opt" || nothing(v.ty)) {
     return fail(s.comp, "FV0223", `\`${base.what}\` read by a key that may be absent, where JavaScript reads the field \`undefined\`: narrow the key with \`v-if\` first, or give it a default`, n.property);
+  }
+  const mapped = keys === undefined && v.ty.k === "str" ? mappedKey(s, n.property) : null;
+  if (mapped !== null) {
+    const among = literalsOf(mapped.on.ty)!;
+    return { sym: { k: "pick", on: mapped.on, keys: among, arms: among.map((k) => step(s, base, mapped.key(k), n, chain, [mapped.key(k)])) }, what };
   }
   if (keys === undefined || (v.ty.k !== "str" && v.ty.k !== "int")) {
     const is = v.ty.k === "str" ? "a `string`, which may name a field every object has, as `toString` or `constructor`" : v.ty.k === "int" ? "a `number`" : describeTy(v.ty);
@@ -512,6 +517,47 @@ function homeVariant(v: Val, node: N): Val {
   if (home === undefined || v.ty.k !== "str" || keys === undefined || !keys.every((k) => typeof k === "string" && home.literals.includes(k))) return v;
   const variant = v.asEnum!.into(home, node);
   return variant === null ? v : { ...v, ty: keptLiterals(enumTy(home), (k) => keys.includes(k)), variant };
+}
+
+function floatConst(s: Scope, n: N): string | null {
+  const c = n.type === "Identifier" && !s.locals.has(n.name) ? s.consts.get(n.name) : undefined;
+  return c?.k === "scalar" && typeof c.js === "number" ? String(c.js) : null;
+}
+
+/** A key built from a value of a union of literals by \`.toUpperCase()\`, \`.toLowerCase()\` or a
+ * template literal: the value it is built from, and the key each of its literals gives. */
+function mappedKey(s: Scope, n: N): { on: Val; key: (literal: string | number) => string } | null {
+  let inner = n;
+  while (inner.type === "ParenthesizedExpression" || inner.type === "TSNonNullExpression") inner = inner.expression;
+  const method = inner.type === "CallExpression" && inner.arguments.length === 0 && inner.callee.type === "MemberExpression" && !inner.callee.computed ? (inner.callee.property.name as string) : null;
+  if (method === "toUpperCase" || method === "toLowerCase") {
+    const from = keyOf(s, inner.callee.object);
+    return from === null ? null : { on: from.on, key: (l) => (method === "toUpperCase" ? from.key(l).toUpperCase() : from.key(l).toLowerCase()) };
+  }
+  if (inner.type === "TemplateLiteral") {
+    const parts = inner.expressions.map((e: N) => keyOf(s, e));
+    const open = parts.filter((p: ReturnType<typeof keyOf>) => p !== null && literalsOf(p.on.ty)!.length > 1);
+    if (parts.some((p: ReturnType<typeof keyOf>) => p === null) || open.length !== 1) return null;
+    const one = open[0]!;
+    const fixed = (p: NonNullable<ReturnType<typeof keyOf>>): string => p.key(literalsOf(p.on.ty)![0]!);
+    return { on: one.on, key: (l) => inner.quasis.map((q: N, i: number) => (q.value.cooked as string) + (i < parts.length ? (parts[i] === one ? one.key(l) : fixed(parts[i]!)) : "")).join("") };
+  }
+  return null;
+}
+
+function keyOf(s: Scope, n: N): { on: Val; key: (literal: string | number) => string } | null {
+  const mapped = mappedKey(s, n);
+  if (mapped !== null) return mapped;
+  let v: Val;
+  try {
+    v = expr(s, n);
+  } catch (e) {
+    if (e instanceof GenError) return null;
+    throw e;
+  }
+  const literals = literalsOf(v.ty);
+  if ((v.ty.k !== "str" && v.ty.k !== "int") || literals === undefined || !literals.length) return null;
+  return { on: v, key: (l) => String(l) };
 }
 
 /** For a constant object read by a key known only when rendering, which is \`undefined\` for some
