@@ -81,6 +81,7 @@ pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
 pub mod flattened;
+pub mod folded_wide;
 pub mod form;
 pub mod form_root;
 pub mod form_wrapped;
@@ -657,6 +658,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Flattened" => {
             let props: flattened::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             flattened::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FoldedWide" => {
+            let props: folded_wide::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            folded_wide::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

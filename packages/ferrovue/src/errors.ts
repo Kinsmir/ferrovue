@@ -540,7 +540,7 @@ export const ERRORS = {
   },
   FV0611: {
     title: "Array literal of different types",
-    detail: "A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.",
+    detail: "A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (integers beside a `Float` are held as `Float`s, and items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.",
   },
   FV0612: {
     title: "Computed member access",

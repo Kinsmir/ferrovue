@@ -1,6 +1,6 @@
 import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, falsyLiteral, FLOAT, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
-import { enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants, refuseOutside } from "./enums.ts";
+import { annotatedStr, enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
@@ -652,11 +652,12 @@ function exprOf(s: Scope, n: N): Val {
         if (!el) fail(comp, "FV0610", "an array literal holds plain values, without holes", n);
         return expr(s, el);
       });
-      const of = values.map((v: Val) => v.ty).reduce(joinTy);
-      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || values.some((v: Val) => !sameTy(v.ty, of))) {
+      const numbers = values.every((v: Val) => isNumber(v.ty)) && values.some((v: Val) => v.ty.k === "float");
+      const of = numbers ? FLOAT : values.map((v: Val) => v.ty).reduce(joinTy);
+      if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || (!numbers && values.some((v: Val) => !sameTy(v.ty, of)))) {
         fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
       }
-      const code = `[${values.map((v: Val) => bare(v.code)).join(", ")}]`;
+      const code = `[${values.map((v: Val) => bare(numbers ? asF64(v) : v.code)).join(", ")}]`;
       return { code, ty: { k: "list", of }, ...loneOf(...values), literal: { of: code, items: values } };
     }
     case "OptionalMemberExpression":
@@ -925,10 +926,16 @@ function exprOf(s: Scope, n: N): Val {
       const k = known(t);
       if (k !== undefined) {
         const chosen = expr(s, k ? n.consequent : n.alternate);
-        if (!untypedEmpty(chosen)) return chosen;
+        const held = chosen.variant !== undefined && chosen.ty.k === "str" ? enumOf(chosen.ty) : undefined;
+        if (!untypedEmpty(chosen) && held === undefined) return chosen;
         ctx.trying++;
         try {
           const other = expr(s, k ? n.alternate : n.consequent);
+          if (held !== undefined) {
+            if (other.ty.k !== "str" || enumOf(other.ty) !== undefined) return chosen;
+            const theirs = literalsOf(other.ty);
+            return annotatedStr(chosen, theirs === undefined ? STR : literalTy("str", [...new Set([...(literalsOf(chosen.ty) ?? held.literals), ...theirs])]));
+          }
           return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
         } catch (e) {
           if (!(e instanceof GenError)) throw e;

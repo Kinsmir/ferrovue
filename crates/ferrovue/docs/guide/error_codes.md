@@ -818,7 +818,7 @@ An array literal with a hole (`[a, , b]`) is a sparse array, whose hole `.map()`
 
 Array literal of different types.
 
-A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.
+A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (integers beside a `Float` are held as `Float`s, and items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.
 
 ## FV0612
 

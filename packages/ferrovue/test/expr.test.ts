@@ -587,12 +587,13 @@ describe("array literals", () => {
     expect(loop("b: boolean", "[b, true]")).toMatch(like("for x_ref in [props.b, true].iter() {"));
     expect(loop("n: number", "[n, 2]")).toMatch(like("for x_ref in [props.n, 2i64].iter() {"));
     expect(loop("n: number", "[n / 2, 1.5]")).toMatch(like("for x_ref in [props.n as f64 / 2.0, 1.5f64].iter() {"));
+    expect(loop("n: number", "[n, 1.5]")).toMatch(like("for x_ref in [props.n as f64, 1.5f64].iter() {"));
+    expect(loop("s: string[]", "s.map(() => -1).flatMap((b) => [b, 10 * 0])")).toMatch(like("[fv_b, 0.0f64]"));
     expect(loop("l: string[]", "[...l, 'a']")).toMatch(like('for x_cow in props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain([std::borrow::Cow::<str>::Borrowed("a")]) {'));
   });
 
   const one = "FV0611 an array literal holds strings, numbers or booleans, all of one type";
   const refused: [string, string, string][] = [
-    ["n: number", "[n, 1.5]", one],
     ["s: string; n: number", "[s, n]", one],
     ["s: string; b: boolean", "[b, s]", one],
     ["s?: string", "[s]", one],
@@ -1088,6 +1089,12 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).not.toContain("_ => super::t::TT::");
     expect(out).toMatch(like("t: Some(props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }).unwrap_or(match props.other {"));
     expect(out).toMatch(like("t: if props.on { props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }) } else { None }"));
+  });
+
+  it("reads a `?:` whose test is known when compiling as the type of both branches, where a member of a union and a string are compared with a literal outside the union", () => {
+    const out = render('defineProps<{ t: "a&b" | "md"; s: string }>();', `<p>{{ (Number.isNaN(1.5) ? s : t) !== '-' }}|{{ (Number.isNaN(1) ? 'x' : t) === 'x' }}</p>`);
+    expect(out).toMatch(like('out.push_str(if fv::props::Union::as_str(props.t) != "-" { "true" } else { "false" });'));
+    expect(out).toMatch(like('out.push_str(if fv::props::Union::as_str(props.t) == "x" { "true" } else { "false" });'));
   });
 
   it("holds a `computed` annotated as a union as its enum, so a child's union prop takes it with no `_` arm", () => {
