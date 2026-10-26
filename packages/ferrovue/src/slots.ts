@@ -13,6 +13,16 @@ function borrowed(code: string): string {
   return code.startsWith("&") || /^\w+$/.test(code) || /^fv_sp\d+\.\w+$/.test(code) ? code : `&${operand(code, UNARY)}`;
 }
 
+/** The properties of a component call's slots object with their keys, `_` aside. */
+export function givenSlots(s: Scope, slots: N): [string, N][] {
+  if (!slots || slots.type === "NullLiteral") return [];
+  if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
+  return slots.properties.flatMap((p: N): [string, N][] => {
+    const key: string = p.key?.type === "Identifier" ? p.key.name : p.key?.value;
+    return key === "_" ? [] : [[key, p]];
+  });
+}
+
 export function slotBody(s: Scope, value: N): N[] {
   return slotContent(s, value).body;
 }

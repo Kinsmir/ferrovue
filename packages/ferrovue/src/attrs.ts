@@ -1,6 +1,6 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
 import { type N, type Scope, type Ty, type Val, fail, nothing, rustStr } from "./model.ts";
-import { GenError } from "./errors.ts";
+import { type ErrorCode, GenError } from "./errors.ts";
 import { asWritten } from "./numbers.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
@@ -296,6 +296,14 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
   if (key === "style") return styleAttr(s, n);
   if (n.type === "NullLiteral") return "fv::attrs::Attr::Undefined";
   return valueAttr(s, attrShown(s, key, n), n);
+}
+
+/** A binding that is a string, `null` or `undefined`, as an attribute, refused with `code` and `what`
+ * when it is anything else. */
+export function stringAttr(s: Scope, n: N, code: ErrorCode, what: string): string {
+  const v = expr(s, n);
+  if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
+  return fail(s.comp, code, what, n);
 }
 
 export function valueAttr(s: Scope, v: Val, n: N): string {

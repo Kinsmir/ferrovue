@@ -4,6 +4,7 @@ import { relative, resolve as resolvePath, sep } from "node:path";
 import { type Component, type N, type Scope, fail, namesSelf, rustStr } from "../model.ts";
 import { type ScopeIdMode } from "../config.ts";
 import { type Plugin, runOf } from "../plugin.ts";
+import { untilSettled } from "../fallthrough.ts";
 
 interface ScopedRun {
   mode: ScopeIdMode;
@@ -98,18 +99,11 @@ function scopeFlow(read: { comp: Component; ssr: string; children: Map<string, s
       }
     }
   }
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (const f of flows) {
-      for (const c of f.calls) {
-        const child = byName.get(c.child);
-        if (!child || child.inherits) continue;
-        if (scopeIdOf(f.comp) !== null || (c.passesAttrs && f.comp.inherits && child.inheritAttrs) || passes(c.within)) {
-          child.inherits = changed = true;
-        }
-      }
-    }
-  }
+  untilSettled(flows, byName, (comp, c, child) => {
+    if (child.inherits || !(scopeIdOf(comp) !== null || (c.passesAttrs && comp.inherits && child.inheritAttrs) || passes(c.within))) return false;
+    child.inherits = true;
+    return true;
+  });
 }
 
 function childIds(s: Scope, child: Component, passesAttrs: boolean, inSlot: boolean, n: N): string | null {

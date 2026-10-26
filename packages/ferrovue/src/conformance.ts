@@ -11,6 +11,7 @@ import { type DatePlans, withDatePlans } from "./date-plans.ts";
 import { fixtureApp, readFixture, type RouterOptions } from "./testing-browser.ts";
 import type { RouteEntry } from "./route-records.ts";
 import { ctx } from "./context.ts";
+import { consoleInto, warnInto } from "./problems.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
 import type { ConformanceOptions } from "./testing.ts";
@@ -217,18 +218,12 @@ async function hydrateFixture(app: App, html: string): Promise<string[]> {
   const root = document.getElementById("root")!;
   const first = root.firstChild;
   const problems: string[] = [];
-  const { warn, error } = console;
-  console.warn = (...args: unknown[]) => void problems.push(`console.warn: ${args.map(String).join(" ")}`);
-  console.error = (...args: unknown[]) => void problems.push(`console.error: ${args.map(String).join(" ")}`);
-  app.config.warnHandler = (message) => void problems.push(`warning: ${message}`);
-  try {
+  warnInto(app, problems);
+  await consoleInto(problems, async () => {
     app.mount(root);
     await settled(app);
     await headRendered();
-  } finally {
-    console.warn = warn;
-    console.error = error;
-  }
+  });
   if (root.firstChild !== first) problems.push("Vue replaced the server's first node");
   app.unmount();
   await headRendered();

@@ -32,25 +32,23 @@ function unmarked(code: string, rust: string): string {
   return outsideLiterals(code, (part) => part.replace(new RegExp(`\\$${rust}(?![\\w$])`, "g"), () => rust));
 }
 
-function flattened(code: string): string {
+function* blockOpenings(code: string): Generator<number> {
   for (let i = 0; i < code.length; i++) {
     const ch = code[i];
-    if (ch === '"' || ch === "'") {
-      i = literalEnd(code, i);
-      continue;
-    }
-    if (ch !== "{" || code[i + 1] !== " " || code[i + 2] !== "{") continue;
+    if (ch === '"' || ch === "'") i = literalEnd(code, i);
+    else if (ch === "{" && code[i + 1] === " ") yield i;
+  }
+}
+
+function flattened(code: string): string {
+  for (const i of blockOpenings(code)) {
+    if (code[i + 2] !== "{") continue;
     const outer = closing(code, i);
     const inner = closing(code, i + 2);
     if (inner > 0 && outer === inner + 2) return flattened(code.slice(0, i) + code.slice(i + 2, inner + 1) + code.slice(outer + 1));
   }
-  for (let i = 0; i < code.length; i++) {
-    const ch = code[i];
-    if (ch === '"' || ch === "'") {
-      i = literalEnd(code, i);
-      continue;
-    }
-    if (ch !== "{" || code[i + 1] !== " " || !code.startsWith("; ", i - 2)) continue;
+  for (const i of blockOpenings(code)) {
+    if (!code.startsWith("; ", i - 2)) continue;
     const inner = closing(code, i);
     if (inner > 0 && code[inner - 1] === " " && code.startsWith(" }", inner + 1)) return flattened(code.slice(0, i) + code.slice(i + 2, inner - 1) + code.slice(inner + 1));
   }

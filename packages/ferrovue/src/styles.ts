@@ -4,7 +4,7 @@ import { describeTy, expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";
 import { condition, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { display, valueAttr } from "./attrs.ts";
+import { display, stringAttr, valueAttr } from "./attrs.ts";
 import { isTemporary } from "./strings.ts";
 
 /** Put the object Vue's server compiler declares as `_cssVars`, the `v-bind()` variables in
@@ -153,6 +153,13 @@ function styleText(s: Scope, e: Emitter, n: N, into: string): void {
   } else if (!nothing(v.ty)) fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
 }
 
+function styleKey(s: Scope, p: N): string {
+  if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1008", "a style object holds plain `property: value` pairs", p);
+  const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
+  if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, "FV1009", `style property \`${key}\``, p);
+  return key;
+}
+
 export function styleAttr(s: Scope, n: N): string {
   switch (n.type) {
     case "StringLiteral":
@@ -161,9 +168,7 @@ export function styleAttr(s: Scope, n: N): string {
       return "fv::attrs::Attr::Undefined";
     case "ObjectExpression": {
       const entries = n.properties.map((p: N) => {
-        if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1008", "a style object holds plain `property: value` pairs", p);
-        const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-        if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, "FV1009", `style property \`${key}\``, p);
+        const key = styleKey(s, p);
         return `(${rustStr(key)}, ${p.value.type === "FvCssVar" ? cssVarAttr(s, p.value) : valueAttr(s, expr(s, p.value), p.value)})`;
       });
       return `fv::attrs::Attr::style([${entries.join(", ")}])`;
@@ -176,9 +181,7 @@ export function styleAttr(s: Scope, n: N): string {
     case "ConditionalExpression":
       return `if ${condition(cond(s, n.test))} { ${styleAttr(s, n.consequent)} } else { ${styleAttr(s, n.alternate)} }`;
   }
-  const v = expr(s, n);
-  if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
-  return fail(s.comp, "FV1007", "a style binding is a string, an object or an array", n);
+  return stringAttr(s, n, "FV1007", "a style binding is a string, an object or an array");
 }
 
 export interface StyleItem {
@@ -208,9 +211,7 @@ export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
       return [{
         cond: when,
         entries: n.properties.map((p: N) => {
-          if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1008", "a style object holds plain `property: value` pairs", p);
-          const key: string = p.key.type === "Identifier" ? p.key.name : String(p.key.value);
-          if (/^\d+$/.test(key) || key.startsWith(":")) fail(s.comp, "FV1009", `style property \`${key}\``, p);
+          const key = styleKey(s, p);
           return { key, css: key.startsWith("--") ? key : hyphenate(key), value: p.value };
         }),
       }];

@@ -6,7 +6,7 @@ import { pickPresent } from "./constants.ts";
 import { meet } from "./strings.ts";
 import { atom, bare, condition, logical, not, occurrences, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { valueAttr } from "./attrs.ts";
+import { stringAttr } from "./attrs.ts";
 import { fresh, jsHint } from "./names.ts";
 
 export type ClassItem = { lit: string } | { code: string };
@@ -211,7 +211,5 @@ export function classAttr(s: Scope, n: N, side: "vnode" | "own"): string {
         `if ${condition(cond(s, n.test))} { ${classAttr(s, n.consequent, side)} } else { ${classAttr(s, n.alternate, side)} }`
       );
   }
-  const v = expr(s, n);
-  if (v.ty.k === "str" || nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str")) return valueAttr(s, v, n);
-  return fail(s.comp, "FV1004", "a class is a string, an array, or an object of conditions", n);
+  return stringAttr(s, n, "FV1004", "a class is a string, an array, or an object of conditions");
 }

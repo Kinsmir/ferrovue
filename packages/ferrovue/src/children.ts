@@ -14,7 +14,7 @@ import { attrOf, dollarAttrs, isAttrs, mergedParts } from "./attrs.ts";
 import { isDollarAttrs, isListener, passedKey } from "./fallthrough.ts";
 import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { statements } from "./template.ts";
-import { slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
+import { givenSlots, slotContent, slotFieldBorrows, staticallyFilled } from "./slots.ts";
 import { slotAsVnodes } from "./dynamic.ts";
 import { fresh, jsHint } from "./names.ts";
 
@@ -273,15 +273,10 @@ export function callChild(s: Scope, e: Emitter, child: Component, propsCode: str
 export function callWith(s: Scope, e: Emitter, child: Component, m: string, head: string, slotsTy: string, trailing: string, slots: N, vnode = false, fallible = true): void {
   const [pre, post] = !fallible ? ["", ""] : e.inClosure ? [`${REFUSALS}.join(`, ")"] : [`${REFUSALS}.check(`, ")?"];
   const given = new Map<string, N>();
-  if (slots && slots.type !== "NullLiteral") {
-    if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
-    for (const p of slots.properties) {
-      const key: string = p.key?.type === "Identifier" ? p.key.name : p.key?.value;
-      if (key === "_") continue;
-      if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0902", "slots hold plain keys", p);
-      if (!child.slotNames.includes(key)) fail(s.comp, "FV0903", `${child.name} has no slot \`${key}\``, p);
-      given.set(key, p.value);
-    }
+  for (const [key, p] of givenSlots(s, slots)) {
+    if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0902", "slots hold plain keys", p);
+    if (!child.slotNames.includes(key)) fail(s.comp, "FV0903", `${child.name} has no slot \`${key}\``, p);
+    given.set(key, p.value);
   }
   if (!takesSlots(child)) {
     e.stmt(`${pre}${head}${trailing})${post};`);
