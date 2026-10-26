@@ -116,13 +116,15 @@ function strictEquality(s: Scope, n: N): Val {
   const byEnum = knownLiteral(a) !== undefined && knownLiteral(b) !== undefined ? null : enumEquality(comp, a, b);
   if (own !== undefined) return equalOrNot(n, own);
   if (byEnum !== null) return equalOrNot(n, byEnum);
-  if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) {
-    const [v, literal] = a.ty.k === "opt" ? [a, b] : [b, a];
-    checkNullTest(s, { target: n, literal: literal.ty.k === "null" ? "null" : "undefined", strict: true, is: n.operator === "===" }, v);
-    return equalOrNot(n, `${atom(v.code)}.is_none()`);
-  }
+  if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) return equalAbsent(s, n, a, b);
   if (nothing(a.ty) || nothing(b.ty)) return equalNothing(comp, n, a, b);
   return equalOrNot(n, valuesEqual(comp, n, a, b));
+}
+
+function equalAbsent(s: Scope, n: N, a: Val, b: Val): Val {
+  const [v, literal] = a.ty.k === "opt" ? [a, b] : [b, a];
+  checkNullTest(s, { target: n, literal: literal.ty.k === "null" ? "null" : "undefined", strict: true, is: n.operator === "===" }, v);
+  return equalOrNot(n, `${atom(v.code)}.is_none()`);
 }
 
 function equalOrNot(n: N, eq: string): Val {
@@ -139,13 +141,17 @@ function equalNothing(comp: Component, n: N, a: Val, b: Val): Val {
 }
 
 function valuesEqual(comp: Component, n: N, a: Val, b: Val): string {
-  const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
   if (isNumber(a.ty) && isNumber(b.ty)) return compare(a, "==", b).code;
   if (a.ty.k === "str" && b.ty.k === "str") return stringsEqual(a, b);
   if (a.ty.k === "bool" && b.ty.k === "bool" && (a.konst !== undefined || b.konst !== undefined)) {
     const [k, other] = a.konst !== undefined ? [a.konst, b.code] : [b.konst!, a.code];
     return k ? other : not(other);
   }
+  return scalarsEqual(comp, n, a, b);
+}
+
+function scalarsEqual(comp: Component, n: N, a: Val, b: Val): string {
+  const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
   if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) return binary(a.code, "==", b.code);
   if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && scalar(b.ty)) return binary(a.code, "==", `Some(${bare(b.code)})`);
   if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) return binary(`Some(${bare(a.code)})`, "==", b.code);

@@ -130,24 +130,28 @@ function scopedMember(s: Scope, n: N, prop: string): Val | null {
     case "$props":
       return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
     case "$setup":
-    case "_ctx": {
-      const global = n.object.name === "_ctx" ? claim((p) => p.global?.(s, prop, n)) : undefined;
-      if (global) return global;
-      if (n.object.name === "_ctx" && prop === "$attrs") {
-        return fail(comp, "FV0415", "`$attrs` is bound whole, with `v-bind=\"$attrs\"`; a value read from it has no type: declare it as a prop", n);
-      }
-      const v = s.setup.get(prop);
-      if (v) return v;
-      if (prop === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
-      if (s.clientOnly.has(prop)) return refuseClientOnly(s, prop, n);
-      if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
-        return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
-      }
-      return refuseUnavailable(s, prop, n);
-    }
+    case "_ctx":
+      return contextMember(s, n, prop);
     default:
       return null;
   }
+}
+
+function contextMember(s: Scope, n: N, prop: string): Val {
+  const comp = s.comp;
+  const global = n.object.name === "_ctx" ? claim((p) => p.global?.(s, prop, n)) : undefined;
+  if (global) return global;
+  if (n.object.name === "_ctx" && prop === "$attrs") {
+    return fail(comp, "FV0415", "`$attrs` is bound whole, with `v-bind=\"$attrs\"`; a value read from it has no type: declare it as a prop", n);
+  }
+  const v = s.setup.get(prop);
+  if (v) return v;
+  if (prop === s.propsIdent) return { code: "props", ty: { k: "struct", name: "Props" } };
+  if (s.clientOnly.has(prop)) return refuseClientOnly(s, prop, n);
+  if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
+    return fieldVal(comp, "props", { k: "struct", name: "Props" }, prop, n);
+  }
+  return refuseUnavailable(s, prop, n);
 }
 
 function slotsObject(s: Scope, n: N): string | null {

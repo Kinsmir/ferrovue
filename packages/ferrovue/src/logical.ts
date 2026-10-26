@@ -20,18 +20,25 @@ function isOptional(v: Val): v is Optional {
 
 /** The value of a logical expression: `&&`, `||` or `??`. */
 export function logicalOf(s: Scope, n: N): Val {
-  const comp = s.comp;
   const chained = reassociated(s, n);
   if (chained !== n) return expr(s, chained);
   if (n.operator === "&&" || n.operator === "||") {
     const present = byPresence(s, n);
     if (present !== null) return present;
   }
+  return bySides(s, n);
+}
+
+function bySides(s: Scope, n: N): Val {
   const a = expr(s, n.left);
   const literals = n.operator === "??" ? null : literalNarrowing(s, n.left);
   const right = literals === null ? s : n.operator === "&&" ? literals.yes : literals.no;
   if (n.operator !== "??" && a.ty.k !== "opt" && !nothing(a.ty) && a.ty.k !== "bool" && alwaysTruthy(a.ty)) return n.operator === "&&" ? expr(right, n.right) : a;
-  const b = expr(right, n.right);
+  return combined(s, n, a, expr(right, n.right));
+}
+
+function combined(s: Scope, n: N, a: Val, b: Val): Val {
+  const comp = s.comp;
   if (n.operator === "??" || (n.operator === "||" && (a.ty.k === "opt" ? a.ty.of : a.ty).k === "date")) return nullish(s, n, a, b);
   if (n.operator === "||") return orOf(s, n, a, b);
   if (n.operator === "&&" && a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "&&", b.code));
@@ -81,6 +88,10 @@ function listNullish(s: Scope, n: N, a: Optional, b: Val): Val | null {
   if (a.ty.of.k === "list" && b.ty.k === "list" && (untypedEmpty(b) || (sameTy(a.ty.of, b.ty) && !b.code.startsWith("[")))) {
     return { code: `${atom(a.code)}${a.held !== undefined ? "" : ".map(|v| &v[..])"}.unwrap_or(${untypedEmpty(b) ? "&[]" : sliced(b)})`, ty: untypedEmpty(b) ? a.ty.of : joinTy(a.ty.of, b.ty), slice: true, ...loneOf(a, b) };
   }
+  return sameList(s, n, a, b);
+}
+
+function sameList(s: Scope, n: N, a: Optional, b: Val): Val | null {
   if (a.ty.of.k === "list" && sameTy(a.ty.of, b.ty)) {
     const at = { loc: n.loc, __fv: n.__fv, start: n.start, end: n.end };
     const test = { type: "BinaryExpression", operator: "!=", left: n.left, right: { type: "NullLiteral", ...at }, ...at };
@@ -141,6 +152,10 @@ function orOf(s: Scope, n: N, a: Val, b: Val): Val {
   if (a.ty.k === "opt" && pathOf(n.left) !== null && ["str", "int", "float", "bool"].includes(a.ty.of.k)) {
     return expr(s, { ...n, type: "ConditionalExpression", test: n.left, consequent: n.left, alternate: n.right });
   }
+  return orValues(comp, n, a, b);
+}
+
+function orValues(comp: Component, n: N, a: Val, b: Val): Val {
   if (a.ty.k === "str" && b.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
     return { code: `&*{ let a = ${asCow(a)}; if !a.is_empty() { a } else { ${asCow(b)} } }`, ty: STR, ...loneOf(a, b) };
   }

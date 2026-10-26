@@ -39,19 +39,22 @@ function knownBranch(s: Scope, n: N, k: boolean): Val {
   if (!untypedEmpty(chosen) && held === undefined) return chosen;
   ctx.trying++;
   try {
-    const other = expr(s, k ? n.alternate : n.consequent);
-    if (held !== undefined) {
-      if (other.ty.k !== "str" || enumOf(other.ty) !== undefined) return chosen;
-      const theirs = literalsOf(other.ty);
-      return annotatedStr(chosen, theirs === undefined ? STR : literalTy("str", [...new Set([...(literalsOf(chosen.ty) ?? held.literals), ...theirs])]));
-    }
-    return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
+    return besideOther(comp, expr(s, k ? n.alternate : n.consequent), chosen, held);
   } catch (e) {
     if (!(e instanceof GenError)) throw e;
     return chosen;
   } finally {
     ctx.trying--;
   }
+}
+
+function besideOther(comp: Component, other: Val, chosen: Val, held: EnumDef | undefined): Val {
+  if (held !== undefined) {
+    if (other.ty.k !== "str" || enumOf(other.ty) !== undefined) return chosen;
+    const theirs = literalsOf(other.ty);
+    return annotatedStr(chosen, theirs === undefined ? STR : literalTy("str", [...new Set([...(literalsOf(chosen.ty) ?? held.literals), ...theirs])]));
+  }
+  return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
 }
 
 function branches(s: Scope, n: N, t: Val): Val {
@@ -84,13 +87,18 @@ function chooser(t: Val, p: Presence | null, name: string, a: Val): (yes: string
 }
 
 function choiceOf(c: Branches): Val {
-  const { comp, n, a, b, choose, lone } = c;
+  const { a, b, choose, lone } = c;
   const owned = a.owned || b.owned ? ownedBranches(c) : null;
   if (owned !== null) return owned;
   if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
     return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR, ...lone };
   }
   if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") return listChoice(c);
+  return scalarChoice(c);
+}
+
+function scalarChoice(c: Branches): Val {
+  const { comp, n, a, b, choose } = c;
   if (a.ty.k === "int" && b.ty.k === "int" && (isCast(a) || isCast(b))) return intFromF64(choose(asF64(a), asF64(b)), a.at ?? b.at ?? refusalAt(comp, n));
   if (sameTy(a.ty, b.ty) && a.ty.k !== "opt") return sameChoice(c);
   if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };

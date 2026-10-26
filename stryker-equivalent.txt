@@ -882,7 +882,7 @@ packages/ferrovue/src/members.ts: StringLiteral: "$setup" => "" in if (n.object.
 packages/ferrovue/src/members.ts: ConditionalExpression: n.property.type !== "NumericLiteral" => false in if (n.property.type !== "NumericLiteral" || !Number.isInteger(n.property.value) || n.property.value < 0) {
 packages/ferrovue/src/members.ts: ConditionalExpression: n.property.value < 0 => false in if (n.property.type !== "NumericLiteral" || !Number.isInteger(n.property.value) || n.property.value < 0) {
 
-# members.ts, `scopedMember`, `_ctx.name`: Vue writes `_ctx.name` only for a name no binding
+# members.ts, `contextMember`, `_ctx.name`: Vue writes `_ctx.name` only for a name no binding
 # declares, and a prop is declared by `defineProps`, which Vue's bindings hold, so it writes
 # `$props.name`; on `$setup` the test stops at the first part.
 packages/ferrovue/src/members.ts: ConditionalExpression: f.js === prop => true in if (n.object.name === "_ctx" && comp.props.fields.some((f) => f.js === prop)) {
@@ -903,7 +903,7 @@ packages/ferrovue/src/members.ts: StringLiteral: "_ctx" => "" in if (n.object.na
 packages/ferrovue/src/logical.ts: OptionalChaining: right?.ty => right.ty in if (right?.ty.k === "bool") return { code, ty: BOOL };
 packages/ferrovue/src/logical.ts: OptionalChaining: right?.ty => right.ty in return notBooleans(comp, n, BOOL, right?.ty);
 
-# logical.ts, `logicalOf`: `alwaysTruthy` is false for an optional and for a boolean type,
+# logical.ts, `bySides`: `alwaysTruthy` is false for an optional and for a boolean type,
 # so the type tests before it decide nothing for them. `truthy` of `v` writes `v.is_some()` or
 # `v.is_some_and(…)` for an optional and `v` for a boolean, and literal sets (`literalTy`) belong
 # to string and integer types only.
@@ -920,7 +920,7 @@ packages/ferrovue/src/logical.ts: ConditionalExpression: b.ty.k === "list" => tr
 # optional list, and `a` is optional where this line is reached, so `a.ty.of` is a list.
 packages/ferrovue/src/logical.ts: ConditionalExpression: a.ty.of.k === "list" => true in if (a.enums !== undefined && a.ty.of.k === "list" && untyp … unwrap_or(&[])`, a.ty.of, a.enums.def), ...loneOf(a, b) };
 
-# logical.ts, `listNullish`: the location given to the `!= null` test built for an optional list and
+# logical.ts, `sameList`: the location given to the `!= null` test built for an optional list and
 # an array literal is read by no refusal. `nullTest` and `presence` compile it from its operator
 # and `n.left`, `checkNullTest` returns for `!=`, and `!=` of a list type raises no FV0620 (only
 # dates and query values are described), so every refusal there is located at `n.left`, the
@@ -952,7 +952,7 @@ packages/ferrovue/src/conditional.ts: ConditionalExpression: a.ty.k === "str" =>
 # an `if` is handled branch by branch by both).
 packages/ferrovue/src/logical.ts: ConditionalExpression: a.ty.k === "str" => true in const otherwise = a.ty.k === "str" ? strArg(b.code) : bare(b.code);
 
-# logical.ts, `logicalOf`: the `??` and date block and the `||` block each return, so only `&&`
+# logical.ts, `combined`: the `??` and date block and the `||` block each return, so only `&&`
 # reaches this line.
 packages/ferrovue/src/logical.ts: ConditionalExpression: n.operator === "&&" => true in if (n.operator === "&&" && a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "&&", b.code));
 
@@ -985,7 +985,7 @@ packages/ferrovue/src/operators.ts: OptionalChaining: p.values?.describe?.(other
 # rule of `equal`, and its message reads `what` alone.
 packages/ferrovue/src/operators.ts: StringLiteral: "equal" => "" in if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
 
-# operators.ts, `valuesEqual`: for a type that is not optional `t.of` is undefined, and
+# operators.ts, `scalarsEqual`: for a type that is not optional `t.of` is undefined, and
 # `sameTy(undefined, t)` compares `JSON.stringify(undefined)`, undefined, with a string, so it is
 # false as the original's type test is.
 packages/ferrovue/src/operators.ts: ConditionalExpression: a.ty.k === "opt" => true in if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && scalar(b.ty)) return binary(a.code, "==", `Some(${bare(b.code)})`);
@@ -997,7 +997,7 @@ packages/ferrovue/src/operators.ts: ConditionalExpression: b.ty.k === "opt" => t
 # it.
 packages/ferrovue/src/conditional.ts: ConditionalExpression: !(e instanceof GenError) => false in if (!(e instanceof GenError)) throw e;
 
-# conditional.ts, `knownBranch`: `typedEmpty` of a list of `undefined` asks `localTy` for the Rust
+# conditional.ts, `besideOther`: `typedEmpty` of a list of `undefined` asks `localTy` for the Rust
 # type of `undefined`, which raises FV0309, and the `catch` below returns `chosen`, the original's
 # answer.
 packages/ferrovue/src/conditional.ts: ConditionalExpression: other.ty.of.k !== "undef" => true in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
