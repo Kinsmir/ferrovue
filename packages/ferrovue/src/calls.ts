@@ -33,10 +33,8 @@ function namedCall(s: Scope, n: N): Val {
   if (rendered) return rendered;
   const own = claim((p) => p.call?.(s, n));
   if (own) return own;
-  const helper = s.helpers.get(callee.name);
-  if (helper) return helperCall(s, helper, args, n);
-  const fn = s.locals.has(callee.name) ? undefined : s.functions.get(callee.name);
-  if (fn) return callFunction(s, callee.fvName ?? callee.name, fn, args, n);
+  const mine = ownCall(s, callee, args, n);
+  if (mine) return mine;
   if (isBoolean(s, callee) && args.length === 1) return boolOf(truthy(expr(s, args[0])));
   const global = !s.locals.has(callee.name) && !s.setup.has(callee.name);
   if (callee.name === "String" && global) {
@@ -132,12 +130,8 @@ function memberCall(s: Scope, n: N): Val {
   const own = claim((p) => p.call?.(s, n));
   if (own) return own;
   if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
-    const helper = s.helpers.get(method);
-    if (helper) return helperCall(s, helper, args, n);
-    const fn = s.functions.get(method);
-    if (fn) return callFunction(s, method, fn, args, n);
-    if (s.clientOnly.has(method)) return refuseClientOnly(s, method, n, true);
-    if (!s.setup.has(method) && !(callee.object.name === "_ctx" && comp.props.fields.some((f) => f.js === method))) return refuseUnavailable(s, method, n, true);
+    const mine = setupCall(s, callee.object.name, method, args, n);
+    if (mine) return mine;
   }
   if (callee.object.type === "Identifier" && callee.object.name === "Math") {
     if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);
@@ -351,6 +345,23 @@ function json(s: Scope, v: Val, n: N): string {
   }
   const w = asWritten(v);
   return one(w.code, w.ty);
+}
+
+function ownCall(s: Scope, callee: N, args: N[], n: N): Val | null {
+  const helper = s.helpers.get(callee.name);
+  if (helper) return helperCall(s, helper, args, n);
+  const fn = s.locals.has(callee.name) ? undefined : s.functions.get(callee.name);
+  return fn ? callFunction(s, callee.fvName ?? callee.name, fn, args, n) : null;
+}
+
+function setupCall(s: Scope, of: string, method: string, args: N[], n: N): Val | null {
+  const helper = s.helpers.get(method);
+  if (helper) return helperCall(s, helper, args, n);
+  const fn = s.functions.get(method);
+  if (fn) return callFunction(s, method, fn, args, n);
+  if (s.clientOnly.has(method)) return refuseClientOnly(s, method, n, true);
+  if (!s.setup.has(method) && !(of === "_ctx" && s.comp.props.fields.some((f) => f.js === method))) return refuseUnavailable(s, method, n, true);
+  return null;
 }
 
 export function helperCall(s: Scope, name: string, args: N[], n: N): Val {
