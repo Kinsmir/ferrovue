@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, camelize, directiveOwner, fail, rustStr, templateAst } from "./model.ts";
+import { type Component, type N, type Scope, camelize, directiveOwner, fail, isAttribute, placeOf, rustStr, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { matchOver } from "./enums.ts";
@@ -166,7 +166,8 @@ function keysOf(s: Scope, n: N, at: N): { on: N; keys: string[] } {
 function element(s: Scope, tag: string, n: N): Choice {
   const self = s.comp.name;
   if (!isHTMLTag(tag) || RESERVED_TAGS.has(tag) || self === tag || self === camelize(tag) || self === camelize(tag).replace(/^./, (c) => c.toUpperCase())) {
-    fail(s.comp, "FV0419", `\`${tag}\` is not an HTML element \`<component :is>\` renders: name an HTML element other than \`<textarea>\`, \`<template>\` and \`<slot>\`, or bind an imported component`, n);
+    const at = placeOf(s.comp, n).line === undefined && n?.type === "StringLiteral" ? (isAttribute(s.comp, (value) => value === tag) ?? n) : n;
+    fail(s.comp, "FV0419", `\`${tag}\` is not an HTML element \`<component :is>\` renders: name an HTML element other than \`<textarea>\`, \`<template>\` and \`<slot>\`, or bind an imported component`, at);
   }
   return { tag };
 }

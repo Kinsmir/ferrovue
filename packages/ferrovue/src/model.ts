@@ -652,6 +652,16 @@ export function directiveOwner(comp: Component, node: N): N {
   return visit(comp.templateAst);
 }
 
+/** Where the template's first static `is` attribute whose value `test` takes is written, or where
+ * its element starts with `element`. */
+export function isAttribute(comp: Component, test: (value: string) => boolean, element = false): N {
+  const found = templateNode(comp, (el) => {
+    const is = el.props.find((p: N) => p.type === 6 && p.name === "is" && p.value !== undefined && test(p.value.content));
+    return is === undefined ? null : element ? el : is;
+  });
+  return found;
+}
+
 function templateNode(comp: Component, test: (el: N) => N): N {
   const visit = (n: N): N => {
     const found = n.type === 1 ? test(n) : null;
