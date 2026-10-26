@@ -744,12 +744,12 @@ function exprOf(s: Scope, n: N): Val {
       }
       if (n.operator === "||") {
         if (a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "||", b.code));
+        if (a.ty.k === "str" && (b.ty.k === "str" || b.ty.k === "undef") && known(a) !== undefined) return known(a) ? a : b;
         if (b.ty.k === "undef") {
           const inner: Ty = keptLiterals(a.ty.k === "opt" ? a.ty.of : a.ty, (l) => !falsyLiteral(l));
           const src = a.ty.k === "opt" ? atom(a.code) : `Some(${bare(a.code)})`;
           return { code: `${src}.filter(|v| ${truthy({ code: "*v", ty: inner })})`, ty: opt(inner) };
         }
-        if (a.ty.k === "str" && b.ty.k === "str" && known(a) !== undefined) return known(a) ? a : b;
         if (a.ty.k === "str" && b.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
           return { code: `&*{ let a = ${asCow(a)}; if !a.is_empty() { a } else { ${asCow(b)} } }`, ty: STR, ...loneOf(a, b) };
         }
@@ -814,7 +814,7 @@ function exprOf(s: Scope, n: N): Val {
       claim((p) => p.values?.refuseEquality?.(s, a, b, n));
       refuseOutside(comp, a, b, n);
       const own = claim((p) => p.values?.equals?.(a, b));
-      const byEnum = enumEquality(comp, a, b);
+      const byEnum = knownLiteral(a) !== undefined && knownLiteral(b) !== undefined ? null : enumEquality(comp, a, b);
       if (own !== undefined) eq = own;
       else if (byEnum !== null) eq = byEnum;
       else if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) {
