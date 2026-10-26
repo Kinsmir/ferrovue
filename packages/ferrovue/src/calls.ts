@@ -67,33 +67,45 @@ function includeBooleanAttr(s: Scope, args: N[]): Val {
 }
 
 function memberCall(s: Scope, n: N): Val {
-  const comp = s.comp;
-  const callee = n.callee;
+  const object = n.callee.object;
+  const method = n.callee.property.name as string;
   const args: N[] = n.arguments;
-  const method = callee.property.name as string;
-  if (callee.object.type === "Identifier") {
-    const known = staticCall(s, callee.object.name, method, args, n);
-    if (known) return known;
-  }
+  const named = object.type === "Identifier" ? namedObjectCall(s, object.name, method, args, n) : claim((p) => p.call?.(s, n));
+  return named ?? methodCall(s, object, method, args, n);
+}
+
+function namedObjectCall(s: Scope, name: string, method: string, args: N[], n: N): Val | null {
+  const known = staticCall(s, name, method, args, n);
+  if (known) return known;
   const own = claim((p) => p.call?.(s, n));
   if (own) return own;
-  if (callee.object.type === "Identifier" && (callee.object.name === "$setup" || callee.object.name === "_ctx")) {
-    const mine = setupCall(s, callee.object.name, method, args, n);
-    if (mine) return mine;
-  }
-  if (callee.object.type === "Identifier" && callee.object.name === "Math") return mathCall(s, method, args, n);
-  if (callee.object.type === "Identifier" && BUILTINS.has(callee.object.name) && !s.locals.has(callee.object.name) && !s.setup.has(callee.object.name)) {
-    return builtin(s, `${callee.object.name}.${method}()`, n);
-  }
-  if ((method === "sort" || method === "reverse") && callee.object.type === "ArrayExpression") {
-    const copy = expr(s, callee.object);
+  const mine = name === "$setup" || name === "_ctx" ? setupCall(s, name, method, args, n) : null;
+  if (mine) return mine;
+  if (name === "Math") return mathCall(s, method, args, n);
+  if (BUILTINS.has(name) && !s.locals.has(name) && !s.setup.has(name)) return builtin(s, `${name}.${method}()`, n);
+  return null;
+}
+
+function methodCall(s: Scope, object: N, method: string, args: N[], n: N): Val {
+  const fixed = literalReceiverCall(s, object, method, args, n);
+  if (fixed) return fixed;
+  const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && object.type === "ArrayExpression";
+  const target = (literal ? presentLiteral(s, object) : null) ?? expr(s, object);
+  return valueMethod(s, target, method, args, n);
+}
+
+function literalReceiverCall(s: Scope, object: N, method: string, args: N[], n: N): Val | null {
+  if ((method === "sort" || method === "reverse") && object.type === "ArrayExpression") {
+    const copy = expr(s, object);
     if (copy.ty.k === "list") return listMethod(s, copy, method === "sort" ? "toSorted" : "toReversed", args, n)!;
   }
-  if (callee.object.type === "RegExpLiteral" && method === "test") return regexTest(s, callee.object, args, n);
-  const map = callee.object.type === "Identifier" || callee.object.type === "MemberExpression" ? constOf(s, callee.object) : null;
+  if (object.type === "RegExpLiteral" && method === "test") return regexTest(s, object, args, n);
+  const map = object.type === "Identifier" || object.type === "MemberExpression" ? constOf(s, object) : null;
   if (map?.sym.k === "const" && map.sym.c.k === "map") return mapCall(s, map, method, args, n);
-  const literal = method === "filter" && args.length === 1 && isBoolean(s, args[0]) && callee.object.type === "ArrayExpression";
-  const target = (literal ? presentLiteral(s, callee.object) : null) ?? expr(s, callee.object);
+  return null;
+}
+
+function valueMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val {
   const typed = claim((p) => p.method?.(s, target, method, args, n));
   if (typed) return typed;
   if (target.ty.k === "str") {
@@ -102,10 +114,8 @@ function memberCall(s: Scope, n: N): Val {
   }
   const numbered = numberMethod(s, target, method, args, n);
   if (numbered) return numbered;
-  if (target.owned) refuseInPlace(comp, `\`.${method}()\``, n);
-  const listed = listCall(s, target, method, args, n);
-  if (listed) return listed;
-  return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);
+  if (target.owned) refuseInPlace(s.comp, `\`.${method}()\``, n);
+  return listCall(s, target, method, args, n) ?? fail(s.comp, "FV0602", `\`.${method}()\` is not supported`, n);
 }
 
 /** The globals of JavaScript a template may name, which the server translates only some of. */
