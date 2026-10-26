@@ -3018,7 +3018,7 @@ const bindingVar = (b: Binding): Var => ({
   bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0,
   ...(b.e.lone ? { lone: true } : {}),
   ...(b.union && b.e.members ? { members: b.e.members, wide: true as const } : {}),
-  ...(b.typed && b.e.members ? { members: b.e.members } : {}),
+  ...(b.typed && b.e.members ? { members: b.e.members, ...(b.e.members.includes("") ? { wide: true as const } : {}) } : {}),
 });
 
 const whole = (e: Expr): Expr => (e.lone ? strLit("whole") : e);
@@ -3600,6 +3600,13 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
       const shape = r.int(0, 1);
       const e = node("str", [g.bool(1), g.bool(1)], ([c, k]) => (shape === 0 ? `(${c} ? '${a}' : '')` : `(${c} ? '${a}' : ${k} ? '${b}' : '')`), 0, true);
       bindings.push({ name: `cmp${bindings.length}`, kind: "computed", e: { ...e, members: [...new Set(shape === 0 ? [a, ""] : [a, b, ""])] }, union: [...sizes.values, ""] });
+    }
+    const flags = props.filter((p) => p.spec.k === "bool");
+    if (flags.length && r.chance(0.4)) {
+      const sizes = FZ_CARD.fields.find((f) => f.name === "size")!.spec as Spec & { k: "enum" };
+      const a = r.pick(sizes.values);
+      const seed = `(props.${r.pick(flags).name} ? '${a}' : '')`;
+      bindings.push({ name: `ref${bindings.length}`, kind: "ref", typed: [...sizes.values, ""].map((v) => JSON.stringify(v)).join(" | "), e: { ...atom("str", seed), fixed: true, members: [a, ""] } });
     }
     for (let n = ifaces.length && r.chance(0.4) ? r.int(1, 2) : 0; n > 0; n--) {
       const iface = r.pick(ifaces);

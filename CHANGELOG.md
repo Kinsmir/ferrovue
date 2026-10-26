@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Fixed
+
+- A narrowed value of a union's enum reaches a child's union prop through one `match` over its variants.
+  0.12.0's code matched its string with a `_` arm, or gave a variant the test rules out the last member's arm: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
+
 ## [0.12.0] - 2026-10-25
 
 ### Added

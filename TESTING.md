@@ -137,6 +137,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Listened`, `Listeners`, `ListenLeaf`, `ListenSale` | Listeners on components, skipped by the server: a component rendering itself through `v-bind` of its own `Props` beside `@loaded`; `@x` for emits the child declares and for ones it does not, with modifiers, `@update:x`, `v-on` of an object and `@[name]`, beside an object literal, a fallthrough attribute and a `v-bind` of the child's `Props`; a prop named like a listener (`onSale`) given a value |
 | `OnProps`, `OnPropsKid`, `OnPropsRoot`, `OnPropsBare` | Props named like listeners (`on1`, `onText` bound as `:on-text`): a number, a string, booleans with and without a default, a `Float`, a union with `""`, a required boolean and a required number, passed on unchanged where Vue passes the props as written (`0`, `""`, `false`, `-0`, `NaN`), and left out when falsy where `mergeProps` joins them: on a component's root, beside `v-bind` of an object literal, and `v-bind` of a child's own `Props` beside a listener |
 | `UnionNarrowing`, `NarrowedTone` | A `ref<Tone \| "">` and a `computed` annotated `Tone \| ""` handed to a child's `Tone` prop once narrowed as TypeScript narrows them: `\|\| undefined`, `=== ''` and `!== ''` either way round in `?:`, a test of its truth, `v-if` / `v-else-if` / `v-else`, `&&` in a `v-if`, and a `computed` annotated `Tone \| undefined`; members holding markup-breaking characters, the empty string, and a hostile label |
+| `UnionNarrowedMatch`, `UnionMoodCard` | A `ref<Mood \| "">` narrowed and handed to a child's optional and required `Mood` props as one `match` over its enum's variants: `\|\| undefined` and `\|\|` with a member, `=== ''` and `!== ''` in `?:`, a `?:` around a `\|\|`, a table read by the ref and by the key `v-if` narrows, an object literal's union fields, `v-if` / `v-else-if` / `v-else`, a `?:` and `\|\|` inside a `v-if` that narrows the ref, and two tests of it in a `v-if` of `&&`; each member, one with markup in it, the empty string, and a hostile label |
 | `UnionLogic` | A string of a union read through `\|\|`, `&&`, `??` and `?:` where a child's union prop or a lookup table takes it: a test of a literal narrowing a table's key on the right of `\|\|` and `&&`, the falsy member left out by `\|\|` with a member to fall back to, an optional member falling back to another by `??`, members and `undefined` chosen by `?:`, and a list of the union built in an object literal; members holding markup-breaking characters, the empty string, absent values, and a hostile label |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
@@ -246,7 +247,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
-| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionLogic` |
+| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays` |
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
@@ -420,7 +421,9 @@ What it generates, with random nesting:
   that type, and a child `FzCard` given an object literal and a `.map()` of literals (or `[]`, or
   an array literal of one) for its interface props: optional fields left out, `undefined`, an
   expression or an optional value, nullable fields `null`, an expression or a nullable value,
-  lists `[]`, a list prop or an array literal, the keys in the interface's order or reversed;
+  lists `[]`, a list prop or an array literal, the keys in the interface's order or reversed; its
+  union field `size` given a member, or a `computed` or a `ref<"sm" | "md" | "lg" | "">` narrowed to
+  the union by `||`, by `===` or `!==` with `''` in `?:` or by its truth;
 - a child `FzWide` whose `number` prop is the product of two or three integers, props or literals
   up to ±(2⁵³ − 1), so that it lies beyond ±2⁶³ when the props are wide, where the render is
   refused (FV0724);

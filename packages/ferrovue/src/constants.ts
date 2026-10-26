@@ -1,6 +1,6 @@
 import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
-import { aliasEnum, knownLiteral, matchOver } from "./enums.ts";
+import { aliasEnum, knownLiteral, matchOver, overVariants } from "./enums.ts";
 
 const TYPES_HOME = blankComponent("types", "types", "types");
 import { ONE_NOTHING, reachType, tyOfTs } from "./typescript.ts";
@@ -557,6 +557,10 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
       else groups.push([[key], values[i]!]);
     });
     if (groups.length === 1) return groups[0]![1];
+    const def = sym.on.variant !== undefined && sym.on.ty.k !== "opt" ? enumOf(sym.on.ty) : undefined;
+    const named = sym.keys as readonly string[];
+    const one = def !== undefined && named.length < def.literals.length && named.every((k) => def.literals.includes(k)) ? overVariants(at.comp, sym.on, named, (k) => (named.includes(k) ? values[named.indexOf(k)]! : null)) : null;
+    if (one !== null) return one;
     const last = groups.findIndex(([, code]) => code === values[values.length - 1]);
     groups.push(...groups.splice(last, 1));
     const branches = groups.map(([keys, code], i) => `${i === groups.length - 1 ? lastArm(keys) : pattern(keys)} => ${code}`);

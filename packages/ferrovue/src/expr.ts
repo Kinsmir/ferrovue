@@ -1,6 +1,6 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, fail, falsyLiteral, FLOAT, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, falsyLiteral, FLOAT, INT, isAscii, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
-import { enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, refuseOutside } from "./enums.ts";
+import { enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants, refuseOutside } from "./enums.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
@@ -445,6 +445,47 @@ export function shown(s: Scope, n: N, how: Shown): Val {
 }
 
 export function expr(s: Scope, n: N): Val {
+  const v = exprOf(s, n);
+  return n.type === "ConditionalExpression" || (n.type === "LogicalExpression" && n.operator !== "??") ? byVariant(s, n, v) : v;
+}
+
+/** `v`, the value of `test ? a : b`, `a || b` or `a && b` where the test narrows a value of a
+ * generated enum: as another enum, one `match` over its variants, each arm the value the branch it
+ * takes gives. */
+function byVariant(s: Scope, n: N, v: Val): Val {
+  if ((v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return v;
+  const conditional = n.type === "ConditionalExpression";
+  const narrowed = literalNarrowing(s, conditional ? n.test : n.left, true);
+  const from = narrowed === null ? undefined : enumOf(narrowed.v.ty);
+  if (narrowed === null || from === undefined || narrowed.v.variant === undefined || narrowed.v.ty.k === "opt") return v;
+  const { path, v: tested, holds } = narrowed;
+  const kept = (literalsOf(tested.ty) ?? from.literals) as readonly string[];
+  const branch = (l: string): N => (conditional ? (holds(l) ? n.consequent : n.alternate) : holds(l) === (n.operator === "||") ? n.left : n.right);
+  const optional = v.ty.k === "opt";
+  const before = v.asEnum?.of === v.code ? v.asEnum.into : undefined;
+  const into = (def: EnumDef, node: N): string | null => {
+    const arm = (l: string): string | null => {
+      const one: Scope = { ...s, narrowed: new Map(s.narrowed).set(path, { ...tested, ty: keptLiterals(enumTy(from), (k) => k === l) }) };
+      ctx.trying++;
+      try {
+        const taken = expr(one, branch(l));
+        if (nothing(taken.ty)) return optional ? "None" : null;
+        if ((taken.ty.k === "opt" ? taken.ty.of : taken.ty).k !== "str" || (taken.ty.k === "opt" && !optional)) return null;
+        const code = intoEnum(s.comp, taken, def, node);
+        return code === null || !optional || taken.ty.k === "opt" ? code : `Some(${bare(code)})`;
+      } catch (e) {
+        if (e instanceof GenError) return null;
+        throw e;
+      } finally {
+        ctx.trying--;
+      }
+    };
+    return overVariants(s.comp, tested, kept, arm) ?? before?.(def, node) ?? intoEnum(s.comp, { code: v.code, ty: v.ty }, def, node);
+  };
+  return { ...v, asEnum: { of: v.code, into } };
+}
+
+function exprOf(s: Scope, n: N): Val {
   const comp = s.comp;
   const path = pathOf(n);
   if (path !== null) {
@@ -680,11 +721,13 @@ export function expr(s: Scope, n: N): Val {
           const variant = `${atom(a.variant!)}.unwrap_or(${variantPath(comp, def, fallback)})`;
           return { code: unionStr(variant), ty: a.ty.of, variant, ...loneOf(a, b) };
         }
-        const widened = def === undefined || fallback === undefined ? undefined : (into: EnumDef, node: N): string | null => {
-          const some = into.literals.includes(fallback) ? intoEnum(comp, a, into, node) : null;
-          return some === null ? null : `${atom(some)}.unwrap_or(${variantPath(comp, into, fallback)})`;
-        };
         const or = (some: string, method: "unwrap_or" | "or", other: string): string => (refuses(other) ? `${some}.${method}_else(|| ${other})` : `${some}.${method}(${other})`);
+        const both = def !== undefined && b.ty.k !== "opt" && b.variant !== undefined && exactlyEnum(b);
+        const widened = def === undefined || (fallback === undefined && !both) ? undefined : (into: EnumDef, node: N): string | null => {
+          const some = fallback === undefined || into.literals.includes(fallback) ? intoEnum(comp, a, into, node) : null;
+          const other = fallback === undefined ? intoEnum(comp, b, into, node) : variantPath(comp, into, fallback);
+          return some === null || other === null ? null : or(atom(some), "unwrap_or", bare(other));
+        };
         if (a.held !== undefined && b.ty.k === "str") return { code: `&*${or(atom(a.held), "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
         if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
           return { code: `&*${or(`${atom(a.code)}.map(std::borrow::Cow::<str>::Borrowed)`, "unwrap_or", asCow(b))}`, ty: STR, ...loneOf(a, b) };
@@ -878,10 +921,11 @@ export function expr(s: Scope, n: N): Val {
         }
         if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
         const code = choose(coerce(comp, a, ty, n), coerce(comp, b, ty, n));
-        const parts = of.k === "str" && [a, b].every((v) => nothing(v.ty) || (v.ty.k !== "opt" && exactlyEnum(v))) ? [a, b] : null;
+        const parts = of.k === "str" && [a, b].every((v) => nothing(v.ty) || exactlyEnum(v)) ? [a, b] : null;
         const into = (def: EnumDef, node: N): string | null => {
           const [x, y] = parts!.map((v) => (nothing(v.ty) ? "None" : intoEnum(comp, v, def, node)));
-          return x == null || y == null ? null : choose(x === "None" ? x : `Some(${bare(x)})`, y === "None" ? y : `Some(${bare(y)})`);
+          const some = (made: string, v: Val): string => (made === "None" || v.ty.k === "opt" ? made : `Some(${bare(made)})`);
+          return x == null || y == null ? null : choose(some(x, a), some(y, b));
         };
         return { code, ty, ...lone, ...(parts ? { asEnum: { of: code, into } } : {}) };
       }

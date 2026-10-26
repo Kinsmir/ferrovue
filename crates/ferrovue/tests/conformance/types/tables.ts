@@ -11,3 +11,9 @@ export const MOOD_LABEL: Record<MoodChoice, string> = { "": "<none> & \"all\"", 
 export const PLAIN_MOOD = { calm: "<q>&\"x'", loud: "calm", "<q>&\"x'": "loud" } as const;
 
 export const SOME_MOOD: Partial<Record<Mood, Mood>> = { calm: "loud" };
+
+export interface MoodCard {
+  mood: Mood;
+  spare?: Mood;
+  note: string;
+}

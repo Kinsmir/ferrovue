@@ -7725,18 +7725,18 @@ defineProps<{ tone?: Tone }>();
         ).get("x.rs")!,
       );
 
+    const MATCHED = `tone: match s_tone { XTone::Calm => Some(${TONE}::Calm), XTone::Loud => Some(${TONE}::Loud), XTone::Empty => None }`;
+
     it("leaves out the falsy member by `||`", () => {
-      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain("tone: Some(fv::props::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v {");
+      expect(narrowed(`<Badge :tone="tone || undefined" />`)).toContain(MATCHED);
     });
 
-    it.each([
-      [`tone === '' ? undefined : tone`, `tone: if s_tone == XTone::Empty { None } else { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) }`],
-      [`'' !== tone ? tone : undefined`, `tone: if s_tone != XTone::Empty { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
-      [`!(tone === '') ? tone : undefined`, `tone: if s_tone != XTone::Empty { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
-      [`tone ? tone : undefined`, `tone: if !fv::props::Union::as_str(s_tone).is_empty() { Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud }) } else { None }`],
-    ])("leaves out a literal a `?:` tests in the branch where it fails: %s", (value, code) => {
-      expect(narrowed(`<Badge :tone="${value}" />`)).toContain(code);
-    });
+    it.each([`tone === '' ? undefined : tone`, `'' !== tone ? tone : undefined`, `!(tone === '') ? tone : undefined`, `tone ? tone : undefined`])(
+      "leaves out a literal a `?:` tests in the branch where it fails: %s",
+      (value) => {
+        expect(narrowed(`<Badge :tone="${value}" />`)).toContain(MATCHED);
+      },
+    );
 
     it("narrows by `v-if` and `v-else`, to the one member a test leaves", () => {
       const out = narrowed(`<i v-if="tone === ''">none</i><Badge v-else-if="tone === 'calm'" :tone="tone" /><Badge v-else :tone="tone" />`);
@@ -7746,8 +7746,8 @@ defineProps<{ tone?: Tone }>();
 
     it("narrows the operands after a test in a `v-if` of `&&`", () => {
       const out = narrowed(`<Badge v-if="on && tone !== ''" :tone="tone" />`, "const on = computed(() => props.start !== undefined);");
-      expect(out).toContain("if s_on && s_tone != XTone::Empty {");
-      expect(out).toContain(`tone: Some(match s_tone { XTone::Calm => ${TONE}::Calm, XTone::Loud | XTone::Empty => ${TONE}::Loud })`);
+      expect(out).toContain(`if s_on && let Some(fv_tone) = match s_tone { XTone::Calm => Some(${TONE}::Calm), XTone::Loud => Some(${TONE}::Loud), XTone::Empty => None } {`);
+      expect(out).toContain("tone: Some(fv_tone)");
     });
 
     it("narrows again in a `v-if` of `&&` a value an outer `v-if` narrowed", () => {
@@ -7763,6 +7763,114 @@ defineProps<{ tone?: Tone }>();
 
     it("keeps an annotated `computed` the compiler cannot show is the union where the template reads it as a string", () => {
       expect(narrowed(`<p>{{ shown }}</p>`, `const shown = computed((): Tone => tone.value as Tone);`)).toContain("fv::core::escape_into(out, fv::props::Union::as_str(s_shown));");
+    });
+  });
+
+  describe("a narrowed enum converted to a child's union, one `match` over its variants", () => {
+    const T = "super::types::Tone";
+    const converted = (template: string, required = false): string => {
+      const out = rendered(
+        compile(
+          project(
+            `<script setup lang="ts">
+import { computed, ref } from "vue";
+import Badge from "./Badge.vue";
+import Chip from "./Chip.vue";
+import { type Tone, NEXT, PREVIEW } from "../types/tone";
+const props = defineProps<{ start?: Tone }>();
+const tone = ref<Tone | "">(props.start ?? "");
+const on = computed(() => props.start !== undefined);
+</script>
+<template>${template}</template>`,
+            {
+              "types/tone.ts": `export type Tone = "calm" | "loud" | "quiet";
+export interface Card { tone: Tone; other?: Tone }
+export const NEXT: Record<Tone, Tone> = { calm: "loud", loud: "quiet", quiet: "calm" };
+export const PREVIEW: Record<Tone | "", Tone> = { "": "quiet", calm: "calm", loud: "loud", quiet: "quiet" };
+`,
+              "components/Badge.vue": `<script setup lang="ts">
+import type { Tone } from "../types/tone";
+defineProps<{ tone${required ? "" : "?"}: Tone }>();
+</script>
+<template><b>{{ tone }}</b></template>`,
+              "components/Chip.vue": `<script setup lang="ts">
+import type { Card } from "../types/tone";
+defineProps<{ card: Card }>();
+</script>
+<template><b>{{ card.tone }}</b></template>`,
+            },
+          ),
+        ).get("x.rs")!,
+      );
+      const props = out.slice(out.indexOf("try_render(out, &super::"));
+      expect(props).not.toMatch(/_ => super::types::Tone::/);
+      expect(props).not.toContain("fv::props::Union::as_str(s_tone)");
+      return out;
+    };
+    const SOME = `match s_tone { XTone::Calm => Some(${T}::Calm), XTone::Loud => Some(${T}::Loud), XTone::Quiet => Some(${T}::Quiet), XTone::Empty => None }`;
+
+    it.each([`tone || undefined`, `tone === '' ? undefined : tone`, `tone !== '' ? tone : undefined`, `tone ? tone : undefined`, `!tone ? undefined : tone`])(
+      "gives the member it leaves out `None` in its own arm: %s",
+      (value) => {
+        expect(converted(`<Badge :tone="${value}" />`)).toContain(`tone: ${SOME} })?;`);
+      },
+    );
+
+    it.each([
+      [`tone || 'calm'`, `match s_tone { XTone::Calm | XTone::Empty => ${T}::Calm, XTone::Loud => ${T}::Loud, XTone::Quiet => ${T}::Quiet }`],
+      [`tone === '' ? 'quiet' : tone`, `match s_tone { XTone::Calm => ${T}::Calm, XTone::Loud => ${T}::Loud, XTone::Quiet | XTone::Empty => ${T}::Quiet }`],
+      [`tone === 'calm' ? 'loud' : tone || 'calm'`, `match s_tone { XTone::Calm | XTone::Loud => ${T}::Loud, XTone::Quiet => ${T}::Quiet, XTone::Empty => ${T}::Calm }`],
+    ])("maps each variant of a required prop to the member the source gives it: %s", (value, code) => {
+      expect(converted(`<Badge :tone="${value}" />`, true)).toContain(`tone: ${code} })?;`);
+    });
+
+    it("leaves out the members two tests exclude, in one `match`", () => {
+      expect(converted(`<Badge :tone="tone === 'calm' ? undefined : tone || undefined" />`)).toContain(
+        `tone: match s_tone { XTone::Calm | XTone::Empty => None, XTone::Loud => Some(${T}::Loud), XTone::Quiet => Some(${T}::Quiet) } })?;`,
+      );
+    });
+
+    it("binds the child's member in the test of a `v-if`, and of its `v-else`", () => {
+      const out = converted(`<Badge v-if="tone" :tone="tone" /><i v-if="tone === ''">none</i><Badge v-else :tone="tone" />`, true);
+      expect(out).toContain(`if let Some(fv_tone) = ${SOME} {\n        super::badge::try_render(out, &super::badge::Props { tone: fv_tone })?;`);
+      expect(out).toContain(`} else if let Some(fv_tone_2) = ${SOME} {\n        super::badge::try_render(out, &super::badge::Props { tone: fv_tone_2 })?;`);
+    });
+
+    it("binds in a `v-else-if` through the binding of the `v-else` it is in", () => {
+      const out = converted(`<i v-if="tone === ''">none</i><Badge v-else-if="tone === 'calm'" :tone="tone" /><Badge v-else :tone="tone" />`, true);
+      expect(out).toContain(`} else if let Some(fv_tone) = match s_tone { XTone::Calm => Some(None), XTone::Loud => Some(Some(${T}::Loud)), XTone::Quiet => Some(Some(${T}::Quiet)), XTone::Empty => None } {`);
+      expect(out).toContain(`if s_tone == XTone::Calm {\n            super::badge::try_render(out, &super::badge::Props { tone: ${T}::Calm })?;\n        } else if let Some(fv_tone_2) = fv_tone {`);
+    });
+
+    it("binds in a `v-if` of `&&`, through the test before it that narrows the same value", () => {
+      const out = converted(`<Badge v-if="on && tone !== '' && tone !== 'calm'" :tone="tone" />`, true);
+      expect(out).toContain(`if s_on && let Some(fv_tone) = match s_tone { XTone::Calm => Some(None), XTone::Loud => Some(Some(${T}::Loud)), XTone::Quiet => Some(Some(${T}::Quiet)), XTone::Empty => None } && let Some(fv_tone_2) = fv_tone {`);
+      expect(out).toContain("tone: fv_tone_2 })?;");
+    });
+
+    it("binds a `?:` and `||` inside a `v-if` that narrows the value", () => {
+      const out = converted(`<template v-if="tone !== 'calm'"><Badge :tone="tone || undefined" /><Badge :tone="tone === '' ? undefined : tone" /></template>`);
+      expect(out).toContain(`if let Some(fv_tone) = match s_tone { XTone::Calm => None, XTone::Loud => Some(Some(${T}::Loud)), XTone::Quiet => Some(Some(${T}::Quiet)), XTone::Empty => Some(None) } {`);
+      expect(out.match(/tone: fv_tone \}\)\?;/g)).toHaveLength(2);
+    });
+
+    it("gives an object literal's union field the same `match`", () => {
+      const out = converted(`<Chip :card="{ tone: tone || 'calm', other: tone || undefined }" /><Chip v-if="tone" :card="{ tone, other: tone }" />`);
+      expect(out).toContain(`card: super::types::Card { tone: match s_tone { XTone::Calm | XTone::Empty => ${T}::Calm, XTone::Loud => ${T}::Loud, XTone::Quiet => ${T}::Quiet }, other: ${SOME} }`);
+      expect(out).toContain(`if let Some(fv_tone) = match s_tone { XTone::Calm => Some(${T}::Calm), XTone::Loud => Some(${T}::Loud), XTone::Quiet => Some(${T}::Quiet), XTone::Empty => None } {`);
+      expect(out).toContain("card: super::types::Card { tone: fv_tone, other: Some(fv_tone) }");
+    });
+
+    it("binds a table read by the narrowed key in the test of the `v-if`", () => {
+      const out = converted(`<Badge v-if="tone" :tone="NEXT[tone]" /><Badge :tone="PREVIEW[tone]" />`, true);
+      expect(out).toContain(`if let Some(fv_tone) = match s_tone { XTone::Calm => Some(${T}::Loud), XTone::Loud => Some(${T}::Quiet), XTone::Quiet => Some(${T}::Calm), XTone::Empty => None } {`);
+      expect(out).toContain(`tone: match s_tone { XTone::Calm => ${T}::Calm, XTone::Loud => ${T}::Loud, XTone::Quiet | XTone::Empty => ${T}::Quiet } })?;`);
+    });
+
+    it("keeps the test of a `v-if` whose branch converts nothing", () => {
+      const out = converted(`<p v-if="tone !== ''">{{ tone }}</p><Badge v-if="tone === 'loud'" :tone="tone" />`, true);
+      expect(out).toContain("if s_tone != XTone::Empty {");
+      expect(out).toContain(`if s_tone == XTone::Loud {\n        super::badge::try_render(out, &super::badge::Props { tone: ${T}::Loud })?;`);
     });
   });
 
@@ -7967,7 +8075,8 @@ defineProps<{ level?: Level }>();
         );
         expect(out).toContain(`let s_picked = match props.level { ${L}::High => XPicked::High, ${L}::Low => XPicked::Low };`);
         expect(out).toContain('if s_picked == XPicked::Empty { "none" } else { "" }');
-        expect(out).toContain(`level: Some(match s_picked { XPicked::High => ${L}::High, XPicked::Low | XPicked::Empty => ${L}::Low })`);
+        expect(out).toContain(`if let Some(fv_picked) = match s_picked { XPicked::High => Some(${L}::High), XPicked::Low => Some(${L}::Low), XPicked::Empty => None } {`);
+        expect(out).toContain("level: Some(fv_picked)");
       });
     });
   });

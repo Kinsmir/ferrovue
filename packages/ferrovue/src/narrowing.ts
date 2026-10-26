@@ -245,9 +245,10 @@ function ownKeyPresence(s: Scope, call: N, negated: boolean): Presence | null {
 
 /** Where the test `n` holds and where it fails, the scopes in which a string of a union of
  * literals it tests is narrowed as TypeScript narrows it: by `===`, `!==`, `==` or `!=` with a
- * string literal, either way round, or by its truth, and by `!` of either. Null when `n` narrows
- * no such value. */
-export function literalNarrowing(s: Scope, n: N): { yes: Scope; no: Scope } | null {
+ * string literal, either way round, or by its truth, and by `!` of either, with the path it
+ * narrows, the value the path holds and whether the test holds for a literal. Null when `n`
+ * tests no such value, or, unless `always`, when it narrows none. */
+export function literalNarrowing(s: Scope, n: N, always = false): { yes: Scope; no: Scope; path: string; v: Val; holds: (literal: string | number) => boolean } | null {
   let test = unparenthesized(n);
   let negated = false;
   while (test.type === "UnaryExpression" && test.operator === "!") {
@@ -278,8 +279,8 @@ export function literalNarrowing(s: Scope, n: N): { yes: Scope; no: Scope } | nu
     return ty === v.ty ? s : { ...s, narrowed: new Map(s.narrowed).set(path, { ...v, ty }) };
   };
   const [yes, no] = [narrowed(holds), narrowed((l) => !holds(l))];
-  if (yes === s && no === s) return null;
-  return negated ? { yes: no, no: yes } : { yes, no };
+  if (yes === s && no === s && !always) return null;
+  return negated ? { yes: no, no: yes, path, v, holds: (l) => !holds(l) } : { yes, no, path, v, holds };
 }
 
 export function narrowTo(s: Scope, p: Presence, name: string): Scope {

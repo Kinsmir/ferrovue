@@ -1073,11 +1073,19 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(refusals(script, template, few)).toEqual([outside]);
   });
 
-  it("binds a `||` of strings to a local before matching it to a child's union prop", () => {
+  it("matches a `||` of a union's enum and a literal over the enum's variants for a child's union prop", () => {
     const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
     expect(render('import T from "./T.vue";\ndefineProps<{ c: "calm" | "loud" | "quiet" | "" }>();', `<T :t="c || 'calm'" />`, child)).toMatch(like(
-      'super::t::try_render(out, &super::t::Props { t: { let v = { let a = fv::props::Union::as_str(props.c); if !a.is_empty() { a } else { "calm" } }; match v { "calm" => super::t::TT::Calm, "loud" => super::t::TT::Loud, _ => super::t::TT::Quiet } } })?;',
+      "super::t::try_render(out, &super::t::Props { t: match props.c { XC::Calm | XC::Empty => super::t::TT::Calm, XC::Loud => super::t::TT::Loud, XC::Quiet => super::t::TT::Quiet } })?;",
     ));
+  });
+
+  it("matches `??` and `?:` of two values of a union's enum over their variants for a child's union prop", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t?: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
+    const out = render(`import T from "./T.vue";\n${script.split("\n").slice(1).join("\n")}`, `<T :t="pick ?? other" /><T :t="on ? pick : undefined" />`, child);
+    expect(out).not.toContain("_ => super::t::TT::");
+    expect(out).toMatch(like("t: Some(props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }).unwrap_or(match props.other {"));
+    expect(out).toMatch(like("t: if props.on { props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }) } else { None }"));
   });
 
   it("reads the left side of `??` on its right with the type its declaration gives", () => {
