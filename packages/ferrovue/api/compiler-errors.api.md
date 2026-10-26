@@ -185,7 +185,7 @@ export const ERRORS: {
     };
     readonly FV0222: {
         readonly title: "Constant object read by a key that is not a union of literals";
-        readonly detail: "A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, or an `enum` of them. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`\"sm\" | \"md\" | \"lg\"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).";
+        readonly detail: "A constant object or enum read by a key chosen at run time (`PAD[size]`, `Tone[props.tone]`) compiles to a `match` over the key's members when the key's type is a closed set: a union of string or integer literals, an `enum` of them, or a key built from one by `.toUpperCase()`, `.toLowerCase()` or a template literal. A constant number reads the key JavaScript writes for it. A plain object has fields of its prototype besides its own (`toString`, `constructor`, `__proto__`), so a key typed `string` could name one of them, which the server does not have, and a key typed `number` has no members to match. Type the key as a union of literals (`\"sm\" | \"md\" | \"lg\"`) or an `enum`, or pass the value as a prop. See [`props`](crate::guide::props#lookup-tables).";
     };
     readonly FV0223: {
         readonly title: "Constant object read by a key that may be absent";
@@ -224,8 +224,8 @@ export const ERRORS: {
         readonly detail: "`defineProps(['title'])` and `defineProps({ title: String })` declare props by run-time values, which give the compiler no Rust type for each prop. Declare them with a type: `defineProps<{ title: string }>()`, with `withDefaults` for defaults. See [`props`](crate::guide::props).";
     };
     readonly FV0304: {
-        readonly title: "Props type not declared in the component";
-        readonly detail: "The props' Rust struct is built from the type `defineProps` names, which must be a type literal (`defineProps<{ count: number }>()`) or an interface declared in the same `<script setup>` block. An interface imported from another file and a type built with `Pick`, `Omit` or `&` are refused. Declare the interface in the component, or write the fields in place.";
+        readonly title: "Props type the compiler does not resolve";
+        readonly detail: "The props' Rust struct is built from the type `defineProps` names: a type literal (`defineProps<{ count: number }>()`), an interface or object type alias the component declares or imports from a `.ts` file, an interface that extends such types, or an intersection of them (`Base & { count: number }`), each prop declared once. A type built with `Partial`, `Pick`, `Omit` or another generic type, and an interface of a `.ts` file that extends another, are refused. Write the fields out in such a type, or declare them in place.";
     };
     readonly FV0305: {
         readonly title: "`defineModel` without a type";
@@ -316,8 +316,8 @@ export const ERRORS: {
         readonly detail: "A prop or a field of an interface becomes a Rust field, whose type is translated from its TypeScript type. A field written with no type (`defineProps<{ tag }>()`, `interface Row { id }`) has no Rust type. Give the field a type, as `tag: string`. See [`props`](crate::guide::props).";
     };
     readonly FV0327: {
-        readonly title: "Props or events of an imported type";
-        readonly detail: "Vue reads the props of `defineProps<P>()` and the events of `defineEmits<E>()` from the type itself, and the compiler resolves that type when the component declares it. A type imported from another file (`import type { P } from \"./p\"`), an intersection with one or an interface that extends one is refused. Declare the props in the component, as `defineProps<{ label: string }>()` or an interface of the component; their fields may have types imported from a `.ts` file, as `defineProps<{ row: Row }>()`. See [`props`](crate::guide::props).";
+        readonly title: "Props of a type Vue's compiler cannot resolve";
+        readonly detail: "Vue reads the props of `defineProps<P>()` from the type itself, and its compiler reads a type imported from a `.ts` file by a relative path (`import type { P } from \"./p\"`). A type imported through an alias (`@/types`), which it resolves only with TypeScript's own module resolution, and the `Props` of another `.vue` file are refused. Import the type by a relative path, move it into a `.ts` file both components import, or declare the props in the component. See [`props`](crate::guide::props#props-from-a-ts-file).";
     };
     readonly FV0328: {
         readonly title: "Prop named with a leading `$`";
@@ -401,7 +401,7 @@ export const ERRORS: {
     };
     readonly FV0418: {
         readonly title: "`<component :is>` over a value that is not a closed set";
-        readonly detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.";
+        readonly detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop or a `defineModel` typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.";
     };
     readonly FV0419: {
         readonly title: "`<component :is>` naming something other than an HTML element";
@@ -545,7 +545,7 @@ export const ERRORS: {
     };
     readonly FV0611: {
         readonly title: "Array literal of different types";
-        readonly detail: "A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.";
+        readonly detail: "A Rust list holds items of one type, and an array literal in a template holds strings, numbers or booleans, all of one type (integers beside a `Float` are held as `Float`s, and items that may be absent only where `.filter(Boolean)` removes them). Convert the items to one type (`String(n)`), or build a list of objects in Rust and pass it as a prop.";
     };
     readonly FV0612: {
         readonly title: "Computed member access";
@@ -569,7 +569,7 @@ export const ERRORS: {
     };
     readonly FV0617: {
         readonly title: "`||` between unsupported types";
-        readonly detail: "`||` gives its first operand that is truthy, of whatever type, and the server holds the result in one Rust type. It is supported between two booleans, two strings, two numbers of one kind, before `undefined`, and after a `Date`. Convert one operand so both share a type, or choose with `?:`.";
+        readonly detail: "`||` gives its first operand that is truthy, of whatever type, and the server holds the result in one Rust type. It is supported between two booleans, two strings, two numbers of one kind, before `undefined`, after a `Date`, and after an optional string, number or boolean read by its name or a field, before a value of its type. Convert one operand so both share a type, or choose with `?:`.";
     };
     readonly FV0618: {
         readonly title: "Unsupported unary operator";

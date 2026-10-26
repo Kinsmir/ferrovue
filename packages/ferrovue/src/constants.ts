@@ -540,7 +540,7 @@ function mappedKey(s: Scope, n: N): { on: Val; key: (literal: string | number) =
     if (parts.some((p: ReturnType<typeof keyOf>) => p === null) || open.length !== 1) return null;
     const one = open[0]!;
     const fixed = (p: NonNullable<ReturnType<typeof keyOf>>): string => p.key(literalsOf(p.on.ty)![0]!);
-    return { on: one.on, key: (l) => inner.quasis.map((q: N, i: number) => (q.value.cooked as string) + (i < parts.length ? (parts[i] === one ? one.key(l) : fixed(parts[i]!)) : "")).join("") };
+    return { on: one.on, key: (l) => inner.quasis.map((q: N, i: number) => (q.value.cooked as string) + (i < parts.length ? (parts[i] === one ? one.key(l) : fixed(parts[i])) : "")).join("") };
   }
   return null;
 }

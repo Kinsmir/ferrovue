@@ -31,11 +31,24 @@ a public field per prop, and a struct for every interface or object type alias t
 `defineProps<P>()` may name an interface or object type alias imported from a `.ts` file by a
 relative path (`import type { CardProps } from "../types/card"`), an interface of the component
 that extends one, or an intersection (`CardProps & { note: string }`). The component's `Props`
-holds the fields of all of them, and `withDefaults` applies as for props declared in place. Vue's
-compiler reads the file through the file system `compileScript` is given: ferrovue passes it one,
-and `@vitejs/plugin-vue` uses TypeScript's, or `script.fs` in its options where the project's
-TypeScript has no JavaScript API (TypeScript 7). A type imported through an alias, or the `Props` of
-another `.vue` file, is refused ([FV0327](crate::guide::error_codes#fv0327)).
+holds the fields of all of them, and `withDefaults` applies as for props declared in place. A type
+imported through an alias, or the `Props` of another `.vue` file, is refused
+([FV0327](crate::guide::error_codes#fv0327)).
+
+The browser build reads the same type: Vue's compiler, in `@vitejs/plugin-vue`, reads the file
+through TypeScript's JavaScript API, which TypeScript 7 does not have, or through the file system
+named by its `script.fs` option. `ferrovue/vite` sets `script.fs` where the options name none. A
+build without ferrovue's Vite plugin, on TypeScript 7, names it in `vite.config.ts`:
+
+```ts
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import vue from "@vitejs/plugin-vue";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
+});
+```
 
 A `number` is an integer on the server, which is what most props are: counts, ids, indexes. Declare
 a prop that may hold a fraction as `Float`. [`numbers`](crate::guide::numbers) explains how both are
