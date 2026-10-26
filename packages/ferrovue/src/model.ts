@@ -65,6 +65,11 @@ export interface Val {
   /** For a list of a generated enum's values, or an optional one, the Rust place of the list of
    * enums, where `code` and `iter` hold its strings. */
   enums?: { place: string; def: EnumDef };
+  /** For a list a `.map()` computes, whose items are values of the generated enum `def`: an
+   * iterator over the enums, while `code` is `of`. */
+  variants?: { of: string; iter: string; def: EnumDef };
+  /** For an array literal, the values of its items, while `code` is `of`. */
+  literal?: { of: string; items: Val[] };
   /** For a string value made of literals the compiler knows, as a lookup table's arms: the Rust
    * expression of the same value as the generated enum `def`, null when a literal is outside it.
    * It holds while `code` is `of`. `home` is a generated enum whose members hold every literal the

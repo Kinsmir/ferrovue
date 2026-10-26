@@ -605,7 +605,8 @@ function exprOf(s: Scope, n: N): Val {
       if (!(of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool") || values.some((v: Val) => !sameTy(v.ty, of))) {
         fail(comp, "FV0611", "an array literal holds strings, numbers or booleans, all of one type", n);
       }
-      return { code: `[${values.map((v: Val) => bare(v.code)).join(", ")}]`, ty: { k: "list", of }, ...loneOf(...values) };
+      const code = `[${values.map((v: Val) => bare(v.code)).join(", ")}]`;
+      return { code, ty: { k: "list", of }, ...loneOf(...values), literal: { of: code, items: values } };
     }
     case "OptionalMemberExpression":
     case "OptionalCallExpression":

@@ -774,7 +774,7 @@ describe("values built from object literals in place", () => {
   it("builds a list of a union's members as a list of its enum, and reads it", () => {
     const script = 'type Tone = "calm" | "loud";\ninterface Mix { tones: Tone[] }\nconst props = defineProps<{ t: Tone }>();\nfunction mix(): Mix { return { tones: [props.t, "loud"] }; }';
     expect(render(script, '<p>{{ mix().tones.join(",") }}</p>')).toMatch(like(
-      'fv::core::escape_into(out, &((Mix { tones: [fv::props::Union::as_str(props.t), "loud"].iter().map(|v| match &**v { "calm" => Tone::Calm, _ => Tone::Loud }).collect() }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));',
+      'fv::core::escape_into(out, &((Mix { tones: vec![props.t, Tone::Loud] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));',
     ));
   });
 
@@ -1101,6 +1101,23 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like("let s_c = if props.on { Tone::Calm } else { props.tone };"));
     expect(out).toMatch(like("t: match s_a { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }"));
     expect(out).toMatch(like("fv::core::escape_into(out, fv::props::Union::as_str(s_a));"));
+  });
+
+  it("hands a child's list of a union a `.map()`, a `.filter()` and an array literal of its values as lists of enums", () => {
+    const files = {
+      "T.vue": sfc('defineProps<{ ts: ("calm" | "loud" | "quiet")[] }>();', "<b>{{ ts.join() }}</b>"),
+      "tones.ts": 'export type Tone = "calm" | "loud" | "quiet";\nexport interface Row { name: string; tone: Tone }\nexport interface Card { tones: Tone[] }\n',
+      "C.vue": sfc('import type { Card } from "./tones";\ndefineProps<{ card: Card }>();', "<b>{{ card.tones.join() }}</b>"),
+    };
+    const out = render(
+      'import { computed } from "vue";\nimport T from "./T.vue";\nimport C from "./C.vue";\nimport type { Row, Tone } from "./tones";\nconst props = defineProps<{ rows: Row[]; tones: Tone[]; tone: Tone }>();\nconst loud = computed(() => props.tones.filter((t) => t !== "calm"));',
+      `<T :ts="rows.map((r) => r.tone)" /><T :ts="tones.map((t) => t)" /><T :ts="loud" /><T :ts="[tone, 'calm']" /><C :card="{ tones: [tone, 'quiet'] }" />`,
+      { files },
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("ts: props.rows.iter().map(|fv_r| fv_r.tone).map(|v| match v { super::types::Tone::Calm => super::t::TTs::Calm, super::types::Tone::Loud => super::t::TTs::Loud, super::types::Tone::Quiet => super::t::TTs::Quiet }).collect()"));
+    expect(out).toMatch(like("let s_loud = props.tones.iter().copied().filter(|fv_t| *fv_t != super::types::Tone::Calm).collect::<Vec<_>>();"));
+    expect(out).toMatch(like("card: super::types::Card { tones: vec![props.tone, super::types::Tone::Quiet] }"));
   });
 
   it("reads a table by a key built with `||` or `?:` through one `match` over the enum the key is made from", () => {

@@ -230,8 +230,10 @@ pub mod union_choice_tag;
 pub mod union_computed_held;
 pub mod union_enums;
 pub mod union_folded_ref;
+pub mod union_hue_set;
 pub mod union_keyed_by_or;
 pub mod union_list;
+pub mod union_list_built;
 pub mod union_list_item;
 pub mod union_logic;
 pub mod union_mark;
@@ -1438,6 +1440,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: union_folded_ref::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_folded_ref::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "UnionHueSet" => {
+            let props: union_hue_set::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_hue_set::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "UnionKeyedByOr" => {
             let props: union_keyed_by_or::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_keyed_by_or::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1445,6 +1451,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionList" => {
             let props: union_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_list::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionListBuilt" => {
+            let props: union_list_built::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_list_built::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionListItem" => {
             let props: union_list_item::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

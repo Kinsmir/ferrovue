@@ -213,7 +213,10 @@ it better, the compiler uses the enum:
 - a `v-for` item of a list of the union is the enum, so a child's union prop, a lookup table and
   `===` read the variant; the list handed to a child's list of the same union is copied, and
   `.join()`, `.includes()`, `.length`, `.filter()`, `.map()` and the other list methods read its
-  items' strings.
+  items' strings. A `.filter()` of it, a `.map()` whose arrow gives a value of a union, held in a
+  `computed` or not, and an array literal of members (`[tone, "calm"]`) reach a child's list of a
+  union, or an object literal's, as a `Vec` of its enum, each item converted by a `match` over
+  variants.
 
 A string the Rust caller holds as a string where the render needs a union's enum, such as a value of
 a `Record<string, Size>`, a field of a store's state or a prop of a single literal handed to a

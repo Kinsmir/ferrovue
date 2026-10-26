@@ -1266,6 +1266,25 @@ impl<'a> Step<'a> {
 }
 
 
+/// `HueSet` in `types/unions.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct HueSet<'a> {
+    #[serde(rename = "hues")]
+    pub hues: Vec<Hue>,
+    #[serde(rename = "note")]
+    pub note: Cow<'a, str>,
+}
+
+impl<'a> HueSet<'a> {
+    /// HueSet with its required fields.
+    pub fn new(hues: impl IntoIterator<Item = Hue>, note: impl Into<Cow<'a, str>>) -> Self {
+        HueSet { hues: hues.into_iter().collect(), note: note.into() }
+    }
+
+}
+
+
 /// `SortsItem` in `types/catalog.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
