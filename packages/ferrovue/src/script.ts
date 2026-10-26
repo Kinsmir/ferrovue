@@ -40,17 +40,18 @@ export function setupStatement(comp: Component, st: N): void {
   fail(comp, "FV0105", `${st.expression?.type === "CallExpression" ? (name === null ? "a call" : `\`${name}()\``) : nodeName(st.expression)} in setup could change what renders, and is not translated`, st);
 }
 
+function computedSource(comp: Component, fn: N): N | null {
+  if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
+  const body = bodyExpr(comp, fn, "a `computed`'s body");
+  const returns = fn.returnType?.typeAnnotation;
+  return returns ? typedBy(body, returns) : body;
+}
+
 export function setupSource(comp: Component, init: N): N | null {
   if (init.type === "CallExpression" && init.callee.type === "Identifier") {
     const name = init.callee.name;
     if ((name === "ref" || name === "shallowRef") && init.arguments.length === 1) return init.arguments[0];
-    if (name === "computed") {
-      const fn = init.arguments[0];
-      if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
-      const body = bodyExpr(comp, fn, "a `computed`'s body");
-      const returns = fn.returnType?.typeAnnotation;
-      return returns ? typedBy(body, returns) : body;
-    }
+    if (name === "computed") return computedSource(comp, init.arguments[0]);
   }
   if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(comp, init.expression);
   return init;
@@ -127,9 +128,7 @@ function asyncLoader(arg: N): N {
   return arg;
 }
 
-/** The components `<script setup>` declares with `defineAsyncComponent(() => import("./X.vue"))`,
- * by local name, each the name of the `.vue` file it loads. */
-export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
+function asyncCallees(ast: N[]): Set<string> {
   const callees = new Set<string>();
   for (const st of ast) {
     if (st.type !== "ImportDeclaration" || st.source.value !== "vue") continue;
@@ -137,20 +136,36 @@ export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
       if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "defineAsyncComponent") callees.add(sp.local.name);
     }
   }
+  return callees;
+}
+
+function importedSpec(loader: N): N | null {
+  const imported = loader?.type === "ArrowFunctionExpression" && loader.params.length === 0 ? loader.body : null;
+  if (imported?.type === "ImportExpression") return imported.source;
+  return imported?.type === "CallExpression" && imported.callee.type === "Import" ? imported.arguments[0] : null;
+}
+
+function asyncChild(comp: Component, d: N, callees: Set<string>): [string, string] | null {
+  const init = d.init;
+  if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !callees.has(init.callee.name)) return null;
+  const spec = importedSpec(asyncLoader(init.arguments[0]));
+  if (d.id.type !== "Identifier" || spec?.type !== "StringLiteral" || !spec.value.endsWith(".vue")) {
+    fail(comp, "FV0106", '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
+  }
+  return [d.id.name, basename(spec.value, ".vue")];
+}
+
+/** The components `<script setup>` declares with `defineAsyncComponent(() => import("./X.vue"))`,
+ * by local name, each the name of the `.vue` file it loads. */
+export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
+  const callees = asyncCallees(ast);
   const found = new Map<string, string>();
   if (!callees.size) return found;
   for (const st of ast) {
     if (st.type !== "VariableDeclaration") continue;
     for (const d of st.declarations) {
-      const init = d.init;
-      if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !callees.has(init.callee.name)) continue;
-      const loader = asyncLoader(init.arguments[0]);
-      const imported = loader?.type === "ArrowFunctionExpression" && loader.params.length === 0 ? loader.body : null;
-      const spec = imported?.type === "ImportExpression" ? imported.source : imported?.type === "CallExpression" && imported.callee.type === "Import" ? imported.arguments[0] : null;
-      if (d.id.type !== "Identifier" || spec?.type !== "StringLiteral" || !spec.value.endsWith(".vue")) {
-        fail(comp, "FV0106", '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
-      }
-      found.set(d.id.name, basename(spec.value, ".vue"));
+      const child = asyncChild(comp, d, callees);
+      if (child !== null) found.set(...child);
     }
   }
   return found;
@@ -283,16 +298,19 @@ function importedValue(scope: Scope, sp: N, decls: Map<string, Declared>, fns: M
   if (d?.exported) evaluable(scope, sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
 }
 
+function moduleValues(scope: Scope, st: N, file: string): void {
+  if (st.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) readTypeFile(file);
+  const decls = ctx.constDecls.get(file);
+  if (decls === undefined) return;
+  const fns = ctx.tsModules.get(file)?.functions;
+  for (const sp of st.specifiers) importedValue(scope, sp, decls, fns);
+}
+
 function moduleImport(scope: Scope, st: N, from: string): void {
   const typeOnly = st.importKind === "type";
   for (const sp of typeOnly ? [] : st.specifiers) if (sp.importKind !== "type") scope.imported.set(sp.local.name, from);
   const file = resolveImport(scope.comp.file, from);
-  if (file === null) return;
-  if (!typeOnly && st.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) readTypeFile(file);
-  const decls = ctx.constDecls.get(file);
-  if (decls === undefined || typeOnly) return;
-  const fns = ctx.tsModules.get(file)?.functions;
-  for (const sp of st.specifiers) importedValue(scope, sp, decls, fns);
+  if (file !== null && !typeOnly) moduleValues(scope, st, file);
 }
 
 function scriptImport(s: Setup, st: N): void {
@@ -326,16 +344,22 @@ function asyncBinding(s: Setup, d: N): boolean {
   return true;
 }
 
+function objectConstant(scope: Scope, d: N, local: string, objectDecl: Declared): boolean {
+  if ((d.id.typeAnnotation || statedTy(d.init)) && !constant(objectDecl)) return false;
+  evaluable(scope, local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
+  return true;
+}
+
+function newMap(s: Setup, made: N): boolean {
+  return made?.type === "NewExpression" && made.callee.type === "Identifier" && made.callee.name === "Map" && !s.locals.has("Map");
+}
+
 function constantBinding(s: Setup, st: N, d: N, local: string): boolean {
   const objectDecl = s.locals.get(local);
   if (st.kind !== "const" || objectDecl === undefined || objectDecl.node !== d) return false;
   const made = unwrapped(d.init);
-  if (made?.type === "ObjectExpression") {
-    if ((d.id.typeAnnotation || statedTy(d.init)) && !constant(objectDecl)) return false;
-    evaluable(s.scope, local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
-    return true;
-  }
-  if (made?.type !== "NewExpression" || made.callee.type !== "Identifier" || made.callee.name !== "Map" || s.locals.has("Map")) return false;
+  if (made?.type === "ObjectExpression") return objectConstant(s.scope, d, local, objectDecl);
+  if (!newMap(s, made)) return false;
   evaluable(s.scope, local, objectDecl, "it is a `Map` the compiler does not evaluate");
   return true;
 }
@@ -372,12 +396,16 @@ interface SetupInit {
   typed: N | undefined;
 }
 
+function typedAs(d: N, isRef: boolean): N | undefined {
+  const declaredAs = d.id.typeAnnotation?.typeAnnotation;
+  return isRef ? (d.init.typeParameters?.params?.[0] ?? refOf(declaredAs)) : (declaredAs ?? statedTy(d.init));
+}
+
 function setupInit(st: N, d: N): SetupInit {
   const init = d.init;
   const isRef = init.type === "CallExpression" && init.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init.callee.name);
   const isComputed = isRef && init.callee.name === "computed";
-  const typed = isRef ? (init.typeParameters?.params?.[0] ?? refOf(d.id.typeAnnotation?.typeAnnotation)) : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init));
-  return { local: d.id.name, init, at: st.start, isRef, isComputed, typed };
+  return { local: d.id.name, init, at: st.start, isRef, isComputed, typed: typedAs(d, isRef) };
 }
 
 function annotatedUnion(comp: Component, b: SetupInit, annotation: N, v: Val, untyped: N): Val {
@@ -387,17 +415,27 @@ function annotatedUnion(comp: Component, b: SetupInit, annotation: N, v: Val, un
   return want === null ? v : declaredUnion(comp, annotatedStr(v, want), want, `\`${b.local}\`, a ${kind},`, untyped);
 }
 
+function setupScope(scope: Scope, b: SetupInit): Scope {
+  return b.isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: b.at, within: "setup" };
+}
+
+function annotationOf(b: SetupInit): N | undefined {
+  return b.typed ?? (b.isComputed ? b.init.arguments[0]?.returnType?.typeAnnotation : undefined);
+}
+
+function annotated(comp: Component, b: SetupInit, v: Val, empty: Val | null, untyped: N | null): Val {
+  const annotation = annotationOf(b);
+  if (b.isRef && annotation && !empty) v = unionRef(comp, b.local, annotation, v, b.init.arguments[0] ?? b.init);
+  return annotation && untyped ? annotatedUnion(comp, b, annotation, v, untyped) : v;
+}
+
 function setupValue(scope: Scope, b: SetupInit): Val | null {
   const comp = scope.comp;
   const untyped = setupSource(comp, b.init);
   const source = untyped && b.typed ? typedBy(untyped, b.typed) : untyped;
   const empty = emptyRef(comp, b.init);
   if (!empty && !source) return null;
-  let v = empty ?? expr(b.isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: b.at, within: "setup" }, source);
-  const annotation = b.typed ?? (b.isComputed ? b.init.arguments[0]?.returnType?.typeAnnotation : undefined);
-  if (b.isRef && annotation && !empty) v = unionRef(comp, b.local, annotation, v, b.init.arguments[0] ?? b.init);
-  if (annotation && untyped) v = annotatedUnion(comp, b, annotation, v, untyped);
-  return v;
+  return annotated(comp, b, empty ?? expr(setupScope(scope, b), source), empty, untyped);
 }
 
 function bindValue(s: Setup, local: string, v: Val, isComputed: boolean): void {
@@ -455,16 +493,20 @@ function setupBinding(s: Setup, st: N, d: N): void {
   for (const name of patternNames(d.id)) s.scope.clientOnly.set(name, "it is destructured from a value the server does not have");
 }
 
+function declaresNoValue(st: N, decl: N): boolean {
+  return st.type === "FunctionDeclaration" || decl?.type === "TSInterfaceDeclaration" || decl?.type === "TSTypeAliasDeclaration";
+}
+
+function expressionStatement(s: Setup, st: N): void {
+  if (!ctx.plugins.some((p) => p.scriptStatement?.(s.scope, st, s.lets))) setupStatement(s.comp, st);
+}
+
 function setupTopLevel(s: Setup, st: N): void {
   if (st.type === "ImportDeclaration") return scriptImport(s, st);
-  if (st.type === "FunctionDeclaration") return;
   const decl = st.type === "ExportNamedDeclaration" ? st.declaration : st;
-  if (decl?.type === "TSInterfaceDeclaration" || decl?.type === "TSTypeAliasDeclaration") return;
+  if (declaresNoValue(st, decl)) return;
   if (decl?.type === "TSEnumDeclaration") return evaluable(s.scope, decl.id.name, s.locals.get(decl.id.name)!, "it is not an enum the compiler evaluates");
-  if (st.type === "ExpressionStatement") {
-    if (!ctx.plugins.some((p) => p.scriptStatement?.(s.scope, st, s.lets))) setupStatement(s.comp, st);
-    return;
-  }
+  if (st.type === "ExpressionStatement") return expressionStatement(s, st);
   if (st.type !== "VariableDeclaration") fail(s.comp, "FV0107", `${nodeName(st)} in setup is not supported`, st);
   for (const d of st.declarations) setupBinding(s, st, d);
 }
