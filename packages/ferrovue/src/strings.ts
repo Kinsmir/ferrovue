@@ -1,10 +1,47 @@
-import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
 import type { ErrorCode } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";
 import { known } from "./narrowing.ts";
 import { asF64, asWritten, isNumber } from "./numbers.ts";
+
+function regexMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val {
+  const comp = s.comp;
+  if (target.lone) fail(comp, "FV0706", lonely(`\`.${method}()\` with a regular expression`), n);
+  const re = regexOf(comp, args[0], `in \`.${method}()\``);
+  const t = strArg(target.code);
+  if (method === "split") {
+    if (args.length > 2) fail(comp, "FV0709", "`.split()` takes 1 to 2 arguments here", n);
+    const limit = args[1] === undefined ? null : expr(s, args[1]);
+    if (limit !== null && !isNumber(limit.ty)) fail(comp, "FV0712", "`.split()` takes a number, present or optional", args[1]);
+    const pieces = `${atom(re)}.split(${t}, ${limit === null ? "None" : `Some(${bare(asF64(limit))})`})`;
+    const shape = regexShape(args[0].pattern, args[0].flags);
+    return computed(`${pieces}.into_iter().map(std::borrow::Cow::<str>::Owned)`, STR, !("pieces" in shape && keepsPairs(shape.pieces)));
+  }
+  if (args.length !== 2) fail(comp, "FV0709", `\`.${method}()\` takes 2 arguments here`, n);
+  if (method === "replaceAll" && !args[0].flags.includes("g")) {
+    fail(comp, "FV0710", "`.replaceAll()` with a regular expression without the `g` flag, which JavaScript refuses with a `TypeError`: add `g`", args[0]);
+  }
+  if (args[1].type === "ArrowFunctionExpression" || args[1].type === "FunctionExpression") {
+    fail(comp, "FV0713", `\`.${method}()\` with a function, which the server does not run: give it a string`, args[1]);
+  }
+  const replacement = expr(s, args[1]);
+  if (replacement.ty.k !== "str") fail(comp, "FV0711", `\`.${method}()\` takes a string that is present`, args[1]);
+  if (replacement.lone) fail(comp, "FV0706", lonely(`\`.${method}()\` with a regular expression`), args[1]);
+  const shape = regexShape(args[0].pattern, args[0].flags);
+  return { code: `&*${atom(re)}.replace(${t}, ${strArg(replacement.code)})`, ty: STR, ...("pieces" in shape && keepsPairs(shape.pieces) ? {} : { lone: true }) };
+}
+
+/** \`/pattern/flags.test(s)\` of a regular expression literal. */
+export function regexTest(s: Scope, re: N, args: N[], n: N): Val {
+  const comp = s.comp;
+  if (args.length !== 1) fail(comp, "FV0709", "`.test()` takes 1 argument here", n);
+  const v = expr(s, args[0]);
+  if (v.ty.k !== "str") fail(comp, "FV0711", "`.test()` takes a string that is present", args[0]);
+  if (v.lone) fail(comp, "FV0706", lonely("`.test()` of a regular expression"), n);
+  return { code: `${atom(regexOf(comp, re, "in `.test()`", n))}.test(${strArg(v.code)})`, ty: BOOL };
+}
 
 export function lonely(what: string): string {
   return `${what} with a string that may hold half of a surrogate pair (cut by \`slice\`, \`substring\`, \`at\`, \`charAt\`, \`split("")\` and the like): JavaScript keeps the half, which can match, order or join with another where ferrovue holds U+FFFD`;
@@ -172,9 +209,167 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
   return { code: `&*format!(${rustStr(fmt)}, ${args.join(", ")})`, ty, format: { text: fmt, args }, ...lone };
 }
 
+const CLASS_ESCAPES: Record<string, "none" | "all"> = { d: "none", D: "all", w: "none", W: "all", s: "none", S: "all" };
+const SYNTAX = "^$\\.*+?()[]{}|/";
+const CONTROLS: Record<string, number> = { t: 9, n: 10, v: 11, f: 12, r: 13 };
+
+type Surrogates = "none" | "all" | "some";
+
+interface RegexPiece {
+  surrogates: Surrogates;
+  min: number;
+  max: number;
+  greedy: boolean;
+}
+
+function coverage(ranges: [number, number][], all: boolean[], negate: boolean): Surrogates {
+  let covered = 0;
+  for (let u = 0xd800; u <= 0xdfff; u++) if (all.some(Boolean) || ranges.some(([lo, hi]) => lo <= u && u <= hi)) covered++;
+  const inside = covered === 0x800 ? "all" : covered === 0 ? "none" : "some";
+  return negate ? (inside === "all" ? "none" : inside === "none" ? "all" : "some") : inside;
+}
+
+/** The pieces of `/pattern/flags` in the subset of regular expressions `fv::strings::JsRegex`
+ * runs, or what leaves the subset: the checks `JsRegex::parse` makes. */
+export function regexShape(pattern: string, flags: string): { refused: string } | { pieces: RegexPiece[] } {
+  const seen = new Set<string>();
+  for (const f of flags) {
+    if ((f !== "g" && f !== "i") || seen.has(f)) return { refused: `the flag \`${f}\`` };
+    seen.add(f);
+  }
+  let at = 0;
+  const peek = (): string | undefined => pattern[at];
+  const hex = (n: number): number | null => {
+    const digits = pattern.slice(at, at + n);
+    at += n;
+    return digits.length === n && /^[0-9a-fA-F]+$/.test(digits) ? parseInt(digits, 16) : null;
+  };
+  const escape = (inClass: boolean): number | "none" | "all" | { refused: string } => {
+    const c = pattern[at++];
+    if (c === undefined) return { refused: "a `\\` at the end" };
+    if (c in CLASS_ESCAPES) return CLASS_ESCAPES[c]!;
+    if (c in CONTROLS) return CONTROLS[c]!;
+    if (c === "0" && !/[0-9]/.test(peek() ?? "")) return 0;
+    if (c === "x" || c === "u") return hex(c === "x" ? 2 : 4) ?? { refused: "an escape with a digit that is not hexadecimal" };
+    if (inClass && c === "b") return 8;
+    if ((inClass && c === "-") || SYNTAX.includes(c)) return c.charCodeAt(0);
+    return { refused: `the escape \`\\${c}\`` };
+  };
+  const number = (): number | null => {
+    const start = at;
+    while (/[0-9]/.test(peek() ?? "")) at++;
+    return at > start ? Number(pattern.slice(start, at)) : null;
+  };
+  const quantifier = (): [number, number] | null | string => {
+    const c = peek();
+    if (c === "*" || c === "+" || c === "?") {
+      at++;
+      return c === "*" ? [0, Infinity] : c === "+" ? [1, Infinity] : [0, 1];
+    }
+    if (c !== "{") return null;
+    const start = at++;
+    const min = number();
+    if (min === null) {
+      at = start;
+      return null;
+    }
+    let max: number | null = min;
+    if (peek() === ",") {
+      at++;
+      max = peek() === "}" ? Infinity : number();
+    }
+    if (peek() !== "}" || max === null) {
+      at = start;
+      return null;
+    }
+    at++;
+    return max < min ? "a quantifier out of order" : [min, max];
+  };
+  const unitOf = (u: string): number | "none" | "all" | { refused: string } => (u === "\\" ? escape(true) : u.charCodeAt(0));
+  const surrogate = (u: number): Surrogates => (u >= 0xd800 && u <= 0xdfff ? "some" : "none");
+  const pieces: RegexPiece[] = [];
+  while (at < pattern.length) {
+    const c = pattern[at++]!;
+    let zeroWidth = c === "^" || c === "$";
+    let kind: Surrogates = c === "." ? "all" : surrogate(c.charCodeAt(0));
+    if (c === "[") {
+      const negate = peek() === "^";
+      if (negate) at++;
+      const ranges: [number, number][] = [];
+      const alls: boolean[] = [];
+      for (;;) {
+        const u = pattern[at++];
+        if (u === undefined) return { refused: "a class that does not end" };
+        if (u === "]") break;
+        const low = unitOf(u);
+        if (typeof low === "object") return low;
+        if (low === "none" || low === "all") {
+          alls.push(low === "all");
+          continue;
+        }
+        let high = low;
+        if (peek() === "-" && pattern[at + 1] !== "]" && pattern[at + 1] !== undefined) {
+          at++;
+          const end = unitOf(pattern[at++]!);
+          if (typeof end === "object") return end;
+          if (end === "none" || end === "all") return { refused: "a range that ends at a class escape" };
+          if (end < low) return { refused: "a range out of order" };
+          high = end;
+        }
+        ranges.push([low, high]);
+      }
+      kind = coverage(ranges, alls, negate);
+    } else if (c === "\\") {
+      if (peek() === "b" || peek() === "B") {
+        at++;
+        zeroWidth = true;
+      } else {
+        const e = escape(false);
+        if (typeof e === "object") return e;
+        kind = e === "none" || e === "all" ? e : surrogate(e);
+      }
+    } else if ("()|]}*+?{".includes(c)) return { refused: `\`${c}\`` };
+    const q = quantifier();
+    if (typeof q === "string") return { refused: q };
+    if (q !== null && zeroWidth) return { refused: "a quantifier of an assertion" };
+    const lazy = q !== null && peek() === "?";
+    if (lazy) at++;
+    if (!zeroWidth) pieces.push({ surrogates: kind, min: q?.[0] ?? 1, max: q?.[1] ?? 1, greedy: !lazy });
+  }
+  return { pieces };
+}
+
+/** What leaves the subset of regular expressions `fv::strings::JsRegex` runs in `/pattern/flags`,
+ * or null when it stays in it. */
+export function regexRefusal(pattern: string, flags: string): string | null {
+  const shape = regexShape(pattern, flags);
+  return "refused" in shape ? shape.refused : null;
+}
+
+/** Whether no match of the pieces can begin or end between the halves of a surrogate pair: none
+ * matches half of one and none is empty, or one piece of every surrogate repeats greedily. */
+function keepsPairs(pieces: RegexPiece[]): boolean {
+  if (pieces.every((p) => p.surrogates === "none") && pieces.some((p) => p.min > 0)) return true;
+  const [one] = pieces;
+  return pieces.length === 1 && one!.surrogates === "all" && one!.min > 0 && one!.max === Infinity && one!.greedy;
+}
+
+/** The Rust of the regular expression literal \`n\`, held once for the program's life: refused
+ * with FV0710 where it leaves the subset \`fv::strings::JsRegex\` runs. */
+export function regexOf(comp: Component, n: N, what: string, at: N = n): string {
+  const pattern: string = n.pattern;
+  const flags: string = n.flags;
+  const refused = regexRefusal(pattern, flags);
+  if (refused !== null) {
+    fail(comp, "FV0710", `\`/${pattern}/${flags}\` ${what} holds ${refused}, outside the regular expressions the server runs`, placeOf(comp, n).line === undefined ? at : n, "the server runs characters, `.`, classes such as `[a-z]` and `\\d`, `\\w`, `\\s`, `^`, `$`, `\\b`, the quantifiers `*`, `+`, `?` and `{n,m}`, and the flags `g` and `i`; do the rest in Rust and pass the result as a prop");
+  }
+  return `{ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new(${rustStr(pattern)}, ${rustStr(flags)})); &RE }`;
+}
+
 export function stringMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   const comp = s.comp;
   const t = strArg(target.code);
+  if (args[0]?.type === "RegExpLiteral" && ["replace", "replaceAll", "split"].includes(method)) return regexMethod(s, target, method, args, n);
   const arity = (least: number, most: number): void => {
     if (args.length < least || args.length > most) {
       fail(comp, "FV0709", `\`.${method}()\` takes ${least === most ? least : `${least} to ${most}`} argument${most === 1 ? "" : "s"} here`, n);

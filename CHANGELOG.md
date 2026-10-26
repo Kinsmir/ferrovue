@@ -24,6 +24,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   Generated code is version 7, which the 0.12 crate refuses; the 0.13 crate builds version 6 too: [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html).
 - `ferrovue::page::Document` writes the page shell around a render, and `ferrovue::html::splice` writes components into trusted `v-html`.
   The guide adds a relative-time recipe: [The page shell](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#the-page-shell).
+- Regular expression literals of a subset in `.replace()`, `.replaceAll()`, `.split()` and `.test()`, matched as JavaScript matches them, run by `ferrovue::strings::JsRegex`.
+  Groups, alternation and other flags stay refused with FV0710: [Regular expressions](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#regular-expressions).
 - `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
   0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 

@@ -149,6 +149,7 @@ A fixture is a JSON object of props plus optional keys:
 | `RootTextarea`, `RootTextareaText`, `RootInput`, `RootCheckbox`, `RootControls` | A `<textarea>` with `v-model` and one with content of its own, an `<input v-model>` with no `type` and a checkbox with a boolean model, each the component's root, rendered alone and by a parent that passes them attributes other than `value` and `type` (a class, a title, `placeholder`, `name`, `disabled`, an `id` built from a prop); empty values, a newline, and hostile strings that close the `<textarea>` |
 | `InlineTypes` | Object types written in place as a prop's and an interface's field types, nested, in a list and optional; a mapped type over a union and a `Record` keyed by one, read by name and by a `v-for` item's union field; an optional mapped type read with `?.`; an indexed type of an interface from a `.ts` file; empty lists and strings, and hostile strings in every field |
 | `LoadedAll` | Loaders awaited together by `Promise.all`, bound to names, to a hole and to nothing, and loaders taking an object of an interface, from an object literal (an optional boolean prop Vue casts to `false`, a `null`) and from a prop of the interface (an optional field left out, a nullable one), each key written with sorted fields; empty strings and lists, and hostile strings in the keys and the results |
+| `RegexText` | Regular expression literals of the subset in `.replace()` with `g` and `i`, chained in a `computed`, `.replaceAll()` with `$&`, `.split()` with and without a limit read by `v-for` and `.length`, `.test()` in a class binding and in text, `\b`, anchors, classes and escapes; empty strings, characters beyond ASCII and outside the BMP, line separators and hostile strings |
 | `UnionLogic` | A string of a union read through `\|\|`, `&&`, `??` and `?:` where a child's union prop or a lookup table takes it: a test of a literal narrowing a table's key on the right of `\|\|` and `&&`, the falsy member left out by `\|\|` with a member to fall back to, an optional member falling back to another by `??`, members and `undefined` chosen by `?:`, and a list of the union built in an object literal; members holding markup-breaking characters, the empty string, absent values, and a hostile label |
 | `UserCard`, `UserList` | Types imported from a shared `.ts` file and from another component, string-literal unions, objects passed to children |
 | `DataList`, `DataTable`, `RowChip` | Scoped slots in a loop with fallbacks, props destructured and taken whole, empty content giving way to the fallback, a slot's object handed to a child |
@@ -258,7 +259,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates`, `LoadedStamps`, `LoadedAll` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
-| Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups` |
+| Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups`, `RegexText` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic`, `UnionOptionalRef` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays`, `UnionListBuilt`, `FoldedWide` |
@@ -830,6 +831,9 @@ and what ferrovue generates (or the error it refuses with).
   fixture (plus a hostile one), and record as above. The suite fails if a component has no fixtures.
 - **A new router case:** add it to `crates/ferrovue-router/tests/vectors/router.json` and run
   `pnpm vectors:record`.
+- **A new regular expression case:** add `[pattern, flags, op, input, arg, null]` to
+  `tests/vectors/regex.json` (`op` is `test`, `replace` or `split`) and run `pnpm vectors:record`,
+  which writes what V8 answers, or `null` where the subset refuses the pattern.
 - **A new string or number case:** add its inputs to `tests/vectors/strings.json`, `parse.json`,
   `compare.json`, `keys.json` or `json.json` (any expected value) and run `pnpm vectors:record`,
   which writes what JavaScript answers.

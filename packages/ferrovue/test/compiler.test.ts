@@ -3351,8 +3351,8 @@ const props = defineProps<{ a: string }>();
       `<script setup lang="ts">
 const props = defineProps<{ a: string }>();
 </script>
-<template><i>{{ a.replace(/x/g, "y") }}</i></template>`,
-      /`\.replace\(\)` with a regular expression/,
+<template><i>{{ a.replace(/x|z/g, "y") }}</i></template>`,
+      /`\/x\|z\/g` in `\.replace\(\)` holds `\|`, outside the regular expressions the server runs/,
     ],
     [
       "replace with a function",
@@ -7371,7 +7371,7 @@ describe("refusals inside a computed or a function", () => {
     const [regex, literal, called, ...rest] = refusals(`<script setup lang="ts">
 import { computed } from "vue";
 const props = defineProps<{ s: string }>();
-const clean = computed(() => props.s.replace(/x/g, ""));
+const clean = computed(() => props.s.replace(/x|z/g, ""));
 const shape = computed(() => ({ a: props.s }));
 function pair(t: string): string {
   return [t, 1].join();

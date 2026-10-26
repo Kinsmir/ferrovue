@@ -605,7 +605,7 @@ function exprOf(s: Scope, n: N): Val {
         let at = base.iter.indexOf(".map(");
         while (at > 0 && !enclosed(base.iter.slice(at + 4))) at = base.iter.indexOf(".map(", at + 1);
         const mapped = at > 0 ? base.iter.slice(0, at) : base.iter;
-        const held = /^(.*)\.iter\(\)$/s.exec(mapped)?.[1];
+        const held = /^(.*)\.(?:into_)?iter\(\)$/s.exec(mapped)?.[1];
         return { code: held !== undefined ? `${atom(held)}.len() as i64` : `${atom(mapped)}.count() as i64`, ty: INT };
       }
       return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(base.iter)}.count() as i64`, ty: INT };

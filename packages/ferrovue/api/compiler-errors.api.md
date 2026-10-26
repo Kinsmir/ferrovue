@@ -689,7 +689,7 @@ export const ERRORS: {
     };
     readonly FV0710: {
         readonly title: "Regular expression";
-        readonly detail: "The server does not run regular expressions, in a template, a `computed` or a function: JavaScript's syntax and matching differ from Rust's `regex` in flags, lookbehind, Unicode classes and `lastIndex`. `.replace()`, `.split()`, `.includes()` and the other string methods take a string pattern. Use `.replaceAll(\"x\", \"y\")` for a fixed pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings).";
+        readonly detail: "The server runs a subset of regular expressions, with JavaScript's matching over UTF-16 code units: a literal in `.replace()`, `.replaceAll()` (with `g`), `.split()` and `.test()`, holding characters, `.`, classes, `\\d`, `\\w`, `\\s`, `^`, `$`, `\\b`, the quantifiers `*`, `+`, `?` and `{n,m}`, and the flags `g` and `i`. Groups, alternation, backreferences, lookarounds, other flags, a regular expression held in a constant and its other methods are refused. Write the pattern within the subset, use a string pattern, or do the matching in Rust and pass the result as a prop. See [`strings`](crate::guide::strings#regular-expressions).";
     };
     readonly FV0711: {
         readonly title: "String method given a value that is not a present string";

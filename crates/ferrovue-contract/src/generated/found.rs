@@ -41,10 +41,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(25 + props.term.len());
+    out.reserve(40 + props.term.len());
     let l_0 = fv_loads.get(super::loaders::LoadFound { search: super::loaders::LoadFoundSearch { lang: None, page: None, term: String::from(&*props.term) }, max: None });
     let (Some(l_0),) = (l_0,) else { return Ok(()); };
-    out.push_str("<ul><!--[-->");
+    out.push_str("<ul");
+    if ({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("\\s+", "g")); &RE }).replace(&props.term, "-").is_empty() {
+        out.push_str(" title");
+    } else {
+        out.push_str(" title=\"");
+        fv::core::escape_into(out, &({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("\\s+", "g")); &RE }).replace(&props.term, "-"));
+        out.push('"');
+    }
+    out.push_str("><!--[-->");
     for fv_f_ref in l_0.iter() {
         let fv_f: &str = fv_f_ref;
         out.push_str("<li>");

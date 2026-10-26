@@ -6,5 +6,5 @@ const [found] = await Promise.all([loadFound({ term: props.term, lang: null })])
 </script>
 
 <template>
-  <ul><li v-for="f in found" :key="f">{{ f }}</li></ul>
+  <ul :title="term.replace(/\s+/g, '-')"><li v-for="f in found" :key="f">{{ f }}</li></ul>
 </template>

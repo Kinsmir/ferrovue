@@ -275,3 +275,47 @@ fn reduce_folds_from_the_initial_value() {
     );
     assert!(js_reduce(std::iter::empty::<f64>(), -0.0, |acc, x| acc + x).is_sign_negative());
 }
+
+#[test]
+fn regular_expressions_of_the_subset_are_javascripts() {
+    let vectors: Vec<(
+        String,
+        String,
+        String,
+        String,
+        serde_json::Value,
+        serde_json::Value,
+    )> = serde_json::from_str(include_str!("../../tests/vectors/regex.json"))
+        .expect("regex vectors");
+    assert!(vectors.len() >= 3900, "the vectors were not all read");
+    let mut run = 0;
+    for (pattern, flags, op, input, arg, want) in &vectors {
+        let Ok(re) = JsRegex::parse(pattern, flags) else {
+            assert_eq!(
+                want,
+                &serde_json::Value::Null,
+                "/{pattern}/{flags} is refused here and recorded"
+            );
+            continue;
+        };
+        assert_ne!(
+            want,
+            &serde_json::Value::Null,
+            "/{pattern}/{flags} is run here and refused by the compiler"
+        );
+        let got: serde_json::Value = match op.as_str() {
+            "test" => re.test(input).into(),
+            "replace" => re
+                .replace(input, arg.as_str().expect("a replacement"))
+                .into(),
+            "split" => re.split(input, arg.as_f64()).into(),
+            other => panic!("no regex operation {other}"),
+        };
+        assert_eq!(
+            &got, want,
+            "{op} of /{pattern}/{flags} on {input:?} with {arg}"
+        );
+        run += 1;
+    }
+    assert!(run > 2000, "the subset ran {run} vectors");
+}

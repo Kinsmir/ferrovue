@@ -177,6 +177,7 @@ pub mod quiet_leaf;
 pub mod rank_line;
 pub mod rated;
 pub mod records;
+pub mod regex_text;
 pub mod regressions;
 pub mod relative_time;
 pub mod renamed_props;
@@ -1200,6 +1201,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Records" => {
             let props: records::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             records::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RegexText" => {
+            let props: regex_text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            regex_text::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Regressions" => {
             let props: regressions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

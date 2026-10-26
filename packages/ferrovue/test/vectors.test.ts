@@ -12,6 +12,7 @@ import { type Call, headCases } from "./head-inputs.ts";
 import { portableTime, portableUtc } from "../src/plugins/dates.ts";
 import { DATE_METHODS, dateCases } from "./date-inputs.ts";
 import { exactPower } from "../src/numbers.ts";
+import { regexRefusal } from "../src/strings.ts";
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue/tests/vectors");
 const CORE = join(import.meta.dirname, "../../../crates/ferrovue-core/tests/vectors");
@@ -85,6 +86,7 @@ describe("vectors shared with the Rust crate", () => {
       ["class.json", 14],
       ["attrs.json", 61],
       ["strings.json", 12863],
+      ["regex.json", 3990],
       ["compare.json", 400],
       ["parse.json", 498],
       ["keys.json", 8],
@@ -226,6 +228,19 @@ describe("vectors shared with the Rust crate", () => {
     const vectors = read("strings.json") as [string, string, string[], unknown][];
     const recorded = vectors.map(([op, input, args]) => [op, input, args, stringOp(op, input, args)]);
     if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("strings.json", recorded);
+    expect(vectors).toEqual(recorded);
+  });
+
+  it("regex.json is JavaScript's regular expressions, where the server's subset holds them", () => {
+    const vectors = read("regex.json") as [string, string, string, string, number | string | null, unknown][];
+    const sent = (x: unknown): unknown => (typeof x === "string" ? x.toWellFormed() : Array.isArray(x) ? x.map(sent) : x);
+    const recorded = vectors.map(([pattern, flags, op, input, arg]) => {
+      if (regexRefusal(pattern, flags) !== null) return [pattern, flags, op, input, arg, null];
+      const re = new RegExp(pattern, flags);
+      const result = op === "test" ? re.test(input) : op === "replace" ? input.replace(re, String(arg)) : input.split(re, arg === null ? undefined : Number(arg));
+      return [pattern, flags, op, input, arg, sent(result)];
+    });
+    if (process.env.FERROVUE_VECTORS_WRITE === "1") return writeVectors("regex.json", recorded);
     expect(vectors).toEqual(recorded);
   });
 
