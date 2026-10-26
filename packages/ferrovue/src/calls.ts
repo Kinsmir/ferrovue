@@ -29,26 +29,8 @@ function namedCall(s: Scope, n: N): Val {
   const comp = s.comp;
   const callee = n.callee;
   const args: N[] = n.arguments;
-  switch (callee.name) {
-    case "_ssrLooseEqual": {
-      const a = expr(s, args[0]);
-      const b = expr(s, args[1]);
-      if (a.ty.k === "str" && b.ty.k === "str") {
-        meet(comp, a, b, "`v-model`", n, "equal");
-        return boolOf(stringsEqual(a, b));
-      }
-      return fail(comp, "FV0413", "`v-model` comparison between these types", n);
-    }
-    case "_ssrIncludeBooleanAttr": {
-      const a = expr(s, args[0]);
-      if (a.konst !== undefined) return a;
-      if (a.ty.k === "str") return { code: "true", ty: BOOL, konst: true };
-      if (a.ty.k === "opt" && a.ty.of.k === "str") return { code: `${atom(a.code)}.is_some()`, ty: BOOL };
-      return boolOf(truthy(a));
-    }
-    case "_ssrLooseContain":
-      return fail(comp, "FV0414", "`v-model` over an array", n);
-  }
+  const rendered = renderHelperCall(s, callee.name, args, n);
+  if (rendered) return rendered;
   const own = claim((p) => p.call?.(s, n));
   if (own) return own;
   const helper = s.helpers.get(callee.name);
@@ -93,6 +75,36 @@ function namedCall(s: Scope, n: N): Val {
   if ((callee.name === "isNaN" || callee.name === "isFinite") && global) return numberTest(s, callee.name, args, n, true);
   if (global && BUILTINS.has(callee.name)) return builtin(s, `${callee.name}()`, n);
   return refuseUnavailable(s, callee.name, n, true);
+}
+
+function renderHelperCall(s: Scope, name: string, args: N[], n: N): Val | null {
+  switch (name) {
+    case "_ssrLooseEqual":
+      return looseEqual(s, args, n);
+    case "_ssrIncludeBooleanAttr":
+      return includeBooleanAttr(s, args);
+    case "_ssrLooseContain":
+      return fail(s.comp, "FV0414", "`v-model` over an array", n);
+  }
+  return null;
+}
+
+function looseEqual(s: Scope, args: N[], n: N): Val {
+  const a = expr(s, args[0]);
+  const b = expr(s, args[1]);
+  if (a.ty.k === "str" && b.ty.k === "str") {
+    meet(s.comp, a, b, "`v-model`", n, "equal");
+    return boolOf(stringsEqual(a, b));
+  }
+  return fail(s.comp, "FV0413", "`v-model` comparison between these types", n);
+}
+
+function includeBooleanAttr(s: Scope, args: N[]): Val {
+  const a = expr(s, args[0]);
+  if (a.konst !== undefined) return a;
+  if (a.ty.k === "str") return { code: "true", ty: BOOL, konst: true };
+  if (a.ty.k === "opt" && a.ty.of.k === "str") return { code: `${atom(a.code)}.is_some()`, ty: BOOL };
+  return boolOf(truthy(a));
 }
 
 function memberCall(s: Scope, n: N): Val {
