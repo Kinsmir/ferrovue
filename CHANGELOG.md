@@ -14,6 +14,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   0.12.0's code matched its string with a `_` arm, or gave a variant the test rules out the last member's arm: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
 - A `ref` of a union whose starting value folds to a constant (`ref<Tone | "">(K === "x" ? "loud" : "")`) reaches a child's union prop as the variant of its member, and `""` as `Empty`.
   0.12.0 refused the member with FV0515, or FV0635 in an object literal: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
+- `out.reserve` counts an optional struct, a list or a `Record` whose text all has a known length without binding it.
+  0.12.0's generated code failed `unused_variables` under `-D warnings` there: [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html).
 
 ## [0.12.0] - 2026-10-25
 

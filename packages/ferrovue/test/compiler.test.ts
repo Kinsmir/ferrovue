@@ -311,6 +311,22 @@ const props = defineProps<{ label: string; items: string[] }>();
     expect(reserve).toContain("props.items.iter().map(|v| v.len()).sum::<usize>()");
   });
 
+  it("reserves the text of structs whose fields all have a known length without binding them", () => {
+    const out = compile(
+      island(`<script setup lang="ts">
+interface P { a: "x" | "yy"; b: "q" | "zzz" }
+interface S { p?: P; a: "x" | "yy" }
+defineProps<{ one?: P; many: P[]; named: Record<string, P>; nested: S[] }>();
+</script>
+<template><div>{{ one?.a }}<i v-for="p in many">{{ p.b }}</i><b v-for="p in named">{{ p.a }}</b><s v-for="s in nested">{{ s.p?.b }}</s></div></template>`),
+    ).get("x.rs")!;
+    const reserve = out.split("\n").find((l) => l.includes("out.reserve("))!;
+    expect(reserve).toContain("props.one.as_ref().map_or(0, |_| 5)");
+    expect(reserve).toContain("5 * props.many.len()");
+    expect(reserve).toContain("props.named.iter().map(|(k, _)| k.len() + 5).sum::<usize>()");
+    expect(reserve).toContain("props.nested.iter().map(|v| v.p.as_ref().map_or(0, |_| 5) + 2).sum::<usize>()");
+  });
+
   it("derives `Default` for a struct whose `new` takes no arguments, and only for one", () => {
     const optional = compile(
       island(`<script setup lang="ts">
