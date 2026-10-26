@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 import vue from "@vitejs/plugin-vue";
@@ -12,7 +12,7 @@ const result = (await build({
   root: dir,
   logLevel: "warn",
   plugins: [
-    vue(config.scopeId === "filepath" ? { features: { componentIdGenerator: "filepath" } } : {}),
+    vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, ...(config.scopeId === "filepath" ? { features: { componentIdGenerator: "filepath" } } : {}) }),
     {
       name: "entry",
       resolveId: (id) => (id.endsWith(entry) ? `\0${entry}` : null),

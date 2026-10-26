@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import vue from "@vitejs/plugin-vue";
 import { escapeHtml } from "@vue/shared";
@@ -33,7 +33,7 @@ beforeAll(async () => {
     configFile: false,
     root: import.meta.dirname,
     logLevel: "warn",
-    plugins: [vue()],
+    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
     build: {
       write: false,
       minify: false,
