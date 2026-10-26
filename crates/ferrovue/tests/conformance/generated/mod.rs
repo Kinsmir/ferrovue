@@ -237,6 +237,7 @@ pub mod union_mood_card;
 pub mod union_narrowed_match;
 pub mod union_narrowing;
 pub mod union_objects;
+pub mod union_placing;
 pub mod union_returned;
 pub mod union_shade;
 pub mod union_step;
@@ -1462,6 +1463,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionObjects" => {
             let props: union_objects::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_objects::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionPlacing" => {
+            let props: union_placing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_placing::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionReturned" => {
             let props: union_returned::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -182,6 +182,14 @@ export function header(source: string, edit = "the `.vue` file"): string {
 `;
 }
 
+function readsEach(inner: string[]): boolean {
+  return inner.some((len) => /\bv\b/.test(len));
+}
+
+function fixedLen(inner: string[]): number {
+  return inner.reduce((sum, len) => sum + Number(len), 0);
+}
+
 export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string> = new Set()): string[] {
   const def = enumOf(ty);
   if (def !== undefined) return [String(Math.max(...def.literals.map((l) => Buffer.byteLength(l))))];
@@ -195,7 +203,8 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
       if (ty.of.k === "html") return [`${place}.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())`];
       if (ty.of.k === "struct") {
         const inner = textLen(comp, "v", ty.of, seen);
-        return inner.length ? [`${place}.as_ref().map_or(0, |v| ${inner.join(" + ")})`] : [];
+        if (!inner.length) return [];
+        return [`${place}.as_ref().map_or(0, |${readsEach(inner) ? `v| ${inner.join(" + ")}` : `_| ${fixedLen(inner)}`})`];
       }
       return [];
     case "struct": {
@@ -208,11 +217,13 @@ export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string
       const each = enumOf(ty.of);
       if (each !== undefined) return [`${Math.max(...each.literals.map((l) => Buffer.byteLength(l)))} * ${place}.len()`];
       const inner = textLen(comp, "v", ty.of, seen);
-      return inner.length ? [`${place}.iter().map(|v| ${inner.join(" + ")}).sum::<usize>()`] : [];
+      if (!inner.length) return [];
+      return [readsEach(inner) ? `${place}.iter().map(|v| ${inner.join(" + ")}).sum::<usize>()` : `${fixedLen(inner)} * ${place}.len()`];
     }
     case "record": {
       const inner = textLen(comp, "v", ty.of, seen);
-      return [`${place}.iter().map(|(k, ${inner.length ? "v" : "_"})| ${["k.len()", ...inner].join(" + ")}).sum::<usize>()`];
+      const each = readsEach(inner) ? inner : inner.length ? [String(fixedLen(inner))] : [];
+      return [`${place}.iter().map(|(k, ${readsEach(inner) ? "v" : "_"})| ${["k.len()", ...each].join(" + ")}).sum::<usize>()`];
     }
     default:
       return [];
