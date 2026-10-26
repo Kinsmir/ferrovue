@@ -1103,6 +1103,19 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like("fv::core::escape_into(out, fv::props::Union::as_str(s_a));"));
   });
 
+  it("reads a table by a key built with `||` or `?:` through one `match` over the enum the key is made from", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
+    const out = render(
+      'import { ref } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ start?: Tone; on: boolean }>();\nconst tone = ref<Tone | "">(props.start ?? "");\nconst NEXT: Record<Tone, Tone> = { calm: "loud", loud: "quiet", quiet: "calm" };\nconst PAD = { calm: "p-1", loud: "p-2", quiet: "p-3" } as const;',
+      `<T :t="NEXT[tone || 'calm']" /><T :t="NEXT[on ? 'loud' : 'quiet']" />{{ PAD[tone || 'loud'] }}`,
+      child,
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("t: match s_tone { XTone::Calm | XTone::Empty => super::t::TT::Loud, XTone::Loud => super::t::TT::Quiet, XTone::Quiet => super::t::TT::Calm }"));
+    expect(out).toMatch(like("t: if props.on { super::t::TT::Quiet } else { super::t::TT::Calm }"));
+    expect(out).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud | XTone::Empty => "p-2", XTone::Quiet => "p-3" });'));
+  });
+
   it("reads the left side of `??` on its right with the type its declaration gives", () => {
     const out = render('defineProps<{ o?: "" | "a" }>();\nconst T = { "": "E" };', '<p>{{ o ?? (o !== undefined ? T[o] : "z") }}</p>');
     expect(out).toMatch(like('props.o.map(fv::props::Union::as_str).or(if let Some(fv_o) = props.o { match fv_o { XO::Empty => Some("E"), XO::A => None } } else { Some("z") })'));

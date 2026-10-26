@@ -1,4 +1,4 @@
-import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, FLOAT, INT, joinAbsence, joinTy, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Absence, type Component, type EnumDef, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, enumOf, enumTy, fail, FLOAT, INT, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nothing, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { aliasEnum, knownLiteral, matchOver, overVariants } from "./enums.ts";
 
@@ -481,7 +481,7 @@ export function constOf(s: Scope, n: N): Named | null {
     const what = n.computed ? `${base.what}[${JSON.stringify(key)}]` : `${base.what}.${key}`;
     return { sym: step(s, base, key, n, chain, []), what };
   }
-  const v = expr(s, n.property);
+  const v = homeVariant(expr(s, n.property), n.property);
   const path = pathOf(n.property);
   const what = `${base.what}[${path === null ? "…" : path.replace(/^(?:_ctx|\$props|\$setup)\./, "").replace(new RegExp(`^${s.propsIdent ?? "\\$^"}\\.`), "")}]`;
   const keys = literalsOf(v.ty);
@@ -501,6 +501,14 @@ export function constOf(s: Scope, n: N): Named | null {
     return { sym: { k: "pick", on: v, keys: kept, arms: arms.filter((a) => a.k !== "none") }, what };
   }
   return { sym: { k: "pick", on: v, keys, arms }, what };
+}
+
+function homeVariant(v: Val, node: N): Val {
+  const home = v.variant === undefined && v.asEnum?.of === v.code ? v.asEnum.home : undefined;
+  const keys = literalsOf(v.ty);
+  if (home === undefined || v.ty.k !== "str" || keys === undefined || !keys.every((k) => typeof k === "string" && home.literals.includes(k))) return v;
+  const variant = v.asEnum!.into(home, node);
+  return variant === null ? v : { ...v, ty: keptLiterals(enumTy(home), (k) => keys.includes(k)), variant };
 }
 
 /** For a constant object read by a key known only when rendering, which is \`undefined\` for some
@@ -557,8 +565,11 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
       else groups.push([[key], values[i]!]);
     });
     if (groups.length === 1) return groups[0]![1];
-    const def = sym.on.variant !== undefined && sym.on.ty.k !== "opt" ? enumOf(sym.on.ty) : undefined;
     const named = sym.keys as readonly string[];
+    const over = sym.on.asEnum?.of === sym.on.code ? sym.on.asEnum.over : undefined;
+    const composed = over === undefined ? null : over((k) => (named.includes(k) ? values[named.indexOf(k)]! : null));
+    if (composed !== null) return composed;
+    const def = sym.on.variant !== undefined && sym.on.ty.k !== "opt" ? enumOf(sym.on.ty) : undefined;
     const one = def !== undefined && named.length < def.literals.length && named.every((k) => def.literals.includes(k)) ? overVariants(at.comp, sym.on, named, (k) => (named.includes(k) ? values[named.indexOf(k)]! : null)) : null;
     if (one !== null) return one;
     const last = groups.findIndex(([, code]) => code === values[values.length - 1]);

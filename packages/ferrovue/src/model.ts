@@ -67,8 +67,10 @@ export interface Val {
   enums?: { place: string; def: EnumDef };
   /** For a string value made of literals the compiler knows, as a lookup table's arms: the Rust
    * expression of the same value as the generated enum `def`, null when a literal is outside it.
-   * It holds while `code` is `of`. */
-  asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null };
+   * It holds while `code` is `of`. `home` is a generated enum whose members hold every literal the
+   * value may be, and `over` gives one `match` over the variants it is made from, each arm the code
+   * `arm` gives the literal the value is there. */
+  asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null; home?: EnumDef; over?: (arm: (literal: string) => string | null) => string | null };
   /** For a value of a generated enum held by `of`, where a `v-if` narrows it to the members
    * `kept`: binds in the test, for each member, the Rust code `arm` gives it, and gives the name
    * the code is bound to. */

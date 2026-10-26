@@ -230,6 +230,7 @@ pub mod union_choice_tag;
 pub mod union_computed_held;
 pub mod union_enums;
 pub mod union_folded_ref;
+pub mod union_keyed_by_or;
 pub mod union_list;
 pub mod union_list_item;
 pub mod union_logic;
@@ -1436,6 +1437,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionFoldedRef" => {
             let props: union_folded_ref::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_folded_ref::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionKeyedByOr" => {
+            let props: union_keyed_by_or::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_keyed_by_or::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionList" => {
             let props: union_list::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

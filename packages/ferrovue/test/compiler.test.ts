@@ -6842,7 +6842,7 @@ describe("constant lookups", () => {
       "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
     );
     expect(out).toContain('fv::core::escape_into(out, match props.level { 1 => "one", _ => "two" });');
-    expect(out).toContain('fv::core::escape_into(out, match if props.on { "b" } else { "a" } { "b" => "p-2", _ => "p-1" });');
+    expect(out).toContain('fv::core::escape_into(out, if props.on { "p-2" } else { "p-1" });');
     expect(out).toContain('fv::core::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
   });
 

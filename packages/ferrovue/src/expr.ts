@@ -482,7 +482,30 @@ function byVariant(s: Scope, n: N, v: Val): Val {
     };
     return overVariants(s.comp, tested, kept, arm) ?? before?.(def, node) ?? intoEnum(s.comp, { code: v.code, ty: v.ty }, def, node);
   };
-  return { ...v, asEnum: { of: v.code, into } };
+  const over = (pick: (literal: string) => string | null): string | null => {
+    if (optional) return null;
+    return overVariants(s.comp, tested, kept, (l) => {
+      const one: Scope = { ...s, narrowed: new Map(s.narrowed).set(path, { ...tested, ty: keptLiterals(enumTy(from), (k) => k === l) }) };
+      ctx.trying++;
+      try {
+        const taken = expr(one, branch(l));
+        const literals = taken.ty.k === "str" ? literalsOf(taken.ty) : undefined;
+        return literals?.length === 1 && typeof literals[0] === "string" ? pick(literals[0]) : null;
+      } catch (e) {
+        if (e instanceof GenError) return null;
+        throw e;
+      } finally {
+        ctx.trying--;
+      }
+    });
+  };
+  return { ...v, asEnum: { of: v.code, into, home: from, over } };
+}
+
+function pickedBy(v: Val, pick: (literal: string) => string | null): string | null {
+  const literal = knownLiteral(v);
+  if (literal !== undefined) return pick(literal);
+  return v.asEnum?.of === v.code && v.asEnum.over !== undefined ? v.asEnum.over(pick) : null;
 }
 
 function exprOf(s: Scope, n: N): Val {
@@ -905,7 +928,11 @@ function exprOf(s: Scope, n: N): Val {
           const [x, y] = both!.map((v) => intoEnum(comp, v, def, node));
           return x == null || y == null ? null : choose(x, y);
         };
-        return { code, ty: joinTy(a.ty, b.ty), ...lone, ...(both ? { asEnum: { of: code, into } } : {}) };
+        const over = (pick: (literal: string) => string | null): string | null => {
+          const [x, y] = both!.map((v) => pickedBy(v, pick));
+          return x == null || y == null ? null : choose(x, y);
+        };
+        return { code, ty: joinTy(a.ty, b.ty), ...lone, ...(both ? { asEnum: { of: code, into, over } } : {}) };
       }
       if (isNumber(a.ty) && isNumber(b.ty)) return { code: choose(asF64(a), asF64(b)), ty: FLOAT };
       const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);

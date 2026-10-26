@@ -838,9 +838,11 @@ let class = match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg =>
 # assert_eq!(class, "p-2");
 ```
 
-A key of a union of string literals is its enum, so the `match` names every variant. A key the
-compiler holds as a string (a `computed` that builds it, a `?:` of literals) is matched as a string,
-and so is an integer union.
+A key of a union of string literals is its enum, so the `match` names every variant. So does a key
+built from one by `||`, `?:` or `&&` (`NEXT[tone || "calm"]`): the `match` is over the variants of
+the enum it is made from, each arm the value the key reads there, and a `?:` of literals reads the
+table in each branch. A key the compiler holds as a string (a `computed` that builds it without an
+annotation) is matched as a string, and so is an integer union.
 
 A table whose values are members of a union (`Record<Tone, Tone>`, `Partial<Record<Tone, Tone>>`,
 or an untyped table of its literals) reaches a child's union prop, an object literal's union field

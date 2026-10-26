@@ -204,10 +204,10 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
     if (sameEnum(from, def) && kept.length === from.literals.length) return v.variant;
     if (!kept.every((l) => def.literals.includes(l))) return null;
     if (kept.length === 1 && !optional) return variantPath(comp, def, kept[0]!);
-    const one = optional ? null : overVariants(comp, v, kept, (l) => (def.literals.includes(l) ? variantPath(comp, def, l) : null));
-    if (one !== null) return one;
     const made = v.asEnum !== undefined && v.asEnum.of === v.code ? v.asEnum.into(def, node) : null;
     if (made !== null) return made;
+    const one = optional ? null : overVariants(comp, v, kept, (l) => (def.literals.includes(l) ? variantPath(comp, def, l) : null));
+    if (one !== null) return one;
     const left = from.literals.filter((l) => !kept.includes(l));
     const arms = kept.map((l, i) => `${[l, ...(i === kept.length - 1 ? left : [])].map((k) => variantPath(comp, from, k)).join(" | ")} => ${variantPath(comp, def, l)}`);
     return over(v.variant, arms.join(", "));
