@@ -774,3 +774,47 @@ mod state {
         );
     }
 }
+
+#[test]
+fn a_document_writes_the_head_s_attributes_and_tags_around_the_body() {
+    let head = crate::head::HeadHtml {
+        html_attrs: String::from(" lang=\"nl\""),
+        body_attrs: String::from(" class=\"dark\""),
+        head_tags: String::from("<title>T</title>"),
+        body_tags_open: String::from("<noscript>n</noscript>"),
+        body_tags: String::from("<script>s</script>"),
+    };
+    assert_eq!(
+        Document::new(head).render("<main></main>"),
+        "<!DOCTYPE html>\n<html lang=\"nl\">\n<head>\n<title>T</title>\n</head>\n<body class=\"dark\">\n<noscript>n</noscript>\n<main></main>\n<script>s</script>\n</body>\n</html>\n"
+    );
+    assert_eq!(
+        Document::default().render(""),
+        "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n</body>\n</html>\n"
+    );
+}
+
+#[test]
+fn a_document_loads_its_entry_from_the_base_and_links_each_chunk_once() {
+    let manifest = r#"{
+        "main.ts": { "file": "assets/main.js", "isEntry": true, "imports": ["_vue.js", "_a\"b.js"] },
+        "C.vue": { "file": "assets/C.js", "imports": ["_vue.js", "main.ts"] },
+        "_vue.js": { "file": "assets/vue.js" },
+        "_a\"b.js": { "file": "assets/a\"b.js", "imports": ["_vue.js"] }
+    }"#;
+    let chunks = Chunks::from_manifest(manifest, r#"{ "C": "assets/C.js" }"#)
+        .unwrap()
+        .with_base("/static/");
+    let document = Document::new(crate::head::HeadHtml::default())
+        .with_entry(&chunks, "main.ts")
+        .with_islands(&chunks, ["C", "C", "Missing"])
+        .with_entry(&chunks, "missing.ts");
+    let page = document.render("b");
+    assert!(page.contains("<head>\n<link rel=\"modulepreload\" href=\"/static/assets/vue.js\"><link rel=\"modulepreload\" href=\"/static/assets/a&quot;b.js\"><link rel=\"modulepreload\" href=\"/static/assets/C.js\">\n</head>"));
+    assert!(page.ends_with(
+        "b\n<script type=\"module\" src=\"/static/assets/main.js\"></script>\n</body>\n</html>\n"
+    ));
+    let mut out = String::from("x");
+    document.write_into(&mut out, "b");
+    assert_eq!(out, format!("x{page}"));
+}

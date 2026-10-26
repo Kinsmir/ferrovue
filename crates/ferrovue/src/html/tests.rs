@@ -690,3 +690,65 @@ mod sanitised {
         assert_eq!(Sanitised::new("<i>a</i>").into_string(), "<i>a</i>");
     }
 }
+
+struct Cleaned(&'static str);
+
+impl TrustedHtml for Cleaned {
+    fn trusted_html(&self) -> &str {
+        self.0
+    }
+}
+
+#[test]
+fn splice_replaces_only_empty_elements_whose_one_attribute_is_the_marker() {
+    let html = Cleaned(concat!(
+        "<p data-part=\"a\">text</p>",
+        "<div data-part=\"a\"></div>",
+        "<span data-part=\"b&quot;&lt;&amp;\"></span>",
+        "<div class=\"x\" data-part=\"a\"></div>",
+        "<div data-part=\"a\" class=\"x\"></div>",
+        "<div data-parts=\"a\"></div>",
+        "<div data-part=\"a\"></span>",
+        "a < b <",
+        "<custom-el data-part=\"c\"></custom-el>",
+    ));
+    let mut seen = Vec::new();
+    let spliced = splice(&html, "data-part", |name, out| {
+        seen.push(name.to_owned());
+        out.push('[');
+        out.push_str(name);
+        out.push(']');
+        name != "c"
+    });
+    assert_eq!(seen, ["a", "b\"<&", "c"]);
+    assert_eq!(
+        spliced.as_str(),
+        concat!(
+            "<p data-part=\"a\">text</p>",
+            "[a]",
+            "[b\"<&]",
+            "<div class=\"x\" data-part=\"a\"></div>",
+            "<div data-part=\"a\" class=\"x\"></div>",
+            "<div data-parts=\"a\"></div>",
+            "<div data-part=\"a\"></span>",
+            "a < b <",
+            "<custom-el data-part=\"c\"></custom-el>",
+        )
+    );
+    assert_eq!(
+        serde_json::to_string(&spliced).unwrap(),
+        serde_json::to_string(spliced.as_str()).unwrap()
+    );
+    let mut out = String::new();
+    trusted_into(&mut out, &spliced);
+    assert_eq!(out, spliced.as_str());
+}
+
+#[test]
+fn splice_keeps_html_without_markers() {
+    assert_eq!(splice(&Cleaned(""), "data-part", |_, _| true).as_str(), "");
+    assert_eq!(
+        splice(&Cleaned("<<>>é<"), "data-part", |_, _| true).as_str(),
+        "<<>>é<"
+    );
+}

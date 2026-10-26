@@ -22,6 +22,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   0.12.0 refused them with FV0310, FV0313 and FV0316; tuples stay refused: [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
 - Loaders awaited together by `Promise.all`, and loader parameters typed as an interface, written into the key with sorted keys.
   Generated code is version 7, which the 0.12 crate refuses; the 0.13 crate builds version 6 too: [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html).
+- `ferrovue::page::Document` writes the page shell around a render, and `ferrovue::html::splice` writes components into trusted `v-html`.
+  The guide adds a relative-time recipe: [The page shell](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#the-page-shell).
 - `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
   0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 

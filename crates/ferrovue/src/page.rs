@@ -700,6 +700,131 @@ impl<'c> Preloads<'c> {
     }
 }
 
+/// The page around the components: the doctype, `<html>` and `<body>` with the attributes the
+/// [`Head`](crate::head::Head) gives them, its tags, the `<link rel="modulepreload">`s of the
+/// entry and of the islands, and the entry's `<script type="module">` at the end of `<body>`.
+///
+/// # Example
+///
+/// ```
+/// use ferrovue::head::Head;
+/// use ferrovue::page::{Chunks, Document};
+///
+/// let manifest = r#"{
+///     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "imports": ["_vue.js"] },
+///     "client/components/Counter.vue": { "file": "assets/Counter.js", "imports": ["_vue.js"] },
+///     "_vue.js": { "file": "assets/vue.js" }
+/// }"#;
+/// let chunks = Chunks::from_manifest(manifest, r#"{ "Counter": "assets/Counter.js" }"#)?;
+/// let document = Document::new(Head::new().render())
+///     .with_entry(&chunks, "client/main.ts")
+///     .with_islands(&chunks, ["Counter"]);
+/// assert_eq!(
+///     document.render("<main>Hi</main>"),
+///     "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n\
+///      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+///      <link rel=\"modulepreload\" href=\"/assets/vue.js\"><link rel=\"modulepreload\" href=\"/assets/Counter.js\">\n\
+///      </head>\n<body>\n<main>Hi</main>\n<script type=\"module\" src=\"/assets/main.js\"></script>\n</body>\n</html>\n"
+/// );
+/// # Ok::<(), ferrovue::page::ManifestError>(())
+/// ```
+#[derive(Debug, Clone, Default)]
+pub struct Document {
+    head: crate::head::HeadHtml,
+    preloads: String,
+    linked: HashSet<String>,
+    entry: Option<String>,
+}
+
+impl Document {
+    /// A document whose head is `head`, as [`Head::render`](crate::head::Head::render) gives it
+    /// once the components have rendered.
+    #[must_use]
+    pub fn new(head: crate::head::HeadHtml) -> Self {
+        Document {
+            head,
+            ..Document::default()
+        }
+    }
+
+    /// Load the entry the manifest names by `key` (`"client/main.ts"`): its `<script
+    /// type="module">`, and a link for each chunk it imports. A key the manifest lacks adds
+    /// nothing.
+    #[must_use]
+    pub fn with_entry(mut self, chunks: &Chunks, key: &str) -> Self {
+        let Some((key, chunk)) = chunks.chunks.get_key_value(key) else {
+            return self;
+        };
+        self.entry = Some(chunks.url(&chunk.file));
+        let mut seen = HashSet::from([key.as_str()]);
+        for import in &chunk.imports {
+            for file in chunks.needed(import, &mut seen) {
+                self.link(chunks.url(file));
+            }
+        }
+        self
+    }
+
+    /// Link the chunks the islands called `names` need, each once.
+    #[must_use]
+    pub fn with_islands<'n>(
+        mut self,
+        chunks: &Chunks,
+        names: impl IntoIterator<Item = &'n str>,
+    ) -> Self {
+        for url in chunks.for_islands(names) {
+            self.link(url);
+        }
+        self
+    }
+
+    fn link(&mut self, url: String) {
+        if self.linked.insert(url.clone()) {
+            self.preloads
+                .push_str("<link rel=\"modulepreload\" href=\"");
+            escape_into(&mut self.preloads, &url);
+            self.preloads.push_str("\">");
+        }
+    }
+
+    /// Write the document into `out`, with `body`, the components' HTML, inside `<body>`.
+    pub fn write_into(&self, out: &mut String, body: &str) {
+        let head = &self.head;
+        out.push_str("<!DOCTYPE html>\n<html");
+        out.push_str(&head.html_attrs);
+        out.push_str(">\n<head>\n");
+        for part in [head.head_tags.as_str(), self.preloads.as_str()] {
+            if !part.is_empty() {
+                out.push_str(part);
+                out.push('\n');
+            }
+        }
+        out.push_str("</head>\n<body");
+        out.push_str(&head.body_attrs);
+        out.push_str(">\n");
+        for part in [head.body_tags_open.as_str(), body, head.body_tags.as_str()] {
+            if !part.is_empty() {
+                out.push_str(part);
+                out.push('\n');
+            }
+        }
+        if let Some(entry) = &self.entry {
+            out.push_str("<script type=\"module\" src=\"");
+            escape_into(out, entry);
+            out.push_str("\"></script>\n");
+        }
+        out.push_str("</body>\n</html>\n");
+    }
+
+    /// The document, with `body` inside `<body>`.
+    #[must_use]
+    pub fn render(&self, body: &str) -> String {
+        let mut out = String::with_capacity(body.len() + 512);
+        self.write_into(&mut out, body);
+        out
+    }
+}
+
 impl std::fmt::Display for ManifestError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "not {}: {}", self.what, self.error)
