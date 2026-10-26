@@ -445,8 +445,13 @@ What it generates, with random nesting:
   numeric one read both ways), or the enums declared in the component, and a string enum as a
   prop type; lookup tables keyed by the enum's members (`[Tone.Loud]: …`), beside the enum or in
   the component, read by an enum prop (or an optional one with `?? Tone.Loud`): strings, a table
-  that lacks some members (narrowed with `v-if`, `typeof` and `!==`, or read with `??`), and
-  objects read on by field;
+  that lacks some members (narrowed with `v-if`, `typeof` and `!==`, or read with `??`),
+  objects read on by field, tables read by keys built from the key by `.toUpperCase()` and a
+  template literal, and a table read by a number constant (`BY_NUM[HALF]`);
+- props declared by an interface imported from a `.ts` file (`defineProps<FzProps>()`), alone or
+  joined with `&` to a type literal, where the props' types are their own; a required
+  `defineModel` of a union of element names read by `<component :is>` by its local and by
+  `modelValue`;
 - `provide` with a string key and with `InjectionKey`s (a plain value, a number and a `computed`),
   a child that injects all three with defaults and a child that provides its own values to its slot
   content; `useHead` (`title`, `titleTemplate`, `htmlAttrs`, `bodyAttrs`, `meta`, `link`, plain

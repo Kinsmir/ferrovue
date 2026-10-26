@@ -387,6 +387,8 @@ export interface Component {
   stores: StoreDef[];
   i18n: Messages | null;
   loads: Loads | null;
+  propsFile?: "plain" | "joined";
+  model?: string[];
 }
 
 export interface Case {
@@ -547,9 +549,9 @@ function helpersUsed(template: Node[]): HelperName[] {
   return [...used].toSorted();
 }
 
-const CONST_NAMES = ["LABELS", "LABEL", "LIMIT", "RATIO", "SHOWN", "WORDS", "NUMS", "ROWS", "Tone", "Rank", "TONE_TEXT", "TONE_NOTE", "TONE_INFO", "TONE_NEXT"] as const;
+const CONST_NAMES = ["LABELS", "LABEL", "LIMIT", "RATIO", "SHOWN", "WORDS", "NUMS", "ROWS", "Tone", "Rank", "TONE_TEXT", "TONE_NOTE", "TONE_INFO", "TONE_NEXT", "TONE_CASE", "TONE_TAGGED", "HALF", "BY_NUM"] as const;
 
-const LOOKUPS = new Set(["TONE_TEXT", "TONE_NOTE", "TONE_INFO", "TONE_NEXT"]);
+const LOOKUPS = new Set(["TONE_TEXT", "TONE_NOTE", "TONE_INFO", "TONE_NEXT", "TONE_CASE", "TONE_TAGGED", "HALF", "BY_NUM"]);
 
 const numText = (x: number): string => (Object.is(x, -0) ? "-0" : String(x));
 
@@ -570,7 +572,19 @@ function lookupLines(k: Consts, exported: boolean): string[] {
     `${e}const TONE_NOTE: Partial<Record<Tone, string>> = { ${entries(k.toneNote, literal)} };`,
     `${e}const TONE_INFO = { ${entries(k.toneInfo, (v) => `{ label: ${literal(v.label)}, n: ${numText(v.n)} }`)} } as const;`,
     `${e}const TONE_NEXT: Record<Tone, Tone> = { ${entries(k.toneNext, (i) => `Tone.${k.tone[i]![0]}`)} };`,
+    `${e}const TONE_CASE = { ${keyed(k, (v) => v.toUpperCase(), literal)} };`,
+    `${e}const TONE_TAGGED = { ${keyed(k, (v) => `t-${v}`, literal)} };`,
+    `${e}const HALF = ${numText(k.ratio)};`,
+    `${e}const BY_NUM = { ${literal(String(k.ratio))}: ${literal(k.label)}, "x": ${literal(k.toneText[0] ?? "")} };`,
   ];
+}
+
+function keyed(k: Consts, key: (value: string) => string, literal: (v: string) => string): string {
+  const seen = new Map<string, string>();
+  k.tone.forEach(([, v], i) => {
+    if (!seen.has(key(v))) seen.set(key(v), k.toneText[i]!);
+  });
+  return [...seen].map(([name, text]) => `${literal(name)}: ${literal(text)}`).join(", ");
 }
 
 function constsFile(k: Consts): string {
@@ -936,6 +950,11 @@ export function helperFiles(c: Component): [string, string][] {
   for (const st of c.stores) files.push([`../stores/${st.id}.ts`, storeFile(st)]);
   if (c.i18n) for (const [locale, messages] of Object.entries(c.i18n.locales)) files.push([`../locales/${locale}.json`, localeJson(messages)]);
   if (loadersUsed(c).length) files.push(["fz-loaders.ts", loadersFile(c)]);
+  if (c.propsFile !== undefined && c.props.length > 1) {
+    const fields = (c.propsFile === "joined" ? c.props.slice(0, -1) : c.props).map((p) => `  ${p.name}${p.spec.k === "opt" ? "?" : ""}: ${tsType(p.spec)};`);
+    const floats = c.props.some((p) => usesFloat(p.spec)) ? ['import type { Float } from "ferrovue/types";', ""] : [];
+    files.push(["fz-props.ts", [...floats, "export interface FzProps {", ...fields, "}", ""].join("\n")]);
+  }
   for (const kid of kidsUsed(c)) files.push([`${kid.name}.vue`, printKid(kid)]);
   return files;
 }
@@ -990,12 +1009,16 @@ export function printComponent(c: Component): string {
     const ty = generic && p.spec.k === "list" && p.spec.of.k === "obj" && p.spec.of.iface === generic ? "T[]" : tsType(p.spec);
     return `${p.name}${p.spec.k === "opt" ? "?" : ""}: ${ty}`;
   });
-  const define = props.length ? `defineProps<{ ${props.join("; ")} }>();` : "defineProps<{}>();";
+  const imported = c.propsFile !== undefined && props.length > 1 ? c.propsFile : null;
+  if (imported !== null) lines.push('import type { FzProps } from "./fz-props";');
+  const define = imported === "plain" ? "defineProps<FzProps>();" : imported === "joined" ? `defineProps<FzProps & { ${props.at(-1)} }>();` : props.length ? `defineProps<{ ${props.join("; ")} }>();` : "defineProps<{}>();";
+  if (c.model !== undefined) lines.push(`const mdl = defineModel<${c.model.map((m) => JSON.stringify(m)).join(" | ")}>({ required: true });`);
   lines.push(c.propsVar || new RegExp(`${FREE}props\\.`).test(`${tpl}\n${script.join("\n")}`) ? `const props = ${define}` : define);
   lines.push(...context.lines);
   lines.push(...script);
   lines.push("</script>", "", "<template>");
   for (const n of c.template) lines.push("  " + printNode(n, "  "));
+  if (c.model !== undefined) lines.push(`  <component :is="mdl" class="m">{{ mdl }}</component>`, `  <component :is="modelValue" />`);
   lines.push("</template>");
   if (c.scoped) lines.push(...scopedStyle(false));
   lines.push("");
@@ -1227,6 +1250,7 @@ export function randomFixture(r: Rng, c: Component, hostile: boolean): Record<st
     const v = randomValue(r, p.spec, ifaces, hostile);
     if (v !== undefined) out[p.name] = v;
   }
+  if (c.model !== undefined) out.modelValue = r.pick(c.model);
   if (c.router) out.$route = randomLocation(r, c.router);
   if (c.stores.length) {
     out.$stores = Object.fromEntries(
@@ -2901,6 +2925,9 @@ function bindLookups(g: Gen, k: Consts, keys: { name: string; opt: boolean }[], 
     const at = key.opt ? `${key.name} ?? Tone.${r.pick(k.tone)[0]}` : key.name;
     const vars: Var[] = [
       { name: `TONE_TEXT[${at}]`, ty: "str", opt: false, bound: 0 },
+      { name: `TONE_CASE[(${at}).toUpperCase()]`, ty: "str", opt: false, bound: 0 },
+      { name: `TONE_TAGGED[\`t-\${${at}}\`]`, ty: "str", opt: false, bound: 0 },
+      { name: "BY_NUM[HALF]", ty: "str", opt: false, bound: 0 },
       { name: `TONE_INFO[${at}].label`, ty: "str", opt: false, bound: 0 },
       { name: `TONE_INFO[${at}].n`, ty: "int", opt: false, bound },
       { name: `TONE_NEXT[${at}]`, ty: "str", opt: false, bound: 0, members: k.tone.map(([, v]) => v) },
@@ -3667,8 +3694,13 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
     (Object.keys(HELPERS) as HelperName[]).map((h) => [h, { scoped: r.chance(0.5), slotted: r.chance(0.5) }]),
   ) as Component["helpers"];
   const objLists = props.filter((p) => p.spec.k === "list" && p.spec.of.k === "obj");
+  const local = (spec: Spec): boolean => /^[\w\s|"'[\]<>,.&;:!?#@%^*()+=\-~$`{}\\/]*$/.test(tsType(spec)) && !/\b(?:Row\d+|Tone|Rank|Fz\w*|TrustedHtml|InlineHtml)\b/.test(tsType(spec));
+  const propsFile = props.every((p) => local(p.spec)) && r.chance(0.2) ? (r.chance(0.5) ? ("plain" as const) : ("joined" as const)) : undefined;
+  const model = r.chance(0.12) ? r.pick([["b", "i"], ["em", "strong", "span"], ["h2", "h3", "p"]]) : undefined;
   const component = prune({
     name,
+    ...(propsFile !== undefined ? { propsFile } : {}),
+    ...(model !== undefined ? { model } : {}),
     ifaces,
     props,
     template,
