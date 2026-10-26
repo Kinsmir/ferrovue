@@ -1,9 +1,9 @@
-import { type N, type Scope, type Val, BOOL, fail, isAscii, sameTy, STR, strTy } from "./model.ts";
+import { type N, type Scope, type Val, BOOL, fail } from "./model.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, operand, strArg, UNARY } from "./parens.ts";
-import { computedListMethod, isBoolean, listMethod, presentLiteral } from "./lists.ts";
-import { loneOf, meet, noArgStringMethod, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
+import { atom, bare } from "./parens.ts";
+import { isBoolean, listCall, listMethod, presentLiteral } from "./lists.ts";
+import { meet, noArgStringMethod, regexTest, stringMethod, stringsEqual } from "./strings.ts";
 import { numberMethod } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
@@ -103,28 +103,8 @@ function memberCall(s: Scope, n: N): Val {
   const numbered = numberMethod(s, target, method, args, n);
   if (numbered) return numbered;
   if (target.owned) refuseInPlace(comp, `\`.${method}()\``, n);
-  if (target.ty.k === "list") {
-    const inPlace = target.iter === undefined && !target.lone && (target.ty.of.k === "str" || target.ty.of.k === "int");
-    const listed = listMethod(s, target, method, args, n) ?? (inPlace ? null : computedListMethod(s, target, method, args, n));
-    if (listed) return listed;
-  }
-  if (target.ty.k === "list" && (target.ty.of.k === "str" || target.ty.of.k === "int")) {
-    const of = target.ty.of;
-    if (method === "includes" && args.length === 1) {
-      const v = expr(s, args[0]);
-      if (of.k === "int" && v.ty.k === "float") return { code: `${atom(target.code)}.iter().any(|v| ${binary("*v as f64", "==", v.code)})`, ty: BOOL };
-      if (!sameTy(v.ty, of)) fail(comp, "FV0801", "`.includes()` looks for a value of the list's own type", args[0]);
-      if (of.k === "int") return { code: `${atom(target.code)}.contains(&${operand(v.code, UNARY)})`, ty: BOOL };
-      const test = v.code === '""' ? "v.is_empty()" : binary("&**v", "==", v.code);
-      return { code: `${atom(target.code)}.iter().any(|v| ${test})`, ty: BOOL };
-    }
-    if (method === "join" && args.length <= 1) {
-      const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
-      if (sep.ty.k !== "str") fail(comp, "FV0802", "`.join()` takes a string", args[0]);
-      const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::core::Js(*v).to_string())`;
-      return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...loneOf(sep) };
-    }
-  }
+  const listed = listCall(s, target, method, args, n);
+  if (listed) return listed;
   return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);
 }
 
