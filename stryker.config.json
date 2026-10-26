@@ -16,7 +16,8 @@
     "packages/ferrovue/src/expr.ts",
     "packages/ferrovue/src/members.ts",
     "packages/ferrovue/src/operators.ts",
-    "packages/ferrovue/src/logical.ts"
+    "packages/ferrovue/src/logical.ts",
+    "packages/ferrovue/src/conditional.ts"
   ],
   "ignorePatterns": ["/target", "/fuzz", "/mutants.out*", "/examples/*/dist", "/packages/*/dist"],
   "tempDirName": "target/stryker/tmp",

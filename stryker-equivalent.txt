@@ -936,13 +936,13 @@ packages/ferrovue/src/logical.ts: ConditionalExpression: def !== undefined => tr
 packages/ferrovue/src/logical.ts: ConditionalExpression: fallback !== undefined => true in if (def !== undefined && fallback !== undefined && def.literals.includes(fallback)) {
 packages/ferrovue/src/logical.ts: ConditionalExpression: def === undefined => false in const widened = def === undefined || fallback === undefined ? undefined : (into: EnumDef, node: N): string | null => {
 
-# logical.ts, `sameFallback` and `orSame`, and expr.ts, `expr` (`?:`): `isTemporary` is false for a
-# type other than a string and `isCast` is false for a type other than an integer, so the type tests
-# they follow are implied (at `||`, `sameTy` makes `a` a float whenever `b` is one).
+# logical.ts, `sameFallback` and `orSame`, and conditional.ts, `choiceOf`: `isTemporary` is false
+# for a type other than a string and `isCast` is false for a type other than an integer, so the type
+# tests they follow are implied (at `||`, `sameTy` makes `a` a float whenever `b` is one).
 packages/ferrovue/src/logical.ts: ConditionalExpression: b.ty.k === "str" => true in if (a.ty.of.k === "str" && b.ty.k === "str" && isTemporary(b)) {
 packages/ferrovue/src/logical.ts: ConditionalExpression: b.ty.k === "int" => true in if (a.ty.of.k === "int" && b.ty.k === "int" && isCast(b))  … nwrap_or(${bare(asF64(b))})`, b.at ?? refusalAt(comp, n));
 packages/ferrovue/src/logical.ts: ConditionalExpression: a.ty.k === "int" => true in if (a.ty.k === "int" && (isCast(a) || isCast(b))) return i … bare(asF64(b))} } }`, a.at ?? b.at ?? refusalAt(comp, n));
-packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "str" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
+packages/ferrovue/src/conditional.ts: ConditionalExpression: a.ty.k === "str" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
 
 # logical.ts, `orSame`: `strArg` and `bare` write the same code for a number. `strArg` changes
 # only code that starts with `&*`, which no number's code does, and keeps parentheses around the
@@ -991,61 +991,61 @@ packages/ferrovue/src/operators.ts: ConditionalExpression: a.ty.k === "opt" => t
 packages/ferrovue/src/operators.ts: LogicalOperator: b.ty.k === "opt" && sameTy(b.ty.of, a.ty) => b.ty.k === "opt" || sameTy(b.ty.of, a.ty) in if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) return binary(`Some(${bare(a.code)})`, "==", b.code);
 packages/ferrovue/src/operators.ts: ConditionalExpression: b.ty.k === "opt" => true in if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) return binary(`Some(${bare(a.code)})`, "==", b.code);
 
-# expr.ts, `expr` (`?:`): `expr` raises a `GenError` for every refusal; another exception is a
+# conditional.ts, `knownBranch`: `expr` raises a `GenError` for every refusal; another exception is a
 # defect of the compiler, and the tests that read each expression as the chosen branch would show
 # it.
-packages/ferrovue/src/expr.ts: ConditionalExpression: !(e instanceof GenError) => false in if (!(e instanceof GenError)) throw e;
+packages/ferrovue/src/conditional.ts: ConditionalExpression: !(e instanceof GenError) => false in if (!(e instanceof GenError)) throw e;
 
-# expr.ts, `expr` (`?:`): `typedEmpty` of a list of `undefined` asks `localTy` for the Rust type
-# of `undefined`, which raises FV0309, and the `catch` below returns `chosen`, the original's
+# conditional.ts, `knownBranch`: `typedEmpty` of a list of `undefined` asks `localTy` for the Rust
+# type of `undefined`, which raises FV0309, and the `catch` below returns `chosen`, the original's
 # answer.
-packages/ferrovue/src/expr.ts: ConditionalExpression: other.ty.of.k !== "undef" => true in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
-packages/ferrovue/src/expr.ts: StringLiteral: "undef" => "" in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
+packages/ferrovue/src/conditional.ts: ConditionalExpression: other.ty.of.k !== "undef" => true in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
+packages/ferrovue/src/conditional.ts: StringLiteral: "undef" => "" in return other.ty.k === "list" && other.ty.of.k !== "undef" ? typedEmpty(comp, other.ty.of) : chosen;
 
-# expr.ts, `expr` (`?:`): without a presence test `name` is read only by `!name || …`, where
+# conditional.ts, `branches`: without a presence test `name` is read only by `!name || …`, where
 # `occurrences` finds no `Stryker was here!` in Rust code, and by `choose`, which returns before
 # reading it. With a test, only the narrowed branch is compiled in the scope that binds the fresh
 # name, so two branches whose code is equal never hold it.
-packages/ferrovue/src/expr.ts: StringLiteral: "" => "Stryker was here!" in const name = p ? fresh("n", jsHint(p.path)) : "";
-packages/ferrovue/src/expr.ts: ConditionalExpression: !name || !occurrences(a.code, name) => true in if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
+packages/ferrovue/src/conditional.ts: StringLiteral: "" => "Stryker was here!" in const name = p ? fresh("n", jsHint(p.path)) : "";
+packages/ferrovue/src/conditional.ts: ConditionalExpression: !name || !occurrences(a.code, name) => true in if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
 
-# expr.ts, `expr` (`?:`): `fieldVal` writes a child's props read from a field as `&place`, and a
+# conditional.ts, `branches`: `fieldVal` writes a child's props read from a field as `&place`, and a
 # child's props held otherwise are a name with no field, so no child's code matches the pattern
 # and `placed` leaves it as it is either way.
-packages/ferrovue/src/expr.ts: StringLiteral: "child" => "" in const placed = (v: Val): Val => (["struct", "child", "reco … w#]+)+$/.test(v.code) ? { ...v, code: `&${v.code}` } : v);
+packages/ferrovue/src/conditional.ts: StringLiteral: "child" => "" in const placed = (v: Val): Val => (["struct", "child", "reco … w#]+)+$/.test(v.code) ? { ...v, code: `&${v.code}` } : v);
 
-# expr.ts, `expr` (`?:`): `present` is a branch's code under `bare`; besides `Some(…)` the
+# conditional.ts, `chooser`: `present` is a branch's code under `bare`; besides `Some(…)` the
 # compiler writes no value as four characters followed by one bracketed group that closes at its
 # end, so the test passes the same codes.
-packages/ferrovue/src/expr.ts: StringLiteral: "Some(" => "" in if (absent === "None" && present.startsWith("Some(") && en … (p.option)}.map(|${name}| ${bare(present.slice(5, -1))})`;
+packages/ferrovue/src/conditional.ts: StringLiteral: "Some(" => "" in if (absent === "None" && present.startsWith("Some(") && en … (p.option)}.map(|${name}| ${bare(present.slice(5, -1))})`;
 
-# expr.ts, `expr` (`?:`): a list of `undefined` is only the empty array literal (each method of it
+# conditional.ts, `choiceOf`: a list of `undefined` is only the empty array literal (each method of it
 # is refused with FV0804, `[...[]]` is `[]`), so two such branches have the same code and `?:`
 # returns the first above.
-packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.of.k !== "undef" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
-packages/ferrovue/src/expr.ts: StringLiteral: "undef" => "" in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") {
+packages/ferrovue/src/conditional.ts: ConditionalExpression: a.ty.of.k !== "undef" => true in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") return listChoice(c);
+packages/ferrovue/src/conditional.ts: StringLiteral: "undef" => "" in if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") return listChoice(c);
 
-# expr.ts, `expr` (`?:`): `exactlyEnum` holds only of a string or an optional string: a value with a
-# `variant` has the type of a generated enum, which `enumTy` makes a string, `knownLiteral` needs a
-# string, and `asEnum` is set only on strings and optional strings (`symVal` of string literals,
-# `??` of an enum's value and a literal, and the two `?:` here). Neither branch is optional where
-# `both` is chosen, and where `parts` is, each branch is `undefined` or a string, so `of` is a
-# string.
-packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "str" => true in const both = a.ty.k === "str" && exactlyEnum(a) && exactlyEnum(b) ? [a, b] : null;
-packages/ferrovue/src/expr.ts: ConditionalExpression: of.k === "str" => true in const parts = of.k === "str" && [a, b].every((v) => nothin …  || (v.ty.k !== "opt" && exactlyEnum(v))) ? [a, b] : null;
+# conditional.ts, `sameChoice` and `eitherAbsent`: `exactlyEnum` holds only of a string or an
+# optional string: a value with a `variant` has the type of a generated enum, which `enumTy` makes a
+# string, `knownLiteral` needs a string, and `asEnum` is set only on strings and optional strings
+# (`symVal` of string literals, `??` of an enum's value and a literal, and the two `?:` here).
+# Neither branch is optional where `both` is chosen, and where `parts` is, each branch is
+# `undefined` or a string, so `of` is a string.
+packages/ferrovue/src/conditional.ts: ConditionalExpression: a.ty.k === "str" => true in const both = a.ty.k === "str" && exactlyEnum(a) && exactlyEnum(b) ? [a, b] : null;
+packages/ferrovue/src/conditional.ts: ConditionalExpression: of.k === "str" => true in const parts = of.k === "str" && [a, b].every((v) => nothin …  || (v.ty.k !== "opt" && exactlyEnum(v))) ? [a, b] : null;
 
-# expr.ts, `expr` (`?:`): the `held` and temporary values are strings or optional strings
+# conditional.ts, `eitherAbsent`: the `held` and temporary values are strings or optional strings
 # (`isTemporary` needs a string, `held` is set only on an optional string), and the other branch
 # has the same base or none, so `optStr` holds of both whenever the rest of the condition does.
-packages/ferrovue/src/expr.ts: ConditionalExpression: nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str" => true in const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
-packages/ferrovue/src/expr.ts: ConditionalExpression: v.ty.of.k === "str" => true in const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
-packages/ferrovue/src/expr.ts: ConditionalExpression: optStr(a) && optStr(b) => true in if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
-packages/ferrovue/src/expr.ts: LogicalOperator: optStr(a) && optStr(b) => optStr(a) || optStr(b) in if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
+packages/ferrovue/src/conditional.ts: ConditionalExpression: nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str" => true in const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+packages/ferrovue/src/conditional.ts: ConditionalExpression: v.ty.of.k === "str" => true in const optStr = (v: Val) => nothing(v.ty) || (v.ty.k === "opt" && v.ty.of.k === "str") || v.ty.k === "str";
+packages/ferrovue/src/conditional.ts: ConditionalExpression: optStr(a) && optStr(b) => true in if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
+packages/ferrovue/src/conditional.ts: LogicalOperator: optStr(a) && optStr(b) => optStr(a) || optStr(b) in if (optStr(a) && optStr(b) && (isTemporary(a) || isTemporary(b) || a.held !== undefined || b.held !== undefined)) {
 
-# expr.ts, `expr` (`?:`): where the two types are equal they are optional (the line above takes
-# the rest), `ty` is the same option, `coerce` returns each code unchanged, and `joinTy` of the
-# two options is that type.
-packages/ferrovue/src/expr.ts: ConditionalExpression: sameTy(a.ty, b.ty) => false in if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
+# conditional.ts, `eitherAbsent`: where the two types are equal they are optional (the line above
+# takes the rest), `ty` is the same option, `coerce` returns each code unchanged, and `joinTy` of
+# the two options is that type.
+packages/ferrovue/src/conditional.ts: ConditionalExpression: sameTy(a.ty, b.ty) => false in if (sameTy(a.ty, b.ty)) return { code: choose(a.code, b.code), ty: joinTy(a.ty, b.ty), ...lone };
 
 # expr.ts, `expr` (`await`): a scope without `within` is a template's, where Vue's parser refuses
 # `await` outside an async function (FV0002) and the list methods refuse an async callback by its
@@ -1053,15 +1053,15 @@ packages/ferrovue/src/expr.ts: ConditionalExpression: sameTy(a.ty, b.ty) => fals
 # function or the setup.
 packages/ferrovue/src/expr.ts: ConditionalExpression: s.within !== undefined => true in if (n.type === "AwaitExpression" && s.within !== undefined) {
 
-# expr.ts, `ownedChoice`: one branch is owned, and an owned value is a struct, a list or an
+# conditional.ts, `ownedChoice`: one branch is owned, and an owned value is a struct, a list or an
 # optional struct (`objectLiteral`, `structList`, `around`, `ownedField`, `.map()` of owned items,
 # `??` and `?:` of them), so `of` is never null and `ty` is an optional, a struct or a list; `own`
 # returns for an optional and a struct before the list lines, so `ty.k === "list"` holds where
 # they are read.
-packages/ferrovue/src/expr.ts: ConditionalExpression: of === null => false in if (of === null || (ba !== null && bb !== null && !sameTy(ba, bb))) return null;
-packages/ferrovue/src/expr.ts: ConditionalExpression: ty.k !== "opt" && ty.k !== "struct" && ty.k !== "list" => false in if (ty.k !== "opt" && ty.k !== "struct" && ty.k !== "list") return null;
-packages/ferrovue/src/expr.ts: ConditionalExpression: ty.k === "list" => true in if (ty.k === "list") return v.owned ? v.code : empty(v) ?  … !== undefined ? collected(v) : `${atom(v.code)}.to_vec()`;
-packages/ferrovue/src/expr.ts: ConditionalExpression: ty.k === "list" => true in if (ty.k === "list" && ty.of.k === "struct") return empty(v) ? "Vec::new()" : ownedStructs(v);
+packages/ferrovue/src/conditional.ts: ConditionalExpression: of === null => false in if (of === null || (ba !== null && bb !== null && !sameTy(ba, bb))) return null;
+packages/ferrovue/src/conditional.ts: ConditionalExpression: ty.k !== "opt" && ty.k !== "struct" && ty.k !== "list" => false in if (ty.k !== "opt" && ty.k !== "struct" && ty.k !== "list") return null;
+packages/ferrovue/src/conditional.ts: ConditionalExpression: ty.k === "list" => true in if (ty.k === "list") return v.owned ? v.code : empty(v) ?  … !== undefined ? collected(v) : `${atom(v.code)}.to_vec()`;
+packages/ferrovue/src/conditional.ts: ConditionalExpression: ty.k === "list" => true in if (ty.k === "list" && ty.of.k === "struct") return empty(v) ? "Vec::new()" : ownedStructs(v);
 
 # members.ts, `ownedField`: `fieldVal` raises FV0604 for every type other than a struct with a
 # message of the field and the type, so passing the base's code, `fv` or nothing raises the same
