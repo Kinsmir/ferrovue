@@ -596,7 +596,8 @@ function exprOf(s: Scope, n: N): Val {
     const joinable = (t: Ty) => t.k === "str" || isNumber(t);
     if ((a.ty.k === "str" || b.ty.k === "str") && joinable(a.ty) && joinable(b.ty)) {
       meet(comp, a, b, "`+`", n, "join");
-      return formatted(comp, [a, b], n, "`+`");
+      const joined = formatted(comp, [a, b], n, "`+`");
+      return joined.variant !== undefined ? annotatedStr(joined, STR) : joined;
     }
     if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int", refusalAt(comp, n));
     return fail(comp, "FV0608", "`+` joins a string to a string or a number, or adds two numbers", n);

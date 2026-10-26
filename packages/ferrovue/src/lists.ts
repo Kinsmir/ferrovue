@@ -744,7 +744,7 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
       const body = returns && fn.body ? typedBy(fn.body, returns) : fn.body;
       const { closure, enumerate } = arrow(s, fn, target, of, false, method, (inner) => {
         out = expr({ ...inner, mapping: true }, body);
-        if (out.ty.k === "int" && out.f64 !== undefined && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
+        if (out.ty.k === "int" && out.f64 !== undefined && (out.num === undefined || Object.is(out.num, -0)) && /-[\w(]|\s[*%]\s/.test(out.f64)) out = { ...out, code: out.f64, ty: FLOAT };
         return mapped(inner, out, fn.body);
       });
       const each = !enumerate && /^\|(\w+)\| \1$/.test(closure) ? it : `${it}${enumerate ? ".enumerate()" : ""}.map(${closure})`;

@@ -19,8 +19,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   0.12.0 refused a value outside the union only where a child's prop read it: [Lookup tables](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#lookup-tables).
 - FV0419 points at a static `is` attribute that names no HTML element, and FV0506 at an element that renders a component by `is="vue:…"`.
   0.12.0 gave both no line: [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
-- A `?:` whose test is known when compiling compares as the type of both branches, and an array literal holds integers beside `Float`s.
-  0.12.0 refused them with FV0637 and FV0611: [FV0611](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0611).
+- A `?:` whose test is known when compiling, and `x + ""` of a union, compare as strings; an array literal holds integers beside `Float`s, and `.map(() => -1)` integers.
+  0.12.0 refused them with FV0637, FV0611 and FV0511: [FV0611](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0611).
 - A narrowed or optional value of a union's enum, a `computed` or a `ref` of a string `enum` and `""` annotated as the union, a table read by a key built with `||` or `?:`, and lists a `.map()`, `.filter()` or array literal builds reach a child's union prop through `match`es over variants.
   0.12.0's code matched its string with a `_` arm, or gave a variant the test rules out the last member's arm: [Unions of string literals](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#unions-of-string-literals).
 - A `ref` of a union whose starting value folds to a constant (`ref<Tone | "">(K === "x" ? "loud" : "")`) reaches a child's union prop as the variant of its member, and `""` as `Empty`.

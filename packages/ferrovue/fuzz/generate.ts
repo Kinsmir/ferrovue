@@ -1892,7 +1892,12 @@ class Gen {
         return members !== undefined && (a.members !== undefined || b.members !== undefined) ? { ...e, members } : e;
       }],
       [1, () => str([this.str(d - 1), this.str(d - 1)], ([a, b]) => `${a} || ${b}`)],
-      [opts.length ? 2 : 0, () => str([this.varRef(r.pick(opts)), this.str(d - 1)], ([a, b]) => `${a} ?? ${b}`)],
+      [opts.length ? 2 : 0, () => {
+        const [a, b] = [this.varRef(r.pick(opts)), this.str(d - 1)];
+        const e = str([a, b], ([x, y]) => `${x} ?? ${y}`);
+        const [ma, mb] = [literalsOf(a), literalsOf(b)];
+        return a.members !== undefined && ma !== undefined && mb !== undefined ? { ...e, members: [...new Set([...ma, ...mb])] } : e;
+      }],
       [
         4,
         () => {
@@ -2871,7 +2876,7 @@ function bindConsts(g: Gen, k: Consts, p: number): void {
     { name: "RATIO", ty: "float", opt: false, bound: 0 },
     { name: "SHOWN", ty: "bool", opt: false, bound: 0 },
     ...k.labels.map(([n]): Var => ({ name: `LABELS.${n}`, ty: "str", opt: false, bound: 0 })),
-    ...k.tone.map(([n]): Var => ({ name: `Tone.${n}`, ty: "str", opt: false, bound: 0 })),
+    ...k.tone.map(([n]): Var => ({ name: `Tone.${n}`, ty: "str", opt: false, bound: 0, members: k.tone.map(([, v]) => v) })),
     { name: "Rank.Low", ty: "int", opt: false, bound: 1 },
     { name: "Rank.Mid", ty: "int", opt: false, bound: k.rank + 1 },
     { name: "Rank.High", ty: "int", opt: false, bound: k.rank + 2 },
