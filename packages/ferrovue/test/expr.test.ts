@@ -588,7 +588,8 @@ describe("array literals", () => {
     expect(loop("n: number", "[n, 2]")).toMatch(like("for x_ref in [props.n, 2i64].iter() {"));
     expect(loop("n: number", "[n / 2, 1.5]")).toMatch(like("for x_ref in [props.n as f64 / 2.0, 1.5f64].iter() {"));
     expect(loop("n: number", "[n, 1.5]")).toMatch(like("for x_ref in [props.n as f64, 1.5f64].iter() {"));
-    expect(loop("s: string[]", "s.map(() => -1).flatMap((b) => [b, 10 * 0])")).toMatch(like("[fv_b, 0.0f64]"));
+    expect(loop("s: string[]", "s.map(() => -1).flatMap((b) => [b, 10 * 0, 0.5])")).toMatch(like("[fv_b as f64, 0.0f64, 0.5f64]"));
+    expect(loop("s: string[]", "s.map(() => -1)")).toMatch(like(".map(|_| -1i64)"));
     expect(loop("l: string[]", "[...l, 'a']")).toMatch(like('for x_cow in props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain([std::borrow::Cow::<str>::Borrowed("a")]) {'));
   });
 
@@ -1141,6 +1142,15 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like("t: match s_m { Some(XM::Calm) | Some(XM::Empty) | None => super::t::TT::Calm, Some(XM::Loud) => super::t::TT::Loud }"));
     expect(out).toMatch(like("if let Some(n1) = match s_m { Some(XM::Calm) => Some(super::t::TT::Calm), Some(XM::Loud) => Some(super::t::TT::Loud), Some(XM::Empty) | None => None } {"));
     expect(out.match(/Some\(XM::Empty\) \| None => None/g)).toHaveLength(2);
+  });
+
+  it("hands a function's `string` parameter a value of a union's enum as its string, which compares with any literal", () => {
+    const out = render(
+      'import { computed } from "vue";\nconst props = defineProps<{ on: boolean }>();\nconst t = computed((): "sm" | "md" => (props.on ? "sm" : "md"));\nfunction odd(s: string): boolean { return s === "ß"; }',
+      "<p>{{ odd(t) }}</p>",
+    );
+    expect(out).toMatch(like('let n1 = fv::props::Union::as_str(s_t);'));
+    expect(out).toMatch(like('n1 == "ß"'));
   });
 
   it("reads a table by a key built with `||` or `?:` through one `match` over the enum the key is made from", () => {
