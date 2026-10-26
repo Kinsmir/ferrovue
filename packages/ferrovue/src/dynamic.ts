@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, camelize, directiveOwner, fail, isAttribute, placeOf, rustStr, templateAst } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, camelize, directiveOwner, fail, isAttribute, literalsOf, placeOf, rustStr, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { matchOver } from "./enums.ts";
@@ -104,7 +104,7 @@ function propOf(s: Scope, n: N): string | null {
     if (s.propsIdent !== null && setupName(o) === s.propsIdent && o.type === "MemberExpression") return own(n.property.name);
   }
   const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
-  return name === null ? null : destructuredProp(s, name);
+  return name === null ? null : (destructuredProp(s, name) ?? s.comp.models.get(name) ?? null);
 }
 
 function literalUnion(comp: Component, t: N, seen: Set<string> = new Set()): string[] | null {
@@ -151,11 +151,16 @@ function propType(s: Scope, name: string): N {
   return members.find((m) => m.type === "TSPropertySignature" && (m.key.name ?? m.key.value) === name)?.typeAnnotation?.typeAnnotation ?? null;
 }
 
+function fieldLiterals(ty: Ty): string[] | null {
+  const literals = literalsOf(ty.k === "opt" ? ty.of : ty);
+  return (ty.k === "opt" ? ty.of : ty).k === "str" && literals !== undefined && literals.length > 1 && literals.every((l) => typeof l === "string") ? (literals as string[]) : null;
+}
+
 function keysOf(s: Scope, n: N, at: N): { on: N; keys: string[] } {
   const name = propOf(s, n);
   if (name === null) fail(s.comp, "FV0418", `${OPEN}; this value is not one of those`, n);
   const field = s.comp.props.fields.find((f) => f.js === name)!;
-  const keys = literalUnion(s.comp, propType(s, name));
+  const keys = literalUnion(s.comp, propType(s, name)) ?? fieldLiterals(field.ty);
   if (keys === null) fail(s.comp, "FV0418", `${OPEN}; \`${name}\` is not typed as a union of string literals, as \`"h1" | "h2"\``, n);
   if (field.ty.k === "opt" && field.dflt === undefined) {
     fail(s.comp, "FV0420", `\`${name}\` may be absent, where Vue renders \`<!---->\` or fails: make it required, or give it a default`, at);

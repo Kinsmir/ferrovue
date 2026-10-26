@@ -394,7 +394,7 @@ export const ERRORS = {
   },
   FV0418: {
     title: "`<component :is>` over a value that is not a closed set",
-    detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.",
+    detail: "`<component :is>` compiles to a `match` over its choices, so each one must be known when compiling: an imported component, an HTML element's name, a `computed` or `?:` choosing among them, a prop or a `defineModel` typed as a union of string literals, or an object of imported components read by such a prop. A `string`, a `Component` or a value from elsewhere could be anything.",
   },
   FV0419: {
     title: "`<component :is>` naming something other than an HTML element",

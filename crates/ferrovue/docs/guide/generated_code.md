@@ -351,7 +351,9 @@ a closed set:
 - an imported component, `:is="Card"`, or an async one from `defineAsyncComponent`;
 - an HTML element's name, `is="h2"` or `:is="'h2'"`;
 - a prop typed as a union of string literals, `as: "h1" | "h2"` (or an alias or `enum` of them),
-  required or with a default;
+  required or with a default, declared in place, by an interface or by a type imported from a `.ts`
+  file, or a `defineModel` of such a union, read by its local (`:is="tag"` of
+  `const tag = defineModel<"h1" | "h2">({ required: true })`) or by its prop (`:is="modelValue"`);
 - an object of imported components or element names, declared in `<script setup>`
   (`const ICONS = { star: Star, moon: Moon }`) or exported as a constant from a `.ts` file that
   imports them, read by such a prop or a literal key: `ICONS[name]`, `ICONS.star`;

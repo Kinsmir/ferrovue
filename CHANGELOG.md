@@ -14,6 +14,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   0.12.0 refused them with FV0327 and FV0304: [Props from a `.ts` file](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#props-from-a-ts-file).
 - Lookup tables read by a constant number of the component and by keys built from a union by `.toUpperCase()`, `.toLowerCase()` or a template literal.
   0.12.0 refused them with FV0222: [Lookup tables](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#lookup-tables).
+- `<component :is>` of a `defineModel` typed as a union, read by its local or by its prop, and of a prop of a type imported from a `.ts` file.
+  0.12.0 refused them with FV0418: [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html).
 - `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
   0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 
