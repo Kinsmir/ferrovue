@@ -235,7 +235,9 @@ members it holds, a lookup table's value, or a `?:` or `??` of these, each turne
 `match` over variants that names every one: `ref<Choice>(props.pick ?? "")` is
 `props.pick.map(|v| match v { Tone::Calm => Choice::Calm, … }).unwrap_or(Choice::Empty)`. Any
 other value keeps the `ref` a string, checked against its annotation as the next paragraph says,
-and so does a union whose literals give a variant no name. Either way the `ref` holds the members
+and so does a union one of whose literals gives a variant no name. A literal of a string `enum`
+takes its member's name (`Mark.Bang = "'!"` is the variant `Bang` of `ref<Mark | "">`), and a
+string the template hands a child's union prop is parsed into its enum as the component renders. Either way the `ref` holds the members
 of its annotation, which may be more than the value it starts with holds:
 `ref<Tone | "">(props.tone)` starts from a member of `Tone` and compares with `""` as with any
 member, and `ref<Tone | "" | undefined>(props.tone)` holds the enum of `Tone | ""` when

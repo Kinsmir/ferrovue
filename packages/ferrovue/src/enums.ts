@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalsOf, literalTy, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalNames, literalsOf, literalTy, nameLiterals, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { atom, bare, binary } from "./parens.ts";
@@ -35,7 +35,17 @@ export function namedBy(type: N, ty: Ty): Ty {
     fail(hint.home, "FV0329", `\`unions\` in ferrovue.config.json names a Rust enum for \`${hint.name}\`, which is not a union of two or more string literals: remove \`${hint.name}\` from \`unions\`, or declare it as one, as \`type ${hint.name} = "a" | "b"\``, hint.node);
   }
   if (hint !== undefined && union && !HINTS.has(inner)) HINTS.set(inner, hint);
+  const literals = literalsOf(inner);
+  if (hint?.members !== undefined && literals !== undefined && literals.length === hint.members.length && literalNames(inner) === undefined) {
+    nameLiterals(inner, new Map(literals.map((l, i) => [String(l), hint.members![i]!])));
+  }
   return ty;
+}
+
+function membersOf(ty: Ty, literals: readonly string[]): { members?: readonly string[] } {
+  const names = literalNames(ty);
+  if (names === undefined) return {};
+  return { members: literals.map((l) => names.get(l) ?? l) };
 }
 
 function pascal(name: string): string {
@@ -129,7 +139,7 @@ function enumScalar(comp: Component, owner: string, field: string, node: N, ty: 
   const inner = ty.k === "opt" ? ty.of : ty;
   const literals = literalsOf(inner);
   if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
-  const hint = HINTS.get(inner) ?? { name: `${pascal(owner)}${pascal(field)}`, module: comp.module, home: comp, node, key: node, what: field };
+  const hint = HINTS.get(inner) ?? { name: `${pascal(owner)}${pascal(field)}`, module: comp.module, home: comp, node, key: node, what: field, ...membersOf(inner, literals as readonly string[]) };
   const made = enumTy(defineEnum(hint, literals as readonly string[]));
   return ty.k === "opt" ? { ...ty, of: made } : made;
 }
@@ -165,7 +175,7 @@ export function refField(comp: Component, local: string, node: N, ty: Ty): Ty {
   const inner = ty.k === "opt" ? ty.of : ty;
   const literals = literalsOf(inner);
   if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
-  const hint = HINTS.get(inner) ?? { name: `${pascal(comp.name)}${pascal(local)}`, module: comp.module, home: comp, node, key: node, what: local };
+  const hint = HINTS.get(inner) ?? { name: `${pascal(comp.name)}${pascal(local)}`, module: comp.module, home: comp, node, key: node, what: local, ...membersOf(inner, literals as readonly string[]) };
   return nameable(hint, literals as readonly string[]) ? enumField(comp, comp.name, local, node, ty) : ty;
 }
 
@@ -216,10 +226,7 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
   const literals = literalsOf(optional ? (v.ty as { of: Ty }).of : v.ty);
   if (literals === undefined || !literals.every((l) => typeof l === "string" && def.literals.includes(l))) return null;
   const strings = literals as readonly string[];
-  if (!isDeclared(optional ? (v.ty as { of: Ty }).of : v.ty)) {
-    if (strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
-    return over(v.code, strings.map((l, i) => `${i === strings.length - 1 ? "_" : rustStr(l)} => ${variantPath(comp, def, l)}`).join(", "));
-  }
+  if (!isDeclared(optional ? (v.ty as { of: Ty }).of : v.ty) && strings.length === 1 && !optional) return variantPath(comp, def, strings[0]!);
   const refused = `${REFUSALS}.keep(Err::<(), _>(fv::render::Refused::new(${rustStr(OUTSIDE)}, format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), ${refusalAt(comp, node)})`;
   const parse = (on: string): string => {
     const subject = /^&\*+[\w.]+$/.test(on) ? on.replace(/^&\*+/, "") : atom(on);

@@ -585,14 +585,22 @@ function symVal(sym: Sym, at: { comp: Component; node: N; what: string }): Val {
   }
   const code = picked(codes);
   const literals = arms.map((a) => (nothing(a.ty) ? null : knownLiteral(a)));
-  if (ty.k === "list" || literals.some((l) => l === undefined)) return { code, ty, ...slice };
+  const nested = (a: Val): boolean => a.ty.k === "str" && a.asEnum?.of === a.code;
+  if (ty.k === "list" || literals.some((l, i) => l === undefined && !nested(arms[i]!))) return { code, ty, ...slice };
   const optional = ty.k === "opt";
-  const into = (def: EnumDef): string | null => {
-    if (!literals.every((l) => l === null || def.literals.includes(l!))) return null;
-    return picked(literals.map((l) => (l === null ? "None" : optional ? `Some(${variantPath(at.comp, def, l!)})` : variantPath(at.comp, def, l!))));
+  const into = (def: EnumDef, node: N): string | null => {
+    const made = literals.map((l, i) => {
+      if (l === undefined) {
+        const inner = arms[i]!.asEnum!.into(def, node);
+        return inner === null ? null : optional ? `Some(${bare(inner)})` : inner;
+      }
+      if (l !== null && !def.literals.includes(l)) return null;
+      return l === null ? "None" : optional ? `Some(${variantPath(at.comp, def, l)})` : variantPath(at.comp, def, l);
+    });
+    return made.some((m) => m === null) ? null : picked(made as string[]);
   };
   const typed = valueEnum(sym.arms);
-  const variant = typed === undefined ? null : into(typed);
+  const variant = typed === undefined ? null : into(typed, at.node);
   if (typed !== undefined && variant !== null) return { code, ty: withAbsence(enumTy(typed), optional ? absence(ty) : null), variant, asEnum: { of: code, into } };
   return { code, ty, asEnum: { of: code, into } };
 }

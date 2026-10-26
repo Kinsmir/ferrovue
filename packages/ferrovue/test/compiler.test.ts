@@ -8126,25 +8126,37 @@ defineProps<{ level?: Level }>();
         );
       const L = "super::types::Level";
 
-      it("holds a string of the wider union where a literal of it names no variant, and compares it with the literal it adds", () => {
+      it("names the variants of the wider union by the `enum`'s members where its literals name none, and compares it with the literal it adds", () => {
         const out = wider(
           `High = "&amp; &lt;", Low = "'!", Mid = "0x1F"`,
           `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "">(props.level);`,
           `<li :class="{ none: picked === '' }">{{ picked }}</li><Badge v-if="picked !== ''" :level="picked" />`,
         );
-        expect(out).toContain("let s_picked = fv::props::Union::as_str(props.level);");
-        expect(out).toContain('fv::attrs::class_into(out, false, &[if s_picked.is_empty() { "none" } else { "" }]);');
-        expect(out).toContain(`if !s_picked.is_empty() {\n        super::badge::try_render(out, &super::badge::Props { level: Some(match s_picked { "&amp; &lt;" => ${L}::High, "'!" => ${L}::Low, _ => ${L}::Mid }) })?;`);
+        expect(out).toContain(`let s_picked = match props.level { ${L}::High => XPicked::High, ${L}::Low => XPicked::Low, ${L}::Mid => XPicked::Mid };`);
+        expect(out).toContain('fv::attrs::class_into(out, false, &[if s_picked == XPicked::Empty { "none" } else { "" }]);');
+        expect(out).toContain(`if let Some(fv_picked) = match s_picked { XPicked::High => Some(${L}::High), XPicked::Low => Some(${L}::Low), XPicked::Mid => Some(${L}::Mid), XPicked::Empty => None } {`);
+        expect(out).not.toContain("_ =>");
       });
 
-      it("holds a string of the wider union started from an optional value of the enum", () => {
+      it("holds an `Option` of the wider union's enum started from an optional value of the enum", () => {
         const out = wider(
           `High = "&amp; &lt;", Low = "'!", Mid = "0x1F"`,
           `const props = defineProps<{ level?: Level }>();\nconst picked = ref<Level | "" | undefined>(props.level);`,
           `<li :class="{ none: picked === '' }">{{ picked }}</li>`,
         );
-        expect(out).toContain("let s_picked = props.level.map(fv::props::Union::as_str);");
-        expect(out).toContain('if s_picked == Some("") { "none" } else { "" }');
+        expect(out).toContain(`let s_picked = props.level.map(|v| match v { ${L}::High => XPicked::High, ${L}::Low => XPicked::Low, ${L}::Mid => XPicked::Mid });`);
+        expect(out).toContain('if s_picked == Some(XPicked::Empty) { "none" } else { "" }');
+      });
+
+      it("holds a string of the wider union where a literal it adds names no variant, and parses it into the child's enum", () => {
+        const out = wider(
+          `High = "&amp; &lt;", Low = "'!"`,
+          `const props = defineProps<{ level: Level }>();\nconst picked = ref<Level | "!">(props.level);`,
+          `<Badge v-if="picked !== '!'" :level="picked" />`,
+        );
+        expect(out).toContain("let s_picked = fv::props::Union::as_str(props.level);");
+        expect(out).toContain(`level: Some(match s_picked.parse::<${L}>() { Ok(fv_u) => fv_u, Err(fv_e) => {`);
+        expect(out).not.toContain("_ =>");
       });
 
       it("holds the wider union's enum, seeded from a present value where the annotation is optional", () => {
@@ -8239,10 +8251,11 @@ ${setup}
       expect(reading(tables, "<p>{{ L[0] }}</p>", 'import { L } from "../types/tone";')).toContain('if let Some(v) = ["calm"].first().map(|v| &**v) {');
     });
 
-    it("hands a table of tables read by two keys to a child's union prop through the strings it holds", () => {
+    it("hands a table of tables read by two keys to a child's union prop through a `match` over its key", () => {
       const tables = 'export const T = { calm: "loud" };\nexport const NEST = { calm: { calm: "loud", loud: "calm", quiet: "quiet" }, loud: { calm: "calm", loud: "calm", quiet: "calm" }, quiet: { calm: "quiet", loud: "loud", quiet: "loud" } };\n';
       const out = reading(tables, '<Badge :tone="NEST[tone][tone]" />', 'import { NEST } from "../types/tone";');
-      expect(out).toContain('{ "loud" => super::types::Tone::Loud, "calm" => super::types::Tone::Calm, _ => super::types::Tone::Quiet }) })?;');
+      expect(out).toContain("tone: Some(match props.tone { super::types::Tone::Calm => match props.tone { super::types::Tone::Calm => super::types::Tone::Loud, super::types::Tone::Loud => super::types::Tone::Calm, super::types::Tone::Quiet => super::types::Tone::Quiet },");
+      expect(out).not.toContain("_ =>");
     });
 
     it("refuses a table's literal outside a child's union prop", () => {

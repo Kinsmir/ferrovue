@@ -798,7 +798,22 @@ export function isDeclared(ty: Ty): boolean {
 
 function derived(from: readonly Ty[], ty: Ty): Ty {
   if (from.some((t) => DECLARED.has(t))) DECLARED.add(ty);
+  const names = new Map<string, string>();
+  for (const t of from) for (const [literal, name] of NAMES.get(t) ?? []) names.set(literal, name);
+  if (names.size) NAMES.set(ty, names);
   return ty;
+}
+
+const NAMES = new WeakMap<Ty, ReadonlyMap<string, string>>();
+
+/** Record the names an `enum` gives the literals of the string type `ty`. */
+export function nameLiterals(ty: Ty, names: ReadonlyMap<string, string>): void {
+  NAMES.set(ty, names);
+}
+
+/** The name of the `enum` member each literal of the string type `ty` comes from, where it comes from one. */
+export function literalNames(ty: Ty): ReadonlyMap<string, string> | undefined {
+  return NAMES.get(ty);
 }
 
 /** A Rust enum generated for a union of string literals. */
