@@ -848,14 +848,14 @@ packages/ferrovue/src/members.ts: EqualityOperator: at > 0 => at >= 0 in const m
 packages/ferrovue/src/members.ts: StringLiteral: `${atom(iter)}.count() as i64` => `` in return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(iter)}.count() as i64`, ty: INT };
 packages/ferrovue/src/members.ts: ConditionalExpression: vec !== undefined => true in return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(iter)}.count() as i64`, ty: INT };
 
-# expr.ts, `expr`, `+`: `+` hands `formatted` two strings or numbers, which no check there
+# operators.ts, `plus`: `+` hands `formatted` two strings or numbers, which no check there
 # refuses, and `meet` has checked the pair just before, so its name is in no message.
-packages/ferrovue/src/expr.ts: StringLiteral: "`+`" => "" in return formatted(comp, [a, b], n, "`+`");
+packages/ferrovue/src/operators.ts: StringLiteral: "`+`" => "" in return formatted(comp, [a, b], n, "`+`");
 
-# expr.ts, `expr`, arithmetic: only a literal has a `value`, and a literal that is not an integer
-# is a float, which makes `int` false.
-packages/ferrovue/src/expr.ts: LogicalOperator: n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) => n.right.type === "NumericLiteral" || Number.isInteger(n.right.value) in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
-packages/ferrovue/src/expr.ts: ConditionalExpression: n.right.type === "NumericLiteral" => true in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
+# operators.ts, `arithmeticOrOrder`: only a literal has a `value`, and a literal that is not an
+# integer is a float, which makes `int` false.
+packages/ferrovue/src/operators.ts: LogicalOperator: n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) => n.right.type === "NumericLiteral" || Number.isInteger(n.right.value) in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
+packages/ferrovue/src/operators.ts: ConditionalExpression: n.right.type === "NumericLiteral" => true in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
 
 # members.ts, `memberOf`, `.value`: a member that is not a name has no `name`, which `refs` does not
 # hold.
@@ -954,41 +954,41 @@ packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "str" => true i
 # reaches this line.
 packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator === "&&" => true in if (n.operator === "&&" && a.ty.k === "bool" && b.ty.k === "bool") return boolOf(logical(a.code, "&&", b.code));
 
-# expr.ts, `expr` (`===`): reading both sides and asking `refuseEquality` before the null test
+# operators.ts, `equality`: reading both sides and asking `refuseEquality` before the null test
 # changes nothing. Reading a node writes the same code each time (local names come from paths),
 # the null literal of a null test reads without error, the dates plugin's `refuseEquality`, the
 # only one, returns where one side is `null` or `undefined` and otherwise raises the FV1809 it
 # raises a few lines later before any other refusal there (`meet` reads strings only, the typeof
 # and router tests return earlier), and the sides are read left to right both times.
-packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" && !test => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" && !test => n.operator !== "===" && n.operator !== "!==" || !test in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" => n.operator !== "===" || n.operator !== "!==" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "===" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: StringLiteral: "===" => "" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: ConditionalExpression: n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
-packages/ferrovue/src/expr.ts: StringLiteral: "!==" => "" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" && !test => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" && !test => n.operator !== "===" && n.operator !== "!==" || !test in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" => n.operator !== "===" || n.operator !== "!==" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: ConditionalExpression: n.operator !== "===" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: StringLiteral: "===" => "" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: ConditionalExpression: n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
+packages/ferrovue/src/operators.ts: StringLiteral: "!==" => "" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
 
-# expr.ts, `expr` (`===`): the router's `equality`, the only plugin with one, answers only `typeof
+# operators.ts, `equality`: the router's `equality`, the only plugin with one, answers only `typeof
 # x === "string"`, which `typeofCompare` takes first and returns above, so `whole` is null here.
-packages/ferrovue/src/expr.ts: ArrowFunction: (p) => p.equality?.(s, n) => () => undefined in const whole = claim((p) => p.equality?.(s, n));
-packages/ferrovue/src/expr.ts: ConditionalExpression: whole => false in if (whole) return whole;
+packages/ferrovue/src/operators.ts: ArrowFunction: (p) => p.equality?.(s, n) => () => undefined in const whole = claim((p) => p.equality?.(s, n));
+packages/ferrovue/src/operators.ts: ConditionalExpression: whole => false in if (whole) return whole;
 
-# expr.ts, `expr` (`==` and `===`): every plugin with `values` hooks (CSS modules, dates, the
-# router) defines `describe`.
-packages/ferrovue/src/expr.ts: OptionalChaining: p.values?.describe?.(v.ty) => p.values?.describe(v.ty) in if (!test.strict && claim((p) => p.values?.describe?.(v.ty)) === undefined) {
-packages/ferrovue/src/expr.ts: OptionalChaining: p.values?.describe?.(other) => p.values?.describe(other) in const opaque = nothing(other) ? undefined : claim((p) => p.values?.describe?.(other));
+# operators.ts, `nullTested` and `equalNothing`: every plugin with `values` hooks (CSS modules,
+# dates, the router) defines `describe`.
+packages/ferrovue/src/operators.ts: OptionalChaining: p.values?.describe?.(v.ty) => p.values?.describe(v.ty) in if (!test.strict && claim((p) => p.values?.describe?.(v.ty)) === undefined) {
+packages/ferrovue/src/operators.ts: OptionalChaining: p.values?.describe?.(other) => p.values?.describe(other) in const opaque = nothing(other) ? undefined : claim((p) => p.values?.describe?.(other));
 
-# expr.ts, `expr` (`===`): `meet` gives every mode other than `order`, `join` and `search` the
+# operators.ts, `strictEquality`: `meet` gives every mode other than `order`, `join` and `search` the
 # rule of `equal`, and its message reads `what` alone.
-packages/ferrovue/src/expr.ts: StringLiteral: "equal" => "" in if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
+packages/ferrovue/src/operators.ts: StringLiteral: "equal" => "" in if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
 
-# expr.ts, `expr` (`===`): for a type that is not optional `t.of` is undefined, and
+# operators.ts, `valuesEqual`: for a type that is not optional `t.of` is undefined, and
 # `sameTy(undefined, t)` compares `JSON.stringify(undefined)`, undefined, with a string, so it is
 # false as the original's type test is.
-packages/ferrovue/src/expr.ts: ConditionalExpression: a.ty.k === "opt" => true in } else if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && sc … b.ty)) eq = binary(a.code, "==", `Some(${bare(b.code)})`);
-packages/ferrovue/src/expr.ts: LogicalOperator: b.ty.k === "opt" && sameTy(b.ty.of, a.ty) => b.ty.k === "opt" || sameTy(b.ty.of, a.ty) in else if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) eq = binary(`Some(${bare(a.code)})`, "==", b.code);
-packages/ferrovue/src/expr.ts: ConditionalExpression: b.ty.k === "opt" => true in else if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) eq = binary(`Some(${bare(a.code)})`, "==", b.code);
+packages/ferrovue/src/operators.ts: ConditionalExpression: a.ty.k === "opt" => true in if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && scalar(b.ty)) return binary(a.code, "==", `Some(${bare(b.code)})`);
+packages/ferrovue/src/operators.ts: LogicalOperator: b.ty.k === "opt" && sameTy(b.ty.of, a.ty) => b.ty.k === "opt" || sameTy(b.ty.of, a.ty) in if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) return binary(`Some(${bare(a.code)})`, "==", b.code);
+packages/ferrovue/src/operators.ts: ConditionalExpression: b.ty.k === "opt" => true in if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) return binary(`Some(${bare(a.code)})`, "==", b.code);
 
 # expr.ts, `expr` (`?:`): `expr` raises a `GenError` for every refusal; another exception is a
 # defect of the compiler, and the tests that read each expression as the chosen branch would show

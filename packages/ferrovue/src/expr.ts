@@ -1,15 +1,15 @@
 import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, falsyLiteral, FLOAT, joinAbsence, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, opt, placeOf, refusalAt, rustStr, sameTy, STR, UNDEF, UNION_STR, unionStr, variantPath, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
-import { annotatedStr, enumEquality, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants, refuseOutside } from "./enums.ts";
+import { annotatedStr, enumListVal, exactlyEnum, intoEnum, knownLiteral, overVariants } from "./enums.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, enclosed, logical, negate, not, occurrences, strArg } from "./parens.ts";
+import { atom, bare, enclosed, logical, occurrences, strArg } from "./parens.ts";
 import { collected, heldDates, sliced, spreadLiteral, typedEmpty, untypedEmpty } from "./lists.ts";
-import { asCow, formatted, isTemporary, loneOf, meet, stringsEqual } from "./strings.ts";
-import { arithmetic, asF64, compare, intFromF64, isCast, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
-import { boolOf, checkNullTest, choice, known, literalNarrowing, narrowing, narrowTo, nullTest, pathOf, type Presence, presence, reassociated, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
+import { asCow, formatted, isTemporary, loneOf } from "./strings.ts";
+import { asF64, intFromF64, isCast, isNumber, numberVal } from "./numbers.ts";
+import { boolOf, choice, known, literalNarrowing, narrowing, narrowTo, pathOf, type Presence, presence, reassociated, truthTested, truthy } from "./narrowing.ts";
 import { BUILTINS, builtin, call } from "./calls.ts";
 import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
@@ -19,6 +19,7 @@ import { assignedLet, loopIn, loopStep } from "./statements.ts";
 import { refuseUnresolved } from "./resolve.ts";
 import { fresh, jsHint } from "./names.ts";
 import { memberOf, optionalChain } from "./members.ts";
+import { binaryOf, unaryOf } from "./operators.ts";
 
 const COMPUTE_IN_RUST = "compute the value in Rust and pass it as a prop";
 
@@ -447,53 +448,6 @@ function exprOf(s: Scope, n: N): Val {
   }
   const named = constOf(s, n);
   if (named) return namedVal(named, { comp, node: n });
-  if (n.type === "BinaryExpression" && n.operator === "+") {
-    const a = expr(s, n.left);
-    const b = expr(s, n.right);
-    const joinable = (t: Ty) => t.k === "str" || isNumber(t);
-    if ((a.ty.k === "str" || b.ty.k === "str") && joinable(a.ty) && joinable(b.ty)) {
-      meet(comp, a, b, "`+`", n, "join");
-      const joined = formatted(comp, [a, b], n, "`+`");
-      return joined.variant !== undefined ? annotatedStr(joined, STR) : joined;
-    }
-    if (isNumber(a.ty) && isNumber(b.ty)) return arithmetic(a, "+", b, a.ty.k === "int" && b.ty.k === "int", refusalAt(comp, n));
-    return fail(comp, "FV0608", "`+` joins a string to a string or a number, or adds two numbers", n);
-  }
-  if (n.type === "BinaryExpression" && n.operator === "**") return power(s, n.left, n.right, n, "`**`");
-  if (n.type === "BinaryExpression" && (n.operator === "in" || n.operator === "instanceof")) {
-    const what =
-      n.operator === "in"
-        ? "tests whether an object has a key, which the server does not translate: for a record, write `Object.keys(r).includes(key)`"
-        : "tests an object's prototype, which the server's typed values do not carry: each value's type is known when compiling";
-    return fail(comp, "FV0631", `\`${n.operator}\` ${what}`, n);
-  }
-  if (n.type === "BinaryExpression" && ["&", "|", "^", "<<", ">>", ">>>"].includes(n.operator)) {
-    return fail(comp, "FV0632", `\`${n.operator}\` works on the 32-bit integers JavaScript converts its operands to, which the server does not translate: compute it in Rust and pass it as a prop`, n);
-  }
-  if (n.type === "BinaryExpression" && ["-", "*", "%", "/", "<", ">", "<=", ">="].includes(n.operator)) {
-    const a = expr(s, n.left);
-    const b = expr(s, n.right);
-    const comparison = ["<", ">", "<=", ">="].includes(n.operator);
-    const ordered = comparison ? claim((p) => p.values?.order?.(a, n.operator, b)) : undefined;
-    if (ordered) return ordered;
-    if (comparison && a.ty.k === "str" && b.ty.k === "str") {
-      meet(comp, a, b, `\`${n.operator}\``, n, "order");
-      const is = { "<": "lt", ">": "gt", "<=": "le", ">=": "ge" }[n.operator as "<"];
-      return { code: `fv::strings::js_cmp(${strArg(a.code)}, ${strArg(b.code)}).is_${is}()`, ty: BOOL };
-    }
-    if (!isNumber(a.ty) || !isNumber(b.ty)) {
-      const why =
-        a.ty.k === "opt" || b.ty.k === "opt"
-          ? "narrow an optional one with `v-if` first"
-          : `the other is ${describeTy(isNumber(a.ty) ? b.ty : a.ty)}`;
-      const between = comparison ? "two numbers, two strings or two dates" : "two numbers";
-      return fail(comp, "FV0609", `\`${n.operator}\` is supported between ${between} that are present: ${why}`, n);
-    }
-    if (["<", ">", "<=", ">="].includes(n.operator)) return compare(a, n.operator, b);
-    const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
-    const int = a.ty.k === "int" && b.ty.k === "int" && n.operator !== "/" && (n.operator !== "%" || intDivisor);
-    return arithmetic(a, n.operator, b, int, refusalAt(comp, n));
-  }
   switch (n.type) {
     case "TemplateLiteral": {
       const parts: (string | Val)[] = [];
@@ -643,81 +597,9 @@ function exprOf(s: Scope, n: N): Val {
       return notBooleans(comp, n, a.ty, b.ty);
     }
     case "UnaryExpression":
-      if (n.operator === "!") {
-        return negatedOrder(s, n.argument) ?? boolOf(not(truthy(truthTested(s, n.argument))));
-      }
-      if (n.operator === "-") {
-        const a = expr(s, n.argument);
-        if (isNumber(a.ty) && a.num !== undefined) return numberVal(-a.num, a.ty.k === "int");
-        if (a.ty.k === "int") return intFromF64(negate(asF64(a)), refusalAt(comp, n));
-        if (a.ty.k === "float") return { code: negate(a.code), ty: FLOAT };
-      }
-      if (n.operator === "typeof") return typeofVal(s, n);
-      return fail(comp, "FV0618", `unary \`${n.operator}\``, n);
-    case "BinaryExpression": {
-      const tested = typeofCompare(n);
-      if (tested) return claim((p) => p.equality?.(s, n)) ?? typeofTest(s, tested, n);
-      const test = nullTest(n);
-      if (n.operator !== "===" && n.operator !== "!==" && !test) {
-        const [a, b] = [expr(s, n.left), expr(s, n.right)];
-        claim((p) => p.values?.refuseEquality?.(s, a, b, n));
-      }
-      if (n.operator !== "===" && n.operator !== "!==" && !test) fail(comp, "FV0619", `\`${n.operator}\`: \`==\` and \`!=\` compare with \`null\` or \`undefined\` only; use \`===\``, n);
-      const whole = claim((p) => p.equality?.(s, n));
-      if (whole) return whole;
-      if (test) {
-        const v = expr(s, test.target);
-        const none = absence(v.ty);
-        if (v.ty.k === "opt") {
-          checkNullTest(s, test, v);
-          const is = `${atom(v.code)}.is_none()`;
-          return boolOf(test.is ? is : not(is));
-        }
-        if (none !== null) {
-          const konst = (!test.strict || none === test.literal) === test.is;
-          return { code: String(konst), ty: BOOL, konst };
-        }
-        if (!test.strict && claim((p) => p.values?.describe?.(v.ty)) === undefined) {
-          return { code: String(!test.is), ty: BOOL, konst: !test.is };
-        }
-        if (!test.strict) fail(comp, "FV0620", `\`${n.operator}\` of ${describeTy(v.ty)}: compare with \`${test.is ? "===" : "!=="} undefined\``, n);
-      }
-      const a = expr(s, n.left);
-      const b = expr(s, n.right);
-      let eq: string;
-      const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
-      const strish = (t: Ty) => t.k === "str" || (t.k === "opt" && t.of.k === "str");
-      if (strish(a.ty) && strish(b.ty)) meet(comp, a, b, `\`${n.operator}\``, n, "equal");
-      claim((p) => p.values?.refuseEquality?.(s, a, b, n));
-      refuseOutside(comp, a, b, n);
-      const own = claim((p) => p.values?.equals?.(a, b));
-      const byEnum = knownLiteral(a) !== undefined && knownLiteral(b) !== undefined ? null : enumEquality(comp, a, b);
-      if (own !== undefined) eq = own;
-      else if (byEnum !== null) eq = byEnum;
-      else if ((nothing(b.ty) && a.ty.k === "opt") || (nothing(a.ty) && b.ty.k === "opt")) {
-        const [v, literal] = a.ty.k === "opt" ? [a, b] : [b, a];
-        checkNullTest(s, { target: n, literal: literal.ty.k === "null" ? "null" : "undefined", strict: true, is: n.operator === "===" }, v);
-        eq = `${atom(v.code)}.is_none()`;
-      } else if (nothing(a.ty) || nothing(b.ty)) {
-        const other = nothing(a.ty) ? b.ty : a.ty;
-        const opaque = nothing(other) ? undefined : claim((p) => p.values?.describe?.(other));
-        if (opaque !== undefined) fail(comp, "FV0621", `\`${n.operator}\` between ${opaque} and ${describeTy(nothing(a.ty) ? a.ty : b.ty)}`, n);
-        const same = a.ty.k === b.ty.k;
-        const konst = n.operator === "===" ? same : !same;
-        return { code: String(konst), ty: BOOL, konst };
-      }
-      else if (isNumber(a.ty) && isNumber(b.ty)) eq = compare(a, "==", b).code;
-      else if (a.ty.k === "str" && b.ty.k === "str") eq = stringsEqual(a, b);
-      else if (a.ty.k === "bool" && b.ty.k === "bool" && (a.konst !== undefined || b.konst !== undefined)) {
-        const [k, other] = a.konst !== undefined ? [a.konst, b.code] : [b.konst!, a.code];
-        eq = k ? other : not(other);
-      } else if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) {
-        eq = binary(a.code, "==", b.code);
-      } else if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && scalar(b.ty)) eq = binary(a.code, "==", `Some(${bare(b.code)})`);
-      else if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) eq = binary(`Some(${bare(a.code)})`, "==", b.code);
-      else return fail(comp, "FV0622", "`===` between these types", n);
-      return boolOf(n.operator === "===" ? eq : not(eq));
-    }
+      return unaryOf(s, n);
+    case "BinaryExpression":
+      return binaryOf(s, n);
     case "ConditionalExpression": {
       if (splits(s, n.test)) return expr(s, split(n));
       const t = truthTested(s, n.test);
