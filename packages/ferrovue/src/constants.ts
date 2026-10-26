@@ -76,18 +76,21 @@ function typedAs(decl: N): string | null {
   return null;
 }
 
-function valueType(t: N): N | null {
+function valueType(home: Component, t: N, seen: Set<string> = new Set()): N | null {
   if (t?.type === "TSMappedType") return t.typeAnnotation ?? null;
   if (t?.type !== "TSTypeReference" || t.typeName.type !== "Identifier") return null;
   const params: N[] = t.typeParameters?.params ?? [];
-  if (["Readonly", "Partial", "Required"].includes(t.typeName.name) && params.length === 1) return valueType(params[0]);
-  return t.typeName.name === "Record" && params.length === 2 ? params[1] : null;
+  const name: string = t.typeName.name;
+  if (["Readonly", "Partial", "Required"].includes(name) && params.length === 1) return valueType(home, params[0], seen);
+  if (name === "Record") return params.length === 2 ? params[1] : null;
+  const alias = params.length === 0 && !seen.has(name) ? home.aliases.get(name) : undefined;
+  return alias === undefined ? null : valueType(home, alias, new Set(seen).add(name));
 }
 
 function typeValues(home: Component, decl: N, c: Const & { k: "object" }): void {
   const names: N[] = [decl.id.typeAnnotation?.typeAnnotation];
   for (let n = decl.init; n?.type === "TSAsExpression" || n?.type === "TSSatisfiesExpression"; n = n.expression) names.push(n.typeAnnotation);
-  const value = names.map(valueType).find((t) => t !== null);
+  const value = names.map((t) => valueType(home, t)).find((t) => t !== null);
   if (!value) return;
   let def: EnumDef | undefined;
   try {

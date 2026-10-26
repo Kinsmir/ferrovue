@@ -8229,10 +8229,22 @@ ${setup}
       ["a mapped type", 'export const T: { [K in Tone]: Tone } = { calm: "loud", loud: "nope", quiet: "calm" };'],
       ["`as`", 'export const T = { calm: "loud", loud: "nope", quiet: "calm" } as Record<Tone, Tone>;'],
       ["`satisfies`", 'export const T = { calm: "loud", loud: "nope", quiet: "calm" } satisfies Record<Tone, Tone>;'],
+      ["a `type` alias", 'type Table = Partial<Record<Tone, Tone>>;\nexport const T: Table = { calm: "loud", loud: "nope", quiet: "calm" };'],
     ])("refuses a value outside the union a type through %s gives, at the value", (_, table) => {
       const e = failure(() => reading(table));
       expect(e.code).toBe("FV0228");
-      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 2, column: table.indexOf('"nope"') + 1 });
+      const last = table.split("\n").at(-1)!;
+      expect(e.at).toMatchObject({ file: "types/tone.ts", line: 1 + table.split("\n").length, column: last.indexOf('"nope"') + 1 });
+    });
+
+    it.each([
+      ["`Record`", "const OWN: Record<Tone, Tone> = { calm: \"loud\", loud: \"nope\", quiet: \"calm\" };"],
+      ["a `type` alias of its own", "type Own = Record<Tone, Tone>;\nconst OWN: Own = { calm: \"loud\", loud: \"nope\", quiet: \"calm\" };"],
+    ])("refuses a value outside an imported union a component's own table typed through %s gives, at the value", (_, setup) => {
+      const e = failure(() => reading('export const T = { calm: "loud" };', "<Badge :tone=\"OWN[tone]\" />", setup));
+      expect(e.code).toBe("FV0228");
+      const last = setup.split("\n").at(-1)!;
+      expect(e.at).toMatchObject({ file: "components/X.vue", line: 4 + setup.split("\n").length, column: last.indexOf('"nope"') + 1 });
     });
 
     it("refuses a value outside the union under a computed key, at the table", () => {

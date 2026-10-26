@@ -15,6 +15,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
+- FV0228 checks a table typed through a `type` alias of a `Record` of a union (`const T: Table = { … }`).
+  0.12.0 refused a value outside the union only where a child's prop read it: [Lookup tables](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#lookup-tables).
 - FV0419 points at a static `is` attribute that names no HTML element, and FV0506 at an element that renders a component by `is="vue:…"`.
   0.12.0 gave both no line: [`error_codes`](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html).
 - A `?:` whose test is known when compiling compares as the type of both branches, and an array literal holds integers beside `Float`s.

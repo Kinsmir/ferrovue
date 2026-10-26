@@ -879,7 +879,8 @@ let next = match tone { Tone::Calm => Tone::Loud, Tone::Loud => Tone::Quiet, Ton
 A table typed with a `type` alias or an `enum` for its values holds the alias's enum, written once
 to `types.rs` for a `.ts` file, so `NEXT[tone] === "loud"` and another table read by it,
 `LABEL[NEXT[tone]]`, compare and match its variants too. A value outside that union is refused
-([FV0228](crate::guide::error_codes#fv0228)), as TypeScript refuses it.
+([FV0228](crate::guide::error_codes#fv0228)), as TypeScript refuses it, whether the table is typed
+with `Record` directly or through a `type` alias of its own (`type Next = Record<Tone, Tone>`).
 
 Each member reads the value the object holds for it: a string, a number, a boolean, `null`, a list
 of them, or an object read on by field (`THEME[tone].fg`, `THEME[tone].weight`). The values of
