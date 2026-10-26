@@ -8,7 +8,7 @@ import { relativePath } from "./paths.ts";
 import { type Component, type Field, type N, type Struct, absence, blankComponent, distinctFields, fail, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx, readSource } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, reachType, readTypeFile, refuseDates, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, inlineTypes, ONE_NOTHING, reachLocal, reachType, readTypeFile, refuseDates, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { enumField } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
@@ -219,7 +219,16 @@ function refuseImportedMacroType(comp: Component, descriptor: SFCDescriptor): vo
 
 function propsFields(comp: Component, t: N): Field[] {
   if (t.type === "TSParenthesizedType") return propsFields(comp, t.typeAnnotation);
-  if (t.type === "TSTypeLiteral") return structOf(comp, "Props", t.members, comp.structs).fields;
+  if (t.type === "TSTypeLiteral") {
+    const placed: { name: string; members: N[]; node: N }[] = [];
+    inlineTypes(comp.name, t.members, placed, comp.aliases);
+    for (const d of placed) {
+      if (comp.structs.has(d.name) && comp.typeDecls.get(d.name)?.node !== d.node) fail(comp, "FV0310", `the object type in place is named \`${d.name}\`, which the component declares too: declare it as an interface of another name`, d.node);
+      comp.typeDecls.set(d.name, { members: d.members, node: d.node });
+      if (!comp.structs.has(d.name)) comp.structs.set(d.name, { name: d.name, fields: [] });
+    }
+    return structOf(comp, "Props", t.members, comp.structs).fields;
+  }
   if (t.type === "TSIntersectionType") return distinctProps(comp, t.types.flatMap((part: N) => propsFields(comp, part)), t);
   const name: string | undefined = t.type === "TSTypeReference" && t.typeName.type === "Identifier" && !t.typeParameters ? t.typeName.name : undefined;
   if (name !== undefined && comp.structs.has(name)) {

@@ -419,8 +419,9 @@ describe("items read by `[…]`", () => {
     });
   }
 
-  it("refuses `[…]` of an object", () => {
-    expect(refusals("interface C { a: string }\ndefineProps<{ c: C }>();", "<p>{{ c['a'] }}</p>")).toEqual(["FV0612 computed member access of an object: `[…]` reads an item of a list, by an integer index"]);
+  it("reads a field of an object by a literal key, and refuses a key of another kind", () => {
+    expect(render("interface C { a: string }\ndefineProps<{ c: C; k: string }>();", "<p>{{ c['a'] }}</p>")).toMatch(like("fv::core::escape_into(out, &props.c.a);"));
+    expect(refusals("interface C { a: string }\ndefineProps<{ c: C; k: string }>();", "<p>{{ c[k] }}</p>")).toEqual(["FV0612 computed member access of an object: `[…]` reads an item of a list, by an integer index"]);
   });
 });
 

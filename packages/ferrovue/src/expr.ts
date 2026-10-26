@@ -553,6 +553,30 @@ function byOption(s: Scope, n: N, v: Val, narrowed: NonNullable<ReturnType<typeo
   return { ...v, asEnum: { of: v.code, into, home: from, over } };
 }
 
+function fieldByKey(s: Scope, base: Val, key: N, n: N): Val | null {
+  const k = expr(s, key);
+  const literal = knownLiteral(k);
+  if (literal !== undefined) {
+    ctx.trying++;
+    try {
+      return fieldVal(s.comp, base.code, base.ty, literal, n);
+    } catch (e) {
+      if (e instanceof GenError) return null;
+      throw e;
+    } finally {
+      ctx.trying--;
+    }
+  }
+  const def = k.variant !== undefined && k.ty.k === "str" ? enumOf(k.ty) : undefined;
+  if (def === undefined) return null;
+  const kept = (literalsOf(k.ty) ?? def.literals) as readonly string[];
+  const fields = kept.map((l) => fieldVal(s.comp, base.code, base.ty, l, n));
+  if (!fields.every((f) => sameTy(f.ty, fields[0]!.ty) && !f.owned && f.iter === undefined)) return null;
+  const arm = (f: Val): string => (f.ty.k === "str" && f.code.startsWith("&*") ? `std::ops::Deref::deref(&${f.code.slice(2)})` : bare(f.code));
+  const code = overVariants(s.comp, k, kept, (l) => arm(fields[kept.indexOf(l)]!)) ?? `match ${k.variant} { ${kept.map((l, i) => `${variantPath(s.comp, def, l)} => ${arm(fields[i]!)}`).join(", ")} }`;
+  return { code, ty: fields[0]!.ty };
+}
+
 function pickedBy(v: Val, pick: (literal: string) => string | null): string | null {
   const literal = knownLiteral(v);
   if (literal !== undefined) return pick(literal);
@@ -703,6 +727,10 @@ function exprOf(s: Scope, n: N): Val {
             fail(comp, "FV0612", "`[…]` reads a part of a `[key, value]` pair by a literal index: `pair[0]` is its key and `pair[1]` its value", n);
           }
           return entryPart(base, n.property.value);
+        }
+        if (base.ty.k === "struct") {
+          const byKey = fieldByKey(s, base, n.property, n);
+          if (byKey !== null) return byKey;
         }
         return fail(comp, "FV0612", `computed member access of ${describeTy(base.ty)}: \`[…]\` reads an item of a list, by an integer index`, n);
       }

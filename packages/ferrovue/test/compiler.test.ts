@@ -2625,6 +2625,41 @@ defineProps<{ cats: Cat[] }>();
     });
   });
 
+  describe("types written in place", () => {
+    const of = (props: string, template = "<p>x</p>", before = ""): string => `<script setup lang="ts">\n${before}defineProps<${props}>();\n</script>\n<template>${template}</template>`;
+    const caught = (source: string): GenError => {
+      try {
+        compile(island(source));
+      } catch (e) {
+        if (e instanceof GenError) return e;
+        throw e;
+      }
+      throw new Error("compiled without an error");
+    };
+
+    it("names an object type in place after the type and the field that hold it, alone, in a list and optional", () => {
+      const out = compile(island(of("{ owner: { name: string; tags?: { t: string }[] }; rows: { k: string }[]; box?: { on: boolean } }", "<p>{{ owner.name }}{{ rows.length }}{{ box?.on }}</p>"))).get("x.rs")!;
+      for (const decl of ["pub struct XOwner<'a> {", "pub struct XOwnerTags<'a> {", "pub struct XRows<'a> {", "pub struct XBox {", "pub owner: XOwner<'a>,", "pub rows: Vec<XRows<'a>>,", "pub r#box: Option<XBox>,"]) expect(out).toContain(decl);
+    });
+
+    it("reads a mapped type and a `Record` over a union of names as a struct, by name and by a value of the union", () => {
+      const out = compile(island(of("{ side: Side; widths: { [K in Side]: number }; labels: Record<Side, string> }", "<p>{{ widths.left }}{{ labels[side] }}</p>", 'type Side = "left" | "right";\n'))).get("x.rs")!;
+      expect(out).toContain("pub widths: XWidths,");
+      expect(out).toContain("match props.side { Side::Left => std::ops::Deref::deref(&props.labels.left), Side::Right => std::ops::Deref::deref(&props.labels.right) }");
+    });
+
+    it("reads an indexed type as the field it names", () => {
+      expect(compile(island(of('{ size: Card["size"] }', "<p>{{ size }}</p>", 'interface Card { size: "sm" | "lg" }\n'))).get("x.rs")).toContain("pub size: CardSize,");
+    });
+
+    it("refuses an object type in place it cannot name, a mapped type over literals that are not names, and a tuple", () => {
+      expect(caught(of("{ pick: { a: string } | { b: string } }"))).toMatchObject({ code: "FV0310" });
+      expect(caught(of('{ m: { [K in "a-b" | "c"]: string } }'))).toMatchObject({ code: "FV0316" });
+      expect(caught(of("{ owner: { name: string } }", "<p>x</p>", "interface XOwner { id: number }\n"))).toMatchObject({ code: "FV0310", message: expect.stringContaining("named `XOwner`") });
+      expect(caught(of("{ pair: [string, number] }"))).toMatchObject({ code: "FV0316" });
+    });
+  });
+
   describe("form fields at the root", () => {
     const field = (template: string, script = "const text = defineModel<string>({ required: true });\nconst on = defineModel<boolean>(\"on\", { required: true });"): string => `<script setup lang="ts">\n${script}\n</script>\n<template>${template}</template>`;
     const parent = (attrs: string): string => `<script setup lang="ts">\nimport F from "./F.vue";\n</script>\n<template><F model-value="a" :on="true" ${attrs} /></template>`;

@@ -249,7 +249,7 @@ export const ERRORS: {
     };
     readonly FV0310: {
         readonly title: "Object type written in place";
-        readonly detail: "Each object in a prop's type becomes a named Rust struct, and an object type written in place (`user: { name: string }`) has no name to give it. Declare it as an interface (`interface User { name: string }`) and name that, or write `{ [key: string]: T }` for a dictionary.";
+        readonly detail: "Each object in a prop's type becomes a named Rust struct. An object type written in place as a field's type, alone, in a list, optional or as a `Record`'s value (`user: { name: string }`), is named after the type and the field that hold it (`CardUser`); one written elsewhere, such as in a union of two objects or as a type argument, has no name to give it, and neither has one whose name the component already gives another type. Declare it as an interface (`interface User { name: string }`) and name that, or write `{ [key: string]: T }` for a dictionary.";
     };
     readonly FV0311: {
         readonly title: "Type that may be both `null` and `undefined`";
@@ -261,7 +261,7 @@ export const ERRORS: {
     };
     readonly FV0313: {
         readonly title: "`Record` not keyed by `string`";
-        readonly detail: "A `Record` is a `ferrovue::props::Record` in Rust, keyed by strings, so `Record<number, T>` and a `Record` keyed by a union of literals are refused. Key it by `string`, or declare an interface with the fields.";
+        readonly detail: "A `Record` keyed by `string` is a `ferrovue::props::Record` in Rust. One keyed by a union of string literals that are names (`Record<Side, string>`), as a field's type, is a struct with a field for each, as a mapped type `{ [K in Side]: string }` is. `Record<number, T>` and a union whose literals are not names are refused. Key it by `string`, or declare an interface with the fields.";
     };
     readonly FV0314: {
         readonly title: "Type alias that refers to itself";
@@ -273,7 +273,7 @@ export const ERRORS: {
     };
     readonly FV0316: {
         readonly title: "Unsupported type";
-        readonly detail: "A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. Write the type as one of those: a tuple as an interface with a field for each part, or a list of such objects. See [`props`](crate::guide::props).";
+        readonly detail: "A prop's type is translated from strings, numbers, booleans, lists, `Record`s, `Date`, literals, unions of one type with `null` or `undefined`, and named types. An indexed type reads a field of an interface by its name (`Card[\"size\"]`), and a mapped type over a union of string literals that are names, written as a field's type, is a struct with a field for each. Other TypeScript types, such as tuples, intersections, function types, `any`, `unknown` and `keyof`, have no Rust type; the message names the one met. A tuple's items reach the browser as an array, which a Rust struct would write as an object. Write the type as one of those: a tuple as an interface with a field for each part, or a list of such objects. See [`props`](crate::guide::props).";
     };
     readonly FV0317: {
         readonly title: "`Record` of unsupported values";

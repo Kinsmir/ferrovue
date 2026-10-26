@@ -138,7 +138,7 @@ export function enumField(comp: Component, owner: string, field: string, node: N
 function enumScalar(comp: Component, owner: string, field: string, node: N, ty: Ty): Ty {
   const inner = ty.k === "opt" ? ty.of : ty;
   const literals = literalsOf(inner);
-  if (inner.k !== "str" || literals === undefined || literals.length < 2) return ty;
+  if (inner.k !== "str" || literals === undefined || literals.length < 2 || enumOf(inner) !== undefined) return ty;
   const hint = HINTS.get(inner) ?? { name: `${pascal(owner)}${pascal(field)}`, module: comp.module, home: comp, node, key: node, what: field, ...membersOf(inner, literals as readonly string[]) };
   const made = enumTy(defineEnum(hint, literals as readonly string[]));
   return ty.k === "opt" ? { ...ty, of: made } : made;

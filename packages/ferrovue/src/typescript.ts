@@ -62,7 +62,16 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return listOf(comp, tyOfTs(comp, t.elementType, structs, seen), t);
     case "TSParenthesizedType":
       return tyOfTs(comp, t.typeAnnotation, structs, seen);
+    case "TSIndexedAccessType":
+      return indexed(comp, t, structs, seen);
+    case "TSMappedType": {
+      const placed = placedStruct(comp, t, structs);
+      if (placed !== null) return placed;
+      break;
+    }
     case "TSTypeLiteral": {
+      const placed = placedStruct(comp, t, structs);
+      if (placed !== null) return placed;
       const [sig] = t.members;
       const key = sig?.parameters?.[0]?.typeAnnotation?.typeAnnotation;
       if (t.members.length === 1 && sig.type === "TSIndexSignature" && key?.type === "TSStringKeyword" && sig.typeAnnotation) {
@@ -105,7 +114,7 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       }
       if (name === "Record" && t.typeParameters?.params?.length === 2) {
         const [key, value] = t.typeParameters.params;
-        if (key.type !== "TSStringKeyword") fail(comp, "FV0313", "a `Record` is keyed by `string`", key);
+        if (key.type !== "TSStringKeyword") return placedStruct(comp, t, structs) ?? fail(comp, "FV0313", "a `Record` is keyed by `string`, or by a union of string literals that are names, written as a field's type", key);
         return recordOf(comp, value, structs, seen);
       }
       if (structs.has(name)) {
@@ -170,8 +179,103 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
       }
     }
   }
+  const written = decls.slice();
+  for (const d of written) inlineTypes(d.name, d.members, decls, aliases);
   for (const d of decls) structs.set(d.name, { name: d.name, fields: [] });
   return decls;
+}
+
+const INLINE = new WeakMap<object, string>();
+
+function capital(name: string): string {
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function keyLiterals(t: N, aliases: Map<string, N>, seen: Set<string> = new Set()): string[] | null {
+  if (t?.type === "TSLiteralType" && t.literal.type === "StringLiteral") return [t.literal.value];
+  if (t?.type === "TSParenthesizedType") return keyLiterals(t.typeAnnotation, aliases, seen);
+  if (t?.type === "TSUnionType") {
+    const all = t.types.map((u: N) => keyLiterals(u, aliases, seen));
+    return all.some((a: string[] | null) => a === null) ? null : [...new Set(all.flat() as string[])];
+  }
+  const name: string | undefined = t?.type === "TSTypeReference" && t.typeName.type === "Identifier" ? t.typeName.name : undefined;
+  if (name === undefined || seen.has(name) || !aliases.has(name)) return null;
+  return keyLiterals(aliases.get(name), aliases, new Set(seen).add(name));
+}
+
+function keyedLiteral(t: N, aliases: Map<string, N>): N | null {
+  const mapped = t?.type === "TSMappedType" && !t.nameType ? { key: t.typeParameter?.constraint, value: t.typeAnnotation, optional: t.optional === true || t.optional === "+" } : null;
+  const record = t?.type === "TSTypeReference" && t.typeName.type === "Identifier" && t.typeName.name === "Record" && t.typeParameters?.params?.length === 2 && t.typeParameters.params[0].type !== "TSStringKeyword" ? { key: t.typeParameters.params[0], value: t.typeParameters.params[1], optional: false } : null;
+  const keyed = mapped ?? record;
+  const keys = keyed?.value ? keyLiterals(keyed.key, aliases) : null;
+  if (keys === null || !keys.every((k) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(k))) return null;
+  const at = { loc: t.loc, start: t.start, end: t.end, __fv: t.__fv };
+  return { type: "TSTypeLiteral", ...at, members: keys.map((k) => ({ type: "TSPropertySignature", ...at, key: { type: "Identifier", name: k, ...at }, computed: false, optional: keyed!.optional, typeAnnotation: { type: "TSTypeAnnotation", ...at, typeAnnotation: keyed!.value } })) };
+}
+
+function placedLiteral(t: N, aliases: Map<string, N>): N | null {
+  switch (t?.type) {
+    case "TSTypeLiteral":
+      return t.members.some((m: N) => m.type === "TSIndexSignature") ? null : t;
+    case "TSMappedType":
+      return keyedLiteral(t, aliases) === null ? null : t;
+    case "TSArrayType":
+      return placedLiteral(t.elementType, aliases);
+    case "TSParenthesizedType":
+    case "TSTypeOperator":
+      return placedLiteral(t.typeAnnotation, aliases);
+    case "TSUnionType": {
+      const parts = t.types.filter((u: N) => u.type !== "TSUndefinedKeyword" && u.type !== "TSNullKeyword" && !(u.type === "TSLiteralType" && u.literal.type === "NullLiteral"));
+      return parts.length === 1 ? placedLiteral(parts[0], aliases) : null;
+    }
+    case "TSTypeReference": {
+      const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
+      const params: N[] = t.typeParameters?.params ?? [];
+      if ((name === "Array" || name === "ReadonlyArray") && params.length === 1) return placedLiteral(params[0], aliases);
+      if (name === "Record" && params.length === 2) return keyedLiteral(t, aliases) === null ? placedLiteral(params[1], aliases) : t;
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Name each object type written in place among the fields of \`owner\` after the field that
+ * holds it, and add its declaration to \`out\`. */
+export function inlineTypes(owner: string, members: N[], out: { name: string; members: N[]; node: N }[], aliases: Map<string, N>): void {
+  for (const m of members) {
+    if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier" || !m.typeAnnotation) continue;
+    const placed = placedLiteral(m.typeAnnotation.typeAnnotation, aliases);
+    if (placed === null || INLINE.has(placed)) continue;
+    const literal = placed.type === "TSTypeLiteral" ? placed : keyedLiteral(placed, aliases)!;
+    const name = `${owner}${capital(m.key.name)}`;
+    INLINE.set(placed, name);
+    out.push({ name, members: literal.members, node: placed });
+    inlineTypes(name, literal.members, out, aliases);
+  }
+}
+
+function placedStruct(comp: Component, t: N, structs: Map<string, Struct>): Ty | null {
+  const name = INLINE.get(t);
+  if (name === undefined) return null;
+  if (structs === ctx.typeStructs) {
+    reachType(name);
+    return { k: "struct", name };
+  }
+  if (structs !== comp.structs || !comp.typeDecls.has(name)) return null;
+  reachLocal(comp, name);
+  return { k: "struct", name };
+}
+
+function indexed(comp: Component, t: N, structs: Map<string, Struct>, seen: Set<string>): Ty {
+  const index = t.indexType;
+  const key = index?.type === "TSLiteralType" && index.literal.type === "StringLiteral" ? (index.literal.value as string) : null;
+  const object = tyOfTs(comp, t.objectType, structs, seen);
+  const st = key === null || object.k !== "struct" ? undefined : lookupStruct(comp, object).st;
+  const field = st?.fields.find((f) => f.js === key);
+  if (field === undefined) {
+    return fail(comp, "FV0316", `${nodeName(t)} is not supported as a prop type`, t, "an indexed type reads a field of an interface by its name, as `Card[\"size\"]`");
+  }
+  return field.ty;
 }
 
 export function refusePrelude(comp: Component, d: N): void {

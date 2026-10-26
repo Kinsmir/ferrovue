@@ -18,6 +18,9 @@ a public field per prop, and a struct for every interface or object type alias t
 | `Size[]`, `("sm" \| "md")[]` | `Vec<Size>`, a list of the union's enum | `impl IntoIterator<Item = Size>` |
 | `number[]`, `Row[]`, `(Size \| null)[]`, … | `Vec<i64>`, `Vec<Row<'a>>`, `Vec<Option<Size>>`, … | the `Vec` |
 | `interface Row { … }`, `type Row = { … }` | a struct `Row<'a>` beside `Props`, or in `types.rs` when imported from a `.ts` file | the struct |
+| `owner: { name: string }`, `{ … }[]`, written in place as a field's type | a struct named after the type and the field, `CardOwner<'a>` (for a prop, after the component: `ButtonOwner`) | the struct |
+| `{ [K in Side]: T }`, `Record<Side, T>` with `Side` a union of names, as a field's type | a struct with a field for each member, named as above | the struct |
+| `Card["size"]` | the type of the field it names | as that type |
 | `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::props::Record<'a, T>`](crate::props::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
