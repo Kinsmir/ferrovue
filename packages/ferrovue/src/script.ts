@@ -308,104 +308,151 @@ function scriptImport(s: Setup, st: N): void {
   else moduleImport(s.scope, st, from);
 }
 
-function setupBinding(s: Setup, st: N, d: N): void {
-  const { comp, scope, locals, lets, lazies } = s;
-  const init0 = d.init;
-  if (d.id.type === "ObjectPattern" && definePropsType(init0)) {
-    for (const p of d.id.properties) {
-      if (p.type !== "ObjectProperty" || p.computed) fail(comp, "FV0108", "destructured props are plain names: `...rest` has no Rust type", p);
-      const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
-      const local = p.value.type === "AssignmentPattern" ? p.value.left : p.value;
-      if (local.type !== "Identifier") fail(comp, "FV0109", "destructured props are plain names", p);
-      scope.setup.set(local.name, fieldVal(comp, "props", { k: "struct", name: "Props" }, key, p));
-    }
-    return;
+function destructuredProps(comp: Component, scope: Scope, pattern: N): void {
+  for (const p of pattern.properties) {
+    if (p.type !== "ObjectProperty" || p.computed) fail(comp, "FV0108", "destructured props are plain names: `...rest` has no Rust type", p);
+    const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
+    const local = p.value.type === "AssignmentPattern" ? p.value.left : p.value;
+    if (local.type !== "Identifier") fail(comp, "FV0109", "destructured props are plain names", p);
+    scope.setup.set(local.name, fieldVal(comp, "props", { k: "struct", name: "Props" }, key, p));
   }
+}
+
+function asyncBinding(s: Setup, d: N): boolean {
   const loaded = d.id.type === "Identifier" ? s.asyncs.get(d.id.name) : undefined;
-  if (loaded !== undefined) {
-    scope.children.set(d.id.name, loaded);
-    scope.loadedLater.add(d.id.name);
-    return;
+  if (loaded === undefined) return false;
+  s.scope.children.set(d.id.name, loaded);
+  s.scope.loadedLater.add(d.id.name);
+  return true;
+}
+
+function constantBinding(s: Setup, st: N, d: N, local: string): boolean {
+  const objectDecl = s.locals.get(local);
+  if (st.kind !== "const" || objectDecl === undefined || objectDecl.node !== d) return false;
+  const made = unwrapped(d.init);
+  if (made?.type === "ObjectExpression") {
+    if ((d.id.typeAnnotation || statedTy(d.init)) && !constant(objectDecl)) return false;
+    evaluable(s.scope, local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
+    return true;
   }
-  if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d, lets))) return;
-  if (d.id.type !== "Identifier") {
-    for (const name of patternNames(d.id)) scope.clientOnly.set(name, "it is destructured from a value the server does not have");
-    return;
+  if (made?.type !== "NewExpression" || made.callee.type !== "Identifier" || made.callee.name !== "Map" || s.locals.has("Map")) return false;
+  evaluable(s.scope, local, objectDecl, "it is a `Map` the compiler does not evaluate");
+  return true;
+}
+
+function calls(init: N, callee: string | null): boolean {
+  return callee !== null && init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === callee;
+}
+
+function attrsOrSlotsBinding(s: Setup, local: string, init: N): boolean {
+  if (calls(init, s.useAttrsName)) {
+    s.scope.attrsBindings.add(local);
+    s.scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
+    return true;
   }
-  const local: string = d.id.name;
-  if (scope.functions.get(local)?.node === init0) return;
-  const objectDecl = locals.get(local);
-  if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && unwrapped(init0)?.type === "ObjectExpression") {
-    if (!(d.id.typeAnnotation || statedTy(init0)) || constant(objectDecl)) {
-      evaluable(scope, local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
-      return;
-    }
-  }
-  const made = unwrapped(init0);
-  if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && made?.type === "NewExpression" && made.callee.type === "Identifier" && made.callee.name === "Map" && !locals.has("Map")) {
-    evaluable(scope, local, objectDecl, "it is a `Map` the compiler does not evaluate");
-    return;
-  }
-  if (s.useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === s.useAttrsName) {
-    scope.attrsBindings.add(local);
-    scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
-    return;
-  }
-  if (s.useSlotsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === s.useSlotsName) {
-    scope.slotsBindings.add(local);
-    return;
-  }
-  const model = comp.models.get(local);
-  if (model !== undefined) {
-    scope.setup.set(local, fieldVal(comp, "props", { k: "struct", name: "Props" }, model, d));
-    scope.refs.add(local);
-    return;
-  }
-  if (!init0) {
-    scope.clientOnly.set(local, "it has no initial value");
-    return;
-  }
-  if (definePropsType(init0)) {
-    scope.propsIdent = local;
-    return;
-  }
-  const isRef = init0.type === "CallExpression" && init0.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init0.callee.name);
-  if (isRef) scope.refs.add(local);
-  const isComputed = isRef && init0.callee.name === "computed";
-  const typed = isRef ? (init0.typeParameters?.params?.[0] ?? refOf(d.id.typeAnnotation?.typeAnnotation)) : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
-  let v: Val;
-  try {
-    const untyped = setupSource(comp, init0);
-    const source = untyped && typed ? typedBy(untyped, typed) : untyped;
-    const empty = emptyRef(comp, init0);
-    if (!empty && !source) {
-      scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
-      return;
-    }
-    v = empty ?? expr(isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: st.start, within: "setup" }, source);
-    const annotation = typed ?? (isComputed ? init0.arguments[0]?.returnType?.typeAnnotation : undefined);
-    if (isRef && annotation && !empty) v = unionRef(comp, local, annotation, v, init0.arguments[0] ?? init0);
-    if (annotation && untyped && (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str") {
-      const kind = isComputed ? "`computed`" : isRef ? `\`${init0.callee.name}\`` : "constant";
-      const want = declaredTy(comp, annotation);
-      if (want !== null) v = declaredUnion(comp, annotatedStr(v, want), want, `\`${local}\`, a ${kind},`, untyped);
-    }
-  } catch (e) {
-    if (!(e instanceof GenError) || e.code === "FV1908") throw e;
-    scope.clientOnly.set(local, e.what);
-    scope.refusedBy.set(local, e);
-    return;
-  }
+  if (!calls(init, s.useSlotsName)) return false;
+  s.scope.slotsBindings.add(local);
+  return true;
+}
+
+function modelBinding(s: Setup, local: string, d: N): boolean {
+  const model = s.comp.models.get(local);
+  if (model === undefined) return false;
+  s.scope.setup.set(local, fieldVal(s.comp, "props", { k: "struct", name: "Props" }, model, d));
+  s.scope.refs.add(local);
+  return true;
+}
+
+interface SetupInit {
+  local: string;
+  init: N;
+  at: number;
+  isRef: boolean;
+  isComputed: boolean;
+  typed: N | undefined;
+}
+
+function setupInit(st: N, d: N): SetupInit {
+  const init = d.init;
+  const isRef = init.type === "CallExpression" && init.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init.callee.name);
+  const isComputed = isRef && init.callee.name === "computed";
+  const typed = isRef ? (init.typeParameters?.params?.[0] ?? refOf(d.id.typeAnnotation?.typeAnnotation)) : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init));
+  return { local: d.id.name, init, at: st.start, isRef, isComputed, typed };
+}
+
+function annotatedUnion(comp: Component, b: SetupInit, annotation: N, v: Val, untyped: N): Val {
+  if ((v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return v;
+  const kind = b.isComputed ? "`computed`" : b.isRef ? `\`${b.init.callee.name}\`` : "constant";
+  const want = declaredTy(comp, annotation);
+  return want === null ? v : declaredUnion(comp, annotatedStr(v, want), want, `\`${b.local}\`, a ${kind},`, untyped);
+}
+
+function setupValue(scope: Scope, b: SetupInit): Val | null {
+  const comp = scope.comp;
+  const untyped = setupSource(comp, b.init);
+  const source = untyped && b.typed ? typedBy(untyped, b.typed) : untyped;
+  const empty = emptyRef(comp, b.init);
+  if (!empty && !source) return null;
+  let v = empty ?? expr(b.isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: b.at, within: "setup" }, source);
+  const annotation = b.typed ?? (b.isComputed ? b.init.arguments[0]?.returnType?.typeAnnotation : undefined);
+  if (b.isRef && annotation && !empty) v = unionRef(comp, b.local, annotation, v, b.init.arguments[0] ?? b.init);
+  if (annotation && untyped) v = annotatedUnion(comp, b, annotation, v, untyped);
+  return v;
+}
+
+function bindValue(s: Setup, local: string, v: Val, isComputed: boolean): void {
   if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
-    scope.setup.set(local, v);
+    s.scope.setup.set(local, v);
     return;
   }
   const name = s.setupNames.get(local)!;
   const { init, read } = bindingOf(v);
-  const lazy = isComputed && mayPanic(lazies, init);
-  lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
-  scope.setup.set(local, read(lazy && !v.owned ? `(*${name})` : name));
-  if (lazy) lazies.set(local, name);
+  const lazy = isComputed && mayPanic(s.lazies, init);
+  s.lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
+  s.scope.setup.set(local, read(lazy && !v.owned ? `(*${name})` : name));
+  if (lazy) s.lazies.set(local, name);
+}
+
+function valueBinding(s: Setup, st: N, d: N): void {
+  const b = setupInit(st, d);
+  if (b.isRef) s.scope.refs.add(b.local);
+  let v: Val | null;
+  try {
+    v = setupValue(s.scope, b);
+  } catch (e) {
+    if (!(e instanceof GenError) || e.code === "FV1908") throw e;
+    s.scope.clientOnly.set(b.local, e.what);
+    s.scope.refusedBy.set(b.local, e);
+    return;
+  }
+  if (v === null) {
+    s.scope.clientOnly.set(b.local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
+    return;
+  }
+  bindValue(s, b.local, v, b.isComputed);
+}
+
+function namedBinding(s: Setup, st: N, d: N): void {
+  const local: string = d.id.name;
+  if (s.scope.functions.get(local)?.node === d.init) return;
+  if (constantBinding(s, st, d, local) || attrsOrSlotsBinding(s, local, d.init) || modelBinding(s, local, d)) return;
+  if (!d.init) {
+    s.scope.clientOnly.set(local, "it has no initial value");
+    return;
+  }
+  if (definePropsType(d.init)) {
+    s.scope.propsIdent = local;
+    return;
+  }
+  valueBinding(s, st, d);
+}
+
+function setupBinding(s: Setup, st: N, d: N): void {
+  if (d.id.type === "ObjectPattern" && definePropsType(d.init)) return destructuredProps(s.comp, s.scope, d.id);
+  if (asyncBinding(s, d)) return;
+  if (ctx.plugins.some((p) => p.scriptBinding?.(s.scope, d, s.lets))) return;
+  if (d.id.type === "Identifier") return namedBinding(s, st, d);
+  for (const name of patternNames(d.id)) s.scope.clientOnly.set(name, "it is destructured from a value the server does not have");
 }
 
 function setupTopLevel(s: Setup, st: N): void {
