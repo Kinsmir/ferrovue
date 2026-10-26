@@ -202,7 +202,9 @@ it better, the compiler uses the enum:
 - `size ?? 'md'` and a default from `withDefaults` are `props.size.unwrap_or(ButtonSize::Md)`, still
   the enum, and a default outside the union is refused
   ([FV0322](crate::guide::error_codes#fv0322)); `v-if="size"` narrows it to the variant;
-- a `computed` that returns the value as it is (`computed(() => props.size)`) holds the enum;
+- a `computed` that returns the value as it is (`computed(() => props.size)`) holds the enum, and
+  so does one annotated as the union (`computed((): Size => (wide ? "lg" : "md"))`) whose body gives
+  members of it;
 - handed to a child's prop of the same union, the enum is copied; to one of another union that holds
   all its members, a `match` maps one to the other; to a `string` prop, it is `as_str()`. A literal of
   the union, a `?:` of members, a lookup table's value and a `computed` typed as the union reach a

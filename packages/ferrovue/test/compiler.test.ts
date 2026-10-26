@@ -6781,14 +6781,16 @@ describe("constant lookups", () => {
     expect(out).toContain('match props.j { K::B => "B", K::A | K::C => "A" }');
   });
 
-  it("reads the union's last member in the `_` arm of a key held as a string, whatever the `??` default and however the values group", () => {
+  it("holds a key annotated as a union as its enum, and matches every variant whatever the `??` default and however the values group", () => {
     const out = render(
       'import { computed } from "vue";\nconst props = defineProps<{ on: boolean; off: boolean }>();\nconst T = { a: "A", b: "B", c: "C" } as const;\nconst U = { a: "A", b: "B", c: "A" } as const;\nconst k = computed((): "a" | "b" | "c" => (props.on ? "b" : "c"));\nconst x = computed((): "a" | "c" | undefined => (props.off ? undefined : props.on ? "a" : "c"));',
       "<i>{{ U[k] }} {{ T[x ?? 'c'] }} {{ T[x ?? 'a'] }}</i>",
     );
-    expect(out).toContain('match s_k { "b" => "B", _ => "A" }');
-    expect(out).toContain('match s_x.unwrap_or("c") { "a" => "A", _ => "C" }');
-    expect(out).toContain('match s_x.unwrap_or("a") { "a" => "A", _ => "C" }');
+    expect(out).toContain("let s_k = if props.on { XK::B } else { XK::C };");
+    expect(out).toContain('match s_k { XK::B => "B", XK::A | XK::C => "A" }');
+    expect(out).toContain('match s_x.unwrap_or(XX::C) { XX::A => "A", XX::C => "C" }');
+    expect(out).toContain('match s_x.unwrap_or(XX::A) { XX::A => "A", XX::C => "C" }');
+    expect(out).not.toContain("_ =>");
   });
 
   it("tests an enum key in a table of booleans and in `v-if` of a table that lacks members, with every arm of a `match` inside it named", () => {
@@ -7685,7 +7687,7 @@ const T = { a: "A", b: "B", c: "C" } as const;
     expect(out).toContain('match s_key { XK::A => "A", XK::B => "B", XK::C => "C" }');
   });
 
-  it("hands a child's prop of a union the enum, a conversion of another enum or of known strings, or the string", () => {
+  it("hands a child's prop of a union the enum, a conversion of another enum, of a `computed` annotated as a union or of known strings, or the string", () => {
     const out = rendered(
       compile(
         island(
@@ -7709,7 +7711,7 @@ defineProps<{ k: "a" | "b" | "c"; o?: "a" | "b" | "c" | "d"; s: string; q: "a" |
     expect(out).toContain("k: match props.k { K::A => super::y::YK::A, K::B => super::y::YK::B, K::C => super::y::YK::C }");
     expect(out).toContain("o: props.m.map(|v| match v { K::A => super::y::YO::A, K::B => super::y::YO::B, K::C => super::y::YO::C })");
     expect(out).toContain("s: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.k))");
-    expect(out).toContain('q: match s_pick { "b" => super::y::YQ::B, _ => super::y::YQ::C }');
+    expect(out).toContain("q: match s_pick { K::A => super::y::YQ::A, K::B => super::y::YQ::B, K::C => super::y::YQ::C }");
     expect(out).toContain("r: if props.on { super::y::YR::A } else { super::y::YR::B }");
     expect(out).toContain("lit: super::y::YLit::C");
   });
@@ -7773,8 +7775,8 @@ defineProps<{ tone?: Tone }>();
 
     it("takes a `computed` annotated as the union, whose body narrows the value to it", () => {
       const out = narrowed(`<Badge :tone="shown" />`, `const shown = computed((): Tone | undefined => (tone.value === "" ? undefined : tone.value));`);
-      expect(out).toContain("let s_shown = if s_tone == XTone::Empty { None } else { Some(fv::props::Union::as_str(s_tone)) };");
-      expect(out).toContain("tone: s_shown.map(|v| match v {");
+      expect(out).toContain(`let s_shown = match s_tone { XTone::Calm => Some(${TONE}::Calm), XTone::Loud => Some(${TONE}::Loud), XTone::Empty => None };`);
+      expect(out).toContain("super::badge::Props { tone: s_shown }");
     });
 
     it("keeps an annotated `computed` the compiler cannot show is the union where the template reads it as a string", () => {

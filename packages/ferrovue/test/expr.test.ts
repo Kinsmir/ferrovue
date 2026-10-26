@@ -1088,6 +1088,21 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like("t: if props.on { props.pick.map(|v| match v { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }) } else { None }"));
   });
 
+  it("holds a `computed` annotated as a union as its enum, so a child's union prop takes it with no `_` arm", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
+    const out = render(
+      'import { computed } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ on: boolean; n: number; tone: Tone }>();\nconst a = computed((): Tone => (props.on ? "loud" : "calm"));\nconst b = computed((): Tone => { if (props.n > 2) return "quiet"; return props.on ? "calm" : "loud"; });\nconst c = computed<Tone>(() => (props.on ? "calm" : props.tone));',
+      '<T :t="a" /><T :t="b" /><T :t="c" />{{ a }}',
+      child,
+    );
+    expect(out).not.toContain("_ =>");
+    expect(out).toMatch(like("let s_a = if props.on { Tone::Loud } else { Tone::Calm };"));
+    expect(out).toMatch(like("let s_b = if props.n as f64 > 2.0 { Tone::Quiet } else { if props.on { Tone::Calm } else { Tone::Loud } };"));
+    expect(out).toMatch(like("let s_c = if props.on { Tone::Calm } else { props.tone };"));
+    expect(out).toMatch(like("t: match s_a { Tone::Calm => super::t::TT::Calm, Tone::Loud => super::t::TT::Loud, Tone::Quiet => super::t::TT::Quiet }"));
+    expect(out).toMatch(like("fv::core::escape_into(out, fv::props::Union::as_str(s_a));"));
+  });
+
   it("reads the left side of `??` on its right with the type its declaration gives", () => {
     const out = render('defineProps<{ o?: "" | "a" }>();\nconst T = { "": "E" };', '<p>{{ o ?? (o !== undefined ? T[o] : "z") }}</p>');
     expect(out).toMatch(like('props.o.map(fv::props::Union::as_str).or(if let Some(fv_o) = props.o { match fv_o { XO::Empty => Some("E"), XO::A => None } } else { Some("z") })'));

@@ -416,6 +416,66 @@ impl ferrovue::props::Union for UnionEnumsPicked {
     }
 }
 
+/// `chosen` in `UnionEnums.vue`: `"a" | "b" | "c"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum UnionEnumsChosen {
+    #[serde(rename = "a")]
+    A,
+    #[serde(rename = "b")]
+    B,
+    #[serde(rename = "c")]
+    C,
+}
+
+impl UnionEnumsChosen {
+    /// Every member, in the order the union declares them.
+    pub const ALL: [UnionEnumsChosen; 3] = [UnionEnumsChosen::A, UnionEnumsChosen::B, UnionEnumsChosen::C];
+
+    /// The string literal this member stands for.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            UnionEnumsChosen::A => "a",
+            UnionEnumsChosen::B => "b",
+            UnionEnumsChosen::C => "c",
+        }
+    }
+}
+
+impl std::fmt::Display for UnionEnumsChosen {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for UnionEnumsChosen {
+    type Err = ferrovue::props::ParseUnionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "a" => Ok(UnionEnumsChosen::A),
+            "b" => Ok(UnionEnumsChosen::B),
+            "c" => Ok(UnionEnumsChosen::C),
+            _ => Err(ferrovue::props::ParseUnionError::new("UnionEnumsChosen", s, &["a", "b", "c"])),
+        }
+    }
+}
+
+impl TryFrom<&str> for UnionEnumsChosen {
+    type Error = ferrovue::props::ParseUnionError;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        s.parse()
+    }
+}
+
+impl ferrovue::props::Union for UnionEnumsChosen {
+    const ALL: &'static [Self] = &UnionEnumsChosen::ALL;
+
+    fn as_str(self) -> &'static str {
+        UnionEnumsChosen::as_str(self)
+    }
+}
+
 /// The props `UnionEnums.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -494,7 +554,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(290 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
-    let s_chosen = if props.level == crate::domain::Level::High { "a" } else { fv::props::Union::as_str(props.mode) };
+    let s_chosen = if props.level == crate::domain::Level::High { UnionEnumsChosen::A } else { match props.mode { UnionEnumsMode::A => UnionEnumsChosen::A, UnionEnumsMode::B => UnionEnumsChosen::B, UnionEnumsMode::C => UnionEnumsChosen::C } };
     out.push_str("<section class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.align), fv::props::Union::as_str(props.mode), props.gap.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
@@ -594,7 +654,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.mode)), wide: Some(match props.align { crate::domain::Align::Left => super::union_child::UnionChildWide::Left, crate::domain::Align::Center => super::union_child::UnionChildWide::Center, crate::domain::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { "a" => super::union_child::UnionChildPick::A, "b" => super::union_child::UnionChildPick::B, _ => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
+    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.mode)), wide: Some(match props.align { crate::domain::Align::Left => super::union_child::UnionChildWide::Left, crate::domain::Align::Center => super::union_child::UnionChildWide::Center, crate::domain::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { UnionEnumsChosen::A => super::union_child::UnionChildPick::A, UnionEnumsChosen::B => super::union_child::UnionChildPick::B, UnionEnumsChosen::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
     for fv_s_ref_2 in props.steps.iter() {
         let fv_s_2 = fv_s_ref_2;

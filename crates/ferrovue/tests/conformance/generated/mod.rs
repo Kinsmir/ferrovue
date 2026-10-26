@@ -227,6 +227,7 @@ pub mod typeof_tests;
 pub mod union_badge;
 pub mod union_child;
 pub mod union_choice_tag;
+pub mod union_computed_held;
 pub mod union_enums;
 pub mod union_folded_ref;
 pub mod union_list;
@@ -1423,6 +1424,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionChoiceTag" => {
             let props: union_choice_tag::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_choice_tag::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionComputedHeld" => {
+            let props: union_computed_held::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_computed_held::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionEnums" => {
             let props: union_enums::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

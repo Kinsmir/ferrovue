@@ -365,8 +365,8 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
           continue;
         }
         v = empty ?? expr(isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: st.start, within: "setup" }, source);
-        if (isRef && !isComputed && typed && !empty) v = unionRef(comp, local, typed, v, init0.arguments[0] ?? init0);
         const annotation = typed ?? (isComputed ? init0.arguments[0]?.returnType?.typeAnnotation : undefined);
+        if (isRef && annotation && !empty) v = unionRef(comp, local, annotation, v, init0.arguments[0] ?? init0);
         if (annotation && untyped && (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str") {
           const kind = isComputed ? "`computed`" : isRef ? `\`${init0.callee.name}\`` : "constant";
           const want = declaredTy(comp, annotation);

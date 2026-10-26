@@ -68,7 +68,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(151 + 8 + 8 + 8 + 8 + props.label.len());
     let s_loud = if props.tone == crate::domain::Shade::Warm { "loud" } else { "quiet" };
-    let s_chosen = props.other.map(fv::props::Union::as_str).unwrap_or(fv::props::Union::as_str(props.tone));
+    let s_chosen = props.other.unwrap_or(props.tone);
     out.push_str("<section class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push('"');
@@ -131,7 +131,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, s_loud);
     out.push_str("</s>");
     super::union_shade::try_render(out, &super::union_shade::Props { tone: props.tone, text: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_shade::try_render(out, &super::union_shade::Props { tone: match s_chosen { "warm" => crate::domain::Shade::Warm, "x-cool" => crate::domain::Shade::XCool, _ => crate::domain::Shade::BQ }, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.tone)) })?;
+    super::union_shade::try_render(out, &super::union_shade::Props { tone: s_chosen, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.tone)) })?;
     super::union_shade::try_render(out, &super::union_shade::Props { tone: props.other.unwrap_or(crate::domain::Shade::Warm), text: std::borrow::Cow::Borrowed("fixed") })?;
     out.push_str("</section>");
     Ok(())
