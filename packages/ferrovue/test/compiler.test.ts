@@ -2589,7 +2589,7 @@ defineProps<{ cats: Cat[] }>();
       expect(compile(cats("", "<component :is=\"tag\" />", "defineProps<{ tag: \"h1\" | \"h2\" }>();")).get("x.rs")).toContain("pub fn render");
     });
 
-    it("refuses props or events of a type imported from another file where the macro reads it, and compiles the forms that declare them", () => {
+    it("reads props of a type imported from a `.ts` file by a relative path, and refuses the forms Vue or the compiler cannot resolve", () => {
       const caught = (project: string): unknown => {
         try {
           compile(project);
@@ -2600,25 +2600,27 @@ defineProps<{ cats: Cat[] }>();
       };
       const lib = "export interface Cat { id: string }\nexport type Pick = { id?: string };\nexport interface Events { (e: \"save\"): void }\n";
       const imported = (declared: string, setup: string) => withFile(cats(`import type { Cat, Pick, Events } from "./lib";\n${declared}`, "<p>x</p>", setup), "lib.ts", lib);
-      const refusedAt = [
-        ["", "defineProps<Cat>();", 5, 13, "Cat"],
-        ["", 'withDefaults(defineProps<Pick>(), { id: "a" });', 5, 26, "Pick"],
-        ["", "defineProps<Cat & { n: number }>();", 5, 13, "Cat"],
-        ["interface Props extends Cat { n: number }", "defineProps<Props>();", 4, 25, "Cat"],
-        ["type Props = Partial<Cat>;", "defineProps<Props>();", 4, 22, "Cat"],
-        ["", "defineProps<{ n: number }>();\ndefineEmits<Events>();", 6, 13, "Events"],
-      ] as const;
-      for (const [declared, setup, line, column, name] of refusedAt) {
-        const e = caught(imported(declared, setup));
-        expect(e, setup).toBeInstanceOf(GenError);
-        expect(e, setup).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line, column }, message: expect.stringContaining(`\`${name}\`, imported from \`./lib\``) });
-      }
-      for (const [declared, setup] of [
-        ["", "defineProps<{ cat: Cat; pick?: Pick }>();"],
-        ["interface Props { cat: Cat }", "defineProps<Props>();"],
-        ["", "const cat = defineModel<Cat>({ required: true });"],
-      ]) {
-        expect(compile(imported(declared!, setup!)).get("x.rs"), setup).toContain("pub fn render");
+      const aliased = withFile(cats('import type { Cat } from "@/lib";', "<p>x</p>", "defineProps<Cat>();"), "lib.ts", lib);
+      expect(caught(aliased)).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line: 4, column: 13 }, message: expect.stringContaining("`Cat`, imported from `@/lib`, which Vue's compiler resolves only by a relative path") });
+      expect(caught(imported("type Props = Partial<Cat>;", "defineProps<Props>();"))).toMatchObject({ code: "FV0304", at: { file: "components/X.vue", line: 5, column: 13 } });
+      const fromVue = island('<script setup lang="ts">\nimport type { Props } from "./Y.vue";\ndefineProps<Props>();\n</script>\n<template><p>{{ id }}</p></template>', {
+        Y: '<script setup lang="ts">\nexport interface Props { id: string }\ndefineProps<Props>();\n</script>\n<template><b>{{ id }}</b></template>',
+      });
+      expect(caught(fromVue)).toMatchObject({ code: "FV0327", at: { file: "components/X.vue", line: 3, column: 13 }, message: expect.stringContaining("imported from `Y.vue`") });
+      expect(caught(imported("", "defineProps<Cat & { id: string }>();"))).toMatchObject({ code: "FV0304", message: expect.stringContaining("`id` is declared twice") });
+      for (const [declared, setup, fields] of [
+        ["", "defineProps<Cat>();", ["pub id: Cow<'a, str>,"]],
+        ["", 'withDefaults(defineProps<Pick>(), { id: "a" });', ["pub id: Option<Cow<'a, str>>,"]],
+        ["", "defineProps<Cat & { n: number }>();", ["pub id: Cow<'a, str>,", "pub n: i64,"]],
+        ["interface Props extends Cat { n: number }", "defineProps<Props>();", ["pub n: i64,", "pub id: Cow<'a, str>,"]],
+        ["", "defineProps<{ n: number }>();\ndefineEmits<Events>();", ["pub n: i64,"]],
+        ["", "defineProps<{ cat: Cat; pick?: Pick }>();", ["pub cat: super::types::Cat<'a>,"]],
+        ["interface Props { cat: Cat }", "defineProps<Props>();", ["pub cat: super::types::Cat<'a>,"]],
+        ["", "const cat = defineModel<Cat>({ required: true });", ["pub model_value: super::types::Cat<'a>,"]],
+      ] as const) {
+        const out = compile(imported(declared, setup)).get("x.rs")!;
+        const props = out.slice(out.indexOf("pub struct Props"), out.indexOf("\n}\n", out.indexOf("pub struct Props")));
+        for (const field of fields) expect(props, setup).toContain(field);
       }
     });
   });

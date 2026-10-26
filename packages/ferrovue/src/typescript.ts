@@ -12,7 +12,7 @@ import { claim } from "./plugin.ts";
 import { declareConsts, enumType } from "./constants.ts";
 import { parseTs } from "./files.ts";
 import { declareFunctions } from "./functions.ts";
-import { refuseUnresolved } from "./resolve.ts";
+import { refuseUnresolved, resolveImport } from "./resolve.ts";
 
 export function typesImports(comp: Component, body: N[]): void {
   for (const s of body) {
@@ -204,6 +204,11 @@ export function readTypeFile(file: string): void {
     ctx.typeDecls.set(d.name, [{ home, members: d.members, node: d.node }]);
     ctx.typeStructs.set(d.name, { name: d.name, fields: [] });
     ctx.typeFiles.set(d.name, rel);
+  }
+  for (const st of body) {
+    if (st.type !== "ImportDeclaration" || st.source.value === TYPES_MODULE || st.source.value.endsWith(".vue")) continue;
+    const imported = resolveImport(rel, st.source.value);
+    if (imported !== null) readTypeFile(imported);
   }
 }
 

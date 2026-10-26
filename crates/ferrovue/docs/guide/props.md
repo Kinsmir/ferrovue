@@ -26,6 +26,17 @@ a public field per prop, and a struct for every interface or object type alias t
 | `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
 | `T`, of `<script setup generic="T extends Row">` | the type of its constraint, `Row<'a>` | as the constraint |
 
+# Props from a `.ts` file
+
+`defineProps<P>()` may name an interface or object type alias imported from a `.ts` file by a
+relative path (`import type { CardProps } from "../types/card"`), an interface of the component
+that extends one, or an intersection (`CardProps & { note: string }`). The component's `Props`
+holds the fields of all of them, and `withDefaults` applies as for props declared in place. Vue's
+compiler reads the file through the file system `compileScript` is given: ferrovue passes it one,
+and `@vitejs/plugin-vue` uses TypeScript's, or `script.fs` in its options where the project's
+TypeScript has no JavaScript API (TypeScript 7). A type imported through an alias, or the `Props` of
+another `.vue` file, is refused ([FV0327](crate::guide::error_codes#fv0327)).
+
 A `number` is an integer on the server, which is what most props are: counts, ids, indexes. Declare
 a prop that may hold a fraction as `Float`. [`numbers`](crate::guide::numbers) explains how both are
 computed and written.

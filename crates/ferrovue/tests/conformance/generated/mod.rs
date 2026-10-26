@@ -101,6 +101,8 @@ pub mod head_server;
 pub mod head_theme;
 pub mod head_theme_page;
 pub mod hollow;
+pub mod imported_props;
+pub mod imported_props_mixed;
 pub mod inline_prose;
 pub mod kebab_tree;
 pub mod keywords;
@@ -769,6 +771,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Hollow" => {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             hollow::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ImportedProps" => {
+            let props: imported_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            imported_props::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ImportedPropsMixed" => {
+            let props: imported_props_mixed::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            imported_props_mixed::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "InlineProse" => {
             let props: inline_prose::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

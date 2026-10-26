@@ -326,9 +326,9 @@ Props declared at run time.
 
 ## FV0304
 
-Props type not declared in the component.
+Props type the compiler does not resolve.
 
-The props' Rust struct is built from the type `defineProps` names, which must be a type literal (`defineProps<{ count: number }>()`) or an interface declared in the same `<script setup>` block. An interface imported from another file and a type built with `Pick`, `Omit` or `&` are refused. Declare the interface in the component, or write the fields in place.
+The props' Rust struct is built from the type `defineProps` names: a type literal (`defineProps<{ count: number }>()`), an interface or object type alias the component declares or imports from a `.ts` file, an interface that extends such types, or an intersection of them (`Base & { count: number }`), each prop declared once. A type built with `Partial`, `Pick`, `Omit` or another generic type, and an interface of a `.ts` file that extends another, are refused. Write the fields out in such a type, or declare them in place.
 
 ## FV0305
 
@@ -464,9 +464,9 @@ A prop or a field of an interface becomes a Rust field, whose type is translated
 
 ## FV0327
 
-Props or events of an imported type.
+Props of a type Vue's compiler cannot resolve.
 
-Vue reads the props of `defineProps<P>()` and the events of `defineEmits<E>()` from the type itself, and the compiler resolves that type when the component declares it. A type imported from another file (`import type { P } from "./p"`), an intersection with one or an interface that extends one is refused. Declare the props in the component, as `defineProps<{ label: string }>()` or an interface of the component; their fields may have types imported from a `.ts` file, as `defineProps<{ row: Row }>()`. See [`props`](crate::guide::props).
+Vue reads the props of `defineProps<P>()` from the type itself, and its compiler reads a type imported from a `.ts` file by a relative path (`import type { P } from "./p"`). A type imported through an alias (`@/types`), which it resolves only with TypeScript's own module resolution, and the `Props` of another `.vue` file are refused. Import the type by a relative path, move it into a `.ts` file both components import, or declare the props in the component. See [`props`](crate::guide::props#props-from-a-ts-file).
 
 ## FV0328
 

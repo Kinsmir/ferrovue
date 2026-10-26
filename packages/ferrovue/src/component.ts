@@ -2,12 +2,13 @@ import { parse as parseJs } from "@babel/parser";
 import { compileScript, compileTemplate, parse as parseSfc, type SFCBlock, type SFCDescriptor, type SFCScriptBlock } from "@vue/compiler-sfc";
 import { isBuiltInDirective } from "@vue/shared";
 import { SourceMapConsumer } from "source-map-js";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import { basename } from "node:path";
 import { relativePath } from "./paths.ts";
-import { type Component, type N, absence, blankComponent, distinctFields, fail, opt, snake, sourceAt, tagAst } from "./model.ts";
+import { type Component, type Field, type N, type Struct, absence, blankComponent, distinctFields, fail, opt, snake, sourceAt, tagAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx, readSource } from "./context.ts";
-import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, readTypeFile, refuseDates, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
+import { typesImports, declareTypes, defaultValue, definePropsType, ONE_NOTHING, reachLocal, reachType, readTypeFile, refuseDates, runtimeDefaults, structOf, tyOfTs } from "./typescript.ts";
 import { enumField } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
@@ -129,7 +130,7 @@ function generics(comp: Component, source: string, block: SFCBlock): void {
 
 function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
   try {
-    return compileScript(descriptor, { id: comp.name });
+    return compileScript(descriptor, { id: comp.name, fs: SCRIPT_FS });
   } catch (e) {
     if (!(e instanceof SyntaxError)) {
       refuseImportedMacroType(comp, descriptor);
@@ -141,6 +142,12 @@ function scriptOf(comp: Component, descriptor: SFCDescriptor): SFCScriptBlock {
     throw new GenError("FV0001", e.message, { file: comp.file, ...where }, e.message.split("\n")[0]);
   }
 }
+
+const SCRIPT_FS = {
+  fileExists: (file: string): boolean => existsSync(file) && statSync(file).isFile(),
+  readFile: (file: string): string | undefined => (existsSync(file) ? readSource(file) : undefined),
+  realpath: (file: string): string => realpathSync(file),
+};
 
 type Imported = { name: string; from: string; node: N };
 
@@ -205,9 +212,56 @@ function refuseImportedMacroType(comp: Component, descriptor: SFCDescriptor): vo
     const found = arg ? reach(arg, offset) : null;
     if (!found) continue;
     const what = macro === "defineProps" ? "props" : "events";
+    if (macro === "defineProps" && !found.from.startsWith(".")) {
+      fail(comp, "FV0327", `the props of \`defineProps\` are read from \`${found.name}\`, imported from \`${found.from}\`, which Vue's compiler resolves only by a relative path: import it as \`./…\` or \`../…\`, or declare the props in the component`, found.node);
+    }
     const write = macro === "defineProps" ? "`defineProps<{ label: string }>()` or an interface the component declares, whose fields may have types imported from a `.ts` file" : '`defineEmits<{ (e: "save"): void }>()` or an interface the component declares';
     fail(comp, "FV0327", `the ${what} of \`${macro}\` are read from \`${found.name}\`, imported from \`${found.from}\`: declare them in the component, as ${write}`, found.node);
   }
+}
+
+function propsFields(comp: Component, t: N): Field[] {
+  if (t.type === "TSParenthesizedType") return propsFields(comp, t.typeAnnotation);
+  if (t.type === "TSTypeLiteral") return structOf(comp, "Props", t.members, comp.structs).fields;
+  if (t.type === "TSIntersectionType") return distinctProps(comp, t.types.flatMap((part: N) => propsFields(comp, part)), t);
+  const name: string | undefined = t.type === "TSTypeReference" && t.typeName.type === "Identifier" && !t.typeParameters ? t.typeName.name : undefined;
+  if (name !== undefined && comp.structs.has(name)) {
+    reachLocal(comp, name);
+    const st = comp.structs.get(name)!;
+    const refused = st.refused?.values().next().value;
+    if (refused !== undefined) throw refused;
+    const bases: N[] = comp.typeDecls.get(name)?.node.extends ?? [];
+    const inherited = bases.flatMap((b: N) => propsFields(comp, { ...b, type: "TSTypeReference", typeName: b.expression, typeParameters: b.typeParameters ?? b.typeArguments }));
+    return distinctProps(comp, [...st.fields, ...inherited], t);
+  }
+  const shared = name === undefined ? null : sharedStruct(comp, name);
+  if (shared !== null) {
+    if ((ctx.typeDecls.get(name!)?.[0]?.node.extends ?? []).length) {
+      fail(comp, "FV0304", `\`${name}\` extends another interface, whose fields the props of a \`.ts\` file's interface do not take: write the props as an intersection, \`defineProps<${name} & Base>()\``, t);
+    }
+    return shared.fields;
+  }
+  const home = name === undefined ? undefined : comp.childProps.get(name) ?? (comp.importedTypes.get(name) as { home?: string } | undefined)?.home;
+  if (name !== undefined && home !== undefined && home !== "types") {
+    fail(comp, "FV0327", `the props of \`defineProps\` are read from \`${name}\`, imported from \`${home}.vue\`: declare them in a \`.ts\` file both components import, or in the component`, t);
+  }
+  return fail(comp, "FV0304", "`defineProps` takes a type literal, an interface or a type literal alias the component declares or imports from a `.ts` file, or an intersection of them", t);
+}
+
+function distinctProps(comp: Component, fields: Field[], at: N): Field[] {
+  const twice = fields.find((f, i) => fields.findIndex((g) => g.js === f.js) !== i);
+  if (twice !== undefined) fail(comp, "FV0304", `\`${twice.js}\` is declared twice among the props' parts: declare each prop once`, at);
+  return fields;
+}
+
+function sharedStruct(comp: Component, local: string): Struct | null {
+  const imported = comp.importedTypes.get(local);
+  if (imported?.k !== "struct" || imported.home !== "types") return null;
+  reachType(imported.name);
+  const st = ctx.typeStructs.get(imported.name);
+  const refused = st?.refused?.values().next().value;
+  if (refused !== undefined) throw refused;
+  return st ?? null;
 }
 
 /** Refuse a component written with the Options API, which `readComponent` read no further: as a
@@ -295,18 +349,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
     const found = definePropsType(call);
     if (found) propsTy = found;
   }
-  if (!propsTy) {
-  } else if (propsTy.type === "TSTypeLiteral") {
-    comp.props = structOf(comp, "Props", propsTy.members, comp.structs);
-  } else if (propsTy.type === "TSTypeReference" && comp.structs.has(propsTy.typeName.name)) {
-    reachLocal(comp, propsTy.typeName.name);
-    const st = comp.structs.get(propsTy.typeName.name)!;
-    const refused = st.refused?.values().next().value;
-    if (refused !== undefined) throw refused;
-    comp.props = { name: "Props", fields: st.fields };
-  } else {
-    fail(comp, "FV0304", "`defineProps` takes a type literal or an interface declared in the same block", propsTy);
-  }
+  if (propsTy) comp.props = { name: "Props", fields: propsFields(comp, propsTy) };
 
   for (const st of ast) {
     if (st.type !== "VariableDeclaration") continue;

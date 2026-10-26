@@ -10,6 +10,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Added
 
+- `defineProps<P>()` reads `P` imported from a `.ts` file by a relative path, an interface that extends one, or an intersection of them.
+  0.12.0 refused them with FV0327 and FV0304: [Props from a `.ts` file](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#props-from-a-ts-file).
 - `||` after an optional string, number, boolean or union read by its name or a field gives the right side where it is absent or falsy.
   0.12.0 refused it with FV0617: [Optional props and defaults](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#optional-props-and-defaults).
 
