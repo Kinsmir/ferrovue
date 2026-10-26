@@ -1,4 +1,4 @@
-import { type Component, type Fn, type N, type Scope, type Val, fail, nothing, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Val, fail, nothing, patternNames, UNION_STR, unionStr } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumListVal } from "./enums.ts";
 import { ctx } from "./context.ts";
@@ -74,23 +74,6 @@ function spot(from: N): N {
 function declared(st: N): string[] {
   if (st?.type === "VariableDeclaration") return st.declarations.flatMap((d: N) => patternNames(d.id));
   return [];
-}
-
-function patternNames(p: N): string[] {
-  switch (p?.type) {
-    case "Identifier":
-      return [p.name];
-    case "ObjectPattern":
-      return p.properties.flatMap((q: N) => patternNames(q.type === "RestElement" ? q.argument : q.value));
-    case "ArrayPattern":
-      return p.elements.flatMap((q: N) => (q ? patternNames(q) : []));
-    case "AssignmentPattern":
-      return patternNames(p.left);
-    case "RestElement":
-      return patternNames(p.argument);
-    default:
-      return [];
-  }
 }
 
 class Renamer {

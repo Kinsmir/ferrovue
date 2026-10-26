@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, patternNames, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
@@ -117,23 +117,6 @@ function emptyRef(comp: Component, init: N): Val | null {
   const ty = tyOfTs(comp, typed, comp.structs);
   refuseDates(comp, ty, "a `ref`", typed);
   return ty.k === "list" ? { code: `Vec::<${localTy(ty.of, comp)}>::new()`, ty } : null;
-}
-
-export function patternNames(p: N): string[] {
-  switch (p?.type) {
-    case "Identifier":
-      return [p.name];
-    case "ObjectPattern":
-      return p.properties.flatMap((q: N) => patternNames(q.type === "RestElement" ? q.argument : q.value));
-    case "ArrayPattern":
-      return p.elements.flatMap((q: N) => (q ? patternNames(q) : []));
-    case "AssignmentPattern":
-      return patternNames(p.left);
-    case "RestElement":
-      return patternNames(p.argument);
-    default:
-      return [];
-  }
 }
 
 function asyncLoader(arg: N): N {

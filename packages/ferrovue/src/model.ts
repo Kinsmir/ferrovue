@@ -326,6 +326,24 @@ export function nodeName(node: N): string {
   return `${/^[aeiou]/.test(words) ? "an" : "a"} ${words}`;
 }
 
+/** The names a binding pattern declares, in the order they appear. */
+export function patternNames(p: N): string[] {
+  switch (p?.type) {
+    case "Identifier":
+      return [p.name];
+    case "ObjectPattern":
+      return p.properties.flatMap((q: N) => patternNames(q.type === "RestElement" ? q.argument : q.value));
+    case "ArrayPattern":
+      return p.elements.flatMap((q: N) => (q ? patternNames(q) : []));
+    case "AssignmentPattern":
+      return patternNames(p.left);
+    case "RestElement":
+      return patternNames(p.argument);
+    default:
+      return [];
+  }
+}
+
 /** Refuse something in a file that has no source to quote, as a locale or routes file. */
 export function failIn(file: string, code: ErrorCode, what: string, help: string | null = null): never {
   throw new GenError(code, `${file}: ${what}`, { file }, what, help);
