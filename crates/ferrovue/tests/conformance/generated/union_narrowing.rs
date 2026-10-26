@@ -186,9 +186,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_shown = if s_tone == UnionNarrowingTone::Empty { None } else { Some(fv::props::Union::as_str(s_tone)) };
     let s_on = !props.label.is_empty();
     out.push_str("<section>");
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(fv::props::Union::as_str(s_tone)).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if s_tone == UnionNarrowingTone::Empty { None } else { Some(match s_tone { UnionNarrowingTone::Calm => super::narrowed_tone::Tone::Calm, UnionNarrowingTone::Loud => super::narrowed_tone::Tone::Loud, UnionNarrowingTone::AB | UnionNarrowingTone::Empty => super::narrowed_tone::Tone::AB }) }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if s_tone != UnionNarrowingTone::Empty { Some(match s_tone { UnionNarrowingTone::Calm => super::narrowed_tone::Tone::Calm, UnionNarrowingTone::Loud => super::narrowed_tone::Tone::Loud, UnionNarrowingTone::AB | UnionNarrowingTone::Empty => super::narrowed_tone::Tone::AB }) } else { None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: match s_tone { UnionNarrowingTone::Calm => Some(super::narrowed_tone::Tone::Calm), UnionNarrowingTone::Loud => Some(super::narrowed_tone::Tone::Loud), UnionNarrowingTone::AB => Some(super::narrowed_tone::Tone::AB), UnionNarrowingTone::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: match s_tone { UnionNarrowingTone::Calm => Some(super::narrowed_tone::Tone::Calm), UnionNarrowingTone::Loud => Some(super::narrowed_tone::Tone::Loud), UnionNarrowingTone::AB => Some(super::narrowed_tone::Tone::AB), UnionNarrowingTone::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: match s_tone { UnionNarrowingTone::Calm => Some(super::narrowed_tone::Tone::Calm), UnionNarrowingTone::Loud => Some(super::narrowed_tone::Tone::Loud), UnionNarrowingTone::AB => Some(super::narrowed_tone::Tone::AB), UnionNarrowingTone::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: (if !s_chosen.is_empty() { Some(s_chosen) } else { None }).map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: s_shown.map(|v| match v { "calm" => super::narrowed_tone::Tone::Calm, "<loud>" => super::narrowed_tone::Tone::Loud, _ => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     if !s_chosen.is_empty() {
@@ -200,11 +200,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     if s_tone == UnionNarrowingTone::Empty {
         out.push_str("<i>empty</i>");
-    } else {
+    } else if let Some(fv_tone) = match s_tone { UnionNarrowingTone::Calm => Some(None), UnionNarrowingTone::Loud => Some(Some(super::narrowed_tone::Tone::Loud)), UnionNarrowingTone::AB => Some(Some(super::narrowed_tone::Tone::AB)), UnionNarrowingTone::Empty => None } {
         if s_tone == UnionNarrowingTone::Calm {
             super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(super::narrowed_tone::Tone::Calm), label: std::borrow::Cow::Borrowed("calm") })?;
-        } else {
-            super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match s_tone { UnionNarrowingTone::Loud => super::narrowed_tone::Tone::Loud, UnionNarrowingTone::AB | UnionNarrowingTone::Calm | UnionNarrowingTone::Empty => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        } else if let Some(fv_tone_2) = fv_tone {
+            super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(fv_tone_2), label: std::borrow::Cow::Borrowed(&*props.label) })?;
         }
     }
     if s_on && s_chosen != "a&b" && !s_chosen.is_empty() {

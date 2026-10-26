@@ -222,12 +222,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(s_held).filter(|v| !v.is_empty()).map(|v| match v { "&amp; &lt;" => super::types::Mark::Amp, "'!" => super::types::Mark::Bang, "0x1F" => super::types::Mark::Hex, _ => super::types::Mark::Tag }), label: std::borrow::Cow::Borrowed(&*format!("{}!", s_held)) })?;
-    if s_kept != UnionWiderRefKept::Empty {
-        super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match s_kept { UnionWiderRefKept::Calm => super::types::Mood::Calm, UnionWiderRefKept::Loud => super::types::Mood::Loud, UnionWiderRefKept::QX | UnionWiderRefKept::Empty => super::types::Mood::QX }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    if let Some(fv_kept) = match s_kept { UnionWiderRefKept::Calm => Some(super::types::Mood::Calm), UnionWiderRefKept::Loud => Some(super::types::Mood::Loud), UnionWiderRefKept::QX => Some(super::types::Mood::QX), UnionWiderRefKept::Empty => None } {
+        super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv_kept), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<!---->");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv::props::Union::as_str(s_chosen)).filter(|v| !v.is_empty()).map(|v| match v { "calm" => super::types::Mood::Calm, "loud" => super::types::Mood::Loud, _ => super::types::Mood::QX }), label: std::borrow::Cow::Borrowed(fv::props::Union::as_str(s_chosen)) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_chosen { UnionWiderRefChosen::Calm => Some(super::types::Mood::Calm), UnionWiderRefChosen::Loud => Some(super::types::Mood::Loud), UnionWiderRefChosen::QX => Some(super::types::Mood::QX), UnionWiderRefChosen::Empty => None }, label: std::borrow::Cow::Borrowed(fv::props::Union::as_str(s_chosen)) })?;
     out.push_str("<b class=\"");
     fv::attrs::class_into(out, false, &[if s_chosen == UnionWiderRefChosen::Empty { "none" } else { "" }, if s_kept == UnionWiderRefKept::Calm { "calm" } else { "" }]);
     out.push_str("\">");

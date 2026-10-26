@@ -69,6 +69,10 @@ export interface Val {
    * expression of the same value as the generated enum `def`, null when a literal is outside it.
    * It holds while `code` is `of`. */
   asEnum?: { of: string; into: (def: EnumDef, node: N) => string | null };
+  /** For a value of a generated enum held by `of`, where a `v-if` narrows it to the members
+   * `kept`: binds in the test, for each member, the Rust code `arm` gives it, and gives the name
+   * the code is bound to. */
+  bound?: { of: string; kept: readonly string[]; bind: (arm: (literal: string) => string) => string };
   /** For an integer computed as an `f64`, where the template computes it, as `fv::render::Refusals::keep`
    * takes it. */
   at?: string;

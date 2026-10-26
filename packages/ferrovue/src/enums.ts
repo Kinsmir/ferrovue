@@ -2,7 +2,8 @@ import { basename } from "node:path";
 import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalsOf, literalTy, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
-import { atom, binary } from "./parens.ts";
+import { atom, bare, binary } from "./parens.ts";
+import { fresh } from "./names.ts";
 import { unquote } from "./strings.ts";
 
 interface Hint {
@@ -201,6 +202,10 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
     if (sameEnum(from, def) && kept.length === from.literals.length) return v.variant;
     if (!kept.every((l) => def.literals.includes(l))) return null;
     if (kept.length === 1 && !optional) return variantPath(comp, def, kept[0]!);
+    const one = optional ? null : overVariants(comp, v, kept, (l) => (def.literals.includes(l) ? variantPath(comp, def, l) : null));
+    if (one !== null) return one;
+    const made = v.asEnum !== undefined && v.asEnum.of === v.code ? v.asEnum.into(def, node) : null;
+    if (made !== null) return made;
     const left = from.literals.filter((l) => !kept.includes(l));
     const arms = kept.map((l, i) => `${[l, ...(i === kept.length - 1 ? left : [])].map((k) => variantPath(comp, from, k)).join(" | ")} => ${variantPath(comp, def, l)}`);
     return over(v.variant, arms.join(", "));
@@ -222,6 +227,66 @@ export function intoEnum(comp: Component, v: Val, def: EnumDef, node: N): string
   };
   const parsed = (on: string): string => `match ${parse(on)} { Ok(fv_u) => fv_u, Err(fv_e) => { ${refused}; ${variantPath(comp, def, def.literals[0]!)} } }`;
   return optional ? `${atom(v.code)}.map(|v| ${parsed("v")})` : parsed(v.code);
+}
+
+function armsOver(comp: Component, def: EnumDef, literals: readonly string[], code: (literal: string) => string): string {
+  const arms = new Map<string, string[]>();
+  for (const l of literals) {
+    const c = code(l);
+    arms.set(c, [...(arms.get(c) ?? []), variantPath(comp, def, l)]);
+  }
+  return [...arms].map(([c, patterns]) => `${patterns.join(" | ")} => ${bare(c)}`).join(", ");
+}
+
+/** For the value `v` of a generated enum, narrowed to its members `kept`, the code `arm` gives each
+ * of them: where a `v-if` narrows it, the name the test binds the code to, and otherwise one
+ * `match` over its variants, whose arms for the members left out are the code `arm` gives them
+ * too. Null when an arm is. */
+export function overVariants(comp: Component, v: Val, kept: readonly string[], arm: (literal: string) => string | null): string | null {
+  const from = enumOf(v.ty);
+  if (from === undefined || v.variant === undefined || v.ty.k === "opt") return null;
+  const codes = new Map<string, string>();
+  for (const l of kept) {
+    const c = arm(l);
+    if (c === null) return null;
+    codes.set(l, c);
+  }
+  if (kept.length === 1) return codes.get(kept[0]!)!;
+  const bound = v.bound;
+  if (bound !== undefined && bound.of === v.variant && bound.kept.length === kept.length && kept.every((l) => bound.kept.includes(l))) return bound.bind((l) => codes.get(l)!);
+  for (const l of from.literals) {
+    const c = codes.has(l) ? codes.get(l)! : arm(l);
+    if (c === null) return null;
+    codes.set(l, c);
+  }
+  return `match ${v.variant} { ${armsOver(comp, from, from.literals, (l) => codes.get(l)!)} }`;
+}
+
+/** Where a `v-if` narrows `v`, a value of a generated enum, to its members `kept`: `v` as the
+ * branch reads it, which binds the code each conversion of it needs to a name made from `hint`,
+ * and the test that binds the names `reads` finds, null when it finds none. */
+export function variantBinder(comp: Component, v: Val, kept: readonly string[], hint: string, reads: (name: string) => boolean): { val: Val; test: () => string | null } {
+  const from = enumOf(v.ty)!;
+  const asked: { name: string; codes: string[] }[] = [];
+  const bind = (arm: (literal: string) => string): string => {
+    const codes = kept.map(arm);
+    const known = asked.find((a) => a.codes.join("\0") === codes.join("\0"));
+    if (known !== undefined) return known.name;
+    const name = fresh("n", hint);
+    asked.push({ name, codes });
+    return name;
+  };
+  const test = (): string | null => {
+    const used = asked.filter((a) => reads(a.name));
+    if (!used.length) return null;
+    const tuple = (parts: string[]): string => (parts.length === 1 ? parts[0]! : `(${parts.join(", ")})`);
+    const some = (l: string): string => `Some(${bare(tuple(used.map((a) => a.codes[kept.indexOf(l)]!)))})`;
+    const pattern = `Some(${tuple(used.map((a) => a.name))})`;
+    const outer = v.bound;
+    if (outer !== undefined && outer.of === v.variant) return `let ${pattern} = ${outer.bind((l) => (kept.includes(l) ? some(l) : "None"))}`;
+    return `let ${pattern} = match ${v.variant} { ${armsOver(comp, from, from.literals, (l) => (kept.includes(l) ? some(l) : "None"))} }`;
+  };
+  return { val: { ...v, bound: { of: v.variant!, kept, bind } }, test };
 }
 
 interface Unproven {

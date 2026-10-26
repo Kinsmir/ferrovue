@@ -1,4 +1,5 @@
-import { type N, type Scope, type Val, fail, namesSelf, nodeName } from "./model.ts";
+import { type N, type Scope, type Val, enumOf, fail, literalsOf, namesSelf, nodeName } from "./model.ts";
+import { variantBinder } from "./enums.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { expr, shown } from "./expr.ts";
@@ -329,6 +330,8 @@ function statement(s: Scope, e: Emitter, st: N): void {
       flatten(st.test);
       const narrowed = new Map(s.narrowed);
       const bound = new Map<string, Presence>();
+      const binders: { part: string; test: () => string | null }[] = [];
+      let at = -1;
       const parts: string[] = [];
       let narrowedLiterals = false;
       for (const op of operands) {
@@ -343,7 +346,9 @@ function statement(s: Scope, e: Emitter, st: N): void {
           parts.push(operand(cond(inner, op), CMP));
           const literals = literalNarrowing(inner, op);
           if (literals !== null) {
-            for (const [path, v] of literals.yes.narrowed) narrowed.set(path, v);
+            const made = binding(inner, literals.yes, literals, (name) => e.reads(name, at));
+            binders.push({ part: parts.at(-1)!, test: made.test });
+            for (const [path, v] of made.scope.narrowed) narrowed.set(path, v);
             narrowedLiterals = true;
           }
         }
@@ -355,8 +360,12 @@ function statement(s: Scope, e: Emitter, st: N): void {
       if (parts.includes("true")) parts.splice(0, parts.length, ...parts.filter((p) => p !== "true"));
       if (narrowed.size > s.narrowed.size || narrowedLiterals) {
         e.open(`if ${parts.join(" && ")}`);
-        const at = e.lines.length - 1;
+        at = e.lines.length - 1;
         statements({ ...s, narrowed }, e, branch(st.consequent));
+        for (const { part, test } of binders.toReversed()) {
+          const binds = test();
+          if (binds !== null) e.replace(at, part, binds);
+        }
         for (const [name, p] of bound) {
           const inHead = occurrences(e.lines[at]!, name) > 1;
           if (!inHead && !e.reads(name, at + 1)) e.replace(at, p.pattern(name), operand(p.present, CMP));
@@ -395,14 +404,31 @@ function statement(s: Scope, e: Emitter, st: N): void {
       return;
     }
     const literals = literalNarrowing(s, st.test);
-    e.open(`if ${condition(cond(s, st.test))}`);
-    statements(literals?.yes ?? s, e, branch(st.consequent));
+    const test = condition(cond(s, st.test));
+    e.open(`if ${test}`);
+    const at = e.lines.length - 1;
+    const yes = binding(s, literals?.yes ?? s, literals, (name) => e.reads(name, at + 1));
+    statements(yes.scope, e, branch(st.consequent));
+    const binds = yes.test();
+    if (binds !== null) e.replace(at, test, binds);
     if (st.alternate) {
       e.close(" else {");
-      statements(literals?.no ?? s, e, branch(st.alternate));
+      const otherwise = e.lines.length - 1;
+      const no = binding(s, literals?.no ?? s, literals, (name) => e.reads(name, otherwise + 1));
+      statements(no.scope, e, branch(st.alternate));
+      const elseBinds = no.test();
+      if (elseBinds !== null) e.replace(otherwise, "} else {", `} else if ${elseBinds} {`);
     }
     e.close();
     return;
   }
   fail(s.comp, "FV0006", `${nodeName(st)} in the compiled template`, st);
+}
+
+function binding(s: Scope, narrowed: Scope, literals: ReturnType<typeof literalNarrowing>, reads: (name: string) => boolean): { scope: Scope; test: () => string | null } {
+  const v = literals === null || narrowed === s ? undefined : narrowed.narrowed.get(literals.path);
+  const kept = v === undefined ? undefined : literalsOf(v.ty);
+  if (literals === null || v === undefined || kept === undefined || v.variant === undefined || v.ty.k === "opt" || enumOf(v.ty) === undefined) return { scope: narrowed, test: () => null };
+  const made = variantBinder(s.comp, v, kept as readonly string[], jsHint(literals.path), reads);
+  return { scope: { ...narrowed, narrowed: new Map(narrowed.narrowed).set(literals.path, made.val) }, test: made.test };
 }

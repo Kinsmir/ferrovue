@@ -231,6 +231,8 @@ pub mod union_list;
 pub mod union_list_item;
 pub mod union_logic;
 pub mod union_mark;
+pub mod union_mood_card;
+pub mod union_narrowed_match;
 pub mod union_narrowing;
 pub mod union_objects;
 pub mod union_returned;
@@ -1434,6 +1436,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionMark" => {
             let props: union_mark::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_mark::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionMoodCard" => {
+            let props: union_mood_card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_mood_card::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionNarrowedMatch" => {
+            let props: union_narrowed_match::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_narrowed_match::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionNarrowing" => {
             let props: union_narrowing::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

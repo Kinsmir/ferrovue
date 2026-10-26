@@ -1214,6 +1214,32 @@ impl<'a> TileRow<'a> {
 }
 
 
+/// `MoodCard` in `types/tables.ts`.
+#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct MoodCard<'a> {
+    #[serde(rename = "mood")]
+    pub mood: Mood,
+    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none")]
+    pub spare: Option<Mood>,
+    #[serde(rename = "note")]
+    pub note: Cow<'a, str>,
+}
+
+impl<'a> MoodCard<'a> {
+    /// MoodCard with its required fields, every optional one absent.
+    pub fn new(mood: Mood, note: impl Into<Cow<'a, str>>) -> Self {
+        MoodCard { mood, spare: None, note: note.into() }
+    }
+
+    /// Set `spare`, which is absent otherwise.
+    pub fn spare(mut self, spare: Mood) -> Self {
+        self.spare = Some(spare);
+        self
+    }
+}
+
+
 /// `Step` in `types/unions.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

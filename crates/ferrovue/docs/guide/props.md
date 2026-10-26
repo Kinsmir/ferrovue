@@ -251,9 +251,12 @@ option, is narrowed as TypeScript narrows it, and reaches a prop of `Tone` once 
 
 The value is the string or the enum it was, narrowed: the generated code tests it as the template
 does and maps it to the child's enum where the child takes it. A `ref<Tone | "">` holds its own
-enum, and the map is a `match` over its variants: the members the test leaves each name their
-variant of `Tone`, and the variants the test rules out (`Empty`) join the last arm, which the test
-keeps them from reaching.
+enum, and the map is one `match` over its variants, with an arm for each that gives the value the
+template gives it: `tone || undefined` is `Some` of the child's variant for each member of `Tone`
+and `None` for `Empty`, and `tone || "calm"` gives `Empty` the variant `Calm`. A `v-if` that
+narrows the `ref` binds the child's value in its test, `if let Some(..) = match tone { .. }`, where
+the variants it rules out are `None`, and a table the narrowed `ref` reads (`NEXT[tone]`) maps each
+variant the same way. No arm is a `_`, and no variant takes another's arm.
 
 A single literal (`kind: "note"`), a union with `string` (`"sm" | string`, which TypeScript widens
 to `string`) and integer literals (`1 | 2 | 3`, an `i64`) stay as they were. So do records of a
