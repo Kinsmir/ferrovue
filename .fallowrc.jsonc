@@ -42,6 +42,22 @@
       "rules": { "unused-store-members": "off" }
     }
   ],
+  "duplicates": {
+    "ignore": [
+      "crates/ferrovue/tests/chrono_dates/components/**",
+      "crates/ferrovue/tests/own_dates/components/**",
+      "crates/ferrovue/tests/own_unions/components/**",
+      "crates/ferrovue/tests/own_unions/types/**",
+      "packages/ferrovue/test/**"
+    ]
+  },
+  "health": {
+    "ignore": [
+      "crates/**/*.vue",
+      "examples/**/*.vue",
+      "packages/ferrovue/test/**"
+    ]
+  },
   "rules": {
     "dev-dependency-in-production": "off",
     "circular-dependencies": "off"

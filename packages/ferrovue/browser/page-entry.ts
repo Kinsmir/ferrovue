@@ -25,25 +25,13 @@ declare global {
 
 const data = (): PageCase => JSON.parse(document.getElementById("fv-page-case")!.textContent) as PageCase;
 
-async function hydrate(): Promise<string> {
+async function shown(label: string, show: typeof hydrateRecordedPage | typeof renderRecordedPage): Promise<string> {
   const page = data();
   try {
-    const app = await hydrateRecordedPage({ html: page.html, record: page.record }, components[page.layout]!, components);
+    const app = await show({ html: page.html, record: page.record }, components[page.layout]!, components);
     const text = document.getElementById("app")!.innerHTML;
     app.unmount();
-    return `hydrated: ${text}`;
-  } catch (e) {
-    return String(e);
-  }
-}
-
-async function render(): Promise<string> {
-  const page = data();
-  try {
-    const app = await renderRecordedPage({ html: page.html, record: page.record }, components[page.layout]!, components);
-    const text = document.getElementById("app")!.innerHTML;
-    app.unmount();
-    return `rendered: ${text}`;
+    return `${label}: ${text}`;
   } catch (e) {
     return String(e);
   }
@@ -60,6 +48,6 @@ function readsAsParsed(html: string): [string, string] {
   return [read, parsed instanceof HTMLScriptElement && parsed.textContent ? JSON.stringify(JSON.parse(parsed.textContent)) : "Error: [ferrovue] the page has no record: no <script id=\"__fv_page\">"];
 }
 
-window.pageHydration = hydrate();
-window.pageRender = render;
+window.pageHydration = shown("hydrated", hydrateRecordedPage);
+window.pageRender = () => shown("rendered", renderRecordedPage);
 window.readsAsParsed = readsAsParsed;

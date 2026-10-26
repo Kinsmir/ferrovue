@@ -162,16 +162,18 @@ function literal(s: Scope, n: N, allowed: Set<string> | "number", key: string): 
   return `fv::head::HeadValue::str(${rustStr(v.value)})`;
 }
 
+function array(s: Scope, n: N, item: (el: N) => string): string {
+  const parts = n.elements.map((el: N) => {
+    if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
+    return item(el);
+  });
+  return `fv::head::HeadValue::array([${parts.join(", ")}])`;
+}
+
 function json(s: Scope, raw: N, where: string): string {
   const n = getter(s, raw);
   if (n?.type === "ObjectExpression") return object(s, n, where, (_key, v) => json(s, v, where));
-  if (n?.type === "ArrayExpression") {
-    const parts = n.elements.map((el: N) => {
-      if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
-      return json(s, el, where);
-    });
-    return `fv::head::HeadValue::array([${parts.join(", ")}])`;
-  }
+  if (n?.type === "ArrayExpression") return array(s, n, (el) => json(s, el, where));
   return value(s, n, where, true);
 }
 
@@ -198,13 +200,7 @@ function classOrStyle(s: Scope, key: string, raw: N): string {
   const n = getter(s, raw);
   const where = `\`${key}\``;
   if (n?.type === "ObjectExpression") return object(s, n, where, (_k, v) => value(s, v, `a value of ${where}`, false));
-  if (n?.type === "ArrayExpression") {
-    const parts = n.elements.map((el: N) => {
-      if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
-      return strict(s, el, `an item of ${where}`);
-    });
-    return `fv::head::HeadValue::array([${parts.join(", ")}])`;
-  }
+  if (n?.type === "ArrayExpression") return array(s, n, (el) => strict(s, el, `an item of ${where}`));
   const v = expr(s, n);
   if (absence(v.ty) === "null" || absence(v.ty) === "either") fail(s.comp, "FV1710", `${where} may be \`null\`, on which unhead's renderer throws; write \`?? undefined\``, n);
   if (v.ty.k === "list" && (v.ty.of.k === "str")) return `fv::head::HeadValue::Array(${items(v)}.map(|v| fv::head::HeadValue::str(&*v)).collect())`;
@@ -222,13 +218,7 @@ function strict(s: Scope, raw: N, where: string): string {
 function tagList(s: Scope, tag: string, raw: N): string {
   const n = getter(s, raw);
   if (n?.type === "ObjectExpression") return tagObject(s, tag, n);
-  if (n?.type === "ArrayExpression") {
-    const parts = n.elements.map((el: N) => {
-      if (!el || el.type === "SpreadElement") fail(s.comp, "FV1704", "an array in a head input holds plain values: no hole or spread", n);
-      return tagObject(s, tag, el);
-    });
-    return `fv::head::HeadValue::array([${parts.join(", ")}])`;
-  }
+  if (n?.type === "ArrayExpression") return array(s, n, (el) => tagObject(s, tag, el));
   const mapped = n?.type === "CallExpression" && n.callee.type === "MemberExpression" && !n.callee.computed && n.callee.property.name === "map" && n.arguments.length === 1 ? n : null;
   if (mapped) {
     const list = expr(s, mapped.callee.object);

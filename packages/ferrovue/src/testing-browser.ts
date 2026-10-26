@@ -3,6 +3,7 @@ import { routeRecords, type RouteEntry } from "./route-records.ts";
 import { clearLoads, mountPage, provideLoads, readPage, renderPage, reviveDates, type IslandComponent, type PageOptions, type PageRecord, type RenderPageOptions } from "./client.ts";
 import { parsedShape, renderDifference, shapeAtMount } from "./client-render.ts";
 import { isMissing, missingPeer, peer } from "./peer.ts";
+import { consoleInto, throwProblems, warnInto } from "./problems.ts";
 import { settled } from "./settle.ts";
 
 /** A conformance fixture: the props, and `$slots`, `$route`, `$stores`, `$loads` and `$locale`. */
@@ -161,6 +162,16 @@ function recordScript(id: string, record: PageRecord): string {
   return `<script type="application/json" id="${id}">${json}</script>`;
 }
 
+function placeRecordedPage(page: RecordedPage, options: Pick<PageOptions, "container" | "doc" | "record">): { doc: Document; id: string; container: Element } {
+  const doc = options.doc ?? document;
+  const id = options.record ?? "__fv_page";
+  doc.body.innerHTML = page.html + (page.record ? recordScript(id, page.record) : "");
+  const selector = options.container ?? "#app";
+  const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
+  if (!container) throw new Error(`the recorded page has no ${selector as string}`);
+  return { doc, id, container };
+}
+
 function shape(node: Node, scratch: HTMLElement): string {
   if (node.nodeType === 3) return node.textContent ?? "";
   if (node.nodeType === 8) return `<!--${node.textContent ?? ""}-->`;
@@ -188,12 +199,7 @@ export async function hydrateRecordedPage(
   components: Record<string, IslandComponent>,
   options: PageOptions = {},
 ): Promise<App> {
-  const doc = options.doc ?? document;
-  const id = options.record ?? "__fv_page";
-  doc.body.innerHTML = page.html + (page.record ? recordScript(id, page.record) : "");
-  const selector = options.container ?? "#app";
-  const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
-  if (!container) throw new Error(`the recorded page has no ${selector as string}`);
+  const { doc, container } = placeRecordedPage(page, options);
   const scratch = doc.createElement("div");
   const before = container.innerHTML;
   const shapeBefore = [...container.childNodes].map((child) => shape(child, scratch)).join("");
@@ -204,7 +210,7 @@ export async function hydrateRecordedPage(
   let shapeHydrated = "";
   const watch: Plugin = {
     install(app) {
-      app.config.warnHandler = (message) => void problems.push(`warning: ${message}`);
+      warnInto(app, problems);
       const mount = app.mount.bind(app);
       app.mount = (...args: Parameters<App["mount"]>) => {
         const root = mount(...args);
@@ -214,23 +220,14 @@ export async function hydrateRecordedPage(
       };
     },
   };
-  const { warn, error } = console;
-  console.warn = (...args: unknown[]) => void problems.push(`console.warn: ${args.map(String).join(" ")}`);
-  console.error = (...args: unknown[]) => void problems.push(`console.error: ${args.map(String).join(" ")}`);
-  let app: App;
-  try {
-    app = await mountPage(layout, components, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch] });
-    await settled(app);
-  } finally {
-    console.warn = warn;
-    console.error = error;
-  }
+  const app = await consoleInto(problems, async () => {
+    const mounted = await mountPage(layout, components, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch] });
+    await settled(mounted);
+    return mounted;
+  });
   if (container.firstChild !== first) problems.push("Vue replaced the server's first node");
   if (shapeHydrated !== shapeBefore) problems.push(`hydrating changed the markup:\n  server:   ${before}\n  hydrated: ${hydrated}`);
-  if (problems.length) {
-    app.unmount();
-    throw new Error(`the page did not hydrate exactly:\n${problems.join("\n")}`);
-  }
+  throwProblems(app, problems, "the page did not hydrate exactly");
   return app;
 }
 
@@ -248,36 +245,22 @@ export async function renderRecordedPage(
   components: Record<string, IslandComponent>,
   options: RenderPageOptions & { record?: string } = {},
 ): Promise<App> {
-  const doc = options.doc ?? document;
-  const id = options.record ?? "__fv_page";
-  doc.body.innerHTML = page.html + (page.record ? recordScript(id, page.record) : "");
+  const { doc, id, container } = placeRecordedPage(page, options);
   const record = page.record ?? readPage(page.html, { record: id }).record;
-  const selector = options.container ?? "#app";
-  const container = typeof selector === "string" ? doc.querySelector(selector) : selector;
-  if (!container) throw new Error(`the recorded page has no ${selector as string}`);
   const expected = parsedShape(container);
   const problems: string[] = [];
   const watch: Plugin = {
     install(app) {
-      app.config.warnHandler = (message) => void problems.push(`warning: ${message}`);
+      warnInto(app, problems);
     },
   };
   const mounted = shapeAtMount();
-  const { warn, error } = console;
-  console.warn = (...args: unknown[]) => void problems.push(`console.warn: ${args.map(String).join(" ")}`);
-  console.error = (...args: unknown[]) => void problems.push(`console.error: ${args.map(String).join(" ")}`);
-  let app: App;
-  try {
-    app = await renderPage(layout, components, record, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch, mounted.plugin] });
-    const difference = await renderDifference(app, mounted.container() ?? container, await Promise.race([mounted.shape(), settled(app).then(mounted.shape)]), expected);
+  const app = await consoleInto(problems, async () => {
+    const rendered = await renderPage(layout, components, record, { ...options, doc, container, plugins: [...(options.plugins ?? []), watch, mounted.plugin] });
+    const difference = await renderDifference(rendered, mounted.container() ?? container, await Promise.race([mounted.shape(), settled(rendered).then(mounted.shape)]), expected);
     if (difference) problems.push(difference);
-  } finally {
-    console.warn = warn;
-    console.error = error;
-  }
-  if (problems.length) {
-    app.unmount();
-    throw new Error(`the page did not render from its record exactly:\n${problems.join("\n")}`);
-  }
+    return rendered;
+  });
+  throwProblems(app, problems, "the page did not render from its record exactly");
   return app;
 }

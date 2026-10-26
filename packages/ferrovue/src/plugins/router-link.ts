@@ -10,7 +10,7 @@ import { attrOf, attrShown, dollarAttrs, IGNORED_PROPS, isAttrs, mergedParts, me
 import { renderStyle } from "../styles.ts";
 import { classItems } from "../classes.ts";
 import { statements } from "../template.ts";
-import { slotBody } from "../slots.ts";
+import { givenSlots, slotBody } from "../slots.ts";
 import { runOf } from "../plugin.ts";
 import { scopeIdOf } from "./scoped.ts";
 import { allRoutes, router } from "./router.ts";
@@ -239,14 +239,9 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     e.close();
   }
   e.lit(">");
-  if (slots && slots.type !== "NullLiteral") {
-    if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
-    for (const p of slots.properties) {
-      const key: string = p.key?.type === "Identifier" ? p.key.name : p.key?.value;
-      if (key === "_") continue;
-      if (key !== "default") fail(s.comp, "FV1229", "`<RouterLink>` has only its default slot", p);
-      statements({ ...s, fill: false, vnode: true }, e, slotBody(s, p.value));
-    }
+  for (const [key, p] of givenSlots(s, slots)) {
+    if (key !== "default") fail(s.comp, "FV1229", "`<RouterLink>` has only its default slot", p);
+    statements({ ...s, fill: false, vnode: true }, e, slotBody(s, p.value));
   }
   e.lit("</a>");
   e.close();

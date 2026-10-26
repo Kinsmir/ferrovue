@@ -30,6 +30,20 @@ export function isListener(key: string): boolean {
   return /^on[^a-z]/.test(key);
 }
 
+/** Visit each call from each flow's component to a component of `byName`, round after round, until
+ * a round's visits change nothing. */
+export function untilSettled<C extends { child: string }>(flows: { comp: Component; calls: C[] }[], byName: Map<string, Component>, visit: (comp: Component, call: C, child: Component) => boolean): void {
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (const f of flows) {
+      for (const c of f.calls) {
+        const child = byName.get(c.child);
+        if (child && visit(f.comp, c, child)) changed = true;
+      }
+    }
+  }
+}
+
 export function attrsFlow(read: { comp: Component; ssr: string; children: Map<string, string>; attrsBindings: Set<string> }[]): void {
   const byName = new Map(read.map((r) => [r.comp.name, r.comp]));
   const flows = read.map((r) => {
@@ -72,29 +86,24 @@ export function attrsFlow(read: { comp: Component; ssr: string; children: Map<st
     walk(parseJs(r.ssr, { sourceType: "module" }).program);
     return { comp: r.comp, calls };
   });
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (const f of flows) {
-      for (const c of f.calls) {
-        const child = byName.get(c.child);
-        if (!child) continue;
-        const names = c.keys.filter((k) => passedKey(child, k));
-        if ((c.passesAttrs && f.comp.inheritAttrs) || c.passesDollar) names.push(...f.comp.attrNames);
-        for (const name of names) {
-          if (declares(child, name) || child.attrNames.has(name)) continue;
-          child.attrNames.add(name);
-          changed = true;
-        }
-        if (c.passesAttrs && f.comp.inherits && !child.idsInAttrs) child.idsInAttrs = changed = true;
-        const heard = c.keys.filter((k) => isListener(k) && !declares(child, k));
-        if (c.unheard) heard.push("");
-        if ((c.passesAttrs && f.comp.inheritAttrs) || c.passesDollar) heard.push(...[...f.comp.listenerAttrs].filter((k) => k === "" || !declares(child, k)));
-        for (const name of heard) {
-          if (child.listenerAttrs.has(name)) continue;
-          child.listenerAttrs.add(name);
-          changed = true;
-        }
-      }
+  untilSettled(flows, byName, (comp, c, child) => {
+    let changed = false;
+    const names = c.keys.filter((k) => passedKey(child, k));
+    if ((c.passesAttrs && comp.inheritAttrs) || c.passesDollar) names.push(...comp.attrNames);
+    for (const name of names) {
+      if (declares(child, name) || child.attrNames.has(name)) continue;
+      child.attrNames.add(name);
+      changed = true;
     }
-  }
+    if (c.passesAttrs && comp.inherits && !child.idsInAttrs) child.idsInAttrs = changed = true;
+    const heard = c.keys.filter((k) => isListener(k) && !declares(child, k));
+    if (c.unheard) heard.push("");
+    if ((c.passesAttrs && comp.inheritAttrs) || c.passesDollar) heard.push(...[...comp.listenerAttrs].filter((k) => k === "" || !declares(child, k)));
+    for (const name of heard) {
+      if (child.listenerAttrs.has(name)) continue;
+      child.listenerAttrs.add(name);
+      changed = true;
+    }
+    return changed;
+  });
 }
