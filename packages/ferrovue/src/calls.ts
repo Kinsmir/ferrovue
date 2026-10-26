@@ -1,17 +1,17 @@
-import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, isAscii, refusalAt, sameTy, STR, strTy } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, isAscii, sameTy, STR, strTy } from "./model.ts";
 import { ctx } from "./context.ts";
 import type { ErrorCode } from "./errors.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
-import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral, spreadExtreme } from "./lists.ts";
+import { computedListMethod, isBoolean, items, listMethod, objectCall, presentLiteral } from "./lists.ts";
 import { lonely, loneOf, meet, regexTest, stringMethod, stringsEqual, writesAscii } from "./strings.ts";
-import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
+import { asF64, asWritten, isNumber } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
 import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
-import { globalCall, numberStaticCall } from "./globals.ts";
+import { globalCall, mathCall, numberStaticCall } from "./globals.ts";
 
 const DIGITS = new Map<string, [ErrorCode, number, string]>([
   ["toFixed", ["FV0705", 0, "number of digits"]],
@@ -104,36 +104,7 @@ function memberCall(s: Scope, n: N): Val {
     const mine = setupCall(s, callee.object.name, method, args, n);
     if (mine) return mine;
   }
-  if (callee.object.type === "Identifier" && callee.object.name === "Math") {
-    if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);
-    if (method === "pow" && args.length === 2) return power(s, args[0], args[1], n, "`Math.pow()`");
-    if (ROUNDED_BY_EACH.has(method)) {
-      return fail(comp, "FV0719", `\`Math.${method}()\` is computed by each JavaScript engine's own routine, which need not round its result as another engine or Rust does, so the page could show digits the browser's render does not: compute it in Rust and pass it as a prop`, n);
-    }
-    const vals = args.map((a) => expr(s, a));
-    if (vals.length && vals.every((v) => isNumber(v.ty))) {
-      const ints = vals.every((v) => v.ty.k === "int");
-      if ((method === "max" || method === "min") && vals.length >= 2) {
-        if (ints && !vals.some(isCast)) return { code: vals.slice(1).reduce((acc, v) => `${atom(acc)}.${method}(${bare(v.code)})`, vals[0]!.code), ty: INT };
-        const extreme = vals.slice(1).reduce((acc, v) => `fv::core::js_${method}(${bare(acc)}, ${bare(asF64(v))})`, asF64(vals[0]!));
-        if (ints) return intFromF64(extreme, vals.find(isCast)?.at ?? refusalAt(comp, n));
-        return { code: extreme, ty: FLOAT };
-      }
-      if (vals.length === 1) {
-        const x = vals[0]!;
-        if (method === "abs") return ints ? intFromF64(`${receiver(asF64(x))}.abs()`, refusalAt(comp, n)) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
-        if (method === "round") return { code: `fv::core::js_round(${bare(asF64(x))})`, ty: FLOAT };
-        if (method === "floor" || method === "ceil" || method === "trunc") return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
-        if (method === "sqrt") return x.num !== undefined ? numberVal(Math.sqrt(x.num), false) : { code: `${receiver(asF64(x))}.sqrt()`, ty: FLOAT };
-        if (method === "sign") {
-          if (x.num !== undefined) return numberVal(Math.sign(x.num), ints);
-          const sign = `fv::core::js_sign(${bare(asF64(x))})`;
-          return ints ? intFromF64(sign, null) : { code: sign, ty: FLOAT };
-        }
-      }
-    }
-    return fail(comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\`, \`trunc\`, \`sqrt\`, \`sign\` and \`pow\``, n);
-  }
+  if (callee.object.type === "Identifier" && callee.object.name === "Math") return mathCall(s, method, args, n);
   if (callee.object.type === "Identifier" && BUILTINS.has(callee.object.name) && !s.locals.has(callee.object.name) && !s.setup.has(callee.object.name)) {
     return builtin(s, `${callee.object.name}.${method}()`, n);
   }
@@ -211,10 +182,6 @@ function memberCall(s: Scope, n: N): Val {
   }
   return fail(comp, "FV0602", `\`.${method}()\` is not supported`, n);
 }
-
-const ROUNDED_BY_EACH = new Set(
-  "acos acosh asin asinh atan atan2 atanh cbrt cos cosh exp expm1 hypot log log10 log1p log2 sin sinh tan tanh".split(" "),
-);
 
 /** The globals of JavaScript a template may name, which the server translates only some of. */
 export const BUILTINS = new Set(

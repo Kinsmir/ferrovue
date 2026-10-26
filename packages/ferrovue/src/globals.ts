@@ -1,7 +1,8 @@
-import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, refusalAt, STR } from "./model.ts";
 import { atom, bare, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { formatted, lonely, stringOf } from "./strings.ts";
-import { asWritten, isNumber } from "./numbers.ts";
+import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
+import { spreadExtreme } from "./lists.ts";
 import { boolOf } from "./narrowing.ts";
 import { describeTy, expr } from "./expr.ts";
 
@@ -109,4 +110,57 @@ function optionalNumberTest(method: string, v: Val, of: Ty): Val {
   const each = of.k === "int" ? intTest(method, "v") : floatTest(method, "v");
   if (each === "false") return { code: "false", ty: BOOL, konst: false };
   return boolOf(each === "true" ? `${atom(v.code)}.is_some()` : `${atom(v.code)}.is_some_and(|v| ${each})`);
+}
+
+const ROUNDED_BY_EACH = new Set(
+  "acos acosh asin asinh atan atan2 atanh cbrt cos cosh exp expm1 hypot log log10 log1p log2 sin sinh tan tanh".split(" "),
+);
+
+/** Translates a call of a method of `Math`. */
+export function mathCall(s: Scope, method: string, args: N[], n: N): Val {
+  if ((method === "max" || method === "min") && args.some((a) => a?.type === "SpreadElement")) return spreadExtreme(s, method, args);
+  if (method === "pow" && args.length === 2) return power(s, args[0], args[1], n, "`Math.pow()`");
+  if (ROUNDED_BY_EACH.has(method)) {
+    return fail(s.comp, "FV0719", `\`Math.${method}()\` is computed by each JavaScript engine's own routine, which need not round its result as another engine or Rust does, so the page could show digits the browser's render does not: compute it in Rust and pass it as a prop`, n);
+  }
+  const vals = args.map((a) => expr(s, a));
+  const done = vals.length > 0 && vals.every((v) => isNumber(v.ty)) ? numericMath(s, method, vals, n) : null;
+  return done ?? fail(s.comp, "FV0704", `\`Math.${method}()\` is supported on numbers as \`max\`, \`min\`, \`abs\`, \`round\`, \`floor\`, \`ceil\`, \`trunc\`, \`sqrt\`, \`sign\` and \`pow\``, n);
+}
+
+function numericMath(s: Scope, method: string, vals: Val[], n: N): Val | null {
+  const ints = vals.every((v) => v.ty.k === "int");
+  if ((method === "max" || method === "min") && vals.length >= 2) return extreme(s, method, vals, ints, n);
+  return vals.length === 1 ? unaryMath(s, method, vals[0]!, ints, n) : null;
+}
+
+function extreme(s: Scope, method: "max" | "min", vals: Val[], ints: boolean, n: N): Val {
+  if (ints && !vals.some(isCast)) return { code: vals.slice(1).reduce((acc, v) => `${atom(acc)}.${method}(${bare(v.code)})`, vals[0]!.code), ty: INT };
+  const code = vals.slice(1).reduce((acc, v) => `fv::core::js_${method}(${bare(acc)}, ${bare(asF64(v))})`, asF64(vals[0]!));
+  if (ints) return intFromF64(code, vals.find(isCast)?.at ?? refusalAt(s.comp, n));
+  return { code, ty: FLOAT };
+}
+
+function unaryMath(s: Scope, method: string, x: Val, ints: boolean, n: N): Val | null {
+  switch (method) {
+    case "abs":
+      return ints ? intFromF64(`${receiver(asF64(x))}.abs()`, refusalAt(s.comp, n)) : { code: `${receiver(x.code)}.abs()`, ty: FLOAT };
+    case "round":
+      return { code: `fv::core::js_round(${bare(asF64(x))})`, ty: FLOAT };
+    case "floor":
+    case "ceil":
+    case "trunc":
+      return { code: `${receiver(asF64(x))}.${method}()`, ty: FLOAT };
+    case "sqrt":
+      return x.num !== undefined ? numberVal(Math.sqrt(x.num), false) : { code: `${receiver(asF64(x))}.sqrt()`, ty: FLOAT };
+    case "sign":
+      return sign(x, ints);
+  }
+  return null;
+}
+
+function sign(x: Val, ints: boolean): Val {
+  if (x.num !== undefined) return numberVal(Math.sign(x.num), ints);
+  const code = `fv::core::js_sign(${bare(asF64(x))})`;
+  return ints ? intFromF64(code, null) : { code, ty: FLOAT };
 }
