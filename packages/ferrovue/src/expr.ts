@@ -1,4 +1,4 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, FLOAT, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, placeOf, rustStr, sameTy, UNDEF, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type StructTy, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, FLOAT, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, placeOf, rustStr, sameTy, UNDEF, UNION_STR, unionStr, variantPath } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumListVal, intoEnum, overVariants } from "./enums.ts";
 import { CONFIG_FILE } from "./config.ts";
@@ -6,14 +6,14 @@ import { ctx } from "./context.ts";
 import { lookupStruct, markHome, tyOfTs } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { bare } from "./parens.ts";
-import { heldDates, spreadLiteral, typedEmpty } from "./lists.ts";
+import { heldDates, spreadLiteral, tupleParts, typedEmpty } from "./lists.ts";
 import { formatted, loneOf } from "./strings.ts";
 import { asF64, isNumber, numberVal } from "./numbers.ts";
 import { literalNarrowing, pathOf } from "./narrowing.ts";
 import { BUILTINS, builtin, call } from "./calls.ts";
 import { constOf, namedVal } from "./constants.ts";
 import { localeRefusal } from "./plugins/dates.ts";
-import { objectLiteral, structList, untypedObject } from "./objects.ts";
+import { objectLiteral, structList, tupleValue, untypedObject } from "./objects.ts";
 import { letIn } from "./blocks.ts";
 import { assignedLet, loopIn, loopStep } from "./statements.ts";
 import { refuseUnresolved } from "./resolve.ts";
@@ -193,7 +193,7 @@ export function typedBy(n: N, t: N, arrays = true, from?: Component): N {
   switch (n.type) {
     case "ArrayExpression":
       if (n.elements.length === 0) return arrays ? given() : n;
-      return n.elements.some((el: N) => objectish(el)) ? given() : n;
+      return n.elements.some((el: N) => objectish(el)) || structTyped(t) ? given() : n;
     case "ObjectExpression":
       return given();
     case "CallExpression":
@@ -212,6 +212,14 @@ export function typedBy(n: N, t: N, arrays = true, from?: Component): N {
     default:
       return n;
   }
+}
+
+/** Whether the type node \`t\` gives an object, present or not, or a list of objects: an array
+ * literal given it may be a tuple, or a list of tuples. */
+function structTyped(t: N): boolean {
+  if (t.type !== "FvTy") return false;
+  const ty: Ty = t.ty.k === "opt" ? t.ty.of : t.ty;
+  return ty.k === "struct" || (ty.k === "list" && ty.of.k === "struct");
 }
 
 function objectish(n: N): boolean {
@@ -247,7 +255,9 @@ function stated(s: Scope, n: N): Val {
     if (n.fvGiven) return expr(s, n.expression);
     return fail(comp, "FV0628", `\`${keyword}\` states ${describeTy(want)} of an object literal`, n);
   }
+  if (inner.type === "ArrayExpression" && tupleParts(comp, list) !== null) return tupleValue(s, inner, list as StructTy);
   if (inner.type === "ArrayExpression" && inner.elements.length > 0 && list.k === "list" && list.of.k === "struct") return structList(s, inner, list.of);
+  if (inner.type === "ArrayExpression" && inner.elements.length > 0 && n.fvGiven) return expr(s, n.expression);
   if (inner.type === "ArrayExpression" && inner.elements.length === 0) {
     if (list.k === "list") return typedEmpty(comp, list.of);
     if (n.fvGiven) return expr(s, n.expression);

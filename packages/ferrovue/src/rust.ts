@@ -1,12 +1,12 @@
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, REFUSALS, rustStr, snake, takesAttrs, templateAst } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, isTuple, REFUSALS, rustStr, snake, takesAttrs, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumsSource, holdsMapped } from "./enums.ts";
 import { ctx, INLINE_HTML } from "./context.ts";
 import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { closing, occurrences } from "./parens.ts";
+import { bare, closing, occurrences } from "./parens.ts";
 import { statements } from "./template.ts";
 import { cssVarsReads, inlineCssVars } from "./styles.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
@@ -107,11 +107,22 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
   return { ty: fieldTy(ty, comp), value: arg };
 }
 
-function serdeAttrs(f: Field): string {
+/** How serde reads and writes a field's dates and unions mapped to an application's enums. */
+function serdeWith(f: Field): string {
   const absent = f.ty.k === "opt" && f.ty.none === undefined;
   const dated = f.ty.k === "opt" && f.ty.of.k === "date" ? `${absent ? "" : ", default"}, with = "fv::date::opt_date_prop"` : `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::date::dates_in"`;
-  const date = f.ty.k === "date" ? ', with = "fv::date::date_prop"' : bareDates(f.ty) ? dated : holdsMapped(f.ty) ? `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::props::union_prop"` : "";
-  return `    #[serde(rename = ${rustStr(f.js)}${absent ? ', default, skip_serializing_if = "Option::is_none"' : ""}${date})]`;
+  return f.ty.k === "date" ? ', with = "fv::date::date_prop"' : bareDates(f.ty) ? dated : holdsMapped(f.ty) ? `${f.ty.k === "opt" && !absent ? ", default" : ""}, with = "fv::props::union_prop"` : "";
+}
+
+function serdeAttrs(f: Field): string {
+  const absent = f.ty.k === "opt" && f.ty.none === undefined;
+  return `    #[serde(rename = ${rustStr(f.js)}${absent ? ', default, skip_serializing_if = "Option::is_none"' : ""}${serdeWith(f)})]`;
+}
+
+/** The serde attribute of a part of a tuple struct, which has no name and is never absent. */
+function tuplePartAttrs(f: Field): string {
+  const using = serdeWith(f).replace(/^, (?:default, )?/, "");
+  return using ? `#[serde(${using})] ` : "";
 }
 
 function absentNote(optional: Field[]): string {
@@ -121,9 +132,9 @@ function absentNote(optional: Field[]): string {
 }
 
 function builderSource(st: Struct, comp: Component, life: string): string {
-  const required = st.fields.filter((f) => f.ty.k !== "opt");
-  const optional = st.fields.filter((f) => f.ty.k === "opt");
-  const arg = (f: Field) => f.rust;
+  const required = isTuple(st) ? st.fields : st.fields.filter((f) => f.ty.k !== "opt");
+  const optional = isTuple(st) ? [] : st.fields.filter((f) => f.ty.k === "opt");
+  const arg = (f: Field) => (isTuple(st) ? `part${f.rust}` : f.rust);
   const params = required.map((f) => `${arg(f)}: ${param(f.ty, comp, arg(f)).ty}`).join(", ");
   const inits = st.fields
     .map((f) => (f.ty.k === "opt" ? `${f.rust}: None` : fieldInit(f.rust, param(f.ty, comp, arg(f)).value)))
@@ -143,9 +154,9 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   const usesA = /'a/.test(params + setters);
   const impl = life ? "impl<'a>" : usesA ? "impl<'a>" : "impl";
   return `${impl} ${st.name}${life} {
-    /// ${st.name} with ${required.length ? "its required fields" : "nothing set"}${absentNote(optional)}.
+    /// ${st.name} with ${isTuple(st) ? "its parts" : required.length ? "its required fields" : "nothing set"}${absentNote(optional)}.
 ${required.length > 7 ? "    // One argument per required field, however many the type declares.\n    #[allow(clippy::too_many_arguments)]\n" : ""}    pub fn new(${params}) -> Self {
-        ${st.name} { ${inits} }
+        ${isTuple(st) ? `${st.name}(${st.fields.map((f) => bare(param(f.ty, comp, arg(f)).value)).join(", ")})` : `${st.name} { ${inits} }`}
     }
 ${setters}
 }
@@ -154,6 +165,13 @@ ${setters}
 
 export function structSource(st: Struct, comp: Component, doc: string): string {
   const life = structLifetime(st, comp) ? "<'a>" : "";
+  if (isTuple(st)) {
+    const parts = st.fields.map((f) => `${tuplePartAttrs(f)}pub ${fieldTy(f.ty, comp)}`).join(", ");
+    return `${doc}#[derive(Debug, Clone, serde::Serialize)]
+#[cfg_attr(test, derive(serde::Deserialize))]
+pub struct ${st.name}${life}(${parts});
+${ctx.builders ? `\n${builderSource(st, comp, life)}\n` : ""}`;
+  }
   const fields = st.fields
     .map((f) => {
       return `${serdeAttrs(f)}\n    pub ${f.rust}: ${fieldTy(f.ty, comp)},`;

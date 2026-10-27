@@ -22,6 +22,7 @@ pub mod modal;
 pub mod picker;
 pub mod posted;
 pub mod rated;
+pub mod scored;
 pub mod shell;
 pub mod sized;
 pub mod stamped;
@@ -181,6 +182,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Rated" => {
             let props: rated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             rated::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "Scored" => {
+            let props: scored::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            scored::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Shell" => {
             let props: shell::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

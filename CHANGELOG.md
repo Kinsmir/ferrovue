@@ -19,7 +19,9 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - A `<textarea>`, and an `<input v-model>` of a literal `type`, at a component's root where no parent passes it `value` or `type`.
   0.12.0 refused them with FV0424: [Fallthrough attributes](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#fallthrough-attributes).
 - Prop types written in place: object types, mapped types and `Record`s over a union of names, and indexed types (`Card["size"]`).
-  0.12.0 refused them with FV0310, FV0313 and FV0316; tuples stay refused: [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
+  0.12.0 refused them with FV0310, FV0313 and FV0316: [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
+- Tuple prop types (`[label: string, n: number]`), as tuple structs serde writes as arrays, read by index, `.length` and array patterns.
+  0.12.0 refused them with FV0316: [Tuples](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#tuples).
 - Loaders awaited together by `Promise.all`, and loader parameters typed as an interface, written into the key with sorted keys.
   Generated code is version 7, which the 0.12 crate refuses; the 0.13 crate builds version 6 too: [`loaders`](https://docs.rs/ferrovue/latest/ferrovue/guide/loaders/index.html).
 - `ferrovue::page::Document` writes the page shell around a render, and `ferrovue::html::splice` writes components into trusted `v-html`.

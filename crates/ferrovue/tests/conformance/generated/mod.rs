@@ -236,6 +236,8 @@ pub mod tile_rows;
 pub mod translated;
 pub mod tree;
 pub mod truthy;
+pub mod tuple_badge;
+pub mod tuple_types;
 pub mod typeof_tests;
 pub mod union_badge;
 pub mod union_child;
@@ -1489,6 +1491,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Truthy" => {
             let props: truthy::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             truthy::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "TupleBadge" => {
+            let props: tuple_badge::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tuple_badge::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "TupleTypes" => {
+            let props: tuple_types::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            tuple_types::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "TypeofTests" => {
             let props: typeof_tests::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -46,6 +46,12 @@ export interface Struct {
   refused?: Map<string, GenError>;
 }
 
+/** Whether \`st\` is a tuple's struct: its fields are named after the parts' indices, which no
+ * interface's field can be, and Rust holds it as a tuple struct that serde writes as an array. */
+export function isTuple(st: Struct): boolean {
+  return st.fields.length > 0 && st.fields.every((f, i) => f.js === String(i));
+}
+
 export interface Val {
   code: string;
   ty: Ty;

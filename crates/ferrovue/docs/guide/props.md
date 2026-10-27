@@ -21,6 +21,7 @@ a public field per prop, and a struct for every interface or object type alias t
 | `owner: { name: string }`, `{ … }[]`, written in place as a field's type | a struct named after the type and the field, `CardOwner<'a>` (for a prop, after the component: `ButtonOwner`) | the struct |
 | `{ [K in Side]: T }`, `Record<Side, T>` with `Side` a union of names, as a field's type | a struct with a field for each member, named as above | the struct |
 | `Card["size"]` | the type of the field it names | as that type |
+| `[string, number]`, `[label: string, n: number]`, `type Pair = [string, number]` | a tuple struct named as above, `CardPair<'a>(pub Cow<'a, str>, pub i64)`, or `Pair<'a>`; serde writes it as an array. See [Tuples](#tuples) | the struct, `CardPair::new("a", 1)` |
 | `Record<string, T>`, `{ [key: string]: T }` | [`ferrovue::props::Record<'a, T>`](crate::props::Record) | the `Record`, collected from pairs. See [Dictionaries](#dictionaries) |
 | `Props` imported from another component | `super::child::Props<'a>` | the struct |
 | `TrustedHtml` (from `ferrovue/types`) | the type configured as `trustedHtml` | that type. See [`escaping`](crate::guide::escaping) |
@@ -28,6 +29,26 @@ a public field per prop, and a struct for every interface or object type alias t
 | `x?: T`, `x: T \| undefined` | `Option<T>` | a setter, `.x(value)` |
 | `x: T \| null` | `Option<T>`, written as `null` | a setter, `.x(value)` |
 | `T`, of `<script setup generic="T extends Row">` | the type of its constraint, `Row<'a>` | as the constraint |
+
+# Tuples
+
+A tuple type is a tuple struct with a field for each part, in order: the template reads
+`pair[0]` as `pair.0`, `pair.length` as the number of parts, and destructures it in `v-for`, in an
+arrow function's parameter and in a `const` of a `computed` (`([label, n], i) in pairs`). serde
+writes it as an array, so an island's `data-props` and a page's record hold what the browser held.
+
+```ts
+defineProps<{ score: [label: string, points: number]; spans: [Date, Date][] }>();
+```
+
+An array literal of the parts builds a child's tuple prop (`:pair="[name, 0]"`), and a tuple of one
+component reaches a child's tuple of the same parts' types, which the compiler builds part by
+part: TypeScript gives one tuple where another of its parts is taken. A part may be `null`
+(`[string, number | null]`, an `Option`), not optional (`[string, number?]`), a rest
+(`[string, ...number[]]`), or `undefined`, which an array holds as `null` once written as JSON;
+those, and the empty tuple, are refused with [FV0316](crate::guide::error_codes#fv0316). A tuple
+is an array to JavaScript, which an object is not: what reads it as one (`.map()`, `.join()`,
+`v-for` over its parts, `:class`, `String()`) is refused with that construct's own code.
 
 # Props from a `.ts` file
 

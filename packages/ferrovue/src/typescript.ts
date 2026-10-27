@@ -64,7 +64,8 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return tyOfTs(comp, t.typeAnnotation, structs, seen);
     case "TSIndexedAccessType":
       return indexed(comp, t, structs, seen);
-    case "TSMappedType": {
+    case "TSMappedType":
+    case "TSTupleType": {
       const placed = placedStruct(comp, t, structs);
       if (placed !== null) return placed;
       break;
@@ -146,8 +147,8 @@ export function tyOfTs(comp: Component, t: N, structs: Map<string, Struct>, seen
       return fail(comp, "FV0315", `unsupported prop type \`${name}\`: declare it as an interface in the component, or import it from a \`.ts\` file`, t);
     }
   }
-  const help = t.type === "TSTupleType" ? "declare an interface with a field for each part (`{ label: string; count: number }`), or a list of such objects for a list of pairs" : null;
-  return fail(comp, "FV0316", `${nodeName(t)} is not supported as a prop type`, t, help);
+  if (t.type === "TSTupleType") return fail(comp, "FV0316", `${tupleRefusal(t) ?? "a tuple type written there"} is not supported as a prop type`, t, TUPLE_HELP);
+  return fail(comp, "FV0316", `${nodeName(t)} is not supported as a prop type`, t);
 }
 
 function recordOf(comp: Component, value: N, structs: Map<string, Struct>, seen: Set<string>): Ty {
@@ -164,7 +165,9 @@ export function declareTypes(comp: Component, body: N[], structs: Map<string, St
     if (d?.type === "TSInterfaceDeclaration") decls.push({ name: d.id.name, members: d.body.body, node: d });
     else if (d?.type === "TSTypeAliasDeclaration") {
       const dictionary = d.typeAnnotation.members?.some((m: N) => m.type === "TSIndexSignature");
+      const tuple = tupleLiteral(d.typeAnnotation);
       if (d.typeAnnotation.type === "TSTypeLiteral" && !dictionary) decls.push({ name: d.id.name, members: d.typeAnnotation.members, node: d });
+      else if (tuple !== null) decls.push({ name: d.id.name, members: tuple.members, node: d });
       else {
         aliases.set(d.id.name, d.typeAnnotation);
         declareAlias(comp, d.id.name, d.typeAnnotation, d);
@@ -213,10 +216,43 @@ function keyedLiteral(t: N, aliases: Map<string, N>): N | null {
   return { type: "TSTypeLiteral", ...at, members: keys.map((k) => ({ type: "TSPropertySignature", ...at, key: { type: "Identifier", name: k, ...at }, computed: false, optional: keyed!.optional, typeAnnotation: { type: "TSTypeAnnotation", ...at, typeAnnotation: keyed!.value } })) };
 }
 
+const TUPLE_HELP = "a tuple is read when it has one or more parts, none optional (`?`), none a rest (`...`) and none that may be `undefined`; or declare an interface with a field for each part";
+
+/** What keeps the tuple type \`t\` from being a struct of its parts, or null when nothing does. */
+function tupleRefusal(t: N): string | null {
+  if (!t.elementTypes.length) return "an empty tuple";
+  for (const e of t.elementTypes) {
+    if (e.type === "TSOptionalType" || (e.type === "TSNamedTupleMember" && e.optional)) return "a tuple with an optional part";
+    if (e.type === "TSRestType" || (e.type === "TSNamedTupleMember" && e.elementType.type === "TSRestType")) return "a tuple with a rest part";
+  }
+  return null;
+}
+
+const TUPLES = new WeakMap<object>();
+
+/** The tuple type \`t\` as an object type with a field named after each part's index, which a Rust
+ * tuple struct holds and writes as an array, or null when \`t\` is no tuple of fixed parts. */
+function tupleLiteral(t: N): N | null {
+  if (t?.type !== "TSTupleType" || tupleRefusal(t) !== null) return null;
+  const known = TUPLES.get(t);
+  if (known !== undefined) return known;
+  const at = { loc: t.loc, start: t.start, end: t.end, __fv: t.__fv };
+  const members = t.elementTypes.map((e: N, i: number) => {
+    const part = e.type === "TSNamedTupleMember" ? e.elementType : e;
+    const place = { loc: e.loc, start: e.start, end: e.end, __fv: e.__fv };
+    return { type: "TSPropertySignature", ...place, key: { type: "Identifier", name: String(i), ...place }, computed: false, optional: false, tuplePart: true, typeAnnotation: { type: "TSTypeAnnotation", ...place, typeAnnotation: part } };
+  });
+  const literal = { type: "TSTypeLiteral", ...at, members };
+  TUPLES.set(t, literal);
+  return literal;
+}
+
 function placedLiteral(t: N, aliases: Map<string, N>): N | null {
   switch (t?.type) {
     case "TSTypeLiteral":
       return t.members.some((m: N) => m.type === "TSIndexSignature") ? null : t;
+    case "TSTupleType":
+      return tupleLiteral(t) === null ? null : t;
     case "TSMappedType":
       return keyedLiteral(t, aliases) === null ? null : t;
     case "TSArrayType":
@@ -246,7 +282,7 @@ export function inlineTypes(owner: string, members: N[], out: { name: string; me
     if (m.type !== "TSPropertySignature" || m.key.type !== "Identifier" || !m.typeAnnotation) continue;
     const placed = placedLiteral(m.typeAnnotation.typeAnnotation, aliases);
     if (placed === null || INLINE.has(placed)) continue;
-    const literal = placed.type === "TSTypeLiteral" ? placed : keyedLiteral(placed, aliases)!;
+    const literal = placed.type === "TSTypeLiteral" ? placed : (tupleLiteral(placed) ?? keyedLiteral(placed, aliases)!);
     const name = `${owner}${capital(m.key.name)}`;
     INLINE.set(placed, name);
     out.push({ name, members: literal.members, node: placed });
@@ -491,6 +527,9 @@ function fieldOf(comp: Component, name: string, m: N, structs: Map<string, Struc
   const base = tyOfTs(comp, m.typeAnnotation.typeAnnotation, structs, new Set());
   if (m.optional && absence(base) === "null") {
     fail(comp, "FV0321", `\`${m.key.name}?: T | null\` may be absent, which is \`undefined\`, or \`null\`: ${ONE_NOTHING}; declare it \`${m.key.name}: T | null\` or \`${m.key.name}?: T\``, m);
+  }
+  if (m.tuplePart && base.k === "opt" && base.none !== "null") {
+    fail(comp, "FV0316", `part ${m.key.name} of a tuple may be \`undefined\`, which an array holds as \`null\` once written as JSON`, m, TUPLE_HELP);
   }
   const ty = m.optional && base.k !== "opt" ? opt(base) : base;
   return { js: m.key.name, rust: snake(m.key.name), ty: enums ? enumField(comp, name === "Props" ? comp.name : name, m.key.name, m, ty) : declaredLiterals(ty) };
