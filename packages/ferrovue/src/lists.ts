@@ -9,7 +9,7 @@ import { tyNode } from "./objects.ts";
 import { cond, unbound } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { asF64, isNumber } from "./numbers.ts";
-import { asCow, isTemporary, lonely, meet, writesAscii, yieldsCow } from "./strings.ts";
+import { asCow, isTemporary, lonely, loneOf, meet, writesAscii, yieldsCow } from "./strings.ts";
 import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.ts";
 import { expressionBodied } from "./blocks.ts";
 
@@ -842,7 +842,7 @@ function sameItem(s: Scope, target: Val, of: Ty, x: Val, v: string, code: "FV080
   return of.k === "bool" ? binary(v, "==", x.code) : `${v} == ${x.code}`;
 }
 
-export function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
+function computedListMethod(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
   if (target.ty.k !== "list") return null;
   const of = target.ty.of;
   if (of.k === "entry" && (method === "includes" || method === "join")) {
@@ -865,4 +865,37 @@ export function computedListMethod(s: Scope, target: Val, method: string, args: 
     return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...(target.lone || sep.lone ? { lone: true } : {}) };
   }
   return null;
+}
+
+/** Translates a method of a list, or returns null for a receiver that is no list or a method it does not know. */
+export function listCall(s: Scope, target: Val, method: string, args: N[], n: N): Val | null {
+  if (target.ty.k !== "list") return null;
+  const of = target.ty.of;
+  const scalar = of.k === "str" || of.k === "int";
+  const inPlace = target.iter === undefined && !target.lone && scalar;
+  const listed = listMethod(s, target, method, args, n) ?? (inPlace ? null : computedListMethod(s, target, method, args, n));
+  if (listed) return listed;
+  return scalar ? inPlaceMethod(s, target, of, method, args) : null;
+}
+
+function inPlaceMethod(s: Scope, target: Val, of: Ty, method: string, args: N[]): Val | null {
+  if (method === "includes" && args.length === 1) return inPlaceIncludes(s, target, of, args[0]);
+  if (method === "join" && args.length <= 1) return inPlaceJoin(s, target, of, args);
+  return null;
+}
+
+function inPlaceIncludes(s: Scope, target: Val, of: Ty, arg: N): Val {
+  const v = expr(s, arg);
+  if (of.k === "int" && v.ty.k === "float") return { code: `${atom(target.code)}.iter().any(|v| ${binary("*v as f64", "==", v.code)})`, ty: BOOL };
+  if (!sameTy(v.ty, of)) fail(s.comp, "FV0801", "`.includes()` looks for a value of the list's own type", arg);
+  if (of.k === "int") return { code: `${atom(target.code)}.contains(&${operand(v.code, UNARY)})`, ty: BOOL };
+  const test = v.code === '""' ? "v.is_empty()" : binary("&**v", "==", v.code);
+  return { code: `${atom(target.code)}.iter().any(|v| ${test})`, ty: BOOL };
+}
+
+function inPlaceJoin(s: Scope, target: Val, of: Ty, args: N[]): Val {
+  const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
+  if (sep.ty.k !== "str") fail(s.comp, "FV0802", "`.join()` takes a string", args[0]);
+  const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::core::Js(*v).to_string())`;
+  return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...loneOf(sep) };
 }

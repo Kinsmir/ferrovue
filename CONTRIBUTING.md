@@ -76,9 +76,9 @@ packages/ferrovue/           the compiler (npm package)
   src/template.ts, children.ts, slots.ts, loops.ts, vhtml.ts
                              the compiled template: statements, child components, slots, v-for,
                              where `v-html` may go
-  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts, parens.ts
-                             expressions: operators, strings, numbers, narrowing, calls, lists,
-                             the parentheses Rust needs
+  src/expr.ts, strings.ts, numbers.ts, narrowing.ts, calls.ts, globals.ts, lists.ts, parens.ts
+                             expressions: operators, strings, numbers, narrowing, calls,
+                             JavaScript's globals, lists, the parentheses Rust needs
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
   src/dynamic.ts             `<component :is>` over a closed set of choices
