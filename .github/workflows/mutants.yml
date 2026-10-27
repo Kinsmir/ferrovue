@@ -136,7 +136,7 @@ jobs:
           - name: component choices
             modules: dynamic
           - name: expressions
-            modules: expr
+            modules: expr members operators logical conditional
     env:
       MODULES: ${{ matrix.modules }}
     steps:
