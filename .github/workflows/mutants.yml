@@ -137,6 +137,8 @@ jobs:
             modules: dynamic
           - name: expressions
             modules: expr members operators logical conditional
+          - name: calls and methods
+            modules: calls globals lists numbers strings
     env:
       MODULES: ${{ matrix.modules }}
     steps:

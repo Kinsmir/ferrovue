@@ -1,4 +1,4 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, BOOL, enumOf, fail, FLOAT, INT, isAscii, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, BOOL, enumOf, fail, FLOAT, INT, isAscii, isTuple, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumItemVal, enumListVal } from "./enums.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
@@ -8,6 +8,7 @@ import { describeTy, expr, fieldVal, statedTy, typedBy } from "./expr.ts";
 import { tyNode } from "./objects.ts";
 import { cond, unbound } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
+import { lookupStruct } from "./typescript.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, lonely, loneOf, meet, writesAscii, yieldsCow } from "./strings.ts";
 import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.ts";
@@ -36,6 +37,26 @@ export function entryPart(v: Val, i: number): Val {
   if (of.k === "int" || of.k === "float" || of.k === "bool") return { code: `*${place}`, ty: of };
   if (of.k === "date") return { code: `fv::date::js_time_of(${place})`, ty: of };
   return { code: place, ty: of, ...lone };
+}
+
+/** How many parts the tuple of type `ty` has, or null when `ty` is no tuple's struct. */
+export function tupleParts(comp: Component, ty: Ty): number | null {
+  if (ty.k !== "struct") return null;
+  const { st } = lookupStruct(comp, ty);
+  return st !== undefined && isTuple(st) ? st.fields.length : null;
+}
+
+/** Binds the names of `pattern`, an array pattern of a tuple, to its parts. */
+export function bindTuple(comp: Component, pattern: N, v: Val, locals: Map<string, Val>, bound: string[], code: "FV0808" | "FV0818" | "FV0821"): void {
+  const parts = tupleParts(comp, v.ty)!;
+  const refuse = (at: N) => fail(comp, code, `a tuple of ${parts} is destructured to plain names, without defaults or a rest element: \`[${Array.from({ length: parts }, (_, i) => `p${i}`).join(", ")}]\`, or with holes`, at);
+  if (pattern.elements.length > parts) refuse(pattern);
+  pattern.elements.forEach((x: N, i: number) => {
+    if (!x) return;
+    if (x.type !== "Identifier") refuse(x);
+    locals.set(x.name, fieldVal(comp, v.code, v.ty, String(i), x));
+    bound.push(x.name);
+  });
 }
 
 /** Binds the names of `pattern`, an array pattern of a `[key, value]` pair, to its parts. */
@@ -147,7 +168,8 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
       bound.push(prop.value.name);
     }
   } else if (item?.type === "ArrayPattern" && of.k === "entry") bindEntry(comp, item, v, locals, bound, "FV0808");
-  else if (item) fail(comp, "FV0809", `an arrow function's item is a name, or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern of an object"}`, item);
+  else if (item?.type === "ArrayPattern" && tupleParts(comp, of) !== null) bindTuple(comp, item, v, locals, bound, "FV0808");
+  else if (item) fail(comp, "FV0809", `an arrow function's item is a name, or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern of an object, or an array pattern of a tuple"}`, item);
   if (index) {
     locals.set(index.name, { code: i, ty: INT });
     bound.push(index.name);

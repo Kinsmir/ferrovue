@@ -5,7 +5,7 @@ import { ctx } from "./context.ts";
 import { lookupStruct, markHome } from "./typescript.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, enclosed, receiver, strArg } from "./parens.ts";
-import { collected, entryPart, picked, untypedEmpty } from "./lists.ts";
+import { collected, entryPart, picked, tupleParts, untypedEmpty } from "./lists.ts";
 import { asCow, isTemporary, loneOf } from "./strings.ts";
 import { asF64, numberVal } from "./numbers.ts";
 import { BUILTINS, builtin, isObjectCall } from "./calls.ts";
@@ -58,6 +58,8 @@ function lengthOf(s: Scope, n: N): Val | null {
   if (untypedEmpty(base)) return numberVal(0, true);
   if (base.ty.k === "list") return { code: `${atom(base.code)}.len() as i64`, ty: INT };
   if (base.ty.k === "str") return { code: `fv::strings::js_length(${strArg(base.code)})`, ty: INT };
+  const parts = tupleParts(s.comp, base.ty);
+  if (parts !== null) return numberVal(parts, true);
   return null;
 }
 
@@ -86,6 +88,14 @@ function computedMember(s: Scope, n: N): Val {
   if (base.ty.k === "list") return indexed(s, base, n.property, n);
   if (base.ty.k === "str") return unitAt(s, base, n.property);
   if (base.ty.k === "entry") return entryAt(comp, base, n);
+  const parts = tupleParts(comp, base.ty);
+  if (parts !== null) {
+    const at: unknown = n.property.type === "NumericLiteral" ? n.property.value : undefined;
+    if (typeof at !== "number" || !Number.isInteger(at) || at < 0 || at >= parts) {
+      fail(comp, "FV0612", `\`[…]\` reads a part of a tuple of ${parts} by a literal index, from \`0\` to \`${parts - 1}\``, n);
+    }
+    return fieldVal(comp, base.code, base.ty, String(at), n);
+  }
   if (base.ty.k === "struct") {
     const byKey = fieldByKey(s, base, n.property, n);
     if (byKey !== null) return byKey;

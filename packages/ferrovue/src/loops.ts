@@ -7,7 +7,7 @@ import { atom, operand, OR } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { statements } from "./template.ts";
 import { unbound } from "./narrowing.ts";
-import { bindEntry } from "./lists.ts";
+import { bindEntry, bindTuple, tupleParts } from "./lists.ts";
 
 export function list(s: Scope, e: Emitter, c: N): void {
   const fn = c.arguments[1];
@@ -95,7 +95,8 @@ export function list(s: Scope, e: Emitter, c: N): void {
       inner.set(p.value.name, fieldVal(s.comp, itemName, of, p.key.name ?? p.key.value, p));
     }
   } else if (item.type === "ArrayPattern" && of.k === "entry") bindEntry(s.comp, item, { code: itemName, ty: of, ...(src.lone ? { lone: true } : {}) }, inner, [], "FV0818");
-  else fail(s.comp, "FV0822", `a \`v-for\` item is a name or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern"}`, item);
+  else if (item.type === "ArrayPattern" && tupleParts(s.comp, of) !== null) bindTuple(s.comp, item, { code: itemName, ty: of }, inner, [], "FV0821");
+  else fail(s.comp, "FV0822", `a \`v-for\` item is a name or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern, or an array pattern of a tuple"}`, item);
   if (index) inner.set(index.name, { code: idx!, ty: INT });
   const before = e.literalBytes;
   const over = src.enums?.place ?? src.code;
@@ -141,7 +142,8 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
       }
       inner.set(p.value.name, fieldVal(s.comp, v, of, p.key.name ?? p.key.value, p));
     }
-  } else if (value) fail(s.comp, "FV0822", "a `v-for` item is a name, or an object pattern of an object", value);
+  } else if (value?.type === "ArrayPattern" && tupleParts(s.comp, of) !== null) bindTuple(s.comp, value, { code: v, ty: of }, inner, [], "FV0821");
+  else if (value) fail(s.comp, "FV0822", "a `v-for` item is a name, an object pattern of an object, or an array pattern of a tuple", value);
   if (key) inner.set(key.name, { code: k, ty: STR });
   if (index) inner.set(index.name, { code: i, ty: INT });
   const before = e.literalBytes;

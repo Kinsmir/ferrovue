@@ -17,7 +17,12 @@
     "packages/ferrovue/src/members.ts",
     "packages/ferrovue/src/operators.ts",
     "packages/ferrovue/src/logical.ts",
-    "packages/ferrovue/src/conditional.ts"
+    "packages/ferrovue/src/conditional.ts",
+    "packages/ferrovue/src/calls.ts",
+    "packages/ferrovue/src/globals.ts",
+    "packages/ferrovue/src/lists.ts",
+    "packages/ferrovue/src/numbers.ts",
+    "packages/ferrovue/src/strings.ts"
   ],
   "ignorePatterns": ["/target", "/fuzz", "/mutants.out*", "/examples/*/dist", "/packages/*/dist"],
   "tempDirName": "target/stryker/tmp",

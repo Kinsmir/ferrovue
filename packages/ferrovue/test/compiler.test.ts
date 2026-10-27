@@ -9,6 +9,7 @@ import { GenError, GenErrors } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
 import { type ErrorCode, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
+import { like } from "./code.ts";
 
 const roots: string[] = [];
 
@@ -87,7 +88,7 @@ defineProps<{ n: number; on: boolean }>();
         `<script setup lang="ts">
 import { computed } from "vue";
 import { fmt } from "./util";
-const props = defineProps<{ n: number; pair: [number, number] }>();
+const props = defineProps<{ n: number; pair: [number, number?] }>();
 function twice(x: number) { return x * 2; }
 const big = computed(() => {
   while (props.n > 0) return props.n;
@@ -108,9 +109,9 @@ const big = computed(() => {
       const e = refusals(project);
       const said = e.errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
       expect(said).toEqual([
-        ["FV0316", "a tuple type is not supported as a prop type", "declare an interface with a field for each part (`{ label: string; count: number }`), or a list of such objects for a list of pairs"],
+        ["FV0316", "a tuple with an optional part is not supported as a prop type", "a tuple is read when it has one or more parts, none optional (`?`), none a rest (`...`) and none that may be `undefined`; or declare an interface with a field for each part"],
       ]);
-      writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number]", ""));
+      writeFileSync(join(project, "components", "X.vue"), readFileSync(join(project, "components", "X.vue"), "utf8").replace("; pair: [number, number?]", ""));
       const again = refusals(project).errors.map((one) => [(one as GenError).code, (one as GenError).what, (one as GenError).help]);
       expect(again).toEqual([
         [
@@ -2652,11 +2653,73 @@ defineProps<{ cats: Cat[] }>();
       expect(compile(island(of('{ size: Card["size"] }', "<p>{{ size }}</p>", 'interface Card { size: "sm" | "lg" }\n'))).get("x.rs")).toContain("pub size: CardSize,");
     });
 
-    it("refuses an object type in place it cannot name, a mapped type over literals that are not names, and a tuple", () => {
+    it("refuses an object type in place it cannot name, and a mapped type over literals that are not names", () => {
       expect(caught(of("{ pick: { a: string } | { b: string } }"))).toMatchObject({ code: "FV0310" });
       expect(caught(of('{ m: { [K in "a-b" | "c"]: string } }'))).toMatchObject({ code: "FV0316" });
       expect(caught(of("{ owner: { name: string } }", "<p>x</p>", "interface XOwner { id: number }\n"))).toMatchObject({ code: "FV0310", message: expect.stringContaining("named `XOwner`") });
-      expect(caught(of("{ pair: [string, number] }"))).toMatchObject({ code: "FV0316" });
+    });
+
+    it("holds a tuple as a tuple struct, read by index, by `.length` and by array patterns", () => {
+      const out = compile(island(of("{ pair: Pair; rows: [label: string, n: number | null][]; on?: [boolean] }", '<p :title="pair[0]">{{ pair[1] }}{{ pair.length }}{{ on?.[0] }}<i v-for="([l, n], i) in rows" :key="i">{{ l }}{{ n ?? 0 }}</i>{{ rows.map(([l]) => l).join() }}</p>', "type Pair = [string, number];\n"))).get("x.rs")!;
+      for (const decl of ["pub struct Pair<'a>(pub Cow<'a, str>, pub i64);", "pub struct XRows<'a>(pub Cow<'a, str>, pub Option<i64>);", "pub struct XOn(pub bool);", "pub rows: Vec<XRows<'a>>,", "pub on: Option<XOn>,"]) expect(out).toContain(decl);
+      expect(out).toContain("pub fn new(part0: impl Into<Cow<'a, str>>, part1: Option<i64>) -> Self {\n        XRows(part0.into(), part1)\n    }");
+      expect(out).toContain("fv::core::push_int(out, props.pair.1);");
+      expect(out).toContain('out.push(\'2\');');
+      expect(out).toMatch(like("fv::core::escape_into(out, &fv_item.0);"));
+    });
+
+    it("writes a tuple's dates with serde's date helpers, and plans them by their indices", () => {
+      const out = compile(island(of("{ span: [Date, string] }", "<p>{{ span[1] }}</p>"))).get("x.rs")!;
+      expect(out).toContain('pub struct XSpan<\'a>(#[serde(with = "fv::date::date_prop")] pub ferrovue::date::JsDate, pub Cow<\'a, str>);');
+      expect(out).toContain('html.dates("[{\\"span\\":{\\"0\\":1}}]")');
+    });
+
+    const refusal = (project: string): unknown => {
+      try {
+        compile(project);
+      } catch (e) {
+        return e instanceof GenErrors ? e.errors[0] : e;
+      }
+      throw new Error("compiled without an error");
+    };
+
+    it("builds a child's tuple from an array literal and from a tuple of another component", () => {
+      const child = '<script setup lang="ts">\ndefineProps<{ pair: [string, number]; rest?: [string, number][] }>();\n</script>\n<template><b>{{ pair[0] }}</b></template>';
+      const parent = (template: string) => island(`<script setup lang="ts">\nimport C from "./C.vue";\ntype Pair = [string, number];\ndefineProps<{ pair: Pair; pairs: Pair[] }>();\n</script>\n<template><div>${template}</div></template>`, { C: child });
+      expect(compile(parent(`<C :pair="['a', pair[1]]" />`)).get("x.rs")).toContain("pair: super::c::CPair(std::borrow::Cow::<str>::Borrowed(\"a\"), props.pair.1)");
+      const passed = compile(parent('<C :pair="pair" :rest="pairs" />')).get("x.rs")!;
+      expect(passed).toMatch(like("pair: { let fv_tuple = &props.pair; super::c::CPair(std::borrow::Cow::Borrowed(&*fv_tuple.0), fv_tuple.1) }"));
+      expect(passed).toMatch(like("rest: Some(props.pairs.iter().map(|fv_tuple| super::c::CRest(std::borrow::Cow::Borrowed(&*fv_tuple.0), fv_tuple.1)).collect())"));
+      expect(refusal(parent(`<C :pair="['a']" />`))).toMatchObject({ code: "FV0635", message: expect.stringContaining("holds its 2 parts, and this one holds 1") });
+      expect(refusal(parent(`<C :pair="['a', 'b']" />`))).toMatchObject({ code: "FV0635", message: expect.stringContaining("part 1 of `CPair` is a number") });
+      expect(refusal(parent('<C :pair="[...pair]" />'))).toMatchObject({ code: "FV0635", message: expect.stringContaining("without a spread or a hole") });
+    });
+
+    it("names the types FV0510 refuses by their structs", () => {
+      const child = '<script setup lang="ts">\ndefineProps<{ box: { on: boolean } }>();\n</script>\n<template><b>{{ box.on }}</b></template>';
+      const parent = island('<script setup lang="ts">\nimport C from "./C.vue";\ndefineProps<{ box: { on: boolean } }>();\n</script>\n<template><C :box="box" /></template>', { C: child });
+      expect(refusal(parent)).toMatchObject({ code: "FV0510", message: expect.stringContaining("`XBox` where the child takes `CBox`") });
+    });
+
+    it.each([
+      ["an empty tuple", "{ pair: [] }", "an empty tuple"],
+      ["an optional part", "{ pair: [string, number?] }", "a tuple with an optional part"],
+      ["an optional labelled part", "{ pair: [a: string, b?: number] }", "a tuple with an optional part"],
+      ["a rest part", "{ pair: [string, ...number[]] }", "a tuple with a rest part"],
+      ["a part that may be undefined", "{ pair: [string, number | undefined] }", "part 1 of a tuple may be `undefined`"],
+    ])("refuses a tuple with %s", (_, props, message) => {
+      expect(caught(of(props))).toMatchObject({ code: "FV0316", message: expect.stringContaining(message) });
+    });
+
+    it.each([
+      ["an index past its parts", "{{ pair[2] }}", "FV0612", "from `0` to `1`"],
+      ["an index that is not a literal", "{{ pair[n] }}", "FV0612", "by a literal index"],
+      ["a `v-for` over its parts", '<i v-for="x in pair">{{ x }}</i>', "FV0820", "walks an array"],
+      ["a pattern with a rest", '<i v-for="([a, ...b]) in pairs">{{ a }}</i>', "FV0821", "without defaults or a rest element"],
+      ["a pattern of more names than parts", '<i v-for="([a, b, c]) in pairs">{{ a }}</i>', "FV0821", "a tuple of 2"],
+      ["an array method", '{{ pair.join(",") }}', "FV0602", "`.join()`"],
+    ])("refuses %s", (_, template, code, message) => {
+      expect(caught(of("{ pair: [string, number]; pairs: [string, number][]; n: number }", `<p>${template}</p>`))).toMatchObject({ code, message: expect.stringContaining(message) });
     });
   });
 
@@ -7387,8 +7450,8 @@ function pair(t: string): string {
     expect(called!.what).toMatch(/\(in `pair\(\)`, called at components\/X\.vue:10:\d+\)$/);
   });
 
-  it("names the tag resolved by name, and suggests an interface for a tuple prop", () => {
-    const [tuple] = refusals(`<script setup lang="ts">\ndefineProps<{ at: [number, number] }>();\n</script>\n<template><i>{{ at }}</i></template>`);
+  it("names the tag resolved by name, and says which tuples are read", () => {
+    const [tuple] = refusals(`<script setup lang="ts">\ndefineProps<{ at: [number, ...number[]] }>();\n</script>\n<template><i>{{ at }}</i></template>`);
     expect(tuple).toMatchObject({ code: "FV0316", help: expect.stringMatching(/declare an interface with a field for each part/) });
     const [tag] = refusals(`<template><rss><item>x</item></rss></template>`);
     expect(tag).toMatchObject({ code: "FV0513", what: expect.stringMatching(/^`<rss>` is a component the template resolves by name, which must be imported/) });

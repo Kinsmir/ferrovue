@@ -8,8 +8,12 @@ function revived(value: unknown, plan: Plan, types: Record<string, Plan>, depth:
   if (plan === 1) return typeof value === "string" || typeof value === "number" ? new Date(value) : value;
   if (value === null || typeof value !== "object") return value;
   if (Array.isArray(plan)) return Array.isArray(value) && plan.length === 1 ? value.map((item) => revived(item, plan[0]!, types, depth + 1)) : value;
-  if (Array.isArray(value)) return value;
   const every = Object.hasOwn(plan, "*") ? plan["*"] : undefined;
+  if (Array.isArray(value)) {
+    if (every !== undefined) return value;
+    // A tuple: the plan names its parts by their indices.
+    return value.map((item, i) => (Object.hasOwn(plan, String(i)) ? revived(item, plan[String(i)]!, types, depth + 1) : item));
+  }
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => {
       const own = every ?? (Object.hasOwn(plan, key) ? plan[key] : undefined);

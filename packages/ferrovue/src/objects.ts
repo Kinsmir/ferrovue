@@ -174,6 +174,28 @@ export function objectLiteral(s: Scope, n: N, want: StructTy): Val {
   return { code: `${path}${want.name} {${body}}`, ty: want, owned: true, ...loneOf(...values) };
 }
 
+/** An array literal built as the tuple struct `want` names: an item for each part, in order. */
+export function tupleValue(s: Scope, n: N, want: StructTy): Val {
+  const comp = s.comp;
+  const { st, owner, path } = lookupStruct(comp, want);
+  const named = `\`${want.name}\``;
+  const loose = n.elements.findIndex((el: N) => !el || el.type === "SpreadElement");
+  if (loose >= 0) fail(comp, "FV0635", `an array literal of the tuple ${named} holds each part by itself, without a spread or a hole`, n.elements[loose] ?? n);
+  if (n.elements.length !== st!.fields.length) {
+    fail(comp, "FV0635", `an array literal of the tuple ${named} holds its ${st!.fields.length} parts, and this one holds ${n.elements.length}`, n);
+  }
+  const values: Val[] = [];
+  const parts = st!.fields.map((field, i) => {
+    const el: N = n.elements[i];
+    const ty = owner === comp ? field.ty : markHome(field.ty, owner.name);
+    const v = expr(s, typedBy(el, tyNode(ty)));
+    values.push(v);
+    holdsNothing(comp, v, ty, el, `part ${i} of ${named}`);
+    return bare(fieldOwned(comp, v, ty, el, `part ${i} of ${named}`));
+  });
+  return { code: `${path}${want.name}(${parts.join(", ")})`, ty: want, owned: true, ...loneOf(...values) };
+}
+
 /** An array literal of objects built as a list of the struct `of` names. */
 export function structList(s: Scope, n: N, of: StructTy): Val {
   const values = n.elements.map((el: N) => {

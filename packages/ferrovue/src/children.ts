@@ -1,10 +1,10 @@
 import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type Ty, type Val, absence, camelize, declares, enumItems, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type StructTy, type Ty, type Val, absence, camelize, declares, enumItems, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
 import { enumItemVal, exactlyEnum, intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";
-import { bareDates, markHome } from "./typescript.ts";
-import { items } from "./lists.ts";
+import { bareDates, lookupStruct, markHome } from "./typescript.ts";
+import { items, tupleParts } from "./lists.ts";
 import { describeTy, expr, fieldVal, holdsNothing, typedBy } from "./expr.ts";
 import { tyNode } from "./objects.ts";
 import { asF64 } from "./numbers.ts";
@@ -245,7 +245,7 @@ function childAttrsArg(s: Scope, child: Component, parts: N[], merges: boolean, 
 }
 
 export function fieldInit(name: string, value: string): string {
-  return value === name ? name : `${name}: ${bare(value)}`;
+  return value === name && !/^\d/.test(name) ? name : `${name}: ${bare(value)}`;
 }
 
 export function takesSlots(c: Component): boolean {
@@ -399,6 +399,42 @@ function enumListInto(comp: Component, v: Val, want: Ty, node: N): string {
   return `${iter}.map(|v| ${ownInto(comp, each, want.of, node)}).collect()`;
 }
 
+/** A type as FV0510 names it: an object by the name of its struct. */
+function typeNamed(ty: Ty): string {
+  if (ty.k === "struct") return `\`${ty.name}\``;
+  if (ty.k === "list") return `a list of ${typeNamed(ty.of)}`;
+  if (ty.k === "opt") return `${typeNamed(ty.of)}, which may be absent`;
+  if (ty.k === "record") return `a record of ${typeNamed(ty.of)}`;
+  return describeTy(ty);
+}
+
+/** A tuple given to a child's tuple of other parts' types, built part by part as the child's struct:
+ * TypeScript gives one tuple where another of its parts is taken. Also optional, and in a list. */
+function tupleInto(comp: Component, v: Val, want: Ty, node: N): string | null {
+  const parts = tupleParts(comp, want);
+  if (parts !== null) {
+    if (tupleParts(comp, v.ty) !== parts) return null;
+    const t = fresh("t", "tuple");
+    return `{ let ${t} = &${atom(v.code)}; ${tupleBuilt(comp, t, v.ty, want as StructTy, node)} }`;
+  }
+  if (v.iter !== undefined || v.ty.k !== want.k || (want.k !== "opt" && want.k !== "list") || (v.ty.k === "opt" && absence(v.ty) !== absence(want))) return null;
+  const from = (v.ty as Ty & { of: Ty }).of;
+  const to = want.of;
+  if (tupleParts(comp, to) === null || tupleParts(comp, from) !== tupleParts(comp, to)) return null;
+  const t = fresh("t", "tuple");
+  const built = tupleBuilt(comp, t, from, to as StructTy, node);
+  return want.k === "opt" ? `${atom(v.code)}.as_ref().map(|${t}| ${built})` : `${atom(v.code)}.iter().map(|${t}| ${built}).collect()`;
+}
+
+function tupleBuilt(comp: Component, t: string, from: Ty, want: StructTy, node: N): string {
+  const { st, owner, path } = lookupStruct(comp, want);
+  const parts = st!.fields.map((f) => {
+    const ty = owner === comp ? f.ty : markHome(f.ty, owner.name);
+    return bare(ownInto(comp, fieldVal(comp, t, from, f.js, node), ty, node));
+  });
+  return `${path}${want.name}(${parts.join(", ")})`;
+}
+
 export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   holdsNothing(comp, v, want, node, "the prop");
   if (v.owned && sameTy(v.ty, want)) return v.code;
@@ -454,8 +490,10 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
   const objecty = (t: Ty): boolean => t.k === "struct" || t.k === "child" || t.k === "record" || ((t.k === "list" || t.k === "opt") && objecty(t.of));
   if (objecty(want) && sameTy(v.ty, want)) return `${atom(v.code)}.${v.ty.k === "opt" ? "cloned" : "to_owned"}()`;
   if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some(${atom(v.code)}.to_owned())`;
+  const tuple = tupleInto(comp, v, want, node);
+  if (tuple !== null) return tuple;
   if (objecty(want) && v.ty.k === want.k && JSON.stringify(v.ty).includes('"struct"')) {
-    fail(comp, "FV0510", `a ${JSON.stringify(v.ty)} where the child takes a ${JSON.stringify(want)}: two components share a type only when both import it from one \`.ts\` file`, node);
+    fail(comp, "FV0510", `${typeNamed(v.ty)} where the child takes ${typeNamed(want)}: two components share a type only when both import it from one \`.ts\` file`, node);
   }
   if (want.k === "list" && v.ty.k === "list" && v.ty.of.k === "undef") return "Vec::new()";
   if (want.k === "opt" && want.of.k === "list" && v.ty.k === "list") return `Some(${ownInto(comp, v, want.of, node)})`;

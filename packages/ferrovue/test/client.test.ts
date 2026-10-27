@@ -197,6 +197,14 @@ it("turns the dates a plan names inside lists, dictionaries and objects back int
   expect(reviveByPlan({ at: "2024-01-01", rows: "x", days: { 0: "y" } }, [{ at: "Missing", rows: [1], days: [1] }])).toEqual({ at: "2024-01-01", rows: "x", days: { 0: "y" } });
 });
 
+it("turns the dates a plan names in a tuple's parts back into Dates, by their indices", () => {
+  const revived = reviveByPlan({ span: ["2024-01-01", "label", 0], spans: [[-1, "x", null]], by: { a: ["x"] } }, [{ span: { 0: 1, 2: 1 }, spans: [{ 0: 1, 2: 1 }], by: { "*": { 0: 1 } } }]);
+  expect(revived.span).toEqual([new Date("2024-01-01"), "label", new Date(0)]);
+  expect(revived.spans).toEqual([[new Date(-1), "x", null]]);
+  expect(revived.by).toEqual({ a: [new Date(Number.NaN)] });
+  expect(reviveByPlan({ by: ["2024-01-01"] }, [{ by: { "*": 1 } }])).toEqual({ by: ["2024-01-01"] });
+});
+
 it("revives an island's props by the plan in its data-dates, and a page's parts and layout by theirs", async () => {
   const LIST = { days: { type: Array as PropType<Date[]>, required: true as const }, at: Date };
   const List = defineComponent({

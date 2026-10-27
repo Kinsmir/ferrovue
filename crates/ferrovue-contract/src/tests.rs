@@ -16,11 +16,12 @@ use ferrovue::{
 use crate::domain::Tone;
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
-    picker, posted, provides, rated, render_json, route_table, shell, sized, stamped, stores,
-    theme_scope, themed_button, timeline, toned, translated, twins, types,
+    picker, posted, provides, rated, render_json, route_table, scored, shell, sized, stamped,
+    stores, theme_scope, themed_button, timeline, toned, translated, twins, types,
 };
 
 const _: fn(&mut String, &sized::Props) = sized::render;
+const _: fn(&mut String, &scored::Props<'_>) = scored::render;
 const _: fn(&mut String, &greeting::Props<'_>) = greeting::render;
 const _: fn(&mut String, &counter::Props) = counter::render;
 const _: fn(&mut String, &blank::Props) = blank::render;
@@ -119,6 +120,31 @@ fn props_are_built_with_new_and_setters_or_as_literals() {
     assert_eq!(
         render(|out| blank::render(out, &blank::Props::new())),
         render(|out| blank::render(out, &blank::Props::default()))
+    );
+}
+
+#[test]
+fn a_tuple_is_a_tuple_struct_built_from_its_parts_and_written_as_an_array() {
+    let built = scored::Props::new(scored::Score::new("Ada", 3))
+        .extra(scored::ScoredExtra::new("on", Some(true)));
+    let literal = scored::Props {
+        score: scored::Score(Cow::Borrowed("Ada"), 3),
+        extra: Some(scored::ScoredExtra(Cow::Borrowed("on"), Some(true))),
+    };
+    let expected = r#"<p title="Ada">3<b>on true</b></p>"#;
+    assert_eq!(render(|out| scored::render(out, &built)), expected);
+    assert_eq!(scored::html(&literal).into_string(), expected);
+    assert_eq!(built.score.0, "Ada");
+    assert_eq!(built.score.1, 3);
+    let island = scored::island(&built).into_string();
+    assert!(
+        island.starts_with(r#"<div data-island="Scored" data-props="{&quot;score&quot;:[&quot;Ada&quot;,3],&quot;extra&quot;:[&quot;on&quot;,true]}">"#),
+        "{island}"
+    );
+    let plain = scored::Props::new(scored::Score::new("", 0));
+    assert_eq!(
+        render(|out| scored::render(out, &plain)),
+        r#"<p title>0<!----></p>"#
     );
 }
 
