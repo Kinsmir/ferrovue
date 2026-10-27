@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, patternNames, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
@@ -40,17 +40,18 @@ export function setupStatement(comp: Component, st: N): void {
   fail(comp, "FV0105", `${st.expression?.type === "CallExpression" ? (name === null ? "a call" : `\`${name}()\``) : nodeName(st.expression)} in setup could change what renders, and is not translated`, st);
 }
 
+function computedSource(comp: Component, fn: N): N | null {
+  if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
+  const body = bodyExpr(comp, fn, "a `computed`'s body");
+  const returns = fn.returnType?.typeAnnotation;
+  return returns ? typedBy(body, returns) : body;
+}
+
 export function setupSource(comp: Component, init: N): N | null {
   if (init.type === "CallExpression" && init.callee.type === "Identifier") {
     const name = init.callee.name;
     if ((name === "ref" || name === "shallowRef") && init.arguments.length === 1) return init.arguments[0];
-    if (name === "computed") {
-      const fn = init.arguments[0];
-      if (fn?.type !== "ArrowFunctionExpression" && fn?.type !== "FunctionExpression") return null;
-      const body = bodyExpr(comp, fn, "a `computed`'s body");
-      const returns = fn.returnType?.typeAnnotation;
-      return returns ? typedBy(body, returns) : body;
-    }
+    if (name === "computed") return computedSource(comp, init.arguments[0]);
   }
   if (init.type === "TSAsExpression" || init.type === "TSSatisfiesExpression" || init.type === "TSNonNullExpression") return setupSource(comp, init.expression);
   return init;
@@ -119,23 +120,6 @@ function emptyRef(comp: Component, init: N): Val | null {
   return ty.k === "list" ? { code: `Vec::<${localTy(ty.of, comp)}>::new()`, ty } : null;
 }
 
-export function patternNames(p: N): string[] {
-  switch (p?.type) {
-    case "Identifier":
-      return [p.name];
-    case "ObjectPattern":
-      return p.properties.flatMap((q: N) => patternNames(q.type === "RestElement" ? q.argument : q.value));
-    case "ArrayPattern":
-      return p.elements.flatMap((q: N) => (q ? patternNames(q) : []));
-    case "AssignmentPattern":
-      return patternNames(p.left);
-    case "RestElement":
-      return patternNames(p.argument);
-    default:
-      return [];
-  }
-}
-
 function asyncLoader(arg: N): N {
   if (arg?.type === "ObjectExpression") {
     const loader = arg.properties.find((p: N) => p.type === "ObjectProperty" && !p.computed && (p.key.name ?? p.key.value) === "loader");
@@ -144,9 +128,7 @@ function asyncLoader(arg: N): N {
   return arg;
 }
 
-/** The components `<script setup>` declares with `defineAsyncComponent(() => import("./X.vue"))`,
- * by local name, each the name of the `.vue` file it loads. */
-export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
+function asyncCallees(ast: N[]): Set<string> {
   const callees = new Set<string>();
   for (const st of ast) {
     if (st.type !== "ImportDeclaration" || st.source.value !== "vue") continue;
@@ -154,20 +136,36 @@ export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
       if (sp.type === "ImportSpecifier" && (sp.imported.name ?? sp.imported.value) === "defineAsyncComponent") callees.add(sp.local.name);
     }
   }
+  return callees;
+}
+
+function importedSpec(loader: N): N | null {
+  const imported = loader?.type === "ArrowFunctionExpression" && loader.params.length === 0 ? loader.body : null;
+  if (imported?.type === "ImportExpression") return imported.source;
+  return imported?.type === "CallExpression" && imported.callee.type === "Import" ? imported.arguments[0] : null;
+}
+
+function asyncChild(comp: Component, d: N, callees: Set<string>): [string, string] | null {
+  const init = d.init;
+  if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !callees.has(init.callee.name)) return null;
+  const spec = importedSpec(asyncLoader(init.arguments[0]));
+  if (d.id.type !== "Identifier" || spec?.type !== "StringLiteral" || !spec.value.endsWith(".vue")) {
+    fail(comp, "FV0106", '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
+  }
+  return [d.id.name, basename(spec.value, ".vue")];
+}
+
+/** The components `<script setup>` declares with `defineAsyncComponent(() => import("./X.vue"))`,
+ * by local name, each the name of the `.vue` file it loads. */
+export function asyncChildren(comp: Component, ast: N[]): Map<string, string> {
+  const callees = asyncCallees(ast);
   const found = new Map<string, string>();
   if (!callees.size) return found;
   for (const st of ast) {
     if (st.type !== "VariableDeclaration") continue;
     for (const d of st.declarations) {
-      const init = d.init;
-      if (init?.type !== "CallExpression" || init.callee.type !== "Identifier" || !callees.has(init.callee.name)) continue;
-      const loader = asyncLoader(init.arguments[0]);
-      const imported = loader?.type === "ArrowFunctionExpression" && loader.params.length === 0 ? loader.body : null;
-      const spec = imported?.type === "ImportExpression" ? imported.source : imported?.type === "CallExpression" && imported.callee.type === "Import" ? imported.arguments[0] : null;
-      if (d.id.type !== "Identifier" || spec?.type !== "StringLiteral" || !spec.value.endsWith(".vue")) {
-        fail(comp, "FV0106", '`defineAsyncComponent` loads a component of this project, as `defineAsyncComponent(() => import("./Child.vue"))`', init);
-      }
-      found.set(d.id.name, basename(spec.value, ".vue"));
+      const child = asyncChild(comp, d, callees);
+      if (child !== null) found.set(...child);
     }
   }
   return found;
@@ -178,8 +176,20 @@ function mayPanic(lazies: Map<string, string>, init: string): boolean {
   return [...lazies.values()].some((name) => occurrences(init, name) > 0);
 }
 
-export function scopeFor(comp: Component, ast: N[], components: Map<string, Component>): { scope: Scope; lets: string[]; lazies: Map<string, string> } {
-  const scope: Scope = {
+interface Setup {
+  comp: Component;
+  scope: Scope;
+  locals: Map<string, Declared>;
+  asyncs: Map<string, string>;
+  setupNames: Map<string, string>;
+  lets: string[];
+  lazies: Map<string, string>;
+  useAttrsName: string | null;
+  useSlotsName: string | null;
+}
+
+function emptyScope(comp: Component, components: Map<string, Component>): Scope {
+  return {
     comp,
     components,
     setup: new Map(),
@@ -209,17 +219,19 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
     opaque: null,
     plugins: new Map(),
   };
-  for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
-  const evaluable = (local: string, d: Declared, why: string, help: string | null = null): void => {
-    try {
-      scope.consts.set(local, constOfDecl(d));
-    } catch (e) {
-      if (!(e instanceof GenError)) throw e;
-      scope.clientOnly.set(local, `${why}: ${e.message.split("\n")[0]!}`);
-      scope.refusedBy.set(local, help === null || e.help !== null ? e : Object.assign(new GenError(e.code, e.message, e.at, e.what, help), { readAt: e.readAt }));
-    }
-  };
-  const locals = declareConsts(comp, ast);
+}
+
+function evaluable(scope: Scope, local: string, d: Declared, why: string, help: string | null = null): void {
+  try {
+    scope.consts.set(local, constOfDecl(d));
+  } catch (e) {
+    if (!(e instanceof GenError)) throw e;
+    scope.clientOnly.set(local, `${why}: ${e.message.split("\n")[0]!}`);
+    scope.refusedBy.set(local, help === null || e.help !== null ? e : Object.assign(new GenError(e.code, e.message, e.at, e.what, help), { readAt: e.readAt }));
+  }
+}
+
+function numericConsts(scope: Scope, locals: Map<string, Declared>): void {
   for (const [local, d] of locals) {
     try {
       const c = constOfDecl(d);
@@ -228,175 +240,285 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
       if (!(e instanceof GenError)) throw e;
     }
   }
-  const lets: string[] = [];
-  const lazies = new Map<string, string>();
-  const asyncs = asyncChildren(comp, ast);
-  let useAttrsName: string | null = null;
-  let useSlotsName: string | null = null;
-  const declared = (f: { name: string; node: N }, tdzUntil?: number): void => {
-    scope.functions.set(f.name, { name: f.name, node: f.node, home: comp, file: null, ...(tdzUntil !== undefined ? { tdzUntil } : {}) });
-    scope.clientOnly.set(f.name, "it is a function, which the template and a `computed` may call, and only an event handler may name without calling it");
-  };
+}
+
+function declared(scope: Scope, f: { name: string; node: N }, tdzUntil?: number): void {
+  scope.functions.set(f.name, { name: f.name, node: f.node, home: scope.comp, file: null, ...(tdzUntil !== undefined ? { tdzUntil } : {}) });
+  scope.clientOnly.set(f.name, "it is a function, which the template and a `computed` may call, and only an event handler may name without calling it");
+}
+
+function declareFunctions(scope: Scope, ast: N[]): void {
   for (const st of ast) {
     const decls: N[] = st.type === "VariableDeclaration" && st.kind === "const" ? st.declarations : [st];
     for (const d of decls) {
       const f = functionOf(d);
-      if (f) declared(f, st.type === "VariableDeclaration" ? st.end : undefined);
+      if (f) declared(scope, f, st.type === "VariableDeclaration" ? st.end : undefined);
     }
   }
+}
+
+function setupNamesOf(ast: N[]): Map<string, string> {
   const bound = ast.flatMap((st: N) => (st.type === "VariableDeclaration" ? st.declarations.flatMap((d: N) => (d.id.type === "Identifier" ? [d.id.name as string] : [])) : []));
-  const setupNames = dollarNames(bound, (js) => `s_${snake(js).replace(/^r#/, "")}`);
-  for (const st of ast) {
-    if (st.type === "ImportDeclaration") {
-      const from: string = st.source.value;
-      if (from.endsWith(".vue")) {
-        const def = st.specifiers.find((x: N) => x.type === "ImportDefaultSpecifier");
-        if (def) scope.children.set(def.local.name, basename(from, ".vue"));
-        continue;
-      }
-      if (ctx.plugins.some((p) => p.scriptImport?.(scope, st, from))) continue;
-      if (from === "vue") {
-        for (const sp of st.specifiers) {
-          if (sp.type !== "ImportSpecifier") continue;
-          const imported: string = sp.imported.name ?? sp.imported.value;
-          if (imported === "useAttrs") useAttrsName = sp.local.name;
-          if (imported === "useSlots") useSlotsName = sp.local.name;
-        }
-      } else if (ctx.helperModule !== null && from === ctx.helperModule) {
-        for (const sp of st.specifiers) {
-          if (!ctx.helpers[sp.imported.name]) fail(comp, "FV1108", `\`${sp.imported.name}\` has no Rust twin: add it to \`helpers.functions\` in ${CONFIG_FILE}`, sp);
-          scope.helpers.set(sp.local.name, sp.imported.name);
-        }
-      } else {
-        for (const sp of st.importKind === "type" ? [] : st.specifiers) if (sp.importKind !== "type") scope.imported.set(sp.local.name, from);
-        const file = resolveImport(comp.file, from);
-        if (file !== null && st.importKind !== "type" && st.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) readTypeFile(file);
-        const decls = file !== null ? ctx.constDecls.get(file) : undefined;
-        const fns = file !== null ? ctx.tsModules.get(file)?.functions : undefined;
-        for (const sp of decls && st.importKind !== "type" ? st.specifiers : []) {
-          const key: string | undefined = sp.type === "ImportSpecifier" && sp.importKind !== "type" ? (sp.imported.name ?? sp.imported.value) : sp.type === "ImportDefaultSpecifier" ? "default" : undefined;
-          const f = key !== undefined ? fns?.get(key) : undefined;
-          if (f?.exported) {
-            scope.functions.set(sp.local.name, f.fn);
-            scope.clientOnly.set(sp.local.name, `it is a function imported from ${f.fn.home.file}, which the template and a \`computed\` may call, and only an event handler may name without calling it`);
-            continue;
-          }
-          const d = key !== undefined ? decls!.get(key) : undefined;
-          if (d?.exported) evaluable(sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
-        }
-      }
-      continue;
-    }
-    if (st.type === "FunctionDeclaration") continue;
-    const decl = st.type === "ExportNamedDeclaration" ? st.declaration : st;
-    if (decl?.type === "TSInterfaceDeclaration" || decl?.type === "TSTypeAliasDeclaration") continue;
-    if (decl?.type === "TSEnumDeclaration") {
-      evaluable(decl.id.name, locals.get(decl.id.name)!, "it is not an enum the compiler evaluates");
-      continue;
-    }
-    if (st.type === "ExpressionStatement") {
-      if (!ctx.plugins.some((p) => p.scriptStatement?.(scope, st, lets))) setupStatement(comp, st);
-      continue;
-    }
-    if (st.type !== "VariableDeclaration") fail(comp, "FV0107", `${nodeName(st)} in setup is not supported`, st);
-    for (const d of st.declarations) {
-      const init0 = d.init;
-      if (d.id.type === "ObjectPattern" && definePropsType(init0)) {
-        for (const p of d.id.properties) {
-          if (p.type !== "ObjectProperty" || p.computed) fail(comp, "FV0108", "destructured props are plain names: `...rest` has no Rust type", p);
-          const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
-          const local = p.value.type === "AssignmentPattern" ? p.value.left : p.value;
-          if (local.type !== "Identifier") fail(comp, "FV0109", "destructured props are plain names", p);
-          scope.setup.set(local.name, fieldVal(comp, "props", { k: "struct", name: "Props" }, key, p));
-        }
-        continue;
-      }
-      const loaded = d.id.type === "Identifier" ? asyncs.get(d.id.name) : undefined;
-      if (loaded !== undefined) {
-        scope.children.set(d.id.name, loaded);
-        scope.loadedLater.add(d.id.name);
-        continue;
-      }
-      if (ctx.plugins.some((p) => p.scriptBinding?.(scope, d, lets))) continue;
-      if (d.id.type !== "Identifier") {
-        for (const name of patternNames(d.id)) scope.clientOnly.set(name, "it is destructured from a value the server does not have");
-        continue;
-      }
-      const local: string = d.id.name;
-      if (scope.functions.get(local)?.node === init0) continue;
-      const objectDecl = locals.get(local);
-      if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && unwrapped(init0)?.type === "ObjectExpression") {
-        if (!(d.id.typeAnnotation || statedTy(init0)) || constant(objectDecl)) {
-          evaluable(local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
-          continue;
-        }
-      }
-      const made = unwrapped(init0);
-      if (st.kind === "const" && objectDecl !== undefined && objectDecl.node === d && made?.type === "NewExpression" && made.callee.type === "Identifier" && made.callee.name === "Map" && !locals.has("Map")) {
-        evaluable(local, objectDecl, "it is a `Map` the compiler does not evaluate");
-        continue;
-      }
-      if (useAttrsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useAttrsName) {
-        scope.attrsBindings.add(local);
-        scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
-        continue;
-      }
-      if (useSlotsName !== null && init0?.type === "CallExpression" && init0.callee.type === "Identifier" && init0.callee.name === useSlotsName) {
-        scope.slotsBindings.add(local);
-        continue;
-      }
-      const model = comp.models.get(local);
-      if (model !== undefined) {
-        scope.setup.set(local, fieldVal(comp, "props", { k: "struct", name: "Props" }, model, d));
-        scope.refs.add(local);
-        continue;
-      }
-      if (!init0) {
-        scope.clientOnly.set(local, "it has no initial value");
-        continue;
-      }
-      if (definePropsType(init0)) {
-        scope.propsIdent = local;
-        continue;
-      }
-      const isRef = init0.type === "CallExpression" && init0.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init0.callee.name);
-      if (isRef) scope.refs.add(local);
-      const isComputed = isRef && init0.callee.name === "computed";
-      const typed = isRef ? (init0.typeParameters?.params?.[0] ?? refOf(d.id.typeAnnotation?.typeAnnotation)) : (d.id.typeAnnotation?.typeAnnotation ?? statedTy(init0));
-      let v: Val;
-      try {
-        const untyped = setupSource(comp, init0);
-        const source = untyped && typed ? typedBy(untyped, typed) : untyped;
-        const empty = emptyRef(comp, init0);
-        if (!empty && !source) {
-          scope.clientOnly.set(local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
-          continue;
-        }
-        v = empty ?? expr(isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: st.start, within: "setup" }, source);
-        const annotation = typed ?? (isComputed ? init0.arguments[0]?.returnType?.typeAnnotation : undefined);
-        if (isRef && annotation && !empty) v = unionRef(comp, local, annotation, v, init0.arguments[0] ?? init0);
-        if (annotation && untyped && (v.ty.k === "opt" ? v.ty.of : v.ty).k === "str") {
-          const kind = isComputed ? "`computed`" : isRef ? `\`${init0.callee.name}\`` : "constant";
-          const want = declaredTy(comp, annotation);
-          if (want !== null) v = declaredUnion(comp, annotatedStr(v, want), want, `\`${local}\`, a ${kind},`, untyped);
-        }
-      } catch (e) {
-        if (!(e instanceof GenError) || e.code === "FV1908") throw e;
-        scope.clientOnly.set(local, e.what);
-        scope.refusedBy.set(local, e);
-        continue;
-      }
-      if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
-        scope.setup.set(local, v);
-        continue;
-      }
-      const name = setupNames.get(local)!;
-      const { init, read } = bindingOf(v);
-      const lazy = isComputed && mayPanic(lazies, init);
-      lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
-      scope.setup.set(local, read(lazy && !v.owned ? `(*${name})` : name));
-      if (lazy) lazies.set(local, name);
-    }
+  return dollarNames(bound, (js) => `s_${snake(js).replace(/^r#/, "")}`);
+}
+
+function vueImport(s: Setup, st: N): void {
+  for (const sp of st.specifiers) {
+    if (sp.type !== "ImportSpecifier") continue;
+    const imported: string = sp.imported.name ?? sp.imported.value;
+    if (imported === "useAttrs") s.useAttrsName = sp.local.name;
+    if (imported === "useSlots") s.useSlotsName = sp.local.name;
   }
-  return { scope, lets, lazies };
+}
+
+function helperImport(scope: Scope, st: N): void {
+  for (const sp of st.specifiers) {
+    if (!ctx.helpers[sp.imported.name]) fail(scope.comp, "FV1108", `\`${sp.imported.name}\` has no Rust twin: add it to \`helpers.functions\` in ${CONFIG_FILE}`, sp);
+    scope.helpers.set(sp.local.name, sp.imported.name);
+  }
+}
+
+function importedKey(sp: N): string | undefined {
+  if (sp.type === "ImportSpecifier" && sp.importKind !== "type") return sp.imported.name ?? sp.imported.value;
+  return sp.type === "ImportDefaultSpecifier" ? "default" : undefined;
+}
+
+type ModuleFunctions = Map<string, { fn: Fn; exported: boolean }> | undefined;
+
+function importedValue(scope: Scope, sp: N, decls: Map<string, Declared>, fns: ModuleFunctions): void {
+  const key = importedKey(sp);
+  if (key === undefined) return;
+  const f = fns?.get(key);
+  if (f?.exported) {
+    scope.functions.set(sp.local.name, f.fn);
+    scope.clientOnly.set(sp.local.name, `it is a function imported from ${f.fn.home.file}, which the template and a \`computed\` may call, and only an event handler may name without calling it`);
+    return;
+  }
+  const d = decls.get(key);
+  if (d?.exported) evaluable(scope, sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
+}
+
+function moduleValues(scope: Scope, st: N, file: string): void {
+  if (st.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) readTypeFile(file);
+  const decls = ctx.constDecls.get(file);
+  if (decls === undefined) return;
+  const fns = ctx.tsModules.get(file)?.functions;
+  for (const sp of st.specifiers) importedValue(scope, sp, decls, fns);
+}
+
+function moduleImport(scope: Scope, st: N, from: string): void {
+  const typeOnly = st.importKind === "type";
+  for (const sp of typeOnly ? [] : st.specifiers) if (sp.importKind !== "type") scope.imported.set(sp.local.name, from);
+  const file = resolveImport(scope.comp.file, from);
+  if (file !== null && !typeOnly) moduleValues(scope, st, file);
+}
+
+function scriptImport(s: Setup, st: N): void {
+  const from: string = st.source.value;
+  if (from.endsWith(".vue")) {
+    const def = st.specifiers.find((x: N) => x.type === "ImportDefaultSpecifier");
+    if (def) s.scope.children.set(def.local.name, basename(from, ".vue"));
+    return;
+  }
+  if (ctx.plugins.some((p) => p.scriptImport?.(s.scope, st, from))) return;
+  if (from === "vue") vueImport(s, st);
+  else if (ctx.helperModule !== null && from === ctx.helperModule) helperImport(s.scope, st);
+  else moduleImport(s.scope, st, from);
+}
+
+function destructuredProps(comp: Component, scope: Scope, pattern: N): void {
+  for (const p of pattern.properties) {
+    if (p.type !== "ObjectProperty" || p.computed) fail(comp, "FV0108", "destructured props are plain names: `...rest` has no Rust type", p);
+    const key: string = p.key.type === "Identifier" ? p.key.name : p.key.value;
+    const local = p.value.type === "AssignmentPattern" ? p.value.left : p.value;
+    if (local.type !== "Identifier") fail(comp, "FV0109", "destructured props are plain names", p);
+    scope.setup.set(local.name, fieldVal(comp, "props", { k: "struct", name: "Props" }, key, p));
+  }
+}
+
+function asyncBinding(s: Setup, d: N): boolean {
+  const loaded = d.id.type === "Identifier" ? s.asyncs.get(d.id.name) : undefined;
+  if (loaded === undefined) return false;
+  s.scope.children.set(d.id.name, loaded);
+  s.scope.loadedLater.add(d.id.name);
+  return true;
+}
+
+function objectConstant(scope: Scope, d: N, local: string, objectDecl: Declared): boolean {
+  if ((d.id.typeAnnotation || statedTy(d.init)) && !constant(objectDecl)) return false;
+  evaluable(scope, local, objectDecl, "it is an object the compiler does not evaluate", `annotate it with an interface, \`const ${local}: Card = { … }\`, to build it as the Rust struct of that interface`);
+  return true;
+}
+
+function newMap(s: Setup, made: N): boolean {
+  return made?.type === "NewExpression" && made.callee.type === "Identifier" && made.callee.name === "Map" && !s.locals.has("Map");
+}
+
+function constantBinding(s: Setup, st: N, d: N, local: string): boolean {
+  const objectDecl = s.locals.get(local);
+  if (st.kind !== "const" || objectDecl === undefined || objectDecl.node !== d) return false;
+  const made = unwrapped(d.init);
+  if (made?.type === "ObjectExpression") return objectConstant(s.scope, d, local, objectDecl);
+  if (!newMap(s, made)) return false;
+  evaluable(s.scope, local, objectDecl, "it is a `Map` the compiler does not evaluate");
+  return true;
+}
+
+function calls(init: N, callee: string | null): boolean {
+  return callee !== null && init?.type === "CallExpression" && init.callee.type === "Identifier" && init.callee.name === callee;
+}
+
+function attrsOrSlotsBinding(s: Setup, local: string, init: N): boolean {
+  if (calls(init, s.useAttrsName)) {
+    s.scope.attrsBindings.add(local);
+    s.scope.clientOnly.set(local, "`useAttrs()` is bound whole, with `v-bind`; a value read from it has no type");
+    return true;
+  }
+  if (!calls(init, s.useSlotsName)) return false;
+  s.scope.slotsBindings.add(local);
+  return true;
+}
+
+function modelBinding(s: Setup, local: string, d: N): boolean {
+  const model = s.comp.models.get(local);
+  if (model === undefined) return false;
+  s.scope.setup.set(local, fieldVal(s.comp, "props", { k: "struct", name: "Props" }, model, d));
+  s.scope.refs.add(local);
+  return true;
+}
+
+interface SetupInit {
+  local: string;
+  init: N;
+  at: number;
+  isRef: boolean;
+  isComputed: boolean;
+  typed: N | undefined;
+}
+
+function typedAs(d: N, isRef: boolean): N | undefined {
+  const declaredAs = d.id.typeAnnotation?.typeAnnotation;
+  return isRef ? (d.init.typeParameters?.params?.[0] ?? refOf(declaredAs)) : (declaredAs ?? statedTy(d.init));
+}
+
+function setupInit(st: N, d: N): SetupInit {
+  const init = d.init;
+  const isRef = init.type === "CallExpression" && init.callee.type === "Identifier" && ["ref", "shallowRef", "computed"].includes(init.callee.name);
+  const isComputed = isRef && init.callee.name === "computed";
+  return { local: d.id.name, init, at: st.start, isRef, isComputed, typed: typedAs(d, isRef) };
+}
+
+function annotatedUnion(comp: Component, b: SetupInit, annotation: N, v: Val, untyped: N): Val {
+  if ((v.ty.k === "opt" ? v.ty.of : v.ty).k !== "str") return v;
+  const kind = b.isComputed ? "`computed`" : b.isRef ? `\`${b.init.callee.name}\`` : "constant";
+  const want = declaredTy(comp, annotation);
+  return want === null ? v : declaredUnion(comp, annotatedStr(v, want), want, `\`${b.local}\`, a ${kind},`, untyped);
+}
+
+function setupScope(scope: Scope, b: SetupInit): Scope {
+  return b.isComputed ? { ...scope, within: "computed" } : { ...scope, settingUpAt: b.at, within: "setup" };
+}
+
+function annotationOf(b: SetupInit): N | undefined {
+  return b.typed ?? (b.isComputed ? b.init.arguments[0]?.returnType?.typeAnnotation : undefined);
+}
+
+function annotated(comp: Component, b: SetupInit, v: Val, empty: Val | null, untyped: N | null): Val {
+  const annotation = annotationOf(b);
+  if (b.isRef && annotation && !empty) v = unionRef(comp, b.local, annotation, v, b.init.arguments[0] ?? b.init);
+  return annotation && untyped ? annotatedUnion(comp, b, annotation, v, untyped) : v;
+}
+
+function setupValue(scope: Scope, b: SetupInit): Val | null {
+  const comp = scope.comp;
+  const untyped = setupSource(comp, b.init);
+  const source = untyped && b.typed ? typedBy(untyped, b.typed) : untyped;
+  const empty = emptyRef(comp, b.init);
+  if (!empty && !source) return null;
+  return annotated(comp, b, empty ?? expr(setupScope(scope, b), source), empty, untyped);
+}
+
+function bindValue(s: Setup, local: string, v: Val, isComputed: boolean): void {
+  if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
+    s.scope.setup.set(local, v);
+    return;
+  }
+  const name = s.setupNames.get(local)!;
+  const { init, read } = bindingOf(v);
+  const lazy = isComputed && mayPanic(s.lazies, init);
+  s.lets.push(lazy ? `let ${name} = std::cell::LazyCell::new(|| ${init});` : `let ${name} = ${init};`);
+  s.scope.setup.set(local, read(lazy && !v.owned ? `(*${name})` : name));
+  if (lazy) s.lazies.set(local, name);
+}
+
+function valueBinding(s: Setup, st: N, d: N): void {
+  const b = setupInit(st, d);
+  if (b.isRef) s.scope.refs.add(b.local);
+  let v: Val | null;
+  try {
+    v = setupValue(s.scope, b);
+  } catch (e) {
+    if (!(e instanceof GenError) || e.code === "FV1908") throw e;
+    s.scope.clientOnly.set(b.local, e.what);
+    s.scope.refusedBy.set(b.local, e);
+    return;
+  }
+  if (v === null) {
+    s.scope.clientOnly.set(b.local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
+    return;
+  }
+  bindValue(s, b.local, v, b.isComputed);
+}
+
+function namedBinding(s: Setup, st: N, d: N): void {
+  const local: string = d.id.name;
+  if (s.scope.functions.get(local)?.node === d.init) return;
+  if (constantBinding(s, st, d, local) || attrsOrSlotsBinding(s, local, d.init) || modelBinding(s, local, d)) return;
+  if (!d.init) {
+    s.scope.clientOnly.set(local, "it has no initial value");
+    return;
+  }
+  if (definePropsType(d.init)) {
+    s.scope.propsIdent = local;
+    return;
+  }
+  valueBinding(s, st, d);
+}
+
+function setupBinding(s: Setup, st: N, d: N): void {
+  if (d.id.type === "ObjectPattern" && definePropsType(d.init)) return destructuredProps(s.comp, s.scope, d.id);
+  if (asyncBinding(s, d)) return;
+  if (ctx.plugins.some((p) => p.scriptBinding?.(s.scope, d, s.lets))) return;
+  if (d.id.type === "Identifier") return namedBinding(s, st, d);
+  for (const name of patternNames(d.id)) s.scope.clientOnly.set(name, "it is destructured from a value the server does not have");
+}
+
+function declaresNoValue(st: N, decl: N): boolean {
+  return st.type === "FunctionDeclaration" || decl?.type === "TSInterfaceDeclaration" || decl?.type === "TSTypeAliasDeclaration";
+}
+
+function expressionStatement(s: Setup, st: N): void {
+  if (!ctx.plugins.some((p) => p.scriptStatement?.(s.scope, st, s.lets))) setupStatement(s.comp, st);
+}
+
+function setupTopLevel(s: Setup, st: N): void {
+  if (st.type === "ImportDeclaration") return scriptImport(s, st);
+  const decl = st.type === "ExportNamedDeclaration" ? st.declaration : st;
+  if (declaresNoValue(st, decl)) return;
+  if (decl?.type === "TSEnumDeclaration") return evaluable(s.scope, decl.id.name, s.locals.get(decl.id.name)!, "it is not an enum the compiler evaluates");
+  if (st.type === "ExpressionStatement") return expressionStatement(s, st);
+  if (st.type !== "VariableDeclaration") fail(s.comp, "FV0107", `${nodeName(st)} in setup is not supported`, st);
+  for (const d of st.declarations) setupBinding(s, st, d);
+}
+
+export function scopeFor(comp: Component, ast: N[], components: Map<string, Component>): { scope: Scope; lets: string[]; lazies: Map<string, string> } {
+  const scope = emptyScope(comp, components);
+  for (const p of ctx.plugins) if (p.scope) scope.plugins.set(p, p.scope(scope));
+  const locals = declareConsts(comp, ast);
+  numericConsts(scope, locals);
+  const asyncs = asyncChildren(comp, ast);
+  declareFunctions(scope, ast);
+  const s: Setup = { comp, scope, locals, asyncs, setupNames: setupNamesOf(ast), lets: [], lazies: new Map(), useAttrsName: null, useSlotsName: null };
+  for (const st of ast) setupTopLevel(s, st);
+  return { scope, lets: s.lets, lazies: s.lazies };
 }

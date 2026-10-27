@@ -79,8 +79,9 @@ packages/ferrovue/           the compiler (npm package)
   src/expr.ts, members.ts, operators.ts, logical.ts, conditional.ts
                              expressions, by node type: member access, unary and binary operators,
                              `&&`, `||` and `??`, `?:`
-  src/strings.ts, numbers.ts, narrowing.ts, calls.ts, lists.ts, parens.ts
-                             strings, numbers, narrowing, calls, lists, the parentheses Rust needs
+  src/strings.ts, numbers.ts, narrowing.ts, calls.ts, globals.ts, lists.ts, parens.ts
+                             strings, numbers, narrowing, calls, JavaScript's globals, lists,
+                             the parentheses Rust needs
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
   src/dynamic.ts             `<component :is>` over a closed set of choices
