@@ -654,8 +654,9 @@ needs. It is too slow for every pull request; run it locally on the functions a 
 
 [Stryker](https://stryker-mutator.io) does the same for the compiler's TypeScript, configured in
 `stryker.config.json`: it mutates the modules listed under `mutate` (`attrs.ts`, `template.ts`,
-`constants.ts`, `dynamic.ts`, and `expr.ts` with the expression modules `members.ts`,
-`operators.ts`, `logical.ts` and `conditional.ts`) and runs the vitest suite against each mutant,
+`constants.ts`, `dynamic.ts`, `expr.ts` with the expression modules `members.ts`,
+`operators.ts`, `logical.ts` and `conditional.ts`, and the modules of calls and methods `calls.ts`,
+`globals.ts`, `lists.ts`, `numbers.ts` and `strings.ts`, which hold what moved out of `expr.ts`) and runs the vitest suite against each mutant,
 compiler tests and the Vue half of conformance included. The conformance check that `generated/` is
 what the compiler writes now catches any mutant that changes the Rust of a conformance component, so
 a fixture there kills more than its HTML.
@@ -674,7 +675,8 @@ a component while it loads: what runs then is covered by no test, and Stryker ru
 against every mutant it reaches (a static mutant). At four test runners on twelve cores, `attrs.ts`
 and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about 40 and `expr.ts` with
 the expression modules about 45; two runners take about twice as long. The **Mutants** workflow runs
-the modules in those three groups, one job each, within the job's two hours. The reports are
+the modules in five groups (`attrs.ts` with `template.ts`, `constants.ts`, `dynamic.ts`, the
+expression modules, and the modules of calls and methods), one job each, within the job's two hours. The reports are
 `target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
 an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.
 Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant whose code and
