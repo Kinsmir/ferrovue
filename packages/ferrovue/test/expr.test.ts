@@ -1172,3 +1172,90 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like('props.o.map(fv::props::Union::as_str).or(if let Some(fv_o) = props.o { match fv_o { XO::Empty => Some("E"), XO::A => None } } else { Some("z") })'));
   });
 });
+
+describe("values of a union converted to a child's union through `?:`, `||` and `??`", () => {
+  const files = {
+    "tones.ts": 'export type Tone = "calm" | "loud" | "quiet";\nexport interface Card { tone: Tone }\nexport interface Pair { loud: Tone; quiet: Tone }\nexport const SHADE: Record<"loud" | "quiet" | "", Tone> = { loud: "quiet", quiet: "calm", "": "loud" };\n',
+    "T.vue": sfc('import type { Tone } from "./tones";\ndefineProps<{ t?: Tone }>();', "<b>{{ t }}</b>"),
+    "C.vue": sfc('import type { Card } from "./tones";\ndefineProps<{ card: Card }>();', "<b>{{ card.tone }}</b>"),
+  };
+  const script = [
+    'import { computed, ref } from "vue";',
+    'import T from "./T.vue";',
+    'import C from "./C.vue";',
+    'import { type Tone, type Pair, SHADE } from "./tones";',
+    'const props = defineProps<{ start?: Tone; pick: Tone; pair: Pair; on: boolean; word: string; wide: Tone | "hot"; n: number }>();',
+    'const tone = ref<Tone | "">(props.start ?? "");',
+    'const lit = computed(() => (props.on ? "calm" : undefined));',
+    'const two = computed(() => (props.on ? "calm" : "loud"));',
+  ].join("\n");
+  const shown = (template: string) => render(script, template, { files });
+  const refused = (template: string) => refusals(script, template, { files });
+
+  const TONE = "super::types::Tone";
+  const parsed = (subject: string) => like(`t: Some(match ${subject}.parse::<${TONE}>() { Ok(fv_u) => fv_u, Err(fv_e) => {`);
+  const outside = (given: string) => `FV0515 the prop is one of "calm" | "loud" | "quiet", the members of \`Tone\`, and the value given ${given}`;
+
+  it("binds the child's member in the test of the `v-if` a render opens with, where the branch reads it before its last line", () => {
+    const out = render('import T from "./T.vue";\nimport type { Tone } from "./tones";\ndefineProps<{ pick: Tone }>();', `<template v-if="pick !== 'calm'"><T :t="pick" /><i>x</i></template>`, { files });
+    expect(out).toMatch(like(`if let Some(fv_pick) = match props.pick { ${TONE}::Calm => None, ${TONE}::Loud => Some(${TONE}::Loud), ${TONE}::Quiet => Some(${TONE}::Quiet) } {`));
+    expect(out).toMatch(like("super::t::try_render(out, &super::t::Props { t: Some(fv_pick) })?;"));
+  });
+
+  it("converts a `?:` inside a branch another `?:` narrows, through the table read its own `match` gives", () => {
+    const out = shown(`<C :card="tone !== 'calm' ? { tone: tone === 'loud' ? 'calm' : SHADE[tone] } : { tone: 'calm' }" />`);
+    expect(out).toMatch(like(`tone: if s_tone == XTone::Loud { ${TONE}::Calm } else { match s_tone { XTone::Quiet => ${TONE}::Calm, XTone::Empty | XTone::Calm | XTone::Loud => ${TONE}::Loud } }`));
+  });
+
+  it("parses a `?:` whose branch reads a field by a key narrowed to members the struct has", () => {
+    const out = shown(`<C :card="pick !== 'calm' ? { tone: pick === 'loud' ? 'calm' : pair[pick] } : { tone: 'calm' }" />`);
+    expect(out).toMatch(like(`tone: match (if props.pick == ${TONE}::Loud { "calm" } else { fv::props::Union::as_str(props.pair.quiet) }).parse::<${TONE}>()`));
+  });
+
+  it("reads a field by a key a `?:` narrows, giving the members it leaves out the arm of the first it keeps", () => {
+    const out = shown(`<b>{{ pick !== 'calm' ? pair[pick] : 'none' }}</b>`);
+    expect(out).toMatch(like(`match props.pick { ${TONE}::Calm | ${TONE}::Loud => fv::props::Union::as_str(props.pair.loud), ${TONE}::Quiet => fv::props::Union::as_str(props.pair.quiet) }`));
+  });
+
+  it.each([
+    ["a `?:` of literals", `start ?? (on ? 'calm' : 'loud')`, `props.start.map(fv::props::Union::as_str).unwrap_or(if props.on { "calm" } else { "loud" })`],
+    ["an optional string of literals and a literal", `lit ?? 'loud'`, `s_lit.unwrap_or("loud")`],
+    ["a string of literals", `start ?? two`, `props.start.map(fv::props::Union::as_str).unwrap_or(s_two)`],
+  ])("parses `??` of an optional union and %s, which holds no enum", (_, value, subject) => {
+    expect(shown(`<T :t="${value}" />`)).toMatch(parsed(subject));
+  });
+
+  it("parses a `?:` of a string of literals, which holds no enum, and a literal", () => {
+    expect(shown(`<T :t="on ? two : 'calm'" />`)).toMatch(parsed(`(if props.on { s_two } else { "calm" })`));
+  });
+
+  it("parses the right side of `&&` after a union with no falsy member, for each of its variants", () => {
+    expect(shown(`<T :t="pick && two" />`)).toMatch(like(`t: Some(match props.pick { ${TONE}::Calm | ${TONE}::Loud | ${TONE}::Quiet => match s_two.parse::<${TONE}>()`));
+  });
+
+  it("compares a literal on the left of `===` with a value of a union by its variant", () => {
+    expect(shown(`<i v-if="'calm' === tone">c</i>`)).toMatch(like("if s_tone == XTone::Calm {"));
+  });
+
+  it.each([
+    [`tone === 'calm' ? word : 'loud'`, "is a string that may be any other: pass one of them, or a value typed as the union"],
+    [`start ?? 'zzz'`, 'may be "zzz": narrow it'],
+    [`start ?? wide`, 'may be "hot": narrow it'],
+  ])("refuses %s for a child's union prop", (value, given) => {
+    expect(refused(`<T :t="${value}" />`)).toEqual([expect.stringContaining(outside(given))]);
+  });
+
+  it("reports each refused statement after a conversion that translates a branch for each variant", () => {
+    expect(refused(`<T :t="tone || undefined" /><p>{{ n.toFixed(200) }}</p><p>{{ n.toFixed(300) }}</p>`)).toEqual([expect.stringMatching(/^FV0705 /), expect.stringMatching(/^FV0705 /)]);
+  });
+});
+
+describe("names of the template read in `<script setup>`", () => {
+  it("refuses `$slots`, which `<script setup>` does not define", () => {
+    expect(refusals('import { computed } from "vue";\nconst has = computed(() => ($slots.side ? 1 : 0));', '<i>{{ has }}<slot name="side" /></i>')).toEqual([expect.stringMatching(/^FV0601 `\$slots` is not available when rendering on the server/)]);
+  });
+
+  it.fails("refuses a member of a `ref` other than `.value`, which Vue reads as `undefined`", () => {
+    expect(refusals('import { computed, ref } from "vue";\ninterface Item { a: string }\nconst r = ref<Item>({ a: "x" });\nconst c = computed(() => r.a);', "<p>{{ c }}</p>")).toHaveLength(1);
+  });
+});
