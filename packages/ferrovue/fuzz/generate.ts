@@ -1876,7 +1876,7 @@ class Gen {
           const safe = v.members?.filter(plainLit) ?? [];
           const member = safe.length && r.chance(0.6) ? r.pick(safe) : null;
           const e = node("str", [this.varRef(v), strLit(member ?? r.pick(STR_LITS))], ([a, b]) => `${a} ?? ${b}`);
-          return v.members !== undefined && (member !== null || v.members.includes(printExpr(e.kids[1]!).slice(1, -1))) ? { ...e, members: v.members } : e;
+          return v.members !== undefined ? { ...e, members: [...new Set([...v.members, member ?? printExpr(e.kids[1]!).slice(1, -1)])] } : e;
         }],
         [this.tKeys.length && this.tNames.length ? 2 : 0, () => this.translated(d)],
         [this.fnsOf("str").length ? 2 : 0, () => this.call(r.pick(this.fnsOf("str")), d)],
