@@ -65,6 +65,7 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         target: [escape, json, state_script, attrs]
     steps:

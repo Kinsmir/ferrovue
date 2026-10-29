@@ -584,7 +584,8 @@ JSON writing are also fuzzed on their own with [cargo-fuzz](https://rust-fuzz.gi
 which runs libFuzzer on nightly Rust. The fuzz crate, `fuzz/`, is a workspace of its own, so the
 nightly-only `libfuzzer-sys` stays out of the main workspace's builds, tests and mutation runs; its
 dependencies are declared in its own `[workspace.dependencies]`, `node scripts/release.ts members`
-checks that it takes them from there, and CI's cargo-deny job checks them against `deny.toml`.
+checks that it takes them from there, and CI's cargo-deny steps check them against
+`fuzz/deny.toml`.
 
 | Target | Calls | What every input must give |
 |---|---|---|
@@ -602,10 +603,10 @@ cargo +nightly fuzz fmt json fuzz/artifacts/json/<crash>  # the failing input, a
 
 A failing input is written to `fuzz/artifacts/<target>/`; the corpus grows in `fuzz/corpus/<target>/`.
 Both are ignored by git. The nightly **Fuzz** workflow runs each target for ten minutes in a job of
-its own, beside the differential fuzzer, and uploads the failing input when one fails. Each job
-starts from the corpus the last good run of its target saved in the Actions cache, and after a
-good run keeps only the inputs that reach new code (`cargo fuzz cmin`) and saves them for the
-next night.
+its own, two at a time, beside the differential fuzzer, and uploads the failing input when one
+fails. Each job starts from the corpus the last good run of its target saved in the Actions cache,
+and after a good run keeps only the inputs that reach new code (`cargo fuzz cmin`) and saves them
+for the next night.
 
 ## Coverage
 
@@ -617,7 +618,7 @@ pnpm coverage:rust   # cargo llvm-cov over the workspace: target/coverage/rust/h
 
 `coverage:rust` needs `cargo install cargo-llvm-cov --locked` and
 `rustup component add llvm-tools-preview`. The **Coverage** workflow
-(`.github/workflows/coverage.yml`) runs both on every push to `main` and every pull request, writes
+(`.github/workflows/coverage.yml`) runs both every Saturday and by hand, writes
 the totals in the run's summary, and uploads the reports (HTML and lcov) as the `coverage`
 artifact. Nothing is sent to a coverage service, and no number fails the run: a covered line is
 not a tested one, which is what the mutation testing below is for.
@@ -646,7 +647,8 @@ vue-router or vue-i18n, the test that closes a gap takes it from them: a vector 
 `pnpm vectors:record`, or a conformance fixture recorded with `pnpm conformance:record`.
 
 The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in
-sixteen shards built without debug information, and fails on any survivor that is not in the list
+sixteen shards built without debug information, six at a time to leave runners for other
+workflows, and fails on any survivor that is not in the list
 and on any entry of the list that no shard missed, which a test now catches and the list no longer
 needs. It is too slow for every pull request; run it locally on the functions a change touches
 (`-F`, or `--in-diff` with a diff file).
@@ -677,7 +679,7 @@ against every mutant it reaches (a static mutant). At four test runners on twelv
 and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about 40 and `expr.ts` with
 the expression modules about 45; two runners take about twice as long. The **Mutants** workflow runs
 the modules in five groups (`attrs.ts` with `template.ts`, `constants.ts`, `dynamic.ts`, the
-expression modules, and the modules of calls and methods), one job each, within the job's two hours. The reports are
+expression modules, and the modules of calls and methods), one job each and three at a time, within the job's two hours. The reports are
 `target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
 an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.
 Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant whose code and
@@ -706,9 +708,9 @@ file that does not exist, and the TypeScript checker is off: vitest strips the t
 
 ## Performance budgets
 
-Two CI jobs hold ferrovue's speed to a budget: the instructions the generated renderers run, and
-the time a large project takes to compile. The criterion and tinybench benchmarks in the README's
-Performance section measure time per render and are reported only.
+CI's **Performance budgets** job holds ferrovue's speed to a budget: the instructions the generated
+renderers run, and the time a large project takes to compile. The criterion and tinybench
+benchmarks in the README's Performance section measure time per render and are reported only.
 
 ### Instruction counts
 
@@ -722,7 +724,7 @@ from run to run, on a busy laptop and on a shared runner alike.
 
 `crates/ferrovue/benches/instructions.json` is the baseline: a count for each scenario, the Rust
 release and target they were measured with, and the budget in percent. **The committed counts are
-the CI runner's.** The **Instruction counts** job runs `node scripts/instructions.ts` on
+the CI runner's.** The **Performance budgets** job runs `node scripts/instructions.ts` on
 `ubuntu-24.04`, writes the counts and the comparison to the run's summary, uploads the counts as
 the `instructions` artifact (in the baseline's own format), and fails when a scenario runs more
 than 5% more instructions than its baseline, or when the benchmark and the baseline do not name
@@ -739,9 +741,10 @@ copying, so the baseline is tied to four things:
   statically, so the machine's glibc plays no part. Built against glibc, the same benchmark gave
   counts up to 25% apart on Arch (glibc 2.44) and Ubuntu 24.04 (glibc 2.39); built for musl, the
   two agree within 0.05%, with Valgrind 3.25 and 3.22.
-- **The runner image**, `ubuntu-24.04`, named in the job where the other jobs take
-  `ubuntu-latest`. It fixes the Valgrind that apt installs (3.22), so the move of `ubuntu-latest`
-  to Ubuntu 26.04 changes no count. Moving the job to a newer image is a baseline update too.
+- **The runner image**, `ubuntu-24.04`, named in the **Performance budgets** job where the other
+  jobs take `ubuntu-latest`. It fixes the Valgrind that apt installs (3.22), so the move of
+  `ubuntu-latest` to Ubuntu 26.04 changes no count. Moving the job to a newer image is a baseline
+  update too.
 - **gungraun's version** in `Cargo.lock`. `gungraun-runner` must be the same version, which
   `node scripts/instructions.ts --print runner-version` prints.
 
@@ -754,8 +757,8 @@ pnpm bench:instructions:from-ci 123456789 # or a given run's id
 
 It downloads that run's `instructions` artifact with `gh` and writes it over `instructions.json`.
 The procedure after a change that moves the counts, or after a rebase onto one, is: push the branch
-(or start CI on it with `gh workflow run ci.yml --ref <branch>`), wait for its **Instruction
-counts** job, run `pnpm bench:instructions:from-ci`, review the diff and commit it. The job fails
+(or start CI on it with `gh workflow run ci.yml --ref <branch>`), wait for its **Performance
+budgets** job, run `pnpm bench:instructions:from-ci`, review the diff and commit it. The job fails
 on the first push when the counts moved past the budget; it still uploads them, which is what the
 command reads.
 
@@ -816,7 +819,7 @@ times between runs, and a busy laptop shows the same spread. The budgets sit nea
 machine's times, about four times a runner's, so they catch a step that grows by an order of
 magnitude, such as a quadratic pass in the compiler or generated code that sends type checking or
 monomorphisation out of bounds, and let ordinary noise pass. A step over its budget is timed once
-more and fails only if both runs are over. The **Build-time budgets** job writes the times to the
+more and fails only if both runs are over. The **Performance budgets** job writes the times to the
 run's summary, where slower drift shows across runs without failing one. The budgets are the
 `BUDGETS` constant at the top of the script; raise one only with a measurement that shows why.
 

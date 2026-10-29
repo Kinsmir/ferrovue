@@ -139,7 +139,7 @@ or write access.
 The crates are published without their test data: each crate's `exclude` in its `Cargo.toml` leaves
 out the conformance suite, the recorded vectors and the benchmark's expected HTML, so the tests and
 benchmarks run from the repository only. `cargo package -p <crate> --list` shows what a crate
-ships, and CI's "Packages publish cleanly" job builds each crate from its tarball.
+ships, and CI's "Examples and package" job builds each crate from its tarball.
 
 ## Signed tags
 
