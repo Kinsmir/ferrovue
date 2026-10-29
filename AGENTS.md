@@ -162,7 +162,11 @@ before treating it as a failure. CI runs Node 22.23.4, 22, 24 and 26, stable Rus
 its **CI passed** job fails when any other job does. A pull request runs the jobs its changed paths
 reach, on Node 22.23.4 and 26 (the `changes` job in `ci.yml` decides); a push to `main` runs the
 jobs the merged change reaches on every Node and OS; the release branch, a tag, the weekly run and a
-manual run run everything. A change to `ci.yml` or `.github/actions/` runs every job.
+manual run run everything. A change to `ci.yml` or `.github/actions/` runs every job. The account
+runs 20 jobs at once, 5 of them on macOS, so small checks share a job as named steps: **Checks**
+(lint, cargo-deny, `pnpm audit`, zizmor), **Examples and package** and **Performance budgets**, each
+step skipped when the changed paths do not reach it. The Mutants and Fuzz matrices cap their
+`max-parallel` for the same reason, and Coverage runs weekly and by hand.
 
 Mutation testing runs weekly in the Mutants workflow, outside the per-PR checks: `cargo mutants` on
 the runtime and `pnpm mutants:ts` (Stryker) on the compiler modules `stryker.config.json` lists.

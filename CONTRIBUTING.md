@@ -288,8 +288,11 @@ CHANGELOG's `### Deprecated` subsection, and what it removes under `### Removed`
   `pnpm audit` follows the same rule for an advisory that reaches the npm package's dependencies or
   peers, and lists one in development tooling only as a warning; the job's summary lists every
   advisory with its paths. An advisory the maintainer has judged harmless goes under
-  `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`. The **CI passed** job sums up the rest: it
-  fails when any other CI job does.
+  `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml`. Lint, cargo-deny, `pnpm audit` and zizmor
+  are named steps of one **Checks** job, the examples and the packing of both packages steps of
+  **Examples and package**, and the benchmarks and both budgets steps of **Performance budgets**,
+  which keeps a run within the account's 20 concurrent jobs. The **CI passed** job sums up the
+  rest: it fails when any other CI job does.
 - A new dependency must be under a licence `deny.toml` allows (permissive ones compatible with
   MIT OR Apache-2.0) and come from crates.io.
 - A new crate, example or npm package is listed by its path in `Cargo.toml`'s `members` or

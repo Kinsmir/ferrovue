@@ -4,8 +4,8 @@ rules:
       - action.yml:23
   adhoc-packages:
     ignore:
-      # The package job installs the packed tarball with npm, as a user does, which no lockfile describes.
-      - ci.yml:492
+      # The step that runs the packed command installs the packed tarball with npm, as a user does, which no lockfile describes.
+      - ci.yml:417
       # The release pins the npm it publishes with to an exact version.
       - release-dry-run.yml:68
       - release.yml:101

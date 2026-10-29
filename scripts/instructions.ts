@@ -126,7 +126,7 @@ function fromCi(runId: string | undefined): number {
     try {
       execFileSync("gh", ["run", "download", id, "--name", ARTIFACT, "--dir", dir], { cwd: ROOT, stdio: "ignore" });
     } catch {
-      console.error(`error: CI run ${id} has no ${ARTIFACT} artifact; wait for its Instruction counts job to finish`);
+      console.error(`error: CI run ${id} has no ${ARTIFACT} artifact; wait for its Performance budgets job to finish`);
       return 2;
     }
     const measured = read(join(dir, "instructions.json"));

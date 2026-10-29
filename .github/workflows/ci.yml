@@ -156,65 +156,58 @@ jobs:
       - name: The contract test's generated Rust is current
         run: node scripts/ferrovue-in.ts crates/ferrovue-contract --check
 
-  lint:
-    name: Lint (oxlint, fallow)
+  checks:
+    name: Checks
     needs: changes
-    if: needs.changes.outputs.lint == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 50
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/.github/actions/pnpm
+      - name: Workflows (zizmor)
+        uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
+        with:
+          version: 1.30.1
+          min-severity: low
+          advanced-security: false
+          annotations: true
+      - id: pnpm
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' && (needs.changes.outputs.lint == 'true' || needs.changes.outputs.deps == 'true') }}
+        uses: $/.github/actions/pnpm
         with:
           save: ${{ github.ref == 'refs/heads/main' }}
-      - run: pnpm lint
+      - name: Lint (oxlint, fallow)
+        id: lint
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' && needs.changes.outputs.lint == 'true' }}
+        run: pnpm lint
       - name: Both workspaces list every member by its path, without wildcards
+        if: ${{ !cancelled() && steps.lint.conclusion == 'success' && needs.changes.outputs.lint == 'true' }}
         run: node scripts/release.ts members
-
-  deny:
-    name: Dependencies (cargo-deny ${{ matrix.checks }})
-    needs: changes
-    if: needs.changes.outputs.deps == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        checks: [advisories, bans licenses sources]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
+      - id: deny
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' && needs.changes.outputs.deps == 'true' }}
+        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2.87.29
         with:
           tool: cargo-deny@0.20.2
-      - run: cargo deny check $CHECKS
-        continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
-        env:
-          CHECKS: ${{ matrix.checks }}
-      - run: cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check $CHECKS
-        continue-on-error: ${{ matrix.checks == 'advisories' && !startsWith(github.ref, 'refs/tags/') }}
-        env:
-          CHECKS: ${{ matrix.checks }}
-
-  audit:
-    name: Dependencies (pnpm audit)
-    needs: changes
-    if: needs.changes.outputs.deps == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 26
-          package-manager-cache: false
-      - name: No known advisory reaches the npm package's dependencies or peers
+      - name: Dependencies (cargo-deny bans licenses sources)
+        id: deny-bans
+        if: ${{ !cancelled() && steps.deny.outcome == 'success' && needs.changes.outputs.deps == 'true' }}
+        run: cargo deny check bans licenses sources
+      - name: Dependencies of the fuzz workspace (cargo-deny bans licenses sources)
+        if: ${{ !cancelled() && steps.deny-bans.conclusion == 'success' && needs.changes.outputs.deps == 'true' }}
+        run: cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check bans licenses sources
+      - name: Dependencies (cargo-deny advisories)
+        id: deny-advisories
+        if: ${{ !cancelled() && steps.deny.outcome == 'success' && needs.changes.outputs.deps == 'true' }}
+        continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: cargo deny check advisories
+      - name: Dependencies of the fuzz workspace (cargo-deny advisories)
+        if: ${{ !cancelled() && steps.deny-advisories.conclusion == 'success' && needs.changes.outputs.deps == 'true' }}
+        continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: cargo deny --manifest-path fuzz/Cargo.toml --config fuzz/deny.toml check advisories
+      - name: "Dependencies (pnpm audit): no known advisory reaches the npm package's dependencies or peers"
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' && needs.changes.outputs.deps == 'true' }}
         continue-on-error: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: |
           pnpm audit --json > "$RUNNER_TEMP/audit.json" || true
@@ -258,21 +251,6 @@ jobs:
             appendFileSync(process.env.GITHUB_STEP_SUMMARY, lines.join("\n") + "\n");
             if (advisories.some((advisory) => advisory.published)) process.exit(1);
           ' "$RUNNER_TEMP/audit.json"
-
-  zizmor:
-    name: Workflows (zizmor)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: zizmorcore/zizmor-action@85b2b9fb8e3325e7a23d7d0a9d7ba5ae0f999e3e # v0.7.1
-        with:
-          version: 1.30.1
-          min-severity: low
-          advanced-security: false
-          annotations: true
 
   rust:
     name: Rust (${{ matrix.toolchain }})
@@ -347,51 +325,60 @@ jobs:
         run: cargo doc --workspace --all-features --no-deps --locked
 
   examples:
-    name: Example renders
+    name: Examples and package
     needs: changes
-    if: needs.changes.outputs.rust == 'true'
+    if: needs.changes.outputs.rust == 'true' || needs.changes.outputs.hydration == 'true' || needs.changes.outputs.package == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: $/.github/actions/rust
+      - id: rust
+        uses: $/.github/actions/rust
         with:
           cache-key: examples
+      - id: pnpm
+        if: needs.changes.outputs.hydration == 'true' || needs.changes.outputs.package == 'true'
+        uses: $/.github/actions/pnpm
       - name: The example builds outside a test build, and renders its page
+        id: greeting
+        if: ${{ !cancelled() && steps.rust.outcome == 'success' && needs.changes.outputs.rust == 'true' }}
         run: cargo run -p ferrovue-example-greeting --locked | grep -q 'data-island="Greeting"'
       - name: The Dioxus example renders its page, with the island in it
+        if: ${{ !cancelled() && steps.greeting.conclusion == 'success' && needs.changes.outputs.rust == 'true' }}
         run: cargo run -p ferrovue-example-dioxus --locked | grep -q 'data-island="Counter"'
-
-  fullstack:
-    name: Full-stack example hydrates
-    needs: changes
-    if: needs.changes.outputs.hydration == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/rust
-        with:
-          cache-key: fullstack
-      - uses: $/.github/actions/pnpm
       - name: Build ferrovue, which the example imports as a package (ferrovue/vite, ferrovue/client)
+        id: fullstack-ferrovue
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' && needs.changes.outputs.hydration == 'true' }}
         run: pnpm --filter ferrovue build
-      - name: The example's generated Rust is current
+      - name: The full-stack example's generated Rust is current
+        id: fullstack-current
+        if: ${{ !cancelled() && steps.fullstack-ferrovue.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
         run: pnpm --filter ferrovue-example-fullstack check
-      - run: pnpm --filter ferrovue-example-fullstack typecheck
+      - id: fullstack-typecheck
+        if: ${{ !cancelled() && steps.fullstack-current.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
+        run: pnpm --filter ferrovue-example-fullstack typecheck
       - name: Build the client, which regenerates the Rust renderers
+        id: fullstack-client
+        if: ${{ !cancelled() && steps.fullstack-typecheck.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
         run: pnpm --filter ferrovue-example-fullstack build
       - name: The build left the generated Rust as committed
+        id: fullstack-committed
+        if: ${{ !cancelled() && steps.fullstack-client.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
         run: git diff --exit-code -- examples/fullstack/src/generated
-      - run: cargo build -p ferrovue-example-fullstack --locked
-      - run: cargo test -p ferrovue-example-fullstack --locked
+      - id: fullstack-build
+        if: ${{ !cancelled() && steps.fullstack-committed.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
+        run: cargo build -p ferrovue-example-fullstack --locked
+      - id: fullstack-test
+        if: ${{ !cancelled() && steps.fullstack-build.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
+        run: cargo test -p ferrovue-example-fullstack --locked
       - name: The server's pages hydrate in the client with no mismatch
+        id: fullstack-hydrates
+        if: ${{ !cancelled() && steps.fullstack-test.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
         run: pnpm --filter ferrovue-example-fullstack test
       - name: The server streams a page and serves the client's assets
+        if: ${{ !cancelled() && steps.fullstack-hydrates.conclusion == 'success' && needs.changes.outputs.hydration == 'true' }}
         run: |
           PORT=3917 target/debug/ferrovue-example-fullstack &
           trap 'kill $!' EXIT
@@ -401,6 +388,35 @@ jobs:
           script=$(grep -o '/assets/main-[^"]*\.js' "$RUNNER_TEMP/dune.html")
           curl -sf -o /dev/null "http://127.0.0.1:3917$script"
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3917/books/missing)" = 404
+      - name: The crates package and build from their own tarballs
+        id: crates
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' && needs.changes.outputs.package == 'true' }}
+        run: cargo package -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --locked
+      - name: The npm package packs, with its build, README and licences
+        id: npm-pack
+        if: ${{ !cancelled() && steps.crates.conclusion == 'success' && needs.changes.outputs.package == 'true' }}
+        working-directory: packages/ferrovue
+        run: |
+          pnpm pack --pack-destination "$RUNNER_TEMP"
+          tar -tzf "$RUNNER_TEMP"/ferrovue-*.tgz | tee "$RUNNER_TEMP/files.txt"
+          for f in package/dist/cli.js package/dist/compiler.js package/dist/compiler.d.ts package/README.md package/LICENSE-MIT package/LICENSE-APACHE; do
+            grep -qx "$f" "$RUNNER_TEMP/files.txt" || { echo "missing from the npm package: $f"; exit 1; }
+          done
+          if tar -xzOf "$RUNNER_TEMP"/ferrovue-*.tgz package/package.json | grep -E '"(catalog|workspace):'; then
+            echo "the packed package.json still names a pnpm protocol, which npm cannot install"
+            exit 1
+          fi
+      - name: The packed command runs from node_modules
+        if: ${{ !cancelled() && steps.npm-pack.conclusion == 'success' && needs.changes.outputs.package == 'true' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/consumer/components" && cd "$RUNNER_TEMP/consumer"
+          echo '{"name":"consumer","private":true,"type":"module"}' > package.json
+          echo '{"components":"components","out":"gen"}' > ferrovue.config.json
+          cp "$GITHUB_WORKSPACE/examples/greeting/components/Greeting.vue" components/
+          vue=$(cd "$GITHUB_WORKSPACE/packages/ferrovue" && node -p 'require("vue/package.json").version')
+          npm install --no-audit --no-fund "$RUNNER_TEMP"/ferrovue-*.tgz "vue@$vue"
+          npx ferrovue
+          test -f gen/greeting.rs
 
   browser:
     name: Hydrates in real browsers
@@ -454,100 +470,52 @@ jobs:
       - name: Every conformance fixture, and the full-stack example's pages, hydrate in each browser
         run: pnpm test:browser
 
-  package:
-    name: Packages publish cleanly
-    needs: changes
-    if: needs.changes.outputs.package == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/rust
-        with:
-          cache-key: package
-      - uses: $/.github/actions/pnpm
-      - name: The crates package and build from their own tarballs
-        run: cargo package -p ferrovue-core -p ferrovue-router -p ferrovue-i18n -p ferrovue --locked
-      - name: The npm package packs, with its build, README and licences
-        working-directory: packages/ferrovue
-        run: |
-          pnpm pack --pack-destination "$RUNNER_TEMP"
-          tar -tzf "$RUNNER_TEMP"/ferrovue-*.tgz | tee "$RUNNER_TEMP/files.txt"
-          for f in package/dist/cli.js package/dist/compiler.js package/dist/compiler.d.ts package/README.md package/LICENSE-MIT package/LICENSE-APACHE; do
-            grep -qx "$f" "$RUNNER_TEMP/files.txt" || { echo "missing from the npm package: $f"; exit 1; }
-          done
-          if tar -xzOf "$RUNNER_TEMP"/ferrovue-*.tgz package/package.json | grep -E '"(catalog|workspace):'; then
-            echo "the packed package.json still names a pnpm protocol, which npm cannot install"
-            exit 1
-          fi
-      - name: The packed command runs from node_modules
-        run: |
-          mkdir -p "$RUNNER_TEMP/consumer/components" && cd "$RUNNER_TEMP/consumer"
-          echo '{"name":"consumer","private":true,"type":"module"}' > package.json
-          echo '{"components":"components","out":"gen"}' > ferrovue.config.json
-          cp "$GITHUB_WORKSPACE/examples/greeting/components/Greeting.vue" components/
-          vue=$(cd "$GITHUB_WORKSPACE/packages/ferrovue" && node -p 'require("vue/package.json").version')
-          npm install --no-audit --no-fund "$RUNNER_TEMP"/ferrovue-*.tgz "vue@$vue"
-          npx ferrovue
-          test -f gen/greeting.rs
-
-  bench:
-    name: Benchmarks run (quick)
-    needs: changes
-    if: needs.changes.outputs.perf == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/rust
-        with:
-          cache-key: bench
-      - uses: $/.github/actions/pnpm
-      - name: ferrovue's generated renderers (criterion)
-        run: cargo bench -p ferrovue --bench render --locked -- --warm-up-time 1 --measurement-time 2
-      - name: Vue's renderToString (tinybench)
-        run: pnpm bench:js
-        env:
-          FERROVUE_BENCH_QUICK: "1"
-
-  instructions:
-    name: Instruction counts (5% budget)
+  perf:
+    name: Performance budgets
     needs: changes
     if: needs.changes.outputs.perf == 'true'
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 80
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: $/.github/actions/rust
         with:
-          node-version: 26
-          package-manager-cache: false
+          cache-key: perf
+      - id: pnpm
+        uses: $/.github/actions/pnpm
+      - name: ferrovue's generated renderers (criterion)
+        id: criterion
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' }}
+        run: cargo bench -p ferrovue --bench render --locked -- --warm-up-time 1 --measurement-time 2
+      - name: Vue's renderToString (tinybench)
+        if: ${{ !cancelled() && steps.criterion.conclusion == 'success' }}
+        run: pnpm bench:js
+        env:
+          FERROVUE_BENCH_QUICK: "1"
       - name: The toolchain and gungraun version the baseline was measured with
         id: baseline
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' }}
         run: |
           echo "toolchain=$(node scripts/instructions.ts --print toolchain)" >> "$GITHUB_OUTPUT"
           echo "runner=$(node scripts/instructions.ts --print runner-version)" >> "$GITHUB_OUTPUT"
-      - uses: $/.github/actions/rust
-        with:
-          toolchain: ${{ steps.baseline.outputs.toolchain }}
-          cache-key: instructions
-      - uses: $/.github/actions/apt-mirror
-      - name: Valgrind, the musl target and gungraun-runner
+      - id: apt-mirror
+        if: ${{ !cancelled() && steps.baseline.conclusion == 'success' }}
+        uses: $/.github/actions/apt-mirror
+      - name: That toolchain with the musl target, Valgrind and gungraun-runner
+        id: valgrind
+        if: ${{ !cancelled() && steps.apt-mirror.conclusion == 'success' }}
         env:
           TOOLCHAIN: ${{ steps.baseline.outputs.toolchain }}
           RUNNER: ${{ steps.baseline.outputs.runner }}
         run: |
+          rustup toolchain install "$TOOLCHAIN" --profile minimal --target x86_64-unknown-linux-musl
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends valgrind
-          rustup target add --toolchain "$TOOLCHAIN" x86_64-unknown-linux-musl
           cargo install gungraun-runner --version "$RUNNER" --locked
       - name: Each scenario within 5% of crates/ferrovue/benches/instructions.json
+        if: ${{ !cancelled() && steps.valgrind.conclusion == 'success' }}
         run: node scripts/instructions.ts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -555,28 +523,14 @@ jobs:
           name: instructions
           path: target/instructions/instructions.json
           if-no-files-found: warn
-
-  build-budget:
-    name: Build-time budgets (500 components)
-    needs: changes
-    if: needs.changes.outputs.perf == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: $/.github/actions/rust
-        with:
-          cache-key: build-budget
-      - uses: $/.github/actions/pnpm
       - name: The compiler and cargo build of the generated modules within their budgets
+        if: ${{ !cancelled() && steps.pnpm.outcome == 'success' }}
         run: node scripts/build-budget.ts
 
   passed:
     name: CI passed
     if: always()
-    needs: [changes, typescript, typescript-os, lint, deny, audit, zizmor, rust, docs-rs, examples, fullstack, browser, package, bench, instructions, build-budget]
+    needs: [changes, typescript, typescript-os, checks, rust, docs-rs, examples, browser, perf]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
