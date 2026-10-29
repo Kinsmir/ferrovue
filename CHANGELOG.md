@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Added
+
+- The guide's `upgrading_to_0_13` page: bump both halves, generate again for version 7, and `script.fs` on TypeScript 7.
+  [`upgrading_to_0_13`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html).
+
 ## [0.13.0] - 2026-10-29
 
 ### Added
