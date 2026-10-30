@@ -8721,6 +8721,46 @@ defineProps<{ note?: string; kind: Kind; mark: Mark; eager: boolean; on: boolean
     expect(out).toContain('for fv_part in props.parts.iter() {\n        out.push_str("<i>");');
     expect(out).not.toContain("_ref");
   });
+
+  describe("a value that is one of a non-empty string and another", () => {
+    const joined = (template: string, setup = ""): string =>
+      compile(
+        island(`<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ a?: string; b: string; c: boolean; s: string; t: string; bs: string[]; m: "" | "new" }>();
+${setup}
+</script>
+<template>${template}</template>`),
+      ).get("x.rs")!;
+
+    it.each([
+      ["`?:`", `<p v-if="a"><b v-if="c ? a : b">x</b></p>`, ""],
+      ["`?:` with the plain side first", `<p v-if="a"><b v-if="c ? b : a">x</b></p>`, ""],
+      ["`??`", `<b v-if="(s || undefined) ?? t">x</b>`, ""],
+      ["a `?:` of one union whose branches narrow it apart", `<b v-if="m ? m : m">x</b>`, ""],
+      ["an array literal's item", `<p v-if="a"><template v-for="x in [a, b]"><b v-if="x">x</b></template></p>`, ""],
+      ["an array literal's item with the plain side first", `<p v-if="a"><template v-for="x in [b, a]"><b v-if="x">x</b></template></p>`, ""],
+      [
+        "a list built in a block of statements",
+        `<template v-for="x in both"><b v-if="x">x</b></template>`,
+        "interface Tally { n: number }\nconst both = computed(() => {\n  if (props.a) {\n    const r: Tally = { n: props.bs.length };\n    return [props.a, r.n > 0 ? 'x' : 'y'];\n  }\n  const q: Tally = { n: 1 };\n  return [props.b, q.n > props.bs.length ? 'x' : 'y'];\n});",
+      ],
+      ["a computed `?:`", `<b v-if="pick">x</b>`, "const pick = computed(() => (props.a ? (props.b.length ? props.a : props.b) : 'none'));"],
+      ["a computed array literal's item", `<template v-for="x in both"><b v-if="x">x</b></template>`, "const both = computed(() => (props.a ? [props.a, props.b] : []));"],
+    ])("tests %s for the empty string", (_, template, setup) => {
+      expect(joined(template, setup)).toMatch(/is_empty\(\) \}? ?\{\n {4,}out\.push_str\("<b>x<\/b>"\);/);
+    });
+
+    it.each([
+      ["`?:`", `<p v-if="a"><b v-if="c ? a : 'none'">x</b></p>`],
+      ["`??`", `<b v-if="(s || undefined) ?? 'none'">x</b>`],
+      ["an array literal's item", `<p v-if="a"><template v-for="x in [a, 'none']"><b v-if="x">x</b></template></p>`],
+    ])("tests %s of two non-empty strings for nothing", (_, template) => {
+      const out = joined(template);
+      expect(out).toContain('out.push_str("<b>x</b>");');
+      expect(out).not.toMatch(/is_empty\(\) \}? ?\{\n {4,}out\.push_str\("<b>x<\/b>"\);/);
+    });
+  });
 });
 
 describe("refs the browser alone writes", () => {

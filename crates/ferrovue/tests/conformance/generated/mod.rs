@@ -82,6 +82,8 @@ pub mod fall_spaces;
 pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
+pub mod filled_computed;
+pub mod filled_joins;
 pub mod flattened;
 pub mod folded_wide;
 pub mod form;
@@ -687,6 +689,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             fallthrough::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
+        }
+        "FilledComputed" => {
+            let props: filled_computed::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            filled_computed::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FilledJoins" => {
+            let props: filled_joins::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            filled_joins::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Flattened" => {
             let props: flattened::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

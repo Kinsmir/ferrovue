@@ -1,4 +1,4 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, enumOf, fail, FLOAT, joinAbsence, joinTy, literalsOf, literalTy, nothing, refusalAt, sameTy, STR, withAbsence } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, enumOf, fail, FLOAT, joinAbsence, joinTy, literalsOf, literalTy, neverEmpty, nothing, refusalAt, sameTy, STR, withAbsence } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { annotatedStr, exactlyEnum, intoEnum, knownLiteral } from "./enums.ts";
 import { ctx } from "./context.ts";
@@ -64,7 +64,7 @@ function branches(s: Scope, n: N, t: Val): Val {
   const literals = p ? null : literalNarrowing(s, n.test);
   let a = expr(p && !p.negated ? narrowTo(s, p, name) : (literals?.yes ?? s), n.consequent);
   let b = expr(p && p.negated ? narrowTo(s, p, name) : (literals?.no ?? s), n.alternate);
-  if (sameTy(a.ty, b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
+  if (sameTy(a.ty, b.ty) && neverEmpty(a.ty) === neverEmpty(b.ty) && a.code === b.code && (!name || !occurrences(a.code, name))) return a;
   const placed = (v: Val): Val => (["struct", "child", "record"].includes(v.ty.k) && /^\w+(?:\.[\w#]+)+$/.test(v.code) ? { ...v, code: `&${v.code}` } : v);
   [a, b] = [placed(a), placed(b)];
   const [emptyA, emptyB] = [untypedEmpty(a), untypedEmpty(b)];
@@ -176,7 +176,7 @@ function pickedBy(v: Val, pick: (literal: string) => string | null): string | nu
 function ownedChoice(comp: Component, a: Val, b: Val, n: N): { a: string; b: string; ty: Ty } | null {
   const base = (ty: Ty): Ty | null => (ty.k === "opt" ? ty.of : nothing(ty) ? null : ty);
   const [ba, bb] = [base(a.ty), base(b.ty)];
-  const of = ba ?? bb;
+  const of = ba !== null && bb !== null ? joinTy(ba, bb) : (ba ?? bb);
   if (of === null || (ba !== null && bb !== null && !sameTy(ba, bb))) return null;
   const ty = withAbsence(of, joinAbsence(absence(a.ty), absence(b.ty)));
   if (ty.k === "opt" && ty.of.k !== "struct") {
