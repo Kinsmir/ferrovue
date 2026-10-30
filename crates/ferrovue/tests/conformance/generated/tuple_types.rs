@@ -165,8 +165,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv_refusals.check(super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.booking.tagged.0), label: std::borrow::Cow::Borrowed(props.booking.tagged.1.as_deref().unwrap_or("none")) }))?;
     out.push_str("<!--[-->");
-    for (fv_i, fv_item_ref) in props.spans.iter().enumerate() {
-        let fv_item_3 = fv_item_ref;
+    for (fv_i, fv_item_3) in props.spans.iter().enumerate() {
         let fv_i = fv_i as i64;
         out.push_str("<p data-to=\"");
         fv::core::escape_into(out, &fv_item_3.1);
@@ -182,8 +181,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: { let fv_tuple = &props.score; super::tuple_badge::TupleBadgePair(std::borrow::Cow::Borrowed(&*fv_tuple.0), fv_tuple.1) }, rest: Some(props.scores.iter().map(|fv_tuple_2| super::tuple_badge::TupleBadgeRest(std::borrow::Cow::Borrowed(&*fv_tuple_2.0), fv_tuple_2.1)).collect()) }))?;
     fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: super::tuple_badge::TupleBadgePair(std::borrow::Cow::<str>::Borrowed(&*props.score.0), 0i64), rest: Some(Vec::from([super::tuple_badge::TupleBadgeRest(std::borrow::Cow::<str>::Borrowed("x"), 1i64), super::tuple_badge::TupleBadgeRest(std::borrow::Cow::<str>::Owned(s_names.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")), *s_total)])) }))?;
     out.push_str("<!--[-->");
-    for fv_s_ref in props.scores.iter() {
-        let fv_s = fv_s_ref;
+    for fv_s in props.scores.iter() {
         fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: { let fv_tuple_3 = &fv_s; super::tuple_badge::TupleBadgePair(std::borrow::Cow::Borrowed(&*fv_tuple_3.0), fv_tuple_3.1) }, rest: None }))?;
     }
     out.push_str("<!--]--><time datetime=\"");

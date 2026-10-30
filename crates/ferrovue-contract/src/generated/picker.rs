@@ -41,8 +41,7 @@ pub fn render(out: &mut String, props: &Props) {
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(25);
     out.push_str("<ul><!--[-->");
-    for fv_choice_ref in super::types::CHOICES.iter() {
-        let fv_choice = fv_choice_ref;
+    for fv_choice in super::types::CHOICES.iter() {
         out.push_str("<li class=\"");
         fv::attrs::class_into(out, false, &[if fv_choice.id as f64 == props.picked as f64 { "picked" } else { "" }]);
         out.push_str("\">");

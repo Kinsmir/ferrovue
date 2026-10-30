@@ -130,25 +130,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(73 + 9 + 9 + 9 * props.hues.len() + props.label.len());
+    out.reserve(54 + 9 + 9 + 9 * props.hues.len() + props.label.len());
     out.push_str("<span");
     if let Some(v) = props.hue.map(fv::props::Union::as_str) {
-        if v.is_empty() {
-            out.push_str(" data-hue");
-        } else {
-            out.push_str(" data-hue=\"");
-            fv::core::escape_into(out, v);
-            out.push('"');
-        }
+        out.push_str(" data-hue=\"");
+        fv::core::escape_into(out, v);
+        out.push('"');
     }
     if let Some(v) = props.wide.map(fv::props::Union::as_str) {
-        if v.is_empty() {
-            out.push_str(" data-wide");
-        } else {
-            out.push_str(" data-wide=\"");
-            fv::core::escape_into(out, v);
-            out.push('"');
-        }
+        out.push_str(" data-wide=\"");
+        fv::core::escape_into(out, v);
+        out.push('"');
     }
     if props.label.is_empty() {
         out.push_str(" title");

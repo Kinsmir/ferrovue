@@ -80,8 +80,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         })),
     }))?;
     out.push_str("<!--[-->");
-    for fv_p_ref in props.panels.iter() {
-        let fv_p = fv_p_ref;
+    for fv_p in props.panels.iter() {
         fv_refusals.check(super::panel::try_render(out, fv_p, super::panel::Slots {
             title: None,
             default: Some(fv::render::Slot::new(&|out: &mut String| {
@@ -110,7 +109,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         title: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
-            if props.words.len() as i64 != 0 {
+            if !props.words.is_empty() {
                 out.push_str("<!--[-->");
                 for fv_w_ref_2 in props.words.iter() {
                     let fv_w_2: &str = fv_w_ref_2;

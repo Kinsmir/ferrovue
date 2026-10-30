@@ -7,7 +7,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, enclosed, receiver, strArg } from "./parens.ts";
 import { collected, entryPart, picked, tupleParts, untypedEmpty } from "./lists.ts";
 import { asCow, isTemporary, loneOf } from "./strings.ts";
-import { asF64, numberVal } from "./numbers.ts";
+import { asF64, COUNT, numberVal } from "./numbers.ts";
 import { BUILTINS, builtin, isObjectCall } from "./calls.ts";
 import { refuseInPlace } from "./objects.ts";
 import { fresh, jsHint } from "./names.ts";
@@ -59,14 +59,14 @@ export function refValue(s: Scope, n: N): boolean {
 function lengthOf(s: Scope, n: N): Val | null {
   if (isObjectCall(n.object, "entries") && n.object.arguments.length === 1) {
     const r = expr(s, n.object.arguments[0]);
-    if (r.ty.k === "record") return { code: `${atom(r.code)}.len() as i64`, ty: INT };
+    if (r.ty.k === "record") return { code: `${atom(r.code)}.len() as i64`, ty: INT, upTo: COUNT };
   }
   const base = expr(s, n.object);
   if (base.ty.k === "entry") return numberVal(2, true);
   if (base.ty.k === "list" && base.iter !== undefined) return computedLength(base.iter);
   if (untypedEmpty(base)) return numberVal(0, true);
-  if (base.ty.k === "list") return { code: `${atom(base.code)}.len() as i64`, ty: INT };
-  if (base.ty.k === "str") return { code: `fv::strings::js_length(${strArg(base.code)})`, ty: INT };
+  if (base.ty.k === "list") return { code: `${atom(base.code)}.len() as i64`, ty: INT, upTo: COUNT };
+  if (base.ty.k === "str") return { code: `fv::strings::js_length(${strArg(base.code)})`, ty: INT, upTo: COUNT };
   const parts = tupleParts(s.comp, base.ty);
   if (parts !== null) return numberVal(parts, true);
   return null;
@@ -79,9 +79,9 @@ function computedLength(iter: string): Val {
     while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
     const mapped = at > 0 ? iter.slice(0, at) : iter;
     const held = /^(.*)\.(?:into_)?iter\(\)$/s.exec(mapped)?.[1];
-    return { code: held !== undefined ? `${atom(held)}.len() as i64` : `${atom(mapped)}.count() as i64`, ty: INT };
+    return { code: held !== undefined ? `${atom(held)}.len() as i64` : `${atom(mapped)}.count() as i64`, ty: INT, ...(held !== undefined ? { upTo: COUNT } : {}) };
   }
-  return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(iter)}.count() as i64`, ty: INT };
+  return { code: vec !== undefined ? `${atom(vec)}.len() as i64` : `${atom(iter)}.count() as i64`, ty: INT, upTo: COUNT };
 }
 
 function computedMember(s: Scope, n: N): Val {

@@ -112,7 +112,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p>");
     if let Some(fv_os1_2) = props.os1.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>");
-        fv::core::escape_into(out, &(if !fv_os1_2.is_empty() { std::borrow::Cow::<str>::Owned(fv::strings::js_trim_end(&fv_os1_2.to_uppercase()).to_owned()) } else { std::borrow::Cow::<str>::Borrowed("a") }));
+        fv::core::escape_into(out, &(if true { std::borrow::Cow::<str>::Owned(fv::strings::js_trim_end(&fv_os1_2.to_uppercase()).to_owned()) } else { std::borrow::Cow::<str>::Borrowed("a") }));
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

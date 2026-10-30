@@ -46,13 +46,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(66 + props.label.len() + props.words.iter().map(|v| v.len()).sum::<usize>());
-    let s_total = 0.0 + props.words.len() as i64 as f64;
+    let s_total = props.words.len() as i64;
     out.push_str("<p data-count=\"0\" title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str(": none\">0|0|");
     fv::core::escape_into(out, &props.label);
     out.push_str(": none|");
-    fv::core::push_number(out, s_total);
+    fv::core::push_int(out, s_total);
     out.push('|');
     fv::core::push_int(out, (if props.open { &[] } else { &props.words[..] }).len() as i64);
     out.push_str("|true</p>");

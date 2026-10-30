@@ -79,7 +79,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     }
     out.push_str("<!--]--></ul>");
     super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 1i64, drafts: None }, fv_loads)?;
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 as f64 > 1.0) }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 > 1) }, fv_loads)?;
     out.push_str("</article>");
     Ok(())
 }

@@ -151,7 +151,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(140 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
+    out.reserve(134 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
     let s_in_range = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|fv_tone| match fv_tone { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
@@ -161,13 +161,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     if let Some(v) = props.tone.map(|fv_tone_3| match fv_tone_3 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
-        if v.is_empty() {
-            out.push_str(" title");
-        } else {
-            out.push_str(" title=\"");
-            fv::core::escape_into(out, v);
-            out.push('"');
-        }
+        out.push_str(" title=\"");
+        fv::core::escape_into(out, v);
+        out.push('"');
     }
     out.push_str("><p>");
     out.push_str(if if let Some(fv_n_2) = props.n { fv_n_2 as f64 > 1.0 && (fv_n_2 as f64) < 9.0 } else { false } { "true" } else { "false" });
@@ -204,9 +200,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push('|');
-    out.push_str(if if let Some(fv_badge_2) = props.badge.as_ref() { fv::strings::js_length(&fv_badge_2.label) as f64 > 2.0 && &*fv_badge_2.label != "none" } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_badge_2) = props.badge.as_ref() { fv::strings::js_length(&fv_badge_2.label) > 2 && &*fv_badge_2.label != "none" } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(fv_word) = props.word.as_deref() { !fv_word.is_empty() && (fv::strings::js_length(fv_word) as f64) < 6.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_word) = props.word.as_deref() { !fv_word.is_empty() && fv::strings::js_length(fv_word) < 6 } else { false } { "true" } else { "false" });
     out.push_str("</p>");
     if let Some(fv_n_7) = props.n && fv_n_7 as f64 > 1.0 && (fv_n_7 as f64) < 9.0 {
         out.push_str("<i>");

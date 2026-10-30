@@ -92,8 +92,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<section><h2>");
     fv::core::escape_into(out, &props.label);
     out.push_str("</h2><ul><!--[-->");
-    for fv_x_ref in s_seeded.iter() {
-        let fv_x = fv_x_ref;
+    for fv_x in s_seeded.iter() {
         out.push_str("<li>");
         if let Some(v) = fv_x.item.as_ref().map(|fv_item_7| &*fv_item_7.id) {
             fv::core::escape_into(out, v);
@@ -103,15 +102,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
-    for fv_x_ref_2 in s_from_const.iter() {
-        let fv_x_2 = fv_x_ref_2;
+    for fv_x_2 in s_from_const.iter() {
         out.push_str("<li>");
         fv::core::escape_into(out, &fv_x_2.label);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><ol><!--[-->");
-    for (fv_i, fv_x_ref_3) in s_stated.iter().enumerate() {
-        let fv_x_3 = fv_x_ref_3;
+    for (fv_i, fv_x_3) in s_stated.iter().enumerate() {
         let fv_i = fv_i as i64;
         out.push_str("<li>");
         fv::core::push_int(out, fv_i);
@@ -120,22 +117,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><!--[-->");
-    for fv_x_ref_4 in s_typed.iter() {
-        let fv_x_4 = fv_x_ref_4;
+    for fv_x_4 in s_typed.iter() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_x_4.label);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_x_ref_5 in s_flipped.iter() {
-        let fv_x_5 = fv_x_ref_5;
+    for fv_x_5 in s_flipped.iter() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_x_5.label);
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_x_ref_6 in s_chained.iter() {
-        let fv_x_6 = fv_x_ref_6;
+    for fv_x_6 in s_chained.iter() {
         out.push_str("<p>");
         fv::core::escape_into(out, fv_x_6.item.as_ref().map(|fv_item_8| &*fv_item_8.id).unwrap_or("none"));
         out.push_str("</p>");
@@ -148,8 +142,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_x_ref_7 in s_nested.iter() {
-        let fv_x_7 = fv_x_ref_7;
+    for fv_x_7 in s_nested.iter() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_x_7.label);
         out.push_str("</p>");
@@ -161,15 +154,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::push_int(out, s_none.len() as i64);
     out.push_str("</p><!--[-->");
-    for fv_x_ref_8 in (if let Some(fv_item_9) = props.item.as_ref() { &fv_item_9.children[..] } else { &[] }).iter() {
-        let fv_x_8 = fv_x_ref_8;
+    for fv_x_8 in (if let Some(fv_item_9) = props.item.as_ref() { &fv_item_9.children[..] } else { &[] }).iter() {
         out.push_str("<i>");
         fv::core::escape_into(out, &fv_x_8.label);
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_x_ref_9 in (if props.flag { s_none } else { &props.others[..] }).iter() {
-        let fv_x_9 = fv_x_ref_9;
+    for fv_x_9 in (if props.flag { s_none } else { &props.others[..] }).iter() {
         out.push_str("<i>");
         fv::core::escape_into(out, &fv_x_9.label);
         out.push_str("</i>");
@@ -182,8 +173,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</b>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_x_ref_10 in <&[Props<'_>]>::default().iter() {
-        let fv_x_10 = fv_x_ref_10;
+    for fv_x_10 in <&[Props<'_>]>::default().iter() {
         out.push_str("<u>");
         fv::core::escape_into(out, &fv_x_10.label);
         out.push_str("</u>");

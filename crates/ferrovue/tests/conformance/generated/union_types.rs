@@ -66,27 +66,16 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(152 + 8 + 8 + 8 + 8 + props.label.len());
+    out.reserve(136 + 8 + 8 + 8 + 8 + props.label.len());
     let s_loud = if props.tone == super::types::Shade::Warm { "loud" } else { "quiet" };
     let s_chosen = props.other.unwrap_or(props.tone);
     out.push_str("<section class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
-    out.push('"');
-    if fv::props::Union::as_str(props.tone).is_empty() {
-        out.push_str(" data-tone");
-    } else {
-        out.push_str(" data-tone=\"");
-        fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
-        out.push('"');
-    }
-    if props.picked.map(fv::props::Union::as_str).unwrap_or("none").is_empty() {
-        out.push_str(" title");
-    } else {
-        out.push_str(" title=\"");
-        fv::core::escape_into(out, props.picked.map(fv::props::Union::as_str).unwrap_or("none"));
-        out.push('"');
-    }
-    out.push_str("><p>");
+    out.push_str("\" data-tone=\"");
+    fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
+    out.push_str("\" title=\"");
+    fv::core::escape_into(out, props.picked.map(fv::props::Union::as_str).unwrap_or("none"));
+    out.push_str("\"><p>");
     fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
     out.push('|');
     fv::core::escape_into(out, props.other.map(fv::props::Union::as_str).unwrap_or("none"));

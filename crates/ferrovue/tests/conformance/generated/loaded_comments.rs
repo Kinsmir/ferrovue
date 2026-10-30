@@ -75,9 +75,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     out.push_str(" on page ");
     fv::core::push_int(out, props.page);
     out.push_str("</footer>");
-    if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::strings::js_length(&fv_c) as f64 > 6.0) {
+    if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::strings::js_length(&fv_c) > 6) {
         out.push_str("<ol><!--[-->");
-        for fv_c_cow in fv::strings::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::strings::js_length(fv_c_2) as f64 > 6.0), |a, b| fv::strings::js_cmp(a, b)) {
+        for fv_c_cow in fv::strings::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::strings::js_length(fv_c_2) > 6), |a, b| fv::strings::js_cmp(a, b)) {
             let fv_c_3: &str = &fv_c_cow;
             out.push_str("<li>");
             fv::core::escape_into(out, fv_c_3);

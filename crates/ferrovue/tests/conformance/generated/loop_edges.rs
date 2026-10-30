@@ -135,7 +135,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::push_number(out, { let mut fv_i_2: f64 = 0.0f64; let mut fv_k_2: f64 = 10.0f64; let mut fv_returned_3: Option<f64> = None; while fv_k_2 > 0.0 { if fv_k_2 <= props.n as f64 { fv_returned_3 = Some(fv_k_2); break; } else { fv_i_2 += fv_k_2; fv_k_2 -= 3.0; } } if fv_returned_3.is_some() { fv_returned_3.unwrap_or_default() } else { fv_i_2 } });
     out.push('|');
-    fv::core::escape_into(out, &{ let mut fv_wide: f64 = 0.0f64; let mut fv_ascii: bool = true; for fv_ch_3 in props.text.split_inclusive(|_: char| true) { if fv::strings::js_length(fv_ch_3) as f64 > 1.0 { fv_wide += 1.0; } else { if fv::strings::js_cmp(fv_ch_3, "~").is_gt() { fv_ascii = false; } } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_ascii { "true" } else { "false" }, fv::core::Js(fv_wide))) });
+    fv::core::escape_into(out, &{ let mut fv_wide: f64 = 0.0f64; let mut fv_ascii: bool = true; for fv_ch_3 in props.text.split_inclusive(|_: char| true) { if fv::strings::js_length(fv_ch_3) > 1 { fv_wide += 1.0; } else { if fv::strings::js_cmp(fv_ch_3, "~").is_gt() { fv_ascii = false; } } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_ascii { "true" } else { "false" }, fv::core::Js(fv_wide))) });
     out.push('|');
     fv::core::escape_into(out, &(*s_lengths).iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join("-"));
     out.push_str("</p><p>");

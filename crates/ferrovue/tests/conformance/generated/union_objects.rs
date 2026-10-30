@@ -114,19 +114,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(115 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(105 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
     let s_first = super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
     let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: match props.state { UnionObjectsState::Todo | UnionObjectsState::Skipped => super::types::StepState::Skipped, UnionObjectsState::Done => super::types::StepState::Done }, align: props.side };
     let s_steps = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: if fv_i as f64 == 0.0 { super::types::StepState::Todo } else { super::types::StepState::Done }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>();
     let s_role = if let Some(fv_align) = matches!(props.align, super::types::Align::Left | super::types::Align::Right).then_some(fv::props::Union::as_str(props.align)) { match fv_align { "left" => "<start>", _ => "end & \"after\"" } } else { "none" };
-    out.push_str("<section");
-    if s_role.is_empty() {
-        out.push_str(" data-role");
-    } else {
-        out.push_str(" data-role=\"");
-        fv::core::escape_into(out, s_role);
-        out.push('"');
-    }
+    out.push_str("<section data-role=\"");
+    fv::core::escape_into(out, s_role);
+    out.push('"');
     if if props.side.is_some() { true } else { props.side.map(fv::props::Union::as_str).is_some() } {
         out.push_str(" class=\"");
         fv::attrs::class_into(out, false, &[if let Some(fv_side) = props.side { match fv_side { super::types::Align::Left => "l", super::types::Align::Center => "c", super::types::Align::Right => "r" } } else { "" }]);
@@ -138,8 +133,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } })?;
     super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } })?;
     out.push_str("<!--[-->");
-    for fv_s_ref in s_steps.iter() {
-        let fv_s = fv_s_ref;
+    for fv_s in s_steps.iter() {
         super::union_step::try_render(out, &super::union_step::Props { step: fv_s.to_owned() })?;
     }
     out.push_str("<!--]--></ol><p>");

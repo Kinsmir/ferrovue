@@ -41,8 +41,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(27 + 32 * props.rows.len() + props.rows.iter().map(|v| v.label.len() + v.href.len()).sum::<usize>());
     out.push_str("<nav><!--[-->");
-    for fv_r_ref in props.rows.iter() {
-        let fv_r = fv_r_ref;
+    for fv_r in props.rows.iter() {
         out.push_str("<a href=\"");
         fv::core::escape_into(out, &fv_r.href);
         out.push_str("\" class=\"");

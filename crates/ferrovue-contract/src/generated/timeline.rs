@@ -45,8 +45,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(57 + 23 * props.moments.len() + 16 * props.by.len() + props.moments.iter().map(|v| v.label.len()).sum::<usize>() + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
     out.push_str("<ol><!--[-->");
-    for fv_m_ref in props.moments.iter() {
-        let fv_m = fv_m_ref;
+    for fv_m in props.moments.iter() {
         out.push_str("<li>");
         fv::core::escape_into(out, &fv_m.label);
         out.push(' ');

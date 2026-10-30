@@ -48,7 +48,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(40 + 7 + props.label.len());
+    out.reserve(30 + 7 + props.label.len());
     out.push_str("<b");
     if props.mood.map(fv::props::Union::as_str).is_some() {
         out.push_str(" class=\"");
@@ -56,13 +56,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     if let Some(v) = props.mood.map(fv::props::Union::as_str) {
-        if v.is_empty() {
-            out.push_str(" data-mood");
-        } else {
-            out.push_str(" data-mood=\"");
-            fv::core::escape_into(out, v);
-            out.push('"');
-        }
+        out.push_str(" data-mood=\"");
+        fv::core::escape_into(out, v);
+        out.push('"');
     }
     out.push('>');
     fv::core::escape_into(out, &props.label);

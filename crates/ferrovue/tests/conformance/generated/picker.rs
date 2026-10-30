@@ -69,8 +69,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     out.push_str("</legend><!--[-->");
-    for fv_item_ref in props.items.iter() {
-        let fv_item = fv_item_ref;
+    for fv_item in props.items.iter() {
         out.push_str("<label class=\"");
         fv::attrs::class_into(out, false, &[if Some(&*fv_item.label) == props.selected.as_deref() { "on" } else { "" }]);
         out.push('"');

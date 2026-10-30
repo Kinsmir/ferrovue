@@ -87,7 +87,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, fv_i);
         out.push_str("\">");
         fv::core::push_int(out, fv_n);
-        if fv_i as f64 == 0.0 {
+        if fv_i == 0 {
             out.push_str("<!--[--> first<!--]-->");
         } else {
             out.push_str("<!---->");
@@ -95,8 +95,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol><!--[-->");
-    for fv_g_ref in props.groups.iter() {
-        let fv_g = fv_g_ref;
+    for fv_g in props.groups.iter() {
         out.push_str("<div class=\"group\"><h3>");
         fv::core::escape_into(out, &fv_g.name);
         out.push_str(" (");
@@ -122,7 +121,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!--]--></div>");
     }
     out.push_str("<!--]-->");
-    if props.words.len() as i64 == 0 {
+    if props.words.is_empty() {
         out.push_str("<p>no words</p>");
     } else {
         out.push_str("<!---->");

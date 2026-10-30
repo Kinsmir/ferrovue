@@ -67,8 +67,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(35 + 46 * props.shelves.len() + props.shelves.iter().map(|v| v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><!--[-->");
-    for fv_shelf_ref in props.shelves.iter() {
-        let fv_shelf = fv_shelf_ref;
+    for fv_shelf in props.shelves.iter() {
         out.push_str("<!--[-->");
         if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<p><!--[-->");

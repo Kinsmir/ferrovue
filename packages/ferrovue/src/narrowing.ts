@@ -1,4 +1,4 @@
-import { type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, keptLiterals, literalsOf, literalTy, nothing, rustStr, STR, UNDEF, unionStr, variantPath } from "./model.ts";
+import { type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, filledTy, keptLiterals, literalsOf, literalTy, neverEmpty, nothing, rustStr, STR, UNDEF, unionStr, variantPath } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ownKeyTest, pickPresent } from "./constants.ts";
 import { isObjectCall } from "./calls.ts";
@@ -24,11 +24,13 @@ export function truthy(v: Val): string {
   if (branches) return choice(branches.test, truthy({ code: branches.yes, ty: v.ty }), truthy({ code: branches.no, ty: v.ty }));
   switch (v.ty.k) {
     case "str":
-      return `!${receiver(v.code)}.is_empty()`;
+      return neverEmpty(v.ty) ? "true" : `!${receiver(v.code)}.is_empty()`;
     case "html":
       return `!fv::html::TrustedHtml::trusted_html(${bare(v.code)}).is_empty()`;
-    case "int":
-      return binary(v.code, "!=", "0");
+    case "int": {
+      const counted = /^(.+)\.len\(\) as i64$/s.exec(v.code)?.[1];
+      return counted !== undefined && atom(counted) === counted ? `!${counted}.is_empty()` : binary(v.code, "!=", "0");
+    }
     case "float":
       return `${binary(v.code, "!=", "0.0")} && !${receiver(v.code)}.is_nan()`;
     case "bool":
@@ -234,10 +236,11 @@ export function presence(s: Scope, n: N): Presence | null {
     return { path, of: kept, negated, truthy: byTruth, option, present: `${atom(option)}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}`, variant: true, source: { code: v.variant!, def } };
   }
   const scalar = of.k === "str" || of.k === "html" || of.k === "int" || of.k === "float" || of.k === "bool";
-  const filtered = byTruth && scalar;
-  const option = filtered ? `${atom(v.code)}.filter(|v| ${truthy({ code: "*v", ty: of })})` : v.code;
+  const each = scalar ? truthy({ code: "*v", ty: of }) : "true";
+  const filtered = byTruth && each !== "true";
+  const option = filtered ? `${atom(v.code)}.filter(|v| ${each})` : v.code;
   const present = filtered ? truthy(v) : `${atom(v.code)}.is_some()`;
-  return { path, of, negated, truthy: byTruth, option, present, pattern: (name) => `let Some(${name}) = ${option}` };
+  return { path, of: filtered ? filledTy(of) : of, negated, truthy: byTruth, option, present, pattern: (name) => `let Some(${name}) = ${option}` };
 }
 
 function ownKeyPresence(s: Scope, call: N, negated: boolean): Presence | null {

@@ -101,8 +101,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     out.push_str("<section><h2>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
-    for (fv_index, fv_row_ref) in props.rows.iter().enumerate() {
-        let fv_row = fv_row_ref;
+    for (fv_index, fv_row) in props.rows.iter().enumerate() {
         let fv_index = fv_index as i64;
         out.push_str("<li>");
         fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: fv_row, index: fv_index }, Some(&mut |out: &mut String| {

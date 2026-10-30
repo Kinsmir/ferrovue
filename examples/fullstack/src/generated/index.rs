@@ -58,10 +58,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
     out.reserve(105 + 89 * props.books.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("All books")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("{} books, from {}", fv::core::Js(props.books.len() as i64), props.books.iter().map(|fv_b| std::borrow::Cow::<str>::Borrowed(&fv_b.title)).collect::<Vec<_>>().join(", "))))])]))]));
     out.push_str("<section class=\"books\"><h1>All books</h1>");
-    if props.books.len() as i64 != 0 {
+    if !props.books.is_empty() {
         out.push_str("<ul><!--[-->");
-        for fv_book_ref in props.books.iter() {
-            let fv_book = fv_book_ref;
+        for fv_book in props.books.iter() {
             out.push_str("<li>");
             {
                 let fv_link = {

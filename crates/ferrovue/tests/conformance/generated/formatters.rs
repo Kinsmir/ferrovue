@@ -64,9 +64,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<section><h2 title=\"");
     fv::core::escape_into(out, &props.title);
     out.push_str("\">");
-    fv::core::escape_into(out, &(if fv::strings::js_length(&props.title) as f64 <= 12.0 { std::borrow::Cow::<str>::Borrowed(&*props.title) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(11.0f64))))) }));
+    fv::core::escape_into(out, &(if fv::strings::js_length(&props.title) <= 12 { std::borrow::Cow::<str>::Borrowed(&*props.title) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(11.0f64))))) }));
     out.push('|');
-    fv::core::escape_into(out, &(if fv::strings::js_length(&props.title) as f64 <= 5.0 { std::borrow::Cow::<str>::Borrowed(&*props.title) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(4.0f64))))) }));
+    fv::core::escape_into(out, &(if fv::strings::js_length(&props.title) <= 5 { std::borrow::Cow::<str>::Borrowed(&*props.title) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(4.0f64))))) }));
     out.push_str("</h2><p>");
     fv::core::escape_into(out, &s_summary);
     out.push('|');
@@ -87,7 +87,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_item_ref in props.items.iter() {
         let fv_item: &str = fv_item_ref;
         out.push_str("<li>");
-        fv::core::escape_into(out, &(if fv::strings::js_length(fv_item) as f64 <= 4.0 { std::borrow::Cow::<str>::Borrowed(fv_item) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(fv_item, 0.0f64, Some(3.0f64))))) }));
+        fv::core::escape_into(out, &(if fv::strings::js_length(fv_item) <= 4 { std::borrow::Cow::<str>::Borrowed(fv_item) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(fv_item, 0.0f64, Some(3.0f64))))) }));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

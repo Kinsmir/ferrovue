@@ -1,5 +1,5 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
-import { type N, type Piece, type Scope, type Ty, type Val, fail, nothing, rustStr } from "./model.ts";
+import { type N, type Piece, type Scope, type Ty, type Val, fail, neverEmpty, nothing, rustStr } from "./model.ts";
 import { type ErrorCode, GenError } from "./errors.ts";
 import { asWritten } from "./numbers.ts";
 import { CONFIG_FILE } from "./config.ts";
@@ -7,7 +7,7 @@ import { ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, unquote } from "./strings.ts";
-import { atom, bare, condition, receiver, scrutinee, strArg } from "./parens.ts";
+import { atom, bare, condition, ifElse, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
@@ -23,10 +23,11 @@ function piecesOf(v: Val): Piece[] | undefined {
 }
 
 function emptyTest(v: Val): string {
+  if (neverEmpty(v.ty)) return "false";
   const pieces = piecesOf(v);
   if (pieces === undefined) return `${receiver(v.code)}.is_empty()`;
   const strs = pieces.filter((p): p is Val => typeof p !== "string" && !("shown" in p) && p.ty.k === "str");
-  if (strs.length < pieces.length) return "false";
+  if (strs.length < pieces.length || strs.some((p) => neverEmpty(p.ty))) return "false";
   return strs.map((p) => `${receiver(p.code)}.is_empty()`).join(" && ");
 }
 
@@ -83,9 +84,28 @@ function renderable(s: Scope, key: string, v: Val, n: N): void {
   fail(s.comp, "FV0403", `\`${key}\` is bound to ${what}: Vue's server renderer leaves the attribute out, and hydration then sets it, changing the page; ${fix}`, n);
 }
 
+/** For an optional string that is a literal where a test holds and absent where it fails, the
+ * test and the literal. */
+function someLiteral(v: Val): { test: string; value: Val } | null {
+  const branches = v.ty.k === "opt" ? ifElse(v.code) : null;
+  if (branches === null || v.ty.k !== "opt") return null;
+  const literal = (code: string) => /^Some\(("(?:[^"\\]|\\.)*")\)$/.exec(code)?.[1];
+  const [yes, no] = [literal(branches.yes), literal(branches.no)];
+  if (yes !== undefined && branches.no === "None") return { test: branches.test, value: { code: yes, ty: v.ty.of } };
+  if (no !== undefined && branches.yes === "None" && !branches.test.startsWith("let ")) return { test: not(branches.test), value: { code: no, ty: v.ty.of } };
+  return null;
+}
+
 export function renderAttr(s: Scope, e: Emitter, key: string, v: Val, n: N): void {
   renderable(s, key, v, n);
   if (nothing(v.ty)) return;
+  const some = someLiteral(v);
+  if (some !== null) {
+    e.open(`if ${condition(some.test)}`);
+    renderAttr(s, e, key, some.value, n);
+    e.close();
+    return;
+  }
   if (v.ty.k === "opt") {
     e.open(`if let Some(v) = ${scrutinee(v.code)}`);
     renderAttr(s, e, key, { code: "v", ty: v.ty.of }, n);
@@ -120,6 +140,13 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
   if (v.ty.k === "opt" && boolean(v.ty.of)) {
     e.open(`if ${v.ty.of.k === "str" ? `${atom(v.code)}.is_some()` : truthy(v)}`);
     e.lit(` ${name}`);
+    e.close();
+    return;
+  }
+  const some = someLiteral(v);
+  if (some !== null) {
+    e.open(`if ${condition(some.test)}`);
+    renderDynamicAttr(s, e, key, some.value, n, tag);
     e.close();
     return;
   }

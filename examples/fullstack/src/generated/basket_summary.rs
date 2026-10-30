@@ -43,7 +43,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(74 + props.label.len());
     out.push_str("<p class=\"basket");
-    fv::attrs::class_into(out, true, &[if fv_stores.basket.ids.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
+    fv::attrs::class_into(out, true, &[if fv_stores.basket.ids.len() as i64 == 0 { "empty" } else { "" }]);
     out.push_str("\" data-v-0a3b973f>");
     fv::core::escape_into(out, &props.label);
     out.push_str(" of ");
@@ -51,7 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     out.push_str(": <b data-v-0a3b973f>");
     fv::core::push_int(out, fv_stores.basket.ids.len() as i64);
     out.push_str("</b> ");
-    fv::core::escape_into(out, if fv_stores.basket.ids.len() as i64 as f64 == 1.0 { "book" } else { "books" });
+    fv::core::escape_into(out, if fv_stores.basket.ids.len() as i64 == 1 { "book" } else { "books" });
     out.push_str("</p>");
     Ok(())
 }

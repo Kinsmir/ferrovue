@@ -246,8 +246,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for fv_e_ref in props.entries.iter() {
-        let fv_e = fv_e_ref;
+    for fv_e in props.entries.iter() {
         out.push_str("<li");
         if let Some(v) = fv_e.deleted_at.as_deref() {
             out.push_str(" data-deleted=\"");

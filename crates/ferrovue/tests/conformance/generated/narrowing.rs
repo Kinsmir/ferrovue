@@ -140,9 +140,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, props.label.as_deref().filter(|v| !v.is_empty()).unwrap_or("empty"));
     out.push_str("</p><p>");
-    out.push_str(if if let Some(fv_label_4) = props.label.as_deref() { fv::strings::js_length(fv_label_4) as f64 > 2.0 } else { false } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_label_4) = props.label.as_deref() { fv::strings::js_length(fv_label_4) > 2 } else { false } { "true" } else { "false" });
     out.push('|');
-    out.push_str(if if let Some(fv_label_5) = props.label.as_deref() { fv::strings::js_length(fv_label_5) as f64 == 0.0 } else { true } { "true" } else { "false" });
+    out.push_str(if if let Some(fv_label_5) = props.label.as_deref() { fv::strings::js_length(fv_label_5) == 0 } else { true } { "true" } else { "false" });
     out.push('|');
     out.push_str(if if let Some(fv_count_4) = props.count.filter(|v| *v != 0) { fv_count_4 as f64 > 3.0 } else { true } { "true" } else { "false" });
     out.push_str("</p><p>");

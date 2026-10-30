@@ -207,8 +207,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (fv_i_3, fv_item_ref) in props.rows.iter().enumerate() {
-        let fv_item = fv_item_ref;
+    for (fv_i_3, fv_item) in props.rows.iter().enumerate() {
         let fv_i_3 = fv_i_3 as i64;
         out.push_str("<li data-id=\"");
         fv::core::push_int(out, fv_item.id);

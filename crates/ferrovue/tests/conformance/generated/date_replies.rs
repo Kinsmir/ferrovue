@@ -44,8 +44,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(25 + 134 * props.replies.len() + props.replies.iter().map(|v| v.author.len()).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateReplies.vue");
     out.push_str("<ul><!--[-->");
-    for fv_reply_ref in props.replies.iter() {
-        let fv_reply = fv_reply_ref;
+    for fv_reply in props.replies.iter() {
         out.push_str("<li><b>");
         fv::core::escape_into(out, &fv_reply.author);
         out.push_str("</b>");
@@ -74,7 +73,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         } else {
             out.push_str("<!---->");
         }
-        if (props.depth as f64) < 2.0 && fv_reply.replies.len() as i64 != 0 {
+        if (props.depth as f64) < 2.0 && !fv_reply.replies.is_empty() {
             fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: fv_reply.replies.to_owned(), depth: fv_refusals.keep(fv::render::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
         } else {
             out.push_str("<!---->");

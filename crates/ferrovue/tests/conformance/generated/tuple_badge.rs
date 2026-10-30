@@ -82,8 +82,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::escape_into(out, &props.pair.0);
     out.push_str("<!--[-->");
-    for (fv_i, fv_item_ref) in props.rest.as_ref().map(|v| &v[..]).unwrap_or(&[]).iter().enumerate() {
-        let fv_item = fv_item_ref;
+    for (fv_i, fv_item) in props.rest.as_ref().map(|v| &v[..]).unwrap_or(&[]).iter().enumerate() {
         let fv_i = fv_i as i64;
         out.push_str("<i>");
         fv::core::push_int(out, fv_i);

@@ -82,8 +82,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</b> <small>#");
     fv::core::push_int(out, props.user.id);
     out.push_str("</small><!--[-->");
-    for fv_r_ref in props.user.roles.iter() {
-        let fv_r = fv_r_ref;
+    for fv_r in props.user.roles.iter() {
         out.push_str("<i class=\"");
         fv::attrs::class_into(out, false, &[if fv_r.admin { "admin" } else { "" }]);
         out.push_str("\">");
@@ -91,8 +90,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_b_ref in props.badges.as_deref().unwrap_or(&[]).iter() {
-        let fv_b = fv_b_ref;
+    for fv_b in props.badges.as_deref().unwrap_or(&[]).iter() {
         out.push_str("<span class=\"");
         fv::attrs::class_into(out, false, &[fv_b.tone.as_deref().unwrap_or("")]);
         out.push_str("\">");

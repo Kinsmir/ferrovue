@@ -68,15 +68,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<section><h2>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");
-    for fv_r_ref in s_rows.iter() {
-        let fv_r = fv_r_ref;
+    for fv_r in s_rows.iter() {
         out.push_str("<li>");
         fv::core::escape_into(out, &fv_r.name);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><!--[-->");
-    for fv_u_ref in s_users.iter() {
-        let fv_u = fv_u_ref;
+    for fv_u in s_users.iter() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_u.name);
         out.push_str("</p>");

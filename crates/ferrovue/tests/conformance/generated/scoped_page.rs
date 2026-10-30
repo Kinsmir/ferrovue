@@ -85,7 +85,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
     } else {
         out.push_str("<!---->");
     }
-    if props.items.len() as i64 != 0 {
+    if !props.items.is_empty() {
         out.push_str("<ul data-v-56da6d99><!--[-->");
         for fv_i_ref in props.items.iter() {
             let fv_i: &str = fv_i_ref;

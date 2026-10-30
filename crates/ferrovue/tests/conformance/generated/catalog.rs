@@ -86,8 +86,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</option>");
     }
     out.push_str("<!--]--></select><ul><!--[-->");
-    for fv_c_ref in super::types::CHOICES.iter() {
-        let fv_c = fv_c_ref;
+    for fv_c in super::types::CHOICES.iter() {
         out.push_str("<li");
         if let Some(v) = fv_c.hint.as_deref() {
             out.push_str(" title=\"");
@@ -101,8 +100,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ol><!--[-->");
-    for (fv_i, fv_s_ref_2) in super::types::SORTS.iter().enumerate() {
-        let fv_s_2 = fv_s_ref_2;
+    for (fv_i, fv_s_2) in super::types::SORTS.iter().enumerate() {
         let fv_i = fv_i as i64;
         out.push_str("<li>");
         fv::core::push_int(out, fv_i);

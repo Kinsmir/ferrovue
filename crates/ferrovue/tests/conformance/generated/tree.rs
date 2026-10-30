@@ -46,10 +46,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(41 + props.label.len());
     out.push_str("<li>");
     fv::core::escape_into(out, &props.label);
-    if props.children.len() as i64 != 0 {
+    if !props.children.is_empty() {
         out.push_str("<ul><!--[-->");
-        for fv_c_ref in props.children.iter() {
-            let fv_c = fv_c_ref;
+        for fv_c in props.children.iter() {
             super::tree::try_render(out, fv_c)?;
         }
         out.push_str("<!--]--></ul>");

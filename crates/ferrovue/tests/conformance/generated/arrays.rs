@@ -83,8 +83,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Arrays.vue");
     let s_cheap = props.items.iter().filter(|fv_i| fv_i.price < 10.0).collect::<Vec<_>>();
     let s_labels = props.items.iter().map(|fv_i_2| std::borrow::Cow::<str>::Owned(fv_i_2.label.to_uppercase())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    let s_found = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_w| fv::strings::js_length(fv_w) as f64 > 3.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned()));
-    let s_shown = if props.min as f64 > 2.0 { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) as f64 > 1.0).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() };
+    let s_found = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_w| fv::strings::js_length(fv_w) > 3).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned()));
+    let s_shown = if props.min as f64 > 2.0 { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 1).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() };
     out.push_str("<section><ul><!--[-->");
     for (fv_i_3, fv_item) in props.items.iter().filter(|fv_x| fv_x.id as f64 >= props.min as f64).enumerate() {
         let fv_i_3 = fv_i_3 as i64;
@@ -116,7 +116,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><p>");
     fv::core::escape_into(out, props.items.iter().find(|fv_i_5| fv_i_5.label.contains(&*props.query)).map(|fv_value| &*fv_value.label).unwrap_or("no match"));
     out.push('|');
-    fv::core::push_int(out, props.items.iter().position(|fv_i_6| if let Some(fv_note_2) = fv_i_6.note.as_deref() { fv::strings::js_length(fv_note_2) as f64 > 3.0 } else { false }).map_or(-1, |i| i as i64));
+    fv::core::push_int(out, props.items.iter().position(|fv_i_6| if let Some(fv_note_2) = fv_i_6.note.as_deref() { fv::strings::js_length(fv_note_2) > 3 } else { false }).map_or(-1, |i| i as i64));
     out.push('|');
     fv::core::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_w_6| fv_w_6.starts_with(&*props.query)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));
     out.push_str("</p><p>");
@@ -175,7 +175,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p>");
     fv_refusals.check(super::chips::try_render(out, &super::chips::Props { chips: props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_11| **fv_w_11 != *props.query).collect(), counts: Some(props.nums.iter().copied().map(|fv_n_7| fv_refusals.keep(fv::render::try_int(fv_n_7 as f64 + 1.0), 33, 79)).collect()), marks: None }))?;
     out.push_str("<!--[-->");
-    for fv_item_6 in props.items.iter().filter(|fv_i_12| fv_i_12.tags.len() as i64 as f64 > 1.0) {
+    for fv_item_6 in props.items.iter().filter(|fv_i_12| fv_i_12.tags.len() as i64 > 1) {
         fv_refusals.check(super::chips::try_render(out, &super::chips::Props { chips: fv::strings::js_slice_items(fv_item_6.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect(), counts: None, marks: None }))?;
     }
     out.push_str("<!--]--></section>");

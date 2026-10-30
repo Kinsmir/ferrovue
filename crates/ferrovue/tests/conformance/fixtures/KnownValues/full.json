@@ -1,0 +1,1 @@
+{"kind":"text","mark":"new","note":"a note","replaces":"r1","eager":false,"collapsed":true,"flair":["x","y"],"parts":[{"label":"one","tags":["a","b"]},{"label":"two","tags":["c","d","e"]},{"label":"three","tags":[]}],"byName":{"a":{"label":"A","tags":[]},"b":{"label":"","tags":[]}}}

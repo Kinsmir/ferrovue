@@ -575,13 +575,12 @@ setter that consumes and returns the struct. The fields are public, so a struct 
 #         fv::core::escape_into(out, &props.title);
 #     }));
 #     out.push_str("</header>");
-#     if props.rows.len() as i64 != 0 {
+#     if !props.rows.is_empty() {
 #         out.push_str("<ul><!--[-->");
-#         for (i, r_ref) in props.rows.iter().enumerate() {
-#             let r = r_ref;
+#         for (i, r) in props.rows.iter().enumerate() {
 #             let i = i as i64;
 #             out.push_str("<li>");
-#             fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: r, index: i, label: &r.label, tags: &r.tags, first: i as f64 == 0.0 }, Some(&mut |out: &mut String| {
+#             fv::render::scoped_slot_into(out, fv_slots.row, &RowSlotProps { row: r, index: i, label: &r.label, tags: &r.tags, first: i == 0 }, Some(&mut |out: &mut String| {
 #                 fv::core::push_int(out, i);
 #                 out.push_str(". ");
 #                 fv::core::escape_into(out, &r.label);

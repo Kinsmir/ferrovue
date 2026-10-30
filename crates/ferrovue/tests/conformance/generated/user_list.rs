@@ -56,8 +56,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
-    for fv_u_ref in props.users.iter() {
-        let fv_u = fv_u_ref;
+    for fv_u in props.users.iter() {
         super::user_card::try_render(out, &super::user_card::Props { user: fv_u.to_owned(), size: fv_u.size, badges: None, note: None })?;
     }
     out.push_str("<!--]-->");

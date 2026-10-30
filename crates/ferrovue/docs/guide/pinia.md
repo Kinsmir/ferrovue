@@ -214,8 +214,7 @@ assert_eq!(
 #         out.push_str("<!---->");
 #     }
 #     out.push_str("<!--[-->");
-#     for fv_t_ref in fv_stores.prefs.tags.iter() {
-#         let fv_t = fv_t_ref;
+#     for fv_t in fv_stores.prefs.tags.iter() {
 #         out.push_str("<i");
 #         if let Some(v) = fv_t.color.as_deref() {
 #             out.push_str(" title=\"");

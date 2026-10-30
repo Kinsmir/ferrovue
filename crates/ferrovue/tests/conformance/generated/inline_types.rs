@@ -239,8 +239,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.mood), label: std::borrow::Cow::Borrowed(&*props.post.author.name) })?;
     out.push_str("<!--[-->");
-    for fv_l_ref in props.post.author.links.iter() {
-        let fv_l = fv_l_ref;
+    for fv_l in props.post.author.links.iter() {
         out.push_str("<a href=\"");
         fv::core::escape_into(out, &fv_l.href);
         out.push_str("\">");
@@ -256,8 +255,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if props.r#box.inner.on { "true" } else { "false" });
     out.push_str(" <!--[-->");
-    for fv_r_ref in props.rows.iter() {
-        let fv_r = fv_r_ref;
+    for fv_r in props.rows.iter() {
         out.push_str("<p class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_r.side)]);
         out.push_str("\">");

@@ -48,7 +48,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(207 + props.user.len() + props.tab.as_deref().map_or(0, str::len));
+    out.reserve(201 + props.user.len() + props.tab.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
     {
         let fv_link = fv_route.link("/");
@@ -97,15 +97,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             fv::core::escape_into(out, &fv_link.href);
             out.push_str("\" class=\"");
             fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-            out.push('"');
-            if fv_tab.is_empty() {
-                out.push_str(" title");
-            } else {
-                out.push_str(" title=\"");
-                fv::core::escape_into(out, fv_tab);
-                out.push('"');
-            }
-            out.push('>');
+            out.push_str("\" title=\"");
+            fv::core::escape_into(out, fv_tab);
+            out.push_str("\">");
             fv::core::escape_into(out, fv_tab);
             out.push_str("</a>");
         }

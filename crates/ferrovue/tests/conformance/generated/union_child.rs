@@ -234,18 +234,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(46 + 6 + props.text.len() + 7 + 1 + 1);
+    out.reserve(36 + 6 + props.text.len() + 7 + 1 + 1);
     out.push_str("<span class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.align), props.wide.map(fv::props::Union::as_str).unwrap_or("")]);
-    out.push('"');
-    if fv::props::Union::as_str(props.pick).is_empty() {
-        out.push_str(" data-pick");
-    } else {
-        out.push_str(" data-pick=\"");
-        fv::core::escape_into(out, fv::props::Union::as_str(props.pick));
-        out.push('"');
-    }
-    out.push('>');
+    out.push_str("\" data-pick=\"");
+    fv::core::escape_into(out, fv::props::Union::as_str(props.pick));
+    out.push_str("\">");
     fv::core::escape_into(out, &props.text);
     out.push(' ');
     fv::core::escape_into(out, fv::props::Union::as_str(props.fixed));

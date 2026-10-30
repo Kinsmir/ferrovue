@@ -773,7 +773,7 @@ describe("v-if", () => {
     } else {
         out.push_str("<!---->");
     }
-    if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) && (props.on || fv::strings::js_length(fv_a_3) as f64 > 2.0) {
+    if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) && (props.on || fv::strings::js_length(fv_a_3) > 2) {
         out.push_str("<p>w</p>");
     } else {
         out.push_str("<!---->");
