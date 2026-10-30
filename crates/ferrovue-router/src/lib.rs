@@ -1047,7 +1047,7 @@ impl Pattern {
             return Pattern {
                 path: path.to_owned(),
                 parent: None,
-                tokens: vec![Token::Static(String::new())],
+                tokens: Vec::new(),
                 score: vec![ROOT],
                 name,
                 matchable: true,
@@ -1114,7 +1114,7 @@ impl Pattern {
 
     fn parse_from(&self, tokens: &[Token], rest: &str, params: &mut Values) -> bool {
         let Some((token, after)) = tokens.split_first() else {
-            return matches!(rest, "" | "/");
+            return matches!(rest, "" | "/") || (self.tokens.is_empty() && rest == "//");
         };
         match token {
             Token::Static(text) => {
