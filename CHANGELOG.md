@@ -12,6 +12,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 - The guide's `upgrading_to_0_13` page: bump both halves, generate again for version 7, and `script.fs` on TypeScript 7.
   [`upgrading_to_0_13`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html).
+- `linkRoutes` from `ferrovue/link-routes`: `<RouterLink>` and `useRoute()` for an application that navigates on its own, with no router.
+  It resolves links as vue-router does, in about 4 KB gzipped of the client bundle: [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
 
 ### Changed
 
@@ -23,6 +25,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [The locals of a render](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-locals-of-a-render).
 - Generated code is version 8, which writes each `<RouterLink>` with one call the 0.13 crate lacks; the 0.14 crate builds versions 6 and 7 too.
   Generate every component again: [`upgrading_to_0_14`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_14/index.html#2-generate-every-component-again).
+
+### Deprecated
+
+- `linkRouter` from `ferrovue/link-router`, which builds a whole vue-router; it still works, and is removed in a later minor release.
+  Use `linkRoutes`: [`upgrading_to_0_14`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_14/index.html#linkrouter-is-deprecated-for-linkroutes).
 
 ### Fixed
 

@@ -336,7 +336,7 @@ then renders the record into the page:
 import { createPinia } from "pinia";
 import { hydrateState, readPage, renderPage, type App } from "ferrovue";
 import islands from "ferrovue/islands";
-import { linkRouter } from "ferrovue/link-router";
+import { linkRoutes } from "ferrovue/link-routes";
 import routes from "ferrovue/routes";
 
 let current: App | undefined; // what mountPage returned for the first page
@@ -345,9 +345,9 @@ async function navigate(href: string): Promise<void> {
   const next = readPage(await (await fetch(href)).text());
   const pinia = createPinia();
   hydrateState(pinia, { text: next.state });
-  const router = linkRouter(routes, { navigate, location: href });
+  const links = linkRoutes(routes, { navigate, location: href });
   history.pushState(null, "", href);
-  current = await renderPage(() => import("./pages/picks.vue"), islands, next.record, { pinia, router, previous: current });
+  current = await renderPage(() => import("./pages/picks.vue"), islands, next.record, { pinia, plugins: [links], previous: current });
 }
 ```
 
@@ -362,10 +362,10 @@ fails to load.
 
 Some things to know:
 
-- **The router must be at the next page.** The browser's location still names the page shown when
-  the next one renders, so a router built from it resolves the wrong route. `linkRouter` takes the
-  next page's `location`, as the `href` its `navigate` is given, and starts there; a router of your
-  own takes a memory history replaced at that location.
+- **The links must be at the next page.** The browser's location still names the page shown when
+  the next one renders, so links built from it resolve against the wrong route. `linkRoutes` takes
+  the next page's `location`, as the `href` its `navigate` is given, and resolves the route there; a
+  router of your own takes a memory history replaced at that location.
 - **The state is the next page's.** `hydrateState(pinia, { text })` reads the state the fetched page
   carries, `NaN` and infinities included, into a fresh Pinia. Setting `pinia.state.value` on a
   Pinia whose stores are already in use leaves those stores on the old state, so either start a new
@@ -378,7 +378,7 @@ Some things to know:
   the next page's tags as its app mounts and drops the previous page's as it unmounts.
 
 `examples/fullstack` goes between staff picks this way: `client/app.ts` gives the page a
-`linkRouter` whose `navigate` fetches the next page and shows it, pushes the URL, and shows the
+`linkRoutes` whose `navigate` fetches the next page and shows it, pushes the URL, and shows the
 page the URL names again on `popstate`.
 
 ## Islands or a page

@@ -64,3 +64,36 @@ relied on that renders as Vue does now. See
 vue-router does. 0.13 matched it to a catch-all route, or to no route. A request for `//` now
 renders the home page and its links' active classes, where 0.13 rendered the catch-all or nothing.
 See [routing](crate::guide::routing#a-router-per-application-a-route-per-request).
+
+# Deprecated
+
+## `linkRouter` is deprecated for `linkRoutes`
+
+`linkRouter` from `ferrovue/link-router` still works in 0.14, and is removed in a later minor
+release. `linkRoutes` from `ferrovue/link-routes` gives `<RouterLink>` and `useRoute()` the same
+answers with no router, which keeps all but `<RouterLink>` of vue-router out of the client bundle:
+about 4 KB gzipped, where `linkRouter` is about 9 KB. It takes the same routes and options, `history`
+aside, and returns a Vue plugin, given in `plugins` where the router was given in `router`:
+
+```ts
+// 0.13
+import { linkRouter } from "ferrovue/link-router";
+
+const router = linkRouter(routes, { navigate, base: "/app/", location: href });
+await mountIslands(islands, { router });
+await renderPage(layout, islands, record, { router, previous });
+
+// 0.14
+import { linkRoutes } from "ferrovue/link-routes";
+
+const links = linkRoutes(routes, { navigate, base: "/app/", location: href });
+await mountIslands(islands, { plugins: [links] });
+await renderPage(layout, islands, record, { plugins: [links], previous });
+```
+
+There is nothing to wait for: `router.isReady()` and `await router.push(…)` before mounting go. The
+page's route is `links.route` in place of `router.currentRoute.value`, and `links.resolve(to)`
+resolves a location as `router.resolve(to)` did. `navigate` is called with the same `href` and route
+as before, the link to the current page included. An application that read `useRouter()` or
+`$router`, rendered a `<RouterView>`, or passed its own `history`, builds a vue-router of its own.
+See [links when the application navigates on its own](crate::guide::routing#links-when-the-application-navigates-on-its-own).

@@ -2,7 +2,8 @@ import { createMemoryHistory, createRouter, isNavigationFailure, NavigationFailu
 import { routeRecords, type RouteEntry } from "./route-records.ts";
 
 
-/** What `linkRouter` hands navigations to, and the router options of `ferrovue.config.json`. */
+/** What `linkRouter` hands navigations to, and the router options of `ferrovue.config.json`.
+ * @deprecated Use `linkRoutes` and `LinkRoutesOptions` from `ferrovue/link-routes`. */
 export interface LinkRouterOptions {
   /** The application's own navigation, called with the `href` of every navigation after the first
    * (the base included, as the link's `href` attribute has it) and the route it resolves to. */
@@ -40,7 +41,9 @@ function pageHistory(base: string | undefined, location: string | undefined): Ro
  * layer leaves the page: built from the routes file the compiler reads, every route rendering
  * nothing. Its first navigation resolves the page the server rendered; every later one, a link's
  * click included, is handed to `navigate` and aborted, so the router stays on that page. Build one
- * for each page the application shows. */
+ * for each page the application shows.
+ * @deprecated Use `linkRoutes` from `ferrovue/link-routes`, which gives `<RouterLink>` and
+ * `useRoute()` the page's route with no router, in a fraction of the bytes. */
 export function linkRouter(routes: RouteEntry[], options: LinkRouterOptions): Router {
   const history = options.history ?? pageHistory(options.base, options.location);
   const router = createRouter({

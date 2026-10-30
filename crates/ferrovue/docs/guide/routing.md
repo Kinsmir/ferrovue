@@ -439,65 +439,63 @@ for resolving `to` and for marking the link to the current page, on the server a
 hydration alike, as long as vue-router never leaves the page itself. Otherwise a click pushes a
 route that nothing renders: the URL changes and the page does not.
 
-`linkRouter` from `ferrovue/link-router` builds that router from the same routes file the compiler
-reads (or, with a folder of pages, the default export of `ferrovue/routes`), with the base and link classes of `ferrovue.config.json`'s `router`:
+`linkRoutes` from `ferrovue/link-routes` gives `<RouterLink>` and `useRoute()` the page's route with
+no router. It reads the same routes file the compiler reads (or, with a folder of pages, the default
+export of `ferrovue/routes`), with the base and link classes of `ferrovue.config.json`'s `router`,
+and returns a Vue plugin, which goes in `plugins`:
 
 ```ts
 import { mountIslands } from "ferrovue";
 import islands from "ferrovue/islands";
-import { linkRouter } from "ferrovue/link-router";
+import { linkRoutes } from "ferrovue/link-routes";
 import routes from "./routes.json";
 
-const router = linkRouter(routes, {
+const links = linkRoutes(routes, {
   navigate: (href) => navigateTheOldWay(href), // the application's own navigation
   base: "/app/",                               // as `router.base` in ferrovue.config.json
 });
-await mountIslands(islands, { router });
+await mountIslands(islands, { plugins: [links] });
 ```
 
-`ferrovue/link-router` is the one entry that imports vue-router, which stays an optional peer: the
-package root does not load it.
+Components keep importing `RouterLink` and `useRoute` from vue-router. The plugin registers
+vue-router's own `<RouterLink>` and provides it, `useRoute()` and `$route` with a small object of
+its own in place of a router:
 
-Written by hand, the router is this, and each part is there for a reason:
+- **The page's route.** It is resolved once, from `location` or the browser's location, with the
+  base taken off. `links.route` is the route `useRoute()` gives.
+- **Every `to` resolved as vue-router resolves it.** `links.resolve(to)` gives what vue-router's
+  `router.resolve(to)` gives on that page: the same ranking of routes, nested and empty-path
+  children, optional parameters and catch-alls, case-insensitive matching, parameters decoded and
+  `href` encoded with the base, the query parsed and written back, the hash, trailing and doubled
+  slashes, and relative paths. A test compares it with vue-router field by field over the router
+  vectors and random routes and locations.
+- **Every click handed to `navigate`.** A link's `push` or `replace` calls `navigate` with the
+  `href`, base included, and the route it resolves to, and never leaves the page: the active links
+  keep matching the page that is on screen until the application replaces it. A click on the link
+  to the current page is handed over too.
+- **The click belongs to the link.** `<RouterLink>` calls `preventDefault` on a plain left click, so
+  a document-level navigation listener sees `defaultPrevented` and leaves that click to `navigate`.
+  A click with a modifier key, on a `target="_blank"` link or already prevented is left alone, and
+  reaches the listener, or the browser, as on any link.
 
-```ts
-const Empty = { render: () => null };
-const history = createMemoryHistory(base);
-history.replace(location.pathname.slice(history.base.length) + location.search + location.hash);
-const router = createRouter({ history, routes: paths.map((path) => ({ path, component: Empty })) });
-router.beforeEach((to, from) => {
-  if (from === START_LOCATION) return true;
-  navigateTheOldWay(history.createHref(to.fullPath));
-  return false;
-});
-```
+What works is what `<RouterLink>` and `useRoute()` read: `href` with the base, the
+`router-link-active` and `router-link-exact-active` classes (nested routes included),
+`aria-current="page"`, and `useRoute()`'s path, name, params, query, hash and `matched`. There is no
+router: `$router` is not set, `useRouter()` gives only what `<RouterLink>` reads (`resolve`, `push`,
+`replace`, `options` and `currentRoute`), and `<RouterView>` is not registered, so hydrated
+components must not hold one. The route stays the one the plugin was built at, so when the
+application swaps in another page, unmount the islands and mount them again with a new
+`linkRoutes`, built at the new location.
 
-- **Every route renders nothing.** The router matches locations and shows no page. vue-router
-  requires a component for each route, and an empty one renders nothing anywhere it could be shown.
-  Hydrated components must not hold a `<RouterView>`, whose content the client would render as
-  nothing.
-- **The first navigation passes.** It comes from `START_LOCATION`, vue-router's location before
-  any navigation, and resolves the page the server rendered. Until it finishes `router.isReady()`
-  does not resolve, `mountIslands` does not mount, and no link knows which page is current.
-- **Every later navigation is handed over and aborted.** The guard calls the application's
-  navigation with the `href`, base included, and returns `false`, so the router stays on the page
-  it started on: the active links keep matching the page that is on screen until the application
-  replaces it. A click on the link to the current page, which vue-router does not navigate at all,
-  is handed over too.
-- **A memory history.** vue-router's web history writes its own state into `history.state` when
-  the page has none, and listens to `popstate`, where an aborted navigation makes it step the browser's
-  history back again. The memory history starts at the page's location and touches neither, which
-  leaves the back and forward buttons to the application. Pass `history` to use another.
-- **The click belongs to the router.** `<RouterLink>` calls `preventDefault` on a plain left
-  click, so a document-level navigation listener sees `defaultPrevented` and leaves that click to
-  the guard. A click with a modifier key, on a `target="_blank"` link or already prevented is left
-  alone, and reaches the listener, or the browser, as on any link.
+`ferrovue/link-routes` imports from vue-router `RouterLink` and the keys it injects, which a bundler
+keeps apart from the rest of vue-router. Built for production with Vite, Vue left out, `linkRoutes`
+is 9.0 KB minified and 3.9 KB gzipped, where `linkRouter`, which builds a whole vue-router, is
+22.6 KB and 9.0 KB. vue-router stays an optional peer: the package root does not load it.
 
-What still works is everything `<RouterLink>` and `useRoute()` read from the current route:
-`href` with the base, the `router-link-active` and `router-link-exact-active` classes (nested
-routes included), `aria-current="page"`, and `useRoute()`'s path, params, query and hash. The router
-stays on the page it started on, so when the application swaps in another page, unmount the islands
-and mount them again with a new `linkRouter`, built at the new location.
+`linkRouter` from `ferrovue/link-router` is deprecated: it builds a vue-router whose every route
+renders nothing and whose every navigation after the first is handed to `navigate` and aborted, for
+the same result. It still works, and is removed in a later minor release. See
+[moving to `linkRoutes`](crate::guide::upgrading_to_0_14#linkrouter-is-deprecated-for-linkroutes).
 
 # Panics
 

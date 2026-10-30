@@ -60,8 +60,8 @@ beforeAll(async () => {
   bundle = result.output.find((o): o is Rolldown.OutputChunk => o.type === "chunk" && o.isEntry)!.code;
 });
 
-function pageFor(c: (typeof cases)[number]): string {
-  const data: PageData = { component: c.component, fixture: c.json, routes: ROUTES, options: OPTIONS, plans: datePlans() };
+function pageFor(c: (typeof cases)[number], light = false): string {
+  const data: PageData = { component: c.component, fixture: c.json, routes: ROUTES, options: OPTIONS, plans: datePlans(), light };
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const head = recordedHead(c.html);
   return (
@@ -81,7 +81,8 @@ async function describeMessage(m: ConsoleMessage): Promise<string> {
   return `${m.type()}: ${args.join(" ")}`;
 }
 
-const pages = new Map(cases.map((c) => [`/${c.component}/${c.name}`, pageFor(c)]));
+const ROUTED = cases.filter((c) => "$route" in c.json && c.component !== "App");
+const pages = new Map<string, string>([...cases.map((c) => [`/${c.component}/${c.name}`, pageFor(c)] as const), ...ROUTED.map((c) => [`/light/${c.component}/${c.name}`, pageFor(c, true)] as const)]);
 
 const ZONES = ["Pacific/Kiritimati", "America/St_Johns", "Asia/Kathmandu"];
 const DATED = cases.filter((c) => ["DatePost", "DateStamp", "DateRows", "DateDays", "DateReplies", "DateThread", "LoadedDates"].includes(c.component));
@@ -145,6 +146,34 @@ describe.each(BROWSERS)("%s", (name) => {
       expect(result.head.after !== result.head.before, "a head is rewritten exactly when its fixture is in UNHEAD_REWRITES").toBe(rewrites);
     });
   }
+
+  it("hydrates every fixture that reads the route with linkRoutes as it was recorded", async ({ skip }) => {
+    if (!browser) skip();
+    expect(ROUTED.length).toBeGreaterThanOrEqual(40);
+    for (const c of ROUTED) {
+      messages = [];
+      await page.goto(`${ORIGIN}/light/${c.component}/${c.name}`);
+      const result = await page.evaluate(() => window.hydration!);
+      expect(await Promise.all(messages), `${c.component}/${c.name}`).toEqual([]);
+      expect(result.kept, `${c.component}/${c.name}`).toBe(true);
+      expect(result.after, `${c.component}/${c.name}`).toBe(result.before);
+    }
+  }, 60_000);
+
+  it("hands a click on a link hydrated with linkRoutes to navigate", async ({ skip }) => {
+    if (!browser) skip();
+    messages = [];
+    await page.goto(`${ORIGIN}/light/Nav/at-intro.json`);
+    await page.evaluate(() => window.hydration!);
+    const prevented = page.evaluate(() => new Promise<boolean>((resolve) => document.addEventListener("click", (e) => resolve(e.defaultPrevented), { once: true })));
+    await page.click('a[href="/blog/intro/edit"]');
+    expect(await prevented).toBe(true);
+    await page.click('a[href="/blog/intro"]');
+    expect(await page.evaluate(() => window.navigated)).toEqual(["/blog/intro/edit", "/blog/intro"]);
+    expect(new URL(page.url()).pathname).toBe("/light/Nav/at-intro.json");
+    expect(await page.getAttribute('a[href="/blog/intro"]', "aria-current")).toBe("page");
+    expect(await Promise.all(messages)).toEqual([]);
+  });
 
   for (const zone of ZONES) {
     it(`hydrates every fixture with a Date prop, or dates inside its props or its loaders' results, in ${zone} as it was recorded`, async ({ skip }) => {

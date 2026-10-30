@@ -76,7 +76,7 @@ cargo run -p ferrovue-example-fullstack -- --render /books/dune
 | `client/vendor/` | Stand-ins for a component library's components, which ferrovue does not compile: `StarRating`, rendered on the server by its Rust twin, and `ShareLink`, rendered only in the browser |
 | `src/ui.rs` | The Rust twin of `StarRating`, listed under `twins` in `ferrovue.config.json` |
 | `fixtures/`, `test/conformance.test.ts`, `ferrovue::conformance!` in `src/main.rs` | The conformance suite, in two calls: every component's fixtures rendered by Vue through `conformanceSuite` from `ferrovue/testing` (`FERROVUE_FIXTURES_WRITE=1` records the `.html`) and by the generated Rust, byte for byte, which proves the twin too; the generated Rust checked to be current, and every recorded `.html` hydrated with no mismatch |
-| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords` from `ferrovue/route-records`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all; on the staff picks, a `linkRouter` whose `navigate` shows the next pick with `readPage` and `renderPage` |
+| `client/app.ts` | A router over `ferrovue/routes` whose every page renders nothing (`routeRecords` from `ferrovue/route-records`), `hydrateState`, `mountPage` on a page that carries a record, then `mountIslands` of `ferrovue/islands`, which the Vite plugin writes: every island by name, each loaded only on a page that holds it, with one Pinia and one router for them all; on the staff picks, `linkRoutes` in place of the router, whose `navigate` shows the next pick with `readPage` and `renderPage` |
 | `src/pages.rs` | Rendering pages from the generated `route_table::router()`, `Props::new(…)`, `Slots`, `ferrovue::page::state_script_into`, `ferrovue::page::hole()`, and `reviews::into_island()`, a page holding its props that a handler returns; `ferrovue::page::Page` for the staff picks, whose record is the last hole, rendered with `loaders::load` and followed by `Loads::script_into`; a `ferrovue::head::Head` per page, rendered after the body and written into `<head>` |
 | `src/catalogue.rs` | The shop's books, reviews and stock, standing in for a database; the reviews arrive after a delay so the page has something to stream; `Catalogue`, the app's implementation of the generated `Loaders` trait |
 | `src/main.rs` | The axum server: a `ferrovue::web::HtmlStream` per page, a book's reviews alone at `/books/{id}/reviews`, the loaders' results as JSON at `/api/stock/{id}` and `/api/warehouses/{code}`, `Delivery` at `/delivery?ordered=2024-05-01&days=3` rendered with `try_render`, which answers a date browsers read differently (`?ordered=May 1, 2024`) or a delivery beyond the range of dates with `400 Bad Request` and the refusal's message, `dist/assets` served beside it, and `--render` |
@@ -144,10 +144,10 @@ which loads `picks.vue`, `Pick` and `Reviews` and hydrates the whole layout as o
 page is an island; "Add to basket" and "Show all reviews" work because the app holds them.
 
 The links under the reviews feature another pick (`/picks?featured=left-hand`) without a reload.
-The page's router is a `linkRouter`, so a click goes to its `navigate`, which fetches the next
+The page's links come from `linkRoutes`, so a click goes to its `navigate`, which fetches the next
 document, reads its record and state with `readPage`, pushes the URL and shows the page with
 `renderPage`: the same app as the first page, with a fresh Pinia from the next page's state and a
-`linkRouter` at its location, mounted in place of `#app` before the previous page's app is
+`linkRoutes` at its location, mounted in place of `#app` before the previous page's app is
 unmounted. Back and forward show the page the URL names the same way. A link to any other page
 loads it.
 

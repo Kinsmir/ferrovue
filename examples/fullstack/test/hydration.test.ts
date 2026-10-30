@@ -63,9 +63,7 @@ function put(path: string): void {
 }
 
 async function hydrateAt(path: string): Promise<Hydrated> {
-  const history = createMemoryHistory();
-  history.replace(path);
-  app = await hydrate(history);
+  app = await hydrate(path);
   return app;
 }
 
@@ -219,7 +217,7 @@ it("shows the next staff picks from the record of the page it fetches, in place 
   await nextTick();
   expect(add.textContent).toBe("In the basket");
   expect(app!.pinia.state.value.basket).toEqual({ owner: "guest", ids: ["solaris", "dune"] });
-  expect(app!.router.currentRoute.value.fullPath).toBe("/picks?featured=left-hand");
+  expect(app!.route.fullPath).toBe("/picks?featured=left-hand");
   expect(warnings).toEqual([]);
 });
 

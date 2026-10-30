@@ -689,10 +689,10 @@ export interface RenderPageOptions extends Pick<MountOptions, "pinia" | "router"
  * document: load the components it names (and no others), render the app `createPageApp` builds
  * with `hydrate: false` into a copy of the container with no children, wait for the router, put the
  * copy in the container's place, mount, and then unmount `previous`. The next app is mounted
- * before the previous one is unmounted, so a router both use stays started. `router` must be at the
- * next page's location: `linkRouter` with the `location` the navigation goes to. Rejects, leaving
- * the page shown as it is, when the container is missing or a component is not given or does not
- * load. */
+ * before the previous one is unmounted, so a router both use stays started. `router`, or a
+ * `linkRoutes` in `plugins`, must be at the next page's location: built with the `location` the
+ * navigation goes to. Rejects, leaving the page shown as it is, when the container is missing or
+ * a component is not given or does not load. */
 export async function renderPage(layout: IslandComponent, components: Record<string, IslandComponent>, record: PageRecord, options: RenderPageOptions = {}): Promise<App> {
   const container = containerOf(options);
   for (const text of options.loads ?? []) provideLoads(text);
