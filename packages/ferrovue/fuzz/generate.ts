@@ -1876,7 +1876,7 @@ class Gen {
           const safe = v.members?.filter(plainLit) ?? [];
           const member = safe.length && r.chance(0.6) ? r.pick(safe) : null;
           const e = node("str", [this.varRef(v), strLit(member ?? r.pick(STR_LITS))], ([a, b]) => `${a} ?? ${b}`);
-          return v.members !== undefined ? { ...e, members: [...new Set([...v.members, member ?? printExpr(e.kids[1]!).slice(1, -1)])] } : e;
+          return v.members !== undefined ? { ...e, members: v.members } : e;
         }],
         [this.tKeys.length && this.tNames.length ? 2 : 0, () => this.translated(d)],
         [this.fnsOf("str").length ? 2 : 0, () => this.call(r.pick(this.fnsOf("str")), d)],
@@ -1915,12 +1915,15 @@ class Gen {
         const members = test === "true" ? ma : test === "false" ? mb : ma !== undefined && mb !== undefined ? [...new Set([...ma, ...mb])] : undefined;
         return members !== undefined && (a.members !== undefined || b.members !== undefined) ? { ...e, members } : e;
       }],
-      [1, () => str([this.str(d - 1), this.str(d - 1)], ([a, b]) => `${a} || ${b}`)],
+      [1, () => {
+        const [a, b] = [this.str(d - 1), this.str(d - 1)];
+        const e = str([a, b], ([x, y]) => `${x} || ${y}`);
+        return a.members !== undefined && !a.members.includes("") ? { ...e, members: a.members } : e;
+      }],
       [opts.length ? 2 : 0, () => {
         const [a, b] = [this.varRef(r.pick(opts)), this.str(d - 1)];
         const e = str([a, b], ([x, y]) => `${x} ?? ${y}`);
-        const [ma, mb] = [literalsOf(a), literalsOf(b)];
-        return a.members !== undefined && ma !== undefined && mb !== undefined ? { ...e, members: [...new Set([...ma, ...mb])] } : e;
+        return a.members !== undefined ? { ...e, members: a.members } : e;
       }],
       [
         4,
@@ -3063,6 +3066,7 @@ const bindingVar = (b: Binding): Var => ({
   opt: false,
   bound: b.e.ty === "int" ? Math.max(b.e.bound, 1) : 0,
   ...(b.e.lone ? { lone: true } : {}),
+  ...(b.e.members ? { members: b.e.members } : {}),
   ...(b.union && b.e.members ? { members: b.e.members, wide: true as const } : {}),
   ...(b.typed && b.e.members ? { members: b.e.members, ...(b.e.members.includes("") ? { wide: true as const } : {}) } : {}),
 });
