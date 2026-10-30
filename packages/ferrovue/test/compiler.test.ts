@@ -5439,6 +5439,31 @@ import U from "./U.vue";
       /the prop is one of "a" \| "b", the members of `UK`, and the value given is "z"/,
     ],
     [
+      "a string other than the prop's name given to a child's boolean prop",
+      `<script setup lang="ts">
+import B from "./B.vue";
+</script>
+<template><B flag="other" /></template>`,
+      /X\.vue:4:\d+: the prop is a boolean, and the value given is a string/,
+    ],
+    [
+      "the prop's camelCase name given to a child's boolean prop",
+      `<script setup lang="ts">
+import B from "./B.vue";
+</script>
+<template><B flag fooBar="fooBar" /></template>`,
+      /X\.vue:4:26: the prop is an optional boolean, and the value given is a string/,
+    ],
+    [
+      "a string bound to a child's boolean prop",
+      `<script setup lang="ts">
+import B from "./B.vue";
+defineProps<{ s: string }>();
+</script>
+<template><B :flag="s" /></template>`,
+      /X\.vue:5:\d+: the prop is a boolean, and the value given is a string/,
+    ],
+    [
       "a value of a wider union given to a child's prop of a union",
       `<script setup lang="ts">
 import U from "./U.vue";
@@ -6130,6 +6155,10 @@ defineProps<{ b?: string }>();
 defineProps<{ c: string | null }>();
 </script>
 <template><b>{{ c }}</b></template>`,
+    B: `<script setup lang="ts">
+defineProps<{ flag: boolean; fooBar?: boolean }>();
+</script>
+<template><b>{{ flag }}{{ fooBar }}</b></template>`,
     W: `<script setup lang="ts">
 defineProps<{ onSale?: boolean }>();
 </script>
@@ -6213,6 +6242,9 @@ defineProps<{ chip: Chip }>();
     "a defineModel named with a leading `$`": "FV0328",
     "a string given to a child's prop of a union": "FV0515",
     "a literal outside a child's prop of a union": "FV0515",
+    "a string other than the prop's name given to a child's boolean prop": "FV0511",
+    "the prop's camelCase name given to a child's boolean prop": "FV0511",
+    "a string bound to a child's boolean prop": "FV0511",
     "a value of a wider union given to a child's prop of a union": "FV0515",
     "a wider union that may still be its other member given to a child's prop of a union": "FV0515",
     "a wider union narrowed by a test of another member given to a child's prop of a union": "FV0515",

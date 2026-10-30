@@ -473,7 +473,7 @@ export const ERRORS: {
     };
     readonly FV0511: {
         readonly title: "Prop given a value of another type";
-        readonly detail: "The prop's Rust type cannot hold the value, and Vue would hand it to the child as it is, so the child would read another type than it declares. The message names both types. Pass a value of the prop's type, convert it where it is passed, or change the prop's declared type.";
+        readonly detail: "The prop's Rust type cannot hold the value, and Vue would hand it to the child as it is, so the child would read another type than it declares. The message names both types. Pass a value of the prop's type, convert it where it is passed, or change the prop's declared type. A `boolean` prop takes `true` from an attribute written bare, `\"\"` or the prop's name in kebab-case, which Vue casts; any other string reaches the child as a string.";
     };
     readonly FV0512: {
         readonly title: "Type imported from a component that is not compiled";

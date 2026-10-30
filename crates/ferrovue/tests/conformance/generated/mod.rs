@@ -23,6 +23,8 @@ pub mod attr_quirks;
 pub mod attrs;
 pub mod badge;
 pub mod blank;
+pub mod bool_kid;
+pub mod bool_shorthand;
 pub mod bound_object;
 pub mod branches;
 pub mod builtins;
@@ -430,6 +432,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Blank" => {
             let props: blank::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             blank::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "BoolKid" => {
+            let props: bool_kid::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            bool_kid::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "BoolShorthand" => {
+            let props: bool_shorthand::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            bool_shorthand::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "BoundObject" => {
             let props: bound_object::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
