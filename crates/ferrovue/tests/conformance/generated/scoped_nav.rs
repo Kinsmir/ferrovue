@@ -46,9 +46,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     out.reserve(252 + props.href.len() + props.label.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ScopedNav.vue");
     out.push_str("<nav class=\"nav\" data-v-f60bf031>");
-    fv::attrs::link_open(out, &fv_route.link("/blog/intro"), "page", "router-link-active", "router-link-exact-active", &["tab"]);
+    fv::attrs::link_open(out, &fv_route.link("/blog/intro"), "page", "router-link-active", "router-link-active router-link-exact-active", &["tab"], true);
     out.push_str(" data-v-f60bf031>intro</a>");
-    fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-exact-active", &[]);
+    fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     if props.label.is_empty() {
         out.push_str(" title");
     } else {
@@ -67,7 +67,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
-            fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-exact-active", &[]);
+            fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
             out.push_str(&fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id));
             out.push_str(">home ");
             fv::core::escape_into(out, &props.label);

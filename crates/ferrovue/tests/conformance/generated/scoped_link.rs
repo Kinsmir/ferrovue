@@ -48,7 +48,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     out.reserve(75 + props.to.len());
-    fv::attrs::link_open(out, &fv_route.link(&props.to), "page", "router-link-active", "router-link-exact-active", &["link"]);
+    fv::attrs::link_open(out, &fv_route.link(&props.to), "page", "router-link-active", "router-link-active router-link-exact-active", &["link"], true);
     out.push_str(&fv::attrs::scope_attrs(fv_attrs, "data-v-667124f1", ""));
     out.push_str(">go <b data-v-667124f1>there</b></a>");
     Ok(())

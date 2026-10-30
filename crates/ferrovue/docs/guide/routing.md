@@ -40,6 +40,13 @@ options passed to
 
 The class names are written into the generated components; the base goes into `route_table.rs`.
 
+A link's classes are vue-router's class object, `{ [activeClass]: isActive, [exactActiveClass]:
+isExactActive }`, normalised as Vue normalises an object, then merged with the link's own `class` as
+`mergeProps` merges them. So a class name keeps the spaces written in it: with
+`active-class=" on "`, a link to where the reader is has `class="on  router-link-exact-active"`.
+Names that are array indices come first, so `active-class="2" exact-active-class="1"` gives
+`class="1 2"`, and an own class equal to the link's classes is written once.
+
 # File-based routes
 
 `routes` can also name a folder of pages. ferrovue then builds the routes from
@@ -347,9 +354,9 @@ defineProps<{ user: string }>();
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
 #     out.reserve(137 + props.user.len());
 #     out.push_str("<div id=\"app\"><nav>");
-#     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-exact-active", &[]);
+#     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
 #     out.push_str(">home</a> ");
-#     fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-exact-active", &[]);
+#     fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
 #     out.push('>');
 #     fv::core::escape_into(out, &props.user);
 #     out.push_str("</a></nav><main>");

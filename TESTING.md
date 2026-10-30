@@ -160,7 +160,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Frame`, `Forward`, `Page`, `Card` | Slots, fallbacks, comment-only content, slots forwarded through components |
 | `Hollow`, `Blank` | Slot content that may write nothing visible, which shows the fallback exactly when every string it pushes is comments and whitespace: interpolations of absent, empty and whitespace values beside a list's fragment markers, `<template v-if>` and `<template v-for>` of interpolations, whitespace text, a component rendering only a comment, named and scoped slots, a slot forwarded through another component |
 | `Panel`, `Dashboard` | Named slots, `$slots.x`, interpolating fallbacks, child props as literals, variables, lists and whole `Props` |
-| `Nav`, `Links`, `Menu`, `App` | `<RouterLink>` active matching, relative links, named routes, `query`/`hash`, link class props, imported `RouterLink`, `<RouterView>` |
+| `Nav`, `Links`, `Menu`, `App`, `LinkSpaces`, `FallSpaces` | `<RouterLink>` active matching, relative links, named routes, `query`/`hash`, link class props (with spaces, index names, and an own class equal to them, on a link and on a link that is a root given a class), imported `RouterLink`, `<RouterView>` |
 | `RouteInfo` | `useRoute()` and `$route`: path, hash, name, params |
 | `DateGuards` | A date's validity tested with `!Number.isNaN(d.getTime())`, `Number.isFinite` and the rest, in `v-if` and a `computed`; `\|\|` between dates, required, optional and nullable, chained, narrowed under `v-if`, beside `??` and `?:` of the same shapes: valid, invalid and absent dates, the edges of the range |
 | `DatePost`, `DateStamp` | `Date` props, required, optional and nullable, read in `computed`, `v-if` and `v-for` and handed to a child's `Date` props, from a prop and from a `computed`, with the child's props an interface: typical dates, expanded years, the edges of the range, invalid dates given as numbers and as strings beyond it, absent ones |
@@ -281,7 +281,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe` |
 | Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls` |
 | Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
-| Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo` |
+| Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo`, `LinkSpaces`, `FallSpaces` |
 | Pinia | `Badge`, `Cart`, `Counter`, `Session` |
 | vue-i18n | `Translated`, `Plurals`, `MappedChoice` |
 | `v-html` | `Prose`, `InlineProse`, `PlacedHtml`, `HtmlTruth` |

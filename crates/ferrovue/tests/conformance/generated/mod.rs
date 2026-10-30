@@ -78,6 +78,7 @@ pub mod fall_leaf;
 pub mod fall_link;
 pub mod fall_pair;
 pub mod fall_root;
+pub mod fall_spaces;
 pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
@@ -112,6 +113,7 @@ pub mod keywords;
 pub mod known_values;
 pub mod lifecycle;
 pub mod link_open;
+pub mod link_spaces;
 pub mod links;
 pub mod list_access;
 pub mod list_building;
@@ -664,6 +666,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: fall_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_root::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "FallSpaces" => {
+            let props: fall_spaces::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            fall_spaces::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
+        }
         "FallSwitch" => {
             let props: fall_switch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_switch::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -836,6 +845,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             link_open::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
+        }
+        "LinkSpaces" => {
+            let props: link_spaces::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            link_spaces::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
         }
         "Links" => {
             let props: links::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

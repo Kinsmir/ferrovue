@@ -66,7 +66,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                 let fv_link = {
                     fv_route.link_named("/books/[id]", &[("id", &*fv_book.id)], "", "")
                 };
-                fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+                fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
                 out.push('>');
                 fv::core::escape_into(out, &fv_book.title);
                 out.push_str("</a>");

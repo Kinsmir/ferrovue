@@ -1,4 +1,4 @@
-import { escapeHtml } from "@vue/shared";
+import { escapeHtml, normalizeClass } from "@vue/shared";
 import { type N, type Scope, type Val, camelize, fail, rustStr } from "../model.ts";
 import { asWritten } from "../numbers.ts";
 import { CONFIG_FILE } from "../config.ts";
@@ -121,6 +121,16 @@ export function resolveLink(s: Scope, e: Emitter, to: N): void {
   e.close(";");
 }
 
+function stringClass(n: N): boolean {
+  if (n.type === "StringLiteral") return true;
+  if (n.type === "ArrayExpression" || n.type === "ObjectExpression") return false;
+  if (n.type === "LogicalExpression" && n.operator === "&&") return stringClass(n.right);
+  if (n.type === "ConditionalExpression" && (n.consequent.type === "NullLiteral" || n.alternate.type === "NullLiteral")) {
+    return stringClass(n.consequent.type === "NullLiteral" ? n.alternate : n.consequent);
+  }
+  return true;
+}
+
 export function routerLink(s: Scope, e: Emitter, n: N): void {
   const [, rawProps, slots, , slotScopeId] = n.arguments;
   let props = rawProps;
@@ -188,14 +198,13 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     e.open(`if ${s.fallthrough}.is_empty()`);
   }
   const current = escapeHtml(ariaCurrent);
-  const linkItems =
-    activeClass === exactClass
-      ? [`if fv_link.exact { ${rustStr(exactClass)} } else { "" }`]
-      : [`if fv_link.active { ${rustStr(activeClass)} } else { "" }`, `if fv_link.exact { ${rustStr(exactClass)} } else { "" }`];
+  const names = (exact: boolean): string => normalizeClass({ [activeClass]: true, [exactClass]: exact });
+  const active = names(false);
+  const exact = names(true);
   const cls = fields.get("class");
-  const own = cls ? classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code)) : [];
-  const active = activeClass === exactClass ? "" : activeClass;
-  e.stmt(`fv::attrs::link_open(out, ${link}, ${rustStr(current)}, ${rustStr(active)}, ${rustStr(exactClass)}, &[${own.join(", ")}]);`);
+  const string = !!cls && stringClass(cls);
+  const own = !cls ? [] : cls.type === "StringLiteral" ? [rustStr(cls.value)] : classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
+  e.stmt(`fv::attrs::link_open(out, ${link}, ${rustStr(current)}, ${rustStr(escapeHtml(active))}, ${rustStr(escapeHtml(exact))}, &[${own.join(", ")}], ${string});`);
   e.expect(Buffer.byteLength(`<a aria-current="${current}" href="" class=""`));
   for (const p of attrs) {
     const key: string = p.key.value;
@@ -237,7 +246,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     const linkOwn = [
       `("aria-current", if fv_link.exact { fv::attrs::Attr::str(${rustStr(ariaCurrent)}) } else { fv::attrs::Attr::Undefined })`,
       '("href", fv::attrs::Attr::str(&fv_link.href))',
-      `("class", fv::attrs::Attr::from(fv::attrs::class_names(&[${linkItems.join(", ")}])))`,
+      `("class", fv::attrs::Attr::str(if fv_link.exact { ${rustStr(exact)} } else if fv_link.active { ${rustStr(active)} } else { "" }))`,
     ];
     e.stmt(`fv::attrs::attrs_into(out, &[&[${linkOwn.join(", ")}], &fv::attrs::merge_props(&[${sources.join(", ")}])], 1, ${ids});`);
     e.close();

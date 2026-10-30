@@ -64,14 +64,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("home", &[], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "on", "here", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "on", "on here", &[], false);
         out.push_str(">home</a>");
     }
     {
         let fv_link = {
             fv_route.link_named("post", &[("slug", &*props.slug)], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "location", "router-link-active", "router-link-exact-active", &["post"]);
+        fv::attrs::link_open(out, &fv_link, "location", "router-link-active", "router-link-active router-link-exact-active", &["post"], true);
         out.push('>');
         fv::core::escape_into(out, &props.slug);
         out.push_str("</a>");
@@ -80,7 +80,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("post-tab", &[("slug", &*props.slug), ("tab", props.tab.as_deref().unwrap_or("view"))], "", "#top")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[], false);
         out.push_str(">tab</a>");
     }
     {
@@ -93,7 +93,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             fv::router::query_into(&mut fv_search, "empty", "");
             fv_route.link_named("search", &[], &fv_search, "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
         out.push_str(">search</a>");
     }
     {
@@ -102,7 +102,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             fv::router::query_into(&mut fv_search, "from", "menu");
             fv_route.link_path(&format!("/users/{}", props.slug), &fv_search, "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &["user"]);
+        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &["user"], false);
         out.push_str(">user</a>");
     }
     out.push_str("</nav>");

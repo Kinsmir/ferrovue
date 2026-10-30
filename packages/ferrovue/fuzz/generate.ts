@@ -2539,8 +2539,8 @@ class Gen {
         to,
         attrs,
         kids: this.kids(depth + 1, "inline"),
-        active: r.chance(0.2) ? r.pick(["on", "is-here"]) : null,
-        exact: r.chance(0.2) ? r.pick(["exact", "is-here"]) : null,
+        active: r.chance(0.2) ? r.pick(["on", "is-here", " on ", "o  n", "2"]) : null,
+        exact: r.chance(0.2) ? r.pick(["exact", "is-here", " here ", "on", "1"]) : null,
       };
     } finally {
       this.vnode = vnode;
@@ -3144,8 +3144,8 @@ function randomRouter(r: Rng): AppRouter {
   return {
     routes,
     base: r.chance(0.2) ? "/app/" : null,
-    active: r.chance(0.2) ? "act" : null,
-    exact: r.chance(0.2) ? "exact-act" : null,
+    active: r.chance(0.2) ? r.pick(["act", " act "]) : null,
+    exact: r.chance(0.2) ? r.pick(["exact-act", "exact  act"]) : null,
   };
 }
 
