@@ -54,7 +54,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(105 + 30 * props.tags.len() + props.q.len() + props.path.len() + props.tag.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(105 + 36 * props.tags.len() + props.q.len() + props.path.len() + props.tag.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
     let s_search = format!("/search?q={}&page={}", fv::core::js_encode_uri_component(&props.q), fv::core::js_encode_uri_component(&format!("{}", fv::core::Js(props.page))));
     let s_kept = fv::core::js_encode_uri(fv::strings::js_trim(&props.path));
     out.push_str("<nav");
@@ -96,8 +96,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><ul><!--[-->");
     for fv_t_ref in props.tags.iter() {
         let fv_t: &str = fv_t_ref;
-        out.push_str("<li><a href=\"");
-        fv::core::escape_into(out, &format!("/tags/{}", fv::core::js_encode_uri_component(fv_t)));
+        out.push_str("<li><a href=\"/tags/");
+        fv::core::escape_into(out, &fv::core::js_encode_uri_component(fv_t));
         out.push_str("\">");
         fv::core::push_int(out, fv::strings::js_length(&fv::core::js_encode_uri_component(fv_t)));
         out.push_str("</a></li>");

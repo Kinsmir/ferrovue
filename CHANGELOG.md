@@ -13,6 +13,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - The guide's `upgrading_to_0_13` page: bump both halves, generate again for version 7, and `script.fs` on TypeScript 7.
   [`upgrading_to_0_13`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html).
 
+### Changed
+
+- A value joined with `+` or a template literal in an attribute or text is written part by part, with no `String` built for it.
+  [Escaping](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
+
 ### Fixed
 
 - A field read by a key of a union that a `?:` narrows to some of its members compiles; 0.13.0 stopped with a `TypeError`.

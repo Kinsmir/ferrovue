@@ -43,16 +43,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(81 + props.id.len() + props.title.len());
-    out.push_str("<button type=\"button\" class=\"add\"");
-    if format!("Add {} to the basket", props.title).is_empty() {
-        out.push_str(" aria-label");
-    } else {
-        out.push_str(" aria-label=\"");
-        fv::core::escape_into(out, &format!("Add {} to the basket", props.title));
-        out.push('"');
-    }
-    out.push_str(">Add to basket</button>");
+    out.reserve(88 + props.id.len() + props.title.len());
+    out.push_str("<button type=\"button\" class=\"add\" aria-label=\"Add ");
+    fv::core::escape_into(out, &props.title);
+    out.push_str(" to the basket\">Add to basket</button>");
     Ok(())
 }
 

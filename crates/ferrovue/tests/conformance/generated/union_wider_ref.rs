@@ -386,7 +386,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(121 + 10 + 10 + 7 + props.label.len());
+    out.reserve(122 + 10 + 10 + 7 + props.label.len());
     let s_held = match props.mark { super::types::Mark::Amp => UnionWiderRefHeld::Amp, super::types::Mark::Bang => UnionWiderRefHeld::Bang, super::types::Mark::Hex => UnionWiderRefHeld::Hex, super::types::Mark::Tag => UnionWiderRefHeld::Tag };
     let s_picked = if props.on { match props.mark { super::types::Mark::Amp => UnionWiderRefPicked::Amp, super::types::Mark::Bang => UnionWiderRefPicked::Bang, super::types::Mark::Hex => UnionWiderRefPicked::Hex, super::types::Mark::Tag => UnionWiderRefPicked::Tag } } else { UnionWiderRefPicked::Empty };
     let s_spared = props.spare.map(|v| match v { super::types::Mark::Amp => UnionWiderRefSpared::Amp, super::types::Mark::Bang => UnionWiderRefSpared::Bang, super::types::Mark::Hex => UnionWiderRefSpared::Hex, super::types::Mark::Tag => UnionWiderRefSpared::Tag });
@@ -409,7 +409,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::escape_into(out, fv::props::Union::as_str(s_picked));
     out.push(' ');
-    fv::core::escape_into(out, &format!("{}|{}", fv::props::Union::as_str(s_picked), s_spared.map(fv::props::Union::as_str).unwrap_or("undefined")));
+    fv::core::escape_into(out, fv::props::Union::as_str(s_picked));
+    out.push('|');
+    fv::core::escape_into(out, s_spared.map(fv::props::Union::as_str).unwrap_or("undefined"));
     out.push_str("</p>");
     if s_spared == Some(UnionWiderRefSpared::Empty) {
         out.push_str("<i>empty</i>");

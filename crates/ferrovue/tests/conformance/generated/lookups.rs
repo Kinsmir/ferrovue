@@ -75,7 +75,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(226 + 48 * props.badges.len() + 2 + 6 + props.badges.iter().map(|v| 6 + v.text.len()).sum::<usize>() + 5);
+    out.reserve(234 + 48 * props.badges.len() + 2 + 6 + props.badges.iter().map(|v| 6 + v.text.len()).sum::<usize>() + 5);
     let s_padding = match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" };
     let s_shout = if props.loud { "lg" } else { "sm" };
     let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::core::Js(match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 }));
@@ -86,8 +86,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(";background:");
     fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "#eef", super::types::Tone::Warn => "#ffd", super::types::Tone::Danger => "#a00" });
     out.push_str(";width:");
-    fv::core::escape_into(out, &format!("{}px", fv::core::Js(match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 })));
-    out.push_str(";\"><h2 title=\"");
+    fv::core::push_number(out, match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 });
+    out.push_str("px;\"><h2 title=\"");
     fv::core::escape_into(out, match props.size { super::types::Size::Sm => "Small", super::types::Size::Md => "Medium & <more>", super::types::Size::Lg => "Large \"L\"" });
     out.push_str("\">");
     fv::core::escape_into(out, &s_heading);

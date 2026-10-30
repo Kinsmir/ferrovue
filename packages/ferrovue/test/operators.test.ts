@@ -170,8 +170,8 @@ describe("`&&` and `||`", () => {
 
   it("gives the right side of `||` where the left side is known to be falsy", () => {
     expect(lines('<p>{{ "" || `a${s}` }}|{{ 0 || n }}|{{ 2 || n }}</p>')).toMatch(like([
-      'out.push_str("<p>");',
-      'fv::core::escape_into(out, &format!("a{}", props.s));',
+      'out.push_str("<p>a");',
+      "fv::core::escape_into(out, &props.s);",
       "out.push('|');",
       "fv::core::push_int(out, props.n);",
       'out.push_str("|2</p>");',

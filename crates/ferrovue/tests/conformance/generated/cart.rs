@@ -41,15 +41,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(93 + props.heading.len());
+    out.reserve(104 + props.heading.len());
     let s_summary = format!("{} line(s), {} doubled", fv::core::Js(fv_stores.cart.lines.len() as i64), fv::core::Js(fv_stores.prefs.count as f64 * 2.0));
     out.push_str("<aside class=\"");
     fv::attrs::class_into(out, false, &[if &*fv_stores.prefs.density == "compact" { "compact" } else { "" }, if fv_stores.cart.lines.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
     out.push_str("\"><h3>");
     fv::core::escape_into(out, &props.heading);
     out.push_str(": ");
-    fv::core::escape_into(out, &format!("{}'s cart", fv_stores.cart.owner));
-    out.push_str("</h3>");
+    fv::core::escape_into(out, &fv_stores.cart.owner);
+    out.push_str("&#39;s cart</h3>");
     if fv_stores.cart.lines.len() as i64 as f64 == 0.0 {
         out.push_str("<p>nothing yet</p>");
     } else {

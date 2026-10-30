@@ -62,7 +62,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(58 + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.padded.len());
+    out.reserve(66 + props.title.len() + props.note.as_deref().map_or(0, str::len) + props.padded.len());
     out.push_str("<p><b>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</b>|");
@@ -81,13 +81,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, fv::strings::js_trim(&props.padded));
     out.push('|');
     fv::core::push_int(out, fv::strings::js_length(&props.padded));
-    out.push('|');
-    fv::core::escape_into(out, &format!("#{}", fv::core::Js(props.count)));
+    out.push_str("|#");
+    fv::core::push_int(out, props.count);
     out.push('|');
     fv::core::push_number(out, props.count as f64 + 1.0);
     out.push('|');
-    fv::core::escape_into(out, &format!("{}!", props.title));
-    out.push('|');
+    fv::core::escape_into(out, &props.title);
+    out.push_str("!|");
     fv::core::escape_into(out, props.note.as_deref().unwrap_or("none"));
     out.push('|');
     fv::core::escape_into(out, { let a = &*props.title; if !a.is_empty() { a } else { "untitled" } });

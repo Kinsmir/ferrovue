@@ -482,7 +482,15 @@ describe("a `?:` shown as text whose branches differ in type", () => {
         "<p>{{ `${on ? n : s}|${on ? b : s}|${on ? m : s}|${on ? null : s}|${on ? undefined : s}|${on ? l : s}|${on ? 1.5 : s}` }}</p>",
       ),
     ).toMatch(like(
-      `fv::core::escape_into(out, &format!("{}|{}|{}|{}|{}|{}|{}", (if props.on { ${n} } else { ${s} }), (if props.on { if props.b { "true" } else { "false" } } else { &props.s }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined"))) } else { ${s} }), (if props.on { None } else { Some(&*props.s) }).unwrap_or("null"), (if props.on { None } else { Some(&*props.s) }).unwrap_or("undefined"), (if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { ${s} }), (if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(1.5f64))) } else { ${s} })));`,
+      [
+        `fv::core::escape_into(out, &(if props.on { ${n} } else { ${s} }));`,
+        `fv::core::escape_into(out, if props.on { if props.b { "true" } else { "false" } } else { &props.s });`,
+        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined"))) } else { ${s} }));`,
+        `fv::core::escape_into(out, (if props.on { None } else { Some(&*props.s) }).unwrap_or("null"));`,
+        `fv::core::escape_into(out, (if props.on { None } else { Some(&*props.s) }).unwrap_or("undefined"));`,
+        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { ${s} }));`,
+        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(1.5f64))) } else { ${s} }));`,
+      ].join("\n    out.push('|');\n    "),
     ));
   });
 
@@ -532,8 +540,7 @@ describe("`.length`", () => {
 describe("binary operators", () => {
   it("joins strings and adds numbers with `+`", () => {
     const out = render("defineProps<{ s: string; n: number; f: number }>();", "<p>{{ s + n }}|{{ n + s }}|{{ n + 1 }}|{{ n + f / 2 }}|{{ 's' + 't' }}</p>");
-    expect(out).toMatch(like('fv::core::escape_into(out, &format!("{}{}", props.s, fv::core::Js(props.n)));'));
-    expect(out).toMatch(like('fv::core::escape_into(out, &format!("{}{}", fv::core::Js(props.n), props.s));'));
+    expect(out).toMatch(like("fv::core::escape_into(out, &props.s);\n    fv::core::push_int(out, props.n);\n    out.push('|');\n    fv::core::push_int(out, props.n);\n    fv::core::escape_into(out, &props.s);"));
     expect(out).toMatch(like("fv::core::push_number(out, props.n as f64 + 1.0);"));
     expect(out).toMatch(like("fv::core::push_number(out, props.n as f64 + props.f as f64 / 2.0);"));
     expect(out).toMatch(like('out.push_str("|st</p>");'));
@@ -979,7 +986,7 @@ describe("values that may be absent, read and shown", () => {
     const out = render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ `${on ? (off ? null : n) : s}|${on ? (off ? undefined : n) : s}` }}</p>");
     const n = 'std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n)))';
     expect(out).toMatch(like(
-      `fv::core::escape_into(out, &format!("{}|{}", (if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("null") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }), (if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("undefined") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) })));`,
+      `fv::core::escape_into(out, &(if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("null") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }));\n    out.push('|');\n    fv::core::escape_into(out, &(if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("undefined") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }));`,
     ));
   });
 
@@ -1016,7 +1023,7 @@ describe("indexes and strings that may hold half a character", () => {
   });
 
   it("joins a character that may be half of a pair to U+FFFD with `+`", () => {
-    expect(render(l, "<p>{{ s.charAt(0) + '�' }}</p>")).toMatch(like('fv::core::escape_into(out, &format!("{}�", fv::strings::js_char_at(&props.s, 0.0f64)));'));
+    expect(render(l, "<p>{{ s.charAt(0) + '�' }}</p>")).toMatch(like('fv::core::escape_into(out, fv::strings::js_char_at(&props.s, 0.0f64));\n    out.push_str("�</p>");'));
   });
 });
 

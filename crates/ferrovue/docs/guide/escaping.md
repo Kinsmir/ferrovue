@@ -18,6 +18,15 @@ out.push_str("\">");
 assert_eq!(out, r#"<p title="&quot; onmouseover=&quot;alert(1)">"#);
 ```
 
+`escape_into` maps each character on its own, so a value joined with `+` or a template literal
+(`:title="'rank ' + rank"`, `` :href="`/r/${sub}/`" ``) is written part by part, with no string
+built for it: its literal text escaped as ferrovue compiles it, each string part through
+`escape_into`, and each number through [`push_int`](crate::core::push_int) or
+[`push_number`](crate::core::push_number), whose text holds nothing to escape. The bytes are the
+ones Vue writes for the joined string. On a component's root, where Vue writes an empty value as a
+bare attribute, the value is tested for emptiness by its parts: it is never empty where it holds
+literal text, a number or a boolean.
+
 The property tests check that escaped text holds no markup and reads back as it was, for any
 string.
 

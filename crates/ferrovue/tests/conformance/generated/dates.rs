@@ -54,7 +54,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(270 + 23 * props.days.len() + props.published.len() + props.updated.as_deref().map_or(0, str::len) + props.days.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(285 + 23 * props.days.len() + props.published.len() + props.updated.as_deref().map_or(0, str::len) + props.days.iter().map(|v| v.len()).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Dates.vue");
     let s_date = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_date_parse(&props.published), 6, 29));
     let s_moment = fv::date::js_time_clip(props.at as f64 + props.offset);
@@ -77,7 +77,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_number(out, fv::date::js_utc_day(*s_date));
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &format!("{}:{}:{}.{}", fv::core::Js(fv::date::js_utc_hours(*s_date)), fv::strings::js_pad_start(&fv::core::Js(fv::date::js_utc_minutes(*s_date)).to_string(), 2.0f64, "0"), fv::strings::js_pad_start(&fv::core::Js(fv::date::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"), fv::core::Js(fv::date::js_utc_milliseconds(*s_date))));
+    fv::core::push_number(out, fv::date::js_utc_hours(*s_date));
+    out.push(':');
+    fv::core::escape_into(out, &fv::strings::js_pad_start(&fv::core::Js(fv::date::js_utc_minutes(*s_date)).to_string(), 2.0f64, "0"));
+    out.push(':');
+    fv::core::escape_into(out, &fv::strings::js_pad_start(&fv::core::Js(fv::date::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"));
+    out.push('.');
+    fv::core::push_number(out, fv::date::js_utc_milliseconds(*s_date));
     out.push_str("</p>");
     if let Some(fv_updated) = props.updated.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p>");

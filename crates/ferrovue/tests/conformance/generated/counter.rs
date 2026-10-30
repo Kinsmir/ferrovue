@@ -41,7 +41,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(91 + props.title.len());
+    out.reserve(98 + props.title.len());
     out.push_str("<div data-count=\"");
     fv::core::push_int(out, fv_stores.counter.count);
     out.push_str("\"><h4>");
@@ -53,7 +53,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     out.push('|');
     fv::core::push_number(out, fv_stores.counter.count as f64 * 2.0);
     out.push('|');
-    fv::core::escape_into(out, &format!("{} {}", fv::core::Js(fv_stores.counter.count as f64 * 2.0), fv_stores.counter.label));
+    fv::core::push_number(out, fv_stores.counter.count as f64 * 2.0);
+    out.push(' ');
+    fv::core::escape_into(out, &fv_stores.counter.label);
     out.push('|');
     fv::core::push_number(out, fv_stores.counter.step);
     out.push('|');

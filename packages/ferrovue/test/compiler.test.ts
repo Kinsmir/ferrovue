@@ -1021,7 +1021,7 @@ const props = defineProps<{ items: string[]; name: string }>();
 <template><ul v-if="items.length" :title="'list of ' + name"><li v-for="i in items">{{ i }}</li></ul></template>`),
       ).get("x.rs")!;
       expect(out).toContain("props.items.len() as i64");
-      expect(out).toContain('format!("list of {}", props.name)');
+      expect(out).toContain('out.push_str("<ul title=\\"list of ");\n        fv::core::escape_into(out, &props.name);\n        out.push_str("\\"><!--[-->");');
     });
 
     it("adds two numbers, and refuses + between a number and anything but a string", () => {
@@ -7736,7 +7736,7 @@ withDefaults(defineProps<{ k: K; m?: K; n?: K; j: K }>(), { n: "b" });
       ).get("x.rs")!,
     );
     expect(out).toContain("fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.k)]);");
-    expect(out).toContain('fv::core::escape_into(out, &format!("{}!", fv::props::Union::as_str(props.k)));');
+    expect(out).toContain('out.push_str("\\" title=\\"");\n    fv::core::escape_into(out, fv::props::Union::as_str(props.k));\n    out.push_str("!\\">");');
     expect(out).toContain("if let Some(v) = props.m.map(fv::props::Union::as_str) {");
     expect(out).toContain("fv::core::escape_into(out, fv::props::Union::as_str(props.n.unwrap_or(K::B)));");
     expect(out).toContain("fv::core::escape_into(out, &fv::props::Union::as_str(props.k).to_uppercase());");

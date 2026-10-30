@@ -552,7 +552,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(290 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
+    out.reserve(291 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
     let s_chosen = if props.level == crate::domain::Level::High { UnionEnumsChosen::A } else { match props.mode { UnionEnumsMode::A => UnionEnumsChosen::A, UnionEnumsMode::B => UnionEnumsChosen::B, UnionEnumsMode::C => UnionEnumsChosen::C } };
     out.push_str("<section class=\"");
@@ -584,7 +584,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::escape_into(out, &fv::props::Union::as_str(props.mode).to_uppercase());
     out.push(' ');
-    fv::core::escape_into(out, &format!("{}/{}", fv::props::Union::as_str(props.align), fv::props::Union::as_str(props.size.unwrap_or(UnionEnumsSize::Lg))));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.align));
+    out.push('/');
+    fv::core::escape_into(out, fv::props::Union::as_str(props.size.unwrap_or(UnionEnumsSize::Lg)));
     out.push(' ');
     fv::core::push_int(out, fv::strings::js_length(fv::props::Union::as_str(props.align)));
     out.push_str("</");

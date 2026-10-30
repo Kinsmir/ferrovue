@@ -66,7 +66,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(418 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
+    out.reserve(426 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
     out.push_str("<div style=\"");
     if !props.shown {
         out.push_str("display:none;");
@@ -74,8 +74,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\"><p style=\"color:");
     fv::core::escape_into(out, &props.color);
     out.push_str(";font-size:");
-    fv::core::escape_into(out, &format!("{}px", fv::core::Js(props.size)));
-    out.push_str(";line-height:1.5;--gap:");
+    fv::core::push_int(out, props.size);
+    out.push_str("px;line-height:1.5;--gap:");
     fv::core::push_int(out, props.size);
     out.push_str(";opacity:0.5;\">a</p><p style=\"margin:0;");
     if let Some(v) = props.accent.as_deref() {

@@ -77,6 +77,7 @@ mod numbers {
             let mut out = String::new();
             push_number(&mut out, x);
             assert_eq!(&out, want, "String({input})");
+            assert_eq!(&Js(x).to_string(), want, "Js({input})");
         }
     }
 

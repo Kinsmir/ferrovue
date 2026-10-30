@@ -112,6 +112,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
 | `Attrs` | Boolean attributes, `:hidden`, empty values, numbers, absent optionals, `data-` / `aria-`, all class shapes |
+| `AttrParts` | Attribute values joined with `+` and template literals, on the root and on an inner element: string, integer, `Float`, boolean, optional and list parts, a value that is one string, an empty one written bare on the root, a literal, `NaN`, the infinities, `-0`, integers beyond 2⁵³ and markup-breaking characters in every string |
 | `BoundObject` | `v-bind` of an object literal on elements, before and after their own attributes: strings, numbers, booleans, `undefined`, `data-` / `aria-`, a class array after a static class, a style object merged with a static `style`, a form control's `value` and `disabled` |
 | `Styles`, `Shown` | `:style` objects, arrays, strings and conditional objects merged with a static `style`; `v-show`, including on the root; a global `<style>` block |
 | `Markup` | Entities, void elements, SVG attributes, `<pre>` whitespace, whitespace condensing, a `<template lang="html">` |
