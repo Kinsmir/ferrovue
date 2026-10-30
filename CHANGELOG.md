@@ -15,7 +15,7 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Changed
 
-- A value joined with `+` or a template literal in an attribute or text is written part by part, with no `String` built for it; `Js<f64>` formats without allocating.
+- A value joined with `+` or a template literal in an attribute or text is written part by part, with no `String` built for it.
   [Escaping](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 
 ### Fixed

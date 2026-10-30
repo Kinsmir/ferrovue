@@ -198,73 +198,25 @@ impl std::fmt::Write for Short {
 /// assert_eq!(written(f64::NAN), "NaN");
 /// ```
 pub fn push_number(out: &mut String, x: f64) {
-    write_number(out, x);
-}
-
-trait Sink: std::fmt::Write {
-    fn put_str(&mut self, s: &str);
-    fn put_byte(&mut self, c: u8);
-    fn put_zeros(&mut self, n: usize);
-    fn put_decimal(&mut self, n: u64);
-}
-
-impl Sink for String {
-    fn put_str(&mut self, s: &str) {
-        self.push_str(s);
-    }
-
-    fn put_byte(&mut self, c: u8) {
-        self.push(char::from(c));
-    }
-
-    fn put_zeros(&mut self, n: usize) {
-        self.extend(std::iter::repeat_n('0', n));
-    }
-
-    fn put_decimal(&mut self, n: u64) {
-        push_decimal(self, n);
-    }
-}
-
-impl Sink for Short {
-    fn put_str(&mut self, s: &str) {
-        self.extend(s.bytes());
-    }
-
-    fn put_byte(&mut self, c: u8) {
-        self.extend(std::iter::once(c));
-    }
-
-    fn put_zeros(&mut self, n: usize) {
-        self.extend(std::iter::repeat_n(b'0', n));
-    }
-
-    fn put_decimal(&mut self, n: u64) {
-        let mut buf = [0; 20];
-        let start = decimal(&mut buf, n);
-        self.extend(buf[start..].iter().copied());
-    }
-}
-
-fn write_number(out: &mut impl Sink, x: f64) {
+    use std::fmt::Write;
     if x.is_nan() {
-        out.put_str("NaN");
+        out.push_str("NaN");
         return;
     }
     if x == 0.0 {
-        out.put_byte(b'0');
+        out.push('0');
         return;
     }
     if x.is_infinite() {
-        out.put_str(if x < 0.0 { "-Infinity" } else { "Infinity" });
+        out.push_str(if x < 0.0 { "-Infinity" } else { "Infinity" });
         return;
     }
     if x < 0.0 {
-        out.put_byte(b'-');
+        out.push('-');
     }
     let x = x.abs();
     if x.fract() == 0.0 && x <= MAX_SAFE_INTEGER as f64 {
-        out.put_decimal(x as u64);
+        push_decimal(out, x as u64);
         return;
     }
     let (digits, exp) = shortest_digits(x);
@@ -272,21 +224,21 @@ fn write_number(out: &mut impl Sink, x: f64) {
     let k = digits.len() as i32;
     let n = exp + 1;
     if k <= n && n <= 21 {
-        out.put_str(digits);
-        out.put_zeros((n - k) as usize);
+        out.push_str(digits);
+        out.extend(std::iter::repeat_n('0', (n - k) as usize));
     } else if 0 < n && n <= 21 {
-        out.put_str(&digits[..n as usize]);
-        out.put_byte(b'.');
-        out.put_str(&digits[n as usize..]);
+        out.push_str(&digits[..n as usize]);
+        out.push('.');
+        out.push_str(&digits[n as usize..]);
     } else if -6 < n && n <= 0 {
-        out.put_str("0.");
-        out.put_zeros((-n) as usize);
-        out.put_str(digits);
+        out.push_str("0.");
+        out.extend(std::iter::repeat_n('0', (-n) as usize));
+        out.push_str(digits);
     } else {
-        out.put_str(&digits[..1]);
+        out.push_str(&digits[..1]);
         if k > 1 {
-            out.put_byte(b'.');
-            out.put_str(&digits[1..]);
+            out.push('.');
+            out.push_str(&digits[1..]);
         }
         let e = n - 1;
         let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
@@ -717,9 +669,9 @@ impl std::fmt::Display for Js<i64> {
 
 impl std::fmt::Display for Js<f64> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = Short::new();
-        write_number(&mut s, self.0);
-        f.write_str(s.as_str())
+        let mut s = String::new();
+        push_number(&mut s, self.0);
+        f.write_str(&s)
     }
 }
 
