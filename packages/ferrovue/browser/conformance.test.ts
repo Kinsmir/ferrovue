@@ -65,7 +65,7 @@ function pageFor(c: (typeof cases)[number], light = false): string {
   const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const head = recordedHead(c.html);
   return (
-    `<!doctype html><html${head?.htmlAttrs ?? ""}><head><meta charset="utf-8">${head ? "" : `<title>${c.component}/${c.name}</title>`}` +
+    `<!doctype html><html${head?.htmlAttrs ?? ""}><head><meta charset="utf-8">${light ? '<base href="/static/">' : ""}${head ? "" : `<title>${c.component}/${c.name}</title>`}` +
     `<script type="application/json" id="fv-fixture">${json}</script>` +
     `<script type="module" src="/entry.js"></script>${head?.headTags ?? ""}</head>` +
     `<body${head?.bodyAttrs ?? ""}>${hydrationBody(c.html)}</body></html>`
@@ -90,7 +90,7 @@ const DATED = cases.filter((c) => ["DatePost", "DateStamp", "DateRows", "DateDay
 async function serve(page: Page, logged: (message: Promise<string>) => void): Promise<void> {
   page.on("console", (m) => {
     if (!m.location().url.startsWith(ORIGIN)) return;
-    if (m.type() === "error" || (m.type() === "warning" && /hydrat|mismatch/i.test(m.text()))) logged(describeMessage(m));
+    if (m.type() === "error" || (m.type() === "warning" && (/hydrat|mismatch/i.test(m.text()) || new URL(page.url()).pathname.startsWith("/light/")))) logged(describeMessage(m));
   });
   page.on("pageerror", (e) => logged(Promise.resolve(`uncaught: ${e.message}`)));
   await page.route(`${ORIGIN}/**`, (route) => {

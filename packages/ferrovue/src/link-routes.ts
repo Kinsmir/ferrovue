@@ -1,4 +1,5 @@
 import type { App } from "vue";
+import { shallowReactive, shallowRef } from "vue";
 import { RouterLink, routeLocationKey, routerKey, type RouteLocationNormalized, type RouteLocationNormalizedLoaded, type RouteLocationRaw, type RouteLocationResolved, type Router } from "vue-router";
 import type { RouteEntry } from "./route-records.ts";
 
@@ -7,7 +8,8 @@ export interface LinkRoutesOptions {
   /** The application's own navigation, called with the `href` of every navigation (the base
    * included, as the link's `href` attribute has it) and the route it resolves to. */
   navigate: (href: string, to: RouteLocationNormalized) => void;
-  /** The base, as `router.base` in `ferrovue.config.json` gives it. */
+  /** The base, as `router.base` in `ferrovue.config.json` gives it. Left out, there is no base,
+   * as on the server, whatever the page's `<base href>`. */
   base?: string;
   /** As `router.linkActiveClass` in `ferrovue.config.json`. */
   linkActiveClass?: string;
@@ -314,11 +316,7 @@ function parseURL(location: string, current: string): { fullPath: string; path: 
   return { fullPath: path + search + hash, path, query, hash: decode(hash)! };
 }
 
-function normalizeBase(base: string | undefined): string {
-  if (!base) {
-    base = (typeof document !== "undefined" && document.querySelector("base")?.getAttribute("href")) || "/";
-    base = base.replace(/^\w+:\/\/[^/]+/, "");
-  }
+function normalizeBase(base = "/"): string {
   if (base[0] !== "/" && base[0] !== "#") base = "/" + base;
   return base.replace(/\/$/, "");
 }
@@ -435,25 +433,31 @@ export function linkRoutes(routes: RouteEntry[], options: LinkRoutesOptions): Li
   current = resolve((base && pathname.toLowerCase().startsWith(base.toLowerCase()) ? pathname.slice(base.length) || "/" : pathname) + (end < 0 ? "" : page.slice(end)));
   const route: Record<string, unknown> = {};
   for (const key in START) route[key] = current[key as keyof Resolved];
+  const reactive = shallowReactive(route);
   const go = async (to: RouteLocationRaw | Target): Promise<undefined> => {
     const target = resolve(to);
-    options.navigate(target.href!, target as unknown as RouteLocationNormalized);
+    try {
+      options.navigate(target.href!, target as unknown as RouteLocationNormalized);
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   };
   const router = {
-    currentRoute: { value: current },
+    currentRoute: shallowRef(current),
     options: { linkActiveClass: options.linkActiveClass, linkExactActiveClass: options.linkExactActiveClass },
     resolve,
     push: go,
     replace: (to: RouteLocationRaw) => go(typeof to === "string" ? parseURL(to, current.path) : to),
   };
   return {
-    route: route as unknown as RouteLocationNormalizedLoaded,
+    route: reactive as unknown as RouteLocationNormalizedLoaded,
     resolve: resolve as (to: RouteLocationRaw) => RouteLocationResolved,
     install(app) {
       app.component("RouterLink", RouterLink);
       app.config.globalProperties.$route = current as never;
       app.provide(routerKey, router as unknown as Router);
-      app.provide(routeLocationKey, route as unknown as RouteLocationNormalizedLoaded);
+      app.provide(routeLocationKey, reactive as unknown as RouteLocationNormalizedLoaded);
     },
   };
 }

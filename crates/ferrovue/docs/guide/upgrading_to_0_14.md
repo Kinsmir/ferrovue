@@ -71,9 +71,9 @@ See [routing](crate::guide::routing#a-router-per-application-a-route-per-request
 
 `linkRouter` from `ferrovue/link-router` still works in 0.14, and is removed in a later minor
 release. `linkRoutes` from `ferrovue/link-routes` gives `<RouterLink>` and `useRoute()` the same
-answers with no router, which keeps all but `<RouterLink>` of vue-router out of the client bundle:
-about 4 KB gzipped, where `linkRouter` is about 9 KB. It takes the same routes and options, `history`
-aside, and returns a Vue plugin, given in `plugins` where the router was given in `router`:
+answers with no router, which keeps all but `<RouterLink>` of vue-router out of the client bundle,
+in less than half the bytes of `linkRouter`. It takes the same routes and options, `history` aside,
+and returns a Vue plugin, given in `plugins` where the router was given in `router`:
 
 ```ts
 // 0.13
@@ -94,6 +94,9 @@ await renderPage(layout, islands, record, { plugins: [links], previous });
 There is nothing to wait for: `router.isReady()` and `await router.push(…)` before mounting go. The
 page's route is `links.route` in place of `router.currentRoute.value`, and `links.resolve(to)`
 resolves a location as `router.resolve(to)` did. `navigate` is called with the same `href` and route
-as before, the link to the current page included. An application that read `useRouter()` or
+as before, the link to the current page included, and an error it throws is logged with
+`console.error`, as vue-router logs a navigation error. With `base` left out there is no base, as on
+the server: `linkRouter` read the page's `<base href>` then, so a page with one gives `base` the
+value of `router.base`. An application that read `useRouter()` or
 `$router`, rendered a `<RouterView>`, or passed its own `history`, builds a vue-router of its own.
 See [links when the application navigates on its own](crate::guide::routing#links-when-the-application-navigates-on-its-own).

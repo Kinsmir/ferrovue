@@ -462,7 +462,11 @@ vue-router's own `<RouterLink>` and provides it, `useRoute()` and `$route` with 
 its own in place of a router:
 
 - **The page's route.** It is resolved once, from `location` or the browser's location, with the
-  base taken off. `links.route` is the route `useRoute()` gives.
+  base taken off. `links.route` is the route `useRoute()` gives, a shallow reactive object as
+  vue-router's, which `watch` and `toRefs` take; `useRouter().currentRoute` is a ref to it.
+- **The base of `ferrovue.config.json`.** `base` is `router.base`, and left out there is no base, as
+  on the server. A page's `<base href>` is not read, so the links hydrate as the server rendered
+  them.
 - **Every `to` resolved as vue-router resolves it.** `links.resolve(to)` gives what vue-router's
   `router.resolve(to)` gives on that page: the same ranking of routes, nested and empty-path
   children, optional parameters and catch-alls, case-insensitive matching, parameters decoded and
@@ -472,7 +476,9 @@ its own in place of a router:
 - **Every click handed to `navigate`.** A link's `push` or `replace` calls `navigate` with the
   `href`, base included, and the route it resolves to, and never leaves the page: the active links
   keep matching the page that is on screen until the application replaces it. A click on the link
-  to the current page is handed over too.
+  to the current page is handed over too. An error `navigate` throws is logged with
+  `console.error`, as vue-router logs a navigation error with no `onError` handler, and rejects the
+  `push` or `replace`.
 - **The click belongs to the link.** `<RouterLink>` calls `preventDefault` on a plain left click, so
   a document-level navigation listener sees `defaultPrevented` and leaves that click to `navigate`.
   A click with a modifier key, on a `target="_blank"` link or already prevented is left alone, and
@@ -488,9 +494,10 @@ application swaps in another page, unmount the islands and mount them again with
 `linkRoutes`, built at the new location.
 
 `ferrovue/link-routes` imports from vue-router `RouterLink` and the keys it injects, which a bundler
-keeps apart from the rest of vue-router. Built for production with Vite, Vue left out, `linkRoutes`
-is 9.0 KB minified and 3.9 KB gzipped, where `linkRouter`, which builds a whole vue-router, is
-22.6 KB and 9.0 KB. vue-router stays an optional peer: the package root does not load it.
+keeps apart from the rest of vue-router. Built alone as a Vite library for production (vue-router
+5.4, Vue external, `NODE_ENV` set to `production`), `linkRoutes` is 12.4 KB minified and 4.6 KB
+gzipped, and `linkRouter`, which builds a whole vue-router, is 30.2 KB and 10.4 KB: less than half
+the bytes. vue-router stays an optional peer: the package root does not load it.
 
 `linkRouter` from `ferrovue/link-router` is deprecated: it builds a vue-router whose every route
 renders nothing and whose every navigation after the first is handed to `navigate` and aborted, for
