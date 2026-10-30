@@ -165,7 +165,7 @@ function contextMember(s: Scope, n: N, prop: string): Val {
 }
 
 function slotsObject(s: Scope, n: N): string | null {
-  if (n.type === "Identifier") return n.name === "$slots" || (s.slotsBindings.has(n.name) && !s.locals.has(n.name)) ? n.name : null;
+  if (n.type === "Identifier") return s.slotsBindings.has(n.name) && !s.locals.has(n.name) ? n.name : null;
   if (n.type !== "MemberExpression" || n.computed || n.object.type !== "Identifier") return null;
   const [owner, name]: [string, string] = [n.object.name, n.property.name];
   if (owner === "_ctx" && name === "$slots") return "$slots";
@@ -285,7 +285,7 @@ function fieldByKey(s: Scope, base: Val, key: N, n: N): Val | null {
   const fields = kept.map((l) => fieldVal(s.comp, base.code, base.ty, l, n));
   if (!fields.every((f) => sameTy(f.ty, fields[0]!.ty) && !f.owned && f.iter === undefined)) return null;
   const arm = (f: Val): string => (f.ty.k === "str" && f.code.startsWith("&*") ? `std::ops::Deref::deref(&${f.code.slice(2)})` : bare(f.code));
-  const code = overVariants(s.comp, k, kept, (l) => arm(fields[kept.indexOf(l)]!)) ?? `match ${k.variant} { ${kept.map((l, i) => `${variantPath(s.comp, def, l)} => ${arm(fields[i]!)}`).join(", ")} }`;
+  const code = overVariants(s.comp, k, kept, (l) => arm(fields[Math.max(kept.indexOf(l), 0)]!)) ?? `match ${k.variant} { ${kept.map((l, i) => `${variantPath(s.comp, def, l)} => ${arm(fields[i]!)}`).join(", ")} }`;
   return { code, ty: fields[0]!.ty };
 }
 

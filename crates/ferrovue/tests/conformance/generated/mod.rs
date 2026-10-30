@@ -244,6 +244,7 @@ pub mod union_child;
 pub mod union_choice_tag;
 pub mod union_computed_held;
 pub mod union_enums;
+pub mod union_field_by_key;
 pub mod union_folded_ref;
 pub mod union_hue_set;
 pub mod union_keyed_by_or;
@@ -1523,6 +1524,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "UnionEnums" => {
             let props: union_enums::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             union_enums::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "UnionFieldByKey" => {
+            let props: union_field_by_key::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            union_field_by_key::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "UnionFoldedRef" => {
             let props: union_folded_ref::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

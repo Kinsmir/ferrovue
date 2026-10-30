@@ -13,6 +13,13 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - The guide's `upgrading_to_0_13` page: bump both halves, generate again for version 7, and `script.fs` on TypeScript 7.
   [`upgrading_to_0_13`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html).
 
+### Fixed
+
+- A field read by a key of a union that a `?:` narrows to some of its members compiles; 0.13.0 stopped with a `TypeError`.
+  [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
+- `$slots` read in `<script setup>`, where Vue defines no such name, is refused with FV0601; 0.13.0 read it as the template's `$slots`.
+  [`slots`](https://docs.rs/ferrovue/latest/ferrovue/guide/slots/index.html).
+
 ## [0.13.0] - 2026-10-29
 
 ### Added
