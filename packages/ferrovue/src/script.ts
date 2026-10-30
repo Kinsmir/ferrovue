@@ -13,13 +13,7 @@ import { known } from "./narrowing.ts";
 import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
 import { annotatedStr, declaredUnion, exactlyEnum, intoEnum, knownLiteral, refField } from "./enums.ts";
 import { functionOf } from "./functions.ts";
-
-export const CLIENT_HOOKS = new Set([
-  "onMounted", "onBeforeMount", "onUnmounted", "onBeforeUnmount", "onUpdated", "onBeforeUpdate",
-  "onActivated", "onDeactivated", "onErrorCaptured", "onRenderTracked", "onRenderTriggered",
-]);
-
-export const INERT_CALLS = new Set(["defineEmits", "defineSlots", "defineOptions", "defineExpose", "defineProps", "withDefaults"]);
+import { CLIENT_HOOKS, INERT_CALLS, refuseServerWrites, type SetupNames, setupNames } from "./setup-writes.ts";
 
 export function setupStatement(comp: Component, st: N): void {
   const c = st.expression;
@@ -186,6 +180,7 @@ interface Setup {
   lazies: Map<string, string>;
   useAttrsName: string | null;
   useSlotsName: string | null;
+  names: SetupNames;
 }
 
 function emptyScope(comp: Component, components: Map<string, Component>): Scope {
@@ -494,9 +489,15 @@ function namedBinding(s: Setup, st: N, d: N): void {
 function setupBinding(s: Setup, st: N, d: N): void {
   if (d.id.type === "ObjectPattern" && definePropsType(d.init)) return destructuredProps(s.comp, s.scope, d.id);
   if (asyncBinding(s, d)) return;
-  if (ctx.plugins.some((p) => p.scriptBinding?.(s.scope, d, s.lets))) return;
-  if (d.id.type === "Identifier") return namedBinding(s, st, d);
-  for (const name of patternNames(d.id)) s.scope.clientOnly.set(name, "it is destructured from a value the server does not have");
+  if (ctx.plugins.some((p) => p.scriptBinding?.(s.scope, d, s.lets))) {
+    for (const name of patternNames(d.id)) s.names.byPlugins.add(name);
+    return;
+  }
+  const names = patternNames(d.id);
+  if (d.id.type === "Identifier") namedBinding(s, st, d);
+  else for (const name of names) s.scope.clientOnly.set(name, "it is destructured from a value the server does not have");
+  const untranslated = names.find((name) => s.scope.clientOnly.has(name) && s.scope.functions.get(name)?.node !== d.init);
+  if (d.init && untranslated !== undefined) refuseServerWrites(s.scope, s.names, untranslated, d.init);
 }
 
 function declaresNoValue(st: N, decl: N): boolean {
@@ -524,7 +525,7 @@ export function scopeFor(comp: Component, ast: N[], components: Map<string, Comp
   numericConsts(scope, locals);
   const asyncs = asyncChildren(comp, ast);
   declareFunctions(scope, ast);
-  const s: Setup = { comp, scope, locals, asyncs, setupNames: setupNamesOf(ast), lets: [], lazies: new Map(), useAttrsName: null, useSlotsName: null };
+  const s: Setup = { comp, scope, locals, asyncs, setupNames: setupNamesOf(ast), lets: [], lazies: new Map(), useAttrsName: null, useSlotsName: null, names: setupNames(ast) };
   for (const st of ast) setupTopLevel(s, st);
   return { scope, lets: s.lets, lazies: s.lazies };
 }

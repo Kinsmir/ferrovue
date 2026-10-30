@@ -48,6 +48,17 @@ write is the same. A CI job that runs `pnpm ferrovue --check` reports each modul
 until it is generated again with 0.14 and committed. See
 [the version check](crate::guide::generated_code#the-version-check).
 
+## 3. Error codes your CI matches
+
+These sources compiled with 0.13 and are refused with 0.14:
+
+| Source | 0.14 |
+|---|---|
+| an initial value in `<script setup>` the compiler does not translate that assigns, uses `++` or `--`, calls a function of setup, changes a value of setup with a method such as `push`, or gives a value of setup to a function of another library: `const x = (n.value = 5)`, `const y = items.value.push(z)` | FV0105 |
+| an initial value that runs `watchEffect`, `watchSyncEffect` or `watchPostEffect`: `const stop = watchEffect(…)` | FV0103 |
+| an initial value that runs `watch` with `immediate`: `const stop = watch(source, callback, { immediate: true })` | FV0102 |
+| an initial value that runs `onServerPrefetch` | FV0104 |
+
 # Behaviour that changed
 
 ## An empty `TrustedHtml` or `InlineHtml` is false

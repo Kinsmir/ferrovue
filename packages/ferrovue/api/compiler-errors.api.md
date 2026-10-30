@@ -73,7 +73,7 @@ export const ERRORS: {
     };
     readonly FV0105: {
         readonly title: "Statement in setup that could change what renders";
-        readonly detail: "ferrovue translates setup to Rust and does not run it, so a statement that may change state the template reads (`count.value++`, `store.load()`, `items.push(x)`, a call of a function of another library) would render otherwise than Vue does. Lifecycle hooks such as `onMounted`, the compiler macros (`defineEmits`, `defineExpose`) and a `watch` without `immediate` are allowed. Move the statement into `onMounted` or an event handler, write the value as a `computed`, or compute it in Rust and pass it as a prop.";
+        readonly detail: "ferrovue translates setup to Rust and does not run it, so a statement that may change state the template reads (`count.value++`, `store.load()`, `items.push(x)`, a call of a function of another library) would render otherwise than Vue does. The initial value of a `const` or `let` the compiler does not translate is refused the same way when running it could change that state: an assignment, `++` or `--`, a call of a function of setup, a method that changes a value of setup (`push`, `splice`), or a value of setup given to a function of another library. Lifecycle hooks such as `onMounted`, the compiler macros (`defineEmits`, `defineExpose`) and a `watch` without `immediate` are allowed. Move the statement into `onMounted` or an event handler, write the value as a `computed`, or compute it in Rust and pass it as a prop.";
     };
     readonly FV0106: {
         readonly title: "`defineAsyncComponent` of anything but a component of this project";
