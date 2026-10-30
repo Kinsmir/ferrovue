@@ -132,6 +132,7 @@ A fixture is a JSON object of props plus optional keys:
 | `RenamedProps` | Props destructured under new names, which Vue reads as `$props['label']`, in text, attributes, `v-if`, `v-for` and `<component :is>`, one with a default |
 | `Model`, `ModelParent` | `defineModel` (named, required, default) and `v-model` on a component |
 | `Form` | `v-model` on input, checkbox, select, radio and textarea |
+| `SelectText` | `<option>`s with no `value` under a `<select>` with `v-model` of a string (text that is `null`, an interpolation, beside an option with a `value`), and `v-model` that may be absent, `undefined` or `null`, on a `<select>` and on radio buttons whose values are `"undefined"` and `"null"` |
 | `FormWrapped`, `FormRoot` | A `<textarea>` with content of its own and an `<input v-model>` inside the element that takes the root's attributes; a `<select v-model>` as the root |
 | `Builtins` | `Transition`, `TransitionGroup`, `KeepAlive`, `Suspense`, `v-text`, `v-once`, `v-pre`, `v-memo`, a client-only directive |
 | `DirectedEmpty` | A client-only directive on elements with no content, alone, beside attributes bound by name and in a `v-for` |
@@ -285,7 +286,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
 | Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe`, `EmptySlots` |
-| Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls` |
+| Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls`, `SelectText` |
 | Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
 | Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo`, `LinkSpaces`, `FallSpaces` |
 | Pinia | `Badge`, `Cart`, `Counter`, `Session` |

@@ -358,6 +358,20 @@ component that renders it: the content of the `<textarea>`, or its `v-model`, an
 do arrive. A parent that passes `value` or `type`, a bound or `radio` `type`, and a checkbox bound to
 a list are refused ([FV0424](crate::guide::error_codes#fv0424)).
 
+# `v-model` on form controls
+
+`v-model` writes a control's initial state as Vue's server does: a text input's `value`, a
+checkbox's `checked`, and the `checked` of a radio button or the `selected` of an `<option>` whose
+value is loosely equal to the model. The server compares a string model with a string value, and a
+model that may be absent with a literal value, an absent model written as `String()` writes it
+(`undefined`, or `null` for `T | null`): `value="undefined"` is checked while the model is absent.
+An `<option>` with no `value` is compared with `null`, which is what Vue's server compiler gives
+it: the option is selected while the model is `"null"`, or `null`. Give each option a `value` to
+compare it with the model. A number or boolean model on a radio button or a `<select>` is refused
+([FV0413](crate::guide::error_codes#fv0413)), and so is `v-model` on an `<input>` whose `type` is
+bound, where Vue's server chooses as it renders between `checked` and `value`
+([FV0426](crate::guide::error_codes#fv0426)): write the `type` as a literal.
+
 # HTML comments
 
 A template's HTML comments (`<!-- note -->`) render as the client build treats them.

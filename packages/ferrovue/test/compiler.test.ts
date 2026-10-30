@@ -5422,6 +5422,61 @@ defineProps<{ row: Row }>();
       /X\.vue:2:29: `label` has no type: give it one, as `label: string`/,
     ],
     [
+      "a named slot given under `v-if`",
+      `<script setup lang="ts">
+import Fr from "./Fr.vue";
+defineProps<{ on: boolean }>();
+</script>
+<template><Fr><template #head>H</template><template v-if="on" #foot>F</template></Fr></template>`,
+      /X\.vue:5:43: a slot given under `v-if` makes the child's slots depend on the data: give the slot always, and put the `v-if` on an element or a `<template>` inside its content/,
+    ],
+    [
+      "a named slot given under `v-else`",
+      `<script setup lang="ts">
+import Fr from "./Fr.vue";
+defineProps<{ on: boolean }>();
+</script>
+<template><Fr>
+  <template v-if="on" #head>H</template>
+  <template v-else #foot>F</template>
+</Fr></template>`,
+      /X\.vue:6:3: a slot given under `v-if` makes/,
+    ],
+    [
+      "slots given by `v-for`",
+      `<script setup lang="ts">
+import Fr from "./Fr.vue";
+defineProps<{ names: ("head" | "foot")[] }>();
+</script>
+<template><Fr><template v-for="n in names" #[n]>F</template></Fr></template>`,
+      /X\.vue:5:15: a slot given under `v-for` makes the child's slots depend on the data: give the slot always, and put the `v-for` on an element or a `<template>` inside its content/,
+    ],
+    [
+      "`v-model` on an `<input>` whose `type` is bound",
+      `<script setup lang="ts">
+defineProps<{ t: string }>();
+const v = defineModel<string>();
+</script>
+<template><div><input :type="t" v-model="v"></div></template>`,
+      /X\.vue:5:23: `v-model` on an `<input>` whose `type` is bound, where Vue's server chooses as it renders whether to write `checked` or `value`: write a literal `type`, or one `<input>` for each type under `v-if`/,
+    ],
+    [
+      "an `<option>` with no `value` under a `<select>` whose `v-model` is a number",
+      `<script setup lang="ts">
+const n = defineModel<number>({ required: true });
+</script>
+<template><div><select v-model="n"><option>1</option></select></div></template>`,
+      /X\.vue:4:\d+: an `<option>` with no `value` under a `<select>` whose `v-model` is a number, which Vue's server compares with `null`: give the option a `value`, and the model a string type/,
+    ],
+    [
+      "a `<select>` whose `v-model` is a number",
+      `<script setup lang="ts">
+const n = defineModel<number>({ required: true });
+</script>
+<template><div><select v-model="n"><option value="1">1</option></select></div></template>`,
+      /X\.vue:4:\d+: `v-model` of a number compared with a value that is a string: give the model a string type and each option or control a string `value`, or bind `:checked` or `:selected`/,
+    ],
+    [
       "a string given to a child's prop of a union",
       `<script setup lang="ts">
 import U from "./U.vue";
@@ -6159,6 +6214,10 @@ defineProps<{ c: string | null }>();
 defineProps<{ flag: boolean; fooBar?: boolean }>();
 </script>
 <template><b>{{ flag }}{{ fooBar }}</b></template>`,
+    Fr: `<script setup lang="ts">
+defineProps<{ t?: string }>();
+</script>
+<template><div><slot name="head" /><slot name="foot" /></div></template>`,
     W: `<script setup lang="ts">
 defineProps<{ onSale?: boolean }>();
 </script>
@@ -6240,6 +6299,12 @@ defineProps<{ chip: Chip }>();
     "events of a type imported from a package": "FV0327",
     "a prop named with a leading `$`": "FV0328",
     "a defineModel named with a leading `$`": "FV0328",
+    "a named slot given under `v-if`": "FV0901",
+    "a named slot given under `v-else`": "FV0901",
+    "slots given by `v-for`": "FV0901",
+    "`v-model` on an `<input>` whose `type` is bound": "FV0426",
+    "an `<option>` with no `value` under a `<select>` whose `v-model` is a number": "FV0413",
+    "a `<select>` whose `v-model` is a number": "FV0413",
     "a string given to a child's prop of a union": "FV0515",
     "a literal outside a child's prop of a union": "FV0515",
     "a string other than the prop's name given to a child's boolean prop": "FV0511",

@@ -216,6 +216,7 @@ pub mod scoped_rack;
 pub mod scoped_root;
 pub mod scoped_shelf;
 pub mod scoped_tree;
+pub mod select_text;
 pub mod self_compare;
 pub mod session;
 pub mod setup;
@@ -1411,6 +1412,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ScopedTree" => {
             let props: scoped_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             scoped_tree::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "SelectText" => {
+            let props: select_text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            select_text::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "SelfCompare" => {
             let props: self_compare::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

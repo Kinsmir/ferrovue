@@ -1,4 +1,4 @@
-import { type N, type Scope, type Val, enumOf, fail, literalsOf, namesSelf, nodeName } from "./model.ts";
+import { type N, type Scope, type Val, directiveOwner, enumOf, fail, literalsOf, namesSelf, nodeName } from "./model.ts";
 import { optionBinder, variantBinder } from "./enums.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
@@ -177,7 +177,15 @@ export function slot(s: Scope, e: Emitter, n: N): void {
     e.close();
     return;
   }
+  if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderDynamicModel") refuseDynamicModel(s, n);
   fail(s.comp, "FV0006", "this expression cannot be rendered on the server", n);
+}
+
+function refuseDynamicModel(s: Scope, n: N): never {
+  const el = directiveOwner(s.comp, n.arguments[0]);
+  const bound = el?.props.find((p: N) => p.type === 7 && p.name === "bind" && p.arg?.content === "type") ?? el;
+  const at = bound ? { type: "VueTemplate", loc: { start: { line: bound.loc.start.line, column: bound.loc.start.column - 1 } }, __fv: "source" } : n;
+  return fail(s.comp, "FV0426", "`v-model` on an `<input>` whose `type` is bound, where Vue's server chooses as it renders whether to write `checked` or `value`: write a literal `type`, or one `<input>` for each type under `v-if`", at);
 }
 
 export function isComment(text: string): boolean {

@@ -1,12 +1,12 @@
-import { type N, type Scope, type Val, BOOL, fail } from "./model.ts";
+import { type N, type Scope, type Val, absence, BOOL, fail, rustStr } from "./model.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare } from "./parens.ts";
+import { atom, bare, binary } from "./parens.ts";
 import { isBoolean, listCall, listMethod, presentLiteral } from "./lists.ts";
 import { meet, noArgStringMethod, regexTest, stringMethod, stringsEqual } from "./strings.ts";
 import { numberMethod } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";
-import { coerce, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
+import { coerce, describeTy, expr, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
@@ -55,12 +55,21 @@ function renderHelperCall(s: Scope, name: string, args: N[], n: N): Val | null {
 
 function looseEqual(s: Scope, args: N[], n: N): Val {
   const a = expr(s, args[0]);
+  const absent = a.ty.k === "opt" && a.ty.of.k === "str" ? absence(a.ty) : null;
+  const written = args[1]?.type === "NullLiteral" ? "null" : args[1]?.type === "StringLiteral" ? (args[1].value as string) : null;
+  if (args[1]?.type === "NullLiteral" && a.ty.k === "str") return boolOf(binary(a.code, "==", '"null"'));
+  if (absent !== null && written !== null) {
+    return boolOf(written === absent ? `${atom(a.code)}.is_none_or(|v| v == ${rustStr(written)})` : binary(a.code, "==", `Some(${rustStr(written)})`));
+  }
+  if (args[1]?.type === "NullLiteral") {
+    return fail(s.comp, "FV0413", `an \`<option>\` with no \`value\` under a \`<select>\` whose \`v-model\` is ${describeTy(a.ty)}, which Vue's server compares with \`null\`: give the option a \`value\`, and the model a string type`, n);
+  }
   const b = expr(s, args[1]);
   if (a.ty.k === "str" && b.ty.k === "str") {
     meet(s.comp, a, b, "`v-model`", n, "equal");
     return boolOf(stringsEqual(a, b));
   }
-  return fail(s.comp, "FV0413", "`v-model` comparison between these types", n);
+  return fail(s.comp, "FV0413", `\`v-model\` of ${describeTy(a.ty)} compared with a value that is ${describeTy(b.ty)}: give the model a string type and each option or control a string \`value\`, or bind \`:checked\` or \`:selected\``, n);
 }
 
 function includeBooleanAttr(s: Scope, args: N[]): Val {

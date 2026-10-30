@@ -14,12 +14,16 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [`upgrading_to_0_13`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html).
 - `linkRoutes` from `ferrovue/link-routes`: `<RouterLink>` and `useRoute()` for an application that navigates on its own, with no router.
   It resolves links as vue-router does, in less than half the bytes of `linkRouter`: [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
+- An `<option>` with no `value` under a `<select>` with `v-model` of a string, and a `v-model` that may be absent on a `<select>` or a radio button.
+  Each is compared as Vue's server compares it: [`v-model` on form controls](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#v-model-on-form-controls).
 
 - `comments` in `ferrovue.config.json`, and `{ comments }` for `attachSsrRender`, keep a template's HTML comments as plugin-vue's `compilerOptions.comments` does.
   The Vite plugin follows plugin-vue's choice: [HTML comments](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#html-comments).
 
 ### Changed
 
+- `v-model` on an `<input>` whose `type` is bound is refused with FV0426, located at the `:type`; 0.13.0 refused it with FV0006, located at no element.
+  [FV0426](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0426).
 - A value joined with `+` or a template literal in an attribute or text is written part by part, with no `String` built for it.
   [Escaping](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 - Generated renderers leave out tests that cannot fail, and compare and add indices and lengths as integers; what they write is the same.
