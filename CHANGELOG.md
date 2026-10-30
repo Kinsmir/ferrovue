@@ -45,6 +45,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#a-router-per-application-a-route-per-request).
 - A `<RouterLink>`'s class keeps the spaces in its active class names, puts index names first and writes an own class equal to them once, as vue-router does.
   0.13.0 trimmed each name, so `active-class=" on "` rendered `on here` where Vue renders `on  here`: [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#configuring-the-routes).
+- An initial value in `<script setup>` that changes state when setup runs, as `const x = (n.value = 5)` or `const stop = watchEffect(…)`, is refused with FV0102 to FV0105.
+  0.13.0 compiled it and rendered the state unchanged, so `{{ n }}` rendered 0 where Vue renders 5: [FV0105](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0105).
 
 ## [0.13.0] - 2026-10-29
 

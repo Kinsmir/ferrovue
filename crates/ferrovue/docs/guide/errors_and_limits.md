@@ -68,7 +68,7 @@ What is refused today, each with an error that names it:
 - custom directives not listed in `clientDirectives`;
 - `watchEffect`, `watch` with `immediate`, `onServerPrefetch`, a top-level `await` of anything but
   a loader (see [`loaders`](crate::guide::loaders#what-is-refused)), and statements in setup that
-  change state;
+  change state, or initial values that do (`const x = (n.value = 5)`, `const y = items.value.push(z)`);
 - `route.meta` and `route.matched`;
 - in a folder of pages: a parameter beside text in one part of a path (`prefix-[id].vue`),
   repeatable and optional catch-all parameters, parameter parsers (`[id=int]`), named views

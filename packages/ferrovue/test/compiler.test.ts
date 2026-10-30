@@ -3018,6 +3018,16 @@ shown.value = props.label;
       /could change what renders/,
     ],
     [
+      "an initial value of setup that changes state",
+      `<script setup lang="ts">
+import { ref } from "vue";
+const count = ref(0);
+const next = (count.value = 5);
+</script>
+<template><b>{{ count }}</b></template>`,
+      /an assignment in the initial value of `next` runs during setup on the server/,
+    ],
+    [
       "a setup binding it cannot evaluate, named like a prop",
       `<script setup lang="ts">
 const props = defineProps<{ label: string }>();
@@ -6248,6 +6258,7 @@ defineProps<{ chip: Chip }>();
     "a runtime props declaration, which has no types": "FV0303",
     "watchEffect, which runs on the server": "FV0103",
     "a setup statement that changes state": "FV0105",
+    "an initial value of setup that changes state": "FV0105",
     "an interface whose name the generated Rust already uses": "FV0318",
     "a strict comparison of a value that may be null or undefined": "FV0626",
     "loose equality between values": "FV0619",
@@ -8755,5 +8766,75 @@ ${setup}
     const out = mounted("const seen = ref(props.n);", `<p v-if="seen > 0">{{ seen }}</p>`);
     expect(out).toContain("let s_seen = props.n;");
     expect(out).toContain("if s_seen as f64 > 0.0 {");
+  });
+});
+
+describe("initial values setup runs on the server", () => {
+  const source = (setup: string, template: string): string => `<script setup lang="ts">
+import { onMounted, onServerPrefetch, reactive, ref, shallowReactive, watch, watchEffect, type Ref } from "vue";
+import { useClipboard, useDebounceFn, useElementSize } from "some-composables";
+const props = defineProps<{ a: number }>();
+const n = ref(0);
+const f = ref(false);
+const list = ref<string[]>(["b", "a"]);
+${setup}
+</script>
+<template>${template}</template>`;
+  const refusal = (setup: string, template = `<p>{{ n }}<b v-if="f">yes</b>{{ list.length }}</p>`): GenError => {
+    try {
+      compile(island(source(setup, template)));
+    } catch (e) {
+      if (e instanceof GenErrors) return e.errors[0] as GenError;
+      if (e instanceof GenError) return e;
+      throw e;
+    }
+    throw new Error("compiled without an error");
+  };
+
+  it.each([
+    ["an assignment to a ref", "const x = (n.value = 5);\nconst y = [(f.value = true)];", "FV0105", /an assignment in the initial value of `x`/],
+    ["`++` of a ref", "const x = n.value++;", "FV0105", /`\+\+` or `--` in the initial value of `x`/],
+    ["an assignment through another name of a ref", "const m = n;\nconst z = (m.value = 3);", "FV0105", /an assignment in the initial value of `z`/],
+    ["an assignment in a destructured value", "const [a] = [(n.value = 2)];", "FV0105", /an assignment in the initial value of `a`/],
+    ["an assignment in an object literal", "const o = { a: (n.value = 2) };", "FV0105", /an assignment in the initial value of `o`/],
+    ["an index assignment", 'const b = (list.value[0] = "z");', "FV0105", /an assignment in the initial value of `b`/],
+    ["`watchEffect`", "const stop = watchEffect(() => { n.value = 7; });", "FV0103", /`watchEffect` in the initial value of `stop` runs once on the server/],
+    ["`watch` with `immediate`", "const stop = watch(() => props.a, (v) => { n.value = v; }, { immediate: true });", "FV0102", /`watch` with `immediate` runs on the server/],
+    ["`onServerPrefetch`", "const h = onServerPrefetch(() => { f.value = true; });", "FV0104", /`onServerPrefetch` fetches on the server/],
+    ["a function of setup that assigns a ref it is given", "function bump(r: Ref<number>) { r.value = 5; }\nconst x = bump(n);", "FV0105", /^components\/X\.vue:9:11: `bump\(\)`, which runs an assignment, in the initial value of `x`/],
+    ["a function of setup that pushes to a list it is given", 'function add(l: string[]) { l.push("b"); }\nconst x = add(list.value);', "FV0105", /`add\(\)`, which runs `push\(\)` of a value of setup/],
+    ["a function of setup that gives a library a ref it is given", 'import { mutate } from "some-lib";\nfunction g(r: unknown) { return mutate(r); }\nconst x = g(n);', "FV0105", /`g\(\)`, which runs `mutate\(\)`, given a value of setup/],
+    ["`Object.assign` of a ref", "const z = Object.assign(n, { value: 8 });", "FV0105", /`assign\(\)`, given a value of setup, in the initial value of `z`/],
+    ["a method of an object of setup", "const o = { set() { n.value = 4; } };\nconst y = o.set();", "FV0105", /`set\(\)` of a value of setup in the initial value of `y`/],
+    ["`push` to a reactive object's list", 'const s = reactive({ items: ["a"] });\nconst a = s.items.push("b");', "FV0105", /`push\(\)` of a value of setup/],
+    ["`push` to a shallow reactive object's list", "const s = shallowReactive({ items: [1] });\nconst a = s.items.push(2);", "FV0105", /`push\(\)` of a value of setup/],
+    ["an assignment to a reactive object", 'const s = reactive({ label: "x" });\nconst c = (s.label = "y");', "FV0105", /an assignment in the initial value of `c`/],
+    ["`splice` of a ref's list", "const b = list.value.splice(0, 1);", "FV0105", /`splice\(\)` of a value of setup/],
+    ["`delete` of a reactive object's field", "const o = reactive<{ k?: number }>({ k: 1 });\nconst x = delete o.k;", "FV0105", /`delete` in the initial value of `x`/],
+    ["an assignment in a callback a list method runs", "const items = ref([{ done: false }]);\nconst x = items.value.map((i) => { i.done = true; return i; });", "FV0105", /an assignment in the initial value of `x`/],
+    ["an assignment to a `let` of setup in a callback", "let total = 0;\nconst x = [1, 2].forEach((v) => { total += v; });", "FV0105", /an assignment in the initial value of `x`/],
+    ["a library's call given a callback that assigns a ref", 'import { runNow } from "some-lib";\nconst x = runNow(() => { n.value = 3; });', "FV0105", /an assignment in the initial value of `x`/],
+    ["a library's call given a function of setup that assigns a ref", 'import { runNow } from "some-lib";\nfunction set() { n.value = 3; }\nconst x = runNow(set);', "FV0105", /`set\(\)`, which runs an assignment, in the initial value of `x`/],
+    ["a library's call given a ref", 'import { runNow } from "some-lib";\nconst x = runNow(n);', "FV0105", /`runNow\(\)`, given a value of setup, in the initial value of `x`/],
+    ["an emit", 'const emit = defineEmits<{ "update:modelValue": [v: number] }>();\nconst x = emit("update:modelValue", 5);', "FV0105", /`emit\(\)` in the initial value of `x`/],
+    ["an assignment to a `defineModel` ref", "const model = defineModel<number>({ default: 0 });\nconst x = (model.value = 5);", "FV0105", /an assignment in the initial value of `x`/],
+  ])("refuses %s", (_, setup, code, message) => {
+    const e = refusal(setup);
+    expect(e.code).toBe(code);
+    expect(e.message).toMatch(message);
+    expect(e.message).toMatch(/^components\/X\.vue:\d+:\d+: /);
+  });
+
+  it.each([
+    ["a template ref and a hook", "const el = ref<HTMLElement | null>(null);\nconst stop = onMounted(() => { el.value?.focus(); });"],
+    ["event handlers", "const onClick = () => { n.value++; };\nconst handlers = { click: () => { n.value++; } };\nfunction reset() { n.value = 0; }"],
+    ["a `watch` without `immediate`", "const stop = watch(n, () => { f.value = true; });"],
+    ["composables given no state, or a template ref", "const el = ref<HTMLElement | null>(null);\nconst { copy } = useClipboard();\nconst { width } = useElementSize(el);"],
+    ["a composable given a callback that reads state, or a function of setup that does", "const log = useDebounceFn(() => console.log(n.value, list.value.length), 100);\nfunction twice(x: number) { return x * 2; }\nconst later = useDebounceFn(twice, 100);"],
+    ["copies sorted or reversed", "const sorted = [...list.value].sort();\nconst back = list.value.slice().reverse();\nconst clone = JSON.parse(JSON.stringify(list.value));"],
+    ["a timer that writes later", "const t = setTimeout(() => { n.value++; }, 10);"],
+    ["a function that writes only its own values", 'const made = (() => { const m = new Map<string, number>(); m.set("a", 1); return m; })();\nconst at = Date.now();'],
+  ])("compiles %s it does not render", (_, setup) => {
+    expect(compile(island(source(setup, `<p>{{ n }}<b v-if="f">yes</b>{{ list.length }}</p>`))).get("x.rs")).toContain("pub fn render");
   });
 });
