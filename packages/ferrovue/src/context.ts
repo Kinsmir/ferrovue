@@ -46,6 +46,12 @@ function closest(key: string, known: readonly string[]): string | null {
   return best;
 }
 
+/** Whether the HTML comments of templates render under `config`: its `comments`, or, as Vue
+ * decides it, whether plugin-vue compiles for development. */
+export function templateComments(config: Pick<Config, "comments" | "isProduction">): boolean {
+  return config.comments ?? !(config.isProduction ?? true);
+}
+
 /** Check what a configuration file holds against `schema`, naming the first key that is unknown or
  * of the wrong shape, and handing `warn` a warning for each deprecated key. */
 export function checkConfig(raw: unknown, file: string, warn: (warning: GenError) => void, schema: Schema = CONFIG_SCHEMA): Config {
@@ -103,6 +109,7 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
     }
   }
   if (raw.isProduction !== undefined && typeof raw.isProduction !== "boolean") wrong("isProduction", "`true` or `false`: whether `@vitejs/plugin-vue` compiles for production");
+  if (raw.comments !== undefined && typeof raw.comments !== "boolean") wrong("comments", "`true` or `false`: whether the HTML comments of templates render");
   if (raw.cssModules !== undefined) {
     const m = raw.cssModules;
     if (!isObject(m)) return wrong("cssModules", "an object: `{ generateScopedName, hashPrefix?, context? }`");
@@ -208,6 +215,7 @@ export const ctx = {
   unions: new Map<string, string>(),
   mappedUnions: new Map<string, EnumDef>(),
   builders: true,
+  comments: false,
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),

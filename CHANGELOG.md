@@ -15,6 +15,9 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - `linkRoutes` from `ferrovue/link-routes`: `<RouterLink>` and `useRoute()` for an application that navigates on its own, with no router.
   It resolves links as vue-router does, in less than half the bytes of `linkRouter`: [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
 
+- `comments` in `ferrovue.config.json`, and `{ comments }` for `attachSsrRender`, keep a template's HTML comments as plugin-vue's `compilerOptions.comments` does.
+  The Vite plugin follows plugin-vue's choice: [HTML comments](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#html-comments).
+
 ### Changed
 
 - A value joined with `+` or a template literal in an attribute or text is written part by part, with no `String` built for it.
@@ -33,6 +36,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
+- A template's HTML comments render as `comments` or `isProduction` in `ferrovue.config.json` say, left out by default as Vue's production build leaves them out.
+  0.13.0 kept or left them out by `NODE_ENV`: [HTML comments](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#html-comments).
 - A field read by a key of a union that a `?:` narrows to some of its members compiles; 0.13.0 stopped with a `TypeError`.
   [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
 - `$slots` read in `<script setup>`, where Vue defines no such name, is refused with FV0601; 0.13.0 read it as the template's `$slots`.

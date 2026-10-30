@@ -9,6 +9,7 @@ export interface Config {
     $schema?: string;
     builders?: boolean;
     clientDirectives?: string[];
+    comments?: boolean;
     components: string;
     cssModules?: {
         generateScopedName: string;

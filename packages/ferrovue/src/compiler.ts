@@ -2,7 +2,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "nod
 import { basename, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
-import { ctx, JS_DATE, tyOfName } from "./context.ts";
+import { ctx, JS_DATE, templateComments, tyOfName } from "./context.ts";
 import { refuseUnusedUnions } from "./enums.ts";
 import { type Component, failIn, snake } from "./model.ts";
 import { GenError, GenErrors } from "./errors.ts";
@@ -65,6 +65,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.unions = new Map(Object.entries(config.unions ?? {}));
   ctx.mappedUnions = new Map();
   ctx.builders = config.builders ?? true;
+  ctx.comments = templateComments(config);
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
   ctx.vnodeTag = null;

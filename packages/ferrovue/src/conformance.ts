@@ -10,7 +10,7 @@ import { allPages, fileRoutes, pagesFolder, routeEntries } from "./file-routes.t
 import { type DatePlans, withDatePlans } from "./date-plans.ts";
 import { fixtureApp, readFixture, type RouterOptions } from "./testing-browser.ts";
 import type { RouteEntry } from "./route-records.ts";
-import { ctx } from "./context.ts";
+import { ctx, templateComments } from "./context.ts";
 import { consoleInto, warnInto } from "./problems.ts";
 import { headRendered, settled } from "./settle.ts";
 import { attachSsrRender } from "./ssr.ts";
@@ -283,7 +283,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
   const given = componentsByName(options.components, pages);
   for (const [name, component] of given) {
     const source = sources.get(name);
-    if (source) attachSsrRender(source, name, component);
+    if (source) attachSsrRender(source, name, component, { comments: templateComments(config) });
   }
   const cases = casesIn(fixtures);
   const { routes, options: configured } = fixtureOptions(root, config);

@@ -551,6 +551,9 @@ differed. The usual causes:
   [`numbers`](crate::guide::numbers).
 - **Markup the browser rewrites.** HTML the parser moves or closes, such as a `<div>` inside a
   `<p>`, does not survive parsing in either renderer; Vue's own SSR has the same constraint.
+- **Comments the client keeps.** A client built by Vite's dev server keeps a template's HTML
+  comments, and the server leaves them out unless `ferrovue.config.json` keeps them too. See
+  [HTML comments](crate::guide::generated_code#html-comments).
 - **Content written around a component.** A slot closure or a hand-written page part that is not
   what the client's template would render inside the hydrated root.
 

@@ -5,10 +5,11 @@ import { defineConfig } from "vitest/config";
 
 const conformance = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/conformance/ferrovue.config.json", import.meta.url), "utf8")) as {
   cssModules: { generateScopedName: string };
+  comments: boolean;
 };
 
 export default defineConfig({
-  plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
+  plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: conformance.comments } } })],
   css: { modules: { generateScopedName: conformance.cssModules.generateScopedName } },
   resolve: { alias: [{ find: /^ferrovue$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
   test: {

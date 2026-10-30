@@ -127,6 +127,30 @@ it("fails a build whose `v-bind()` variables plugin-vue names otherwise, and war
   expect(() => started(ferrovue({ root }), vite("build", { componentIdGenerator: "filepath" }))).toThrow(/compiles for production, where ferrovue\.config\.json has `"isProduction": false`/);
 });
 
+it("writes a template's comments as plugin-vue keeps them on the dev server, and fails a build in which the configuration differs", () => {
+  writeFileSync(join(root, "components", "Hello.vue"), good.replace("<p>", "<!-- note --><p>"));
+  const vite = (command: "build" | "serve", compilerOptions: Record<string, unknown> = {}) => ({
+    plugins: [{ name: "vite:vue", api: { options: { template: { compilerOptions } } } }],
+    root,
+    isProduction: command === "build",
+    command,
+  });
+  const hello = (): string => readFileSync(join(root, "gen", "hello.rs"), "utf8");
+  expect(started(ferrovue({ root }), vite("build"))).toEqual([]);
+  expect(hello()).not.toContain("note");
+  expect(started(ferrovue({ root }), vite("serve"))).toEqual([]);
+  expect(hello()).toContain("<!-- note -->");
+  expect(started(ferrovue({ root }), vite("serve", { comments: false }))).toEqual([]);
+  expect(hello()).not.toContain("note");
+  expect(() => started(ferrovue({ root }), vite("build", { comments: true }))).toThrow(/the HTML comments of templates: @vitejs\/plugin-vue keeps them, where ferrovue\.config\.json leaves them out; set `"comments": true` in ferrovue\.config\.json/);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", comments: true }));
+  expect(started(ferrovue({ root }), vite("build", { comments: true }))).toEqual([]);
+  expect(hello()).toContain("<!-- note -->");
+  expect(() => started(ferrovue({ root }), vite("build"))).toThrow(/plugin-vue leaves them out, where ferrovue\.config\.json keeps them; set `"comments": false`/);
+  writeFileSync(join(root, "components", "Hello.vue"), good);
+  expect(started(ferrovue({ root }), vite("build"))).toEqual([]);
+});
+
 it("fails a build whose CSS modules Vite names otherwise than the configuration", () => {
   const pattern = "[local]_[hash:base64:5]";
   writeFileSync(join(root, "components", "Hello.vue"), `<template><p :class="$style.hi">hi</p></template>\n<style module>.hi { color: red }</style>`);

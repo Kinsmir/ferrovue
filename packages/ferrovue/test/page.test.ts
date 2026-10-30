@@ -9,7 +9,7 @@ import { clearLoads, defineLoader } from "../src/client.ts";
 import { hydrateRecordedPage, renderRecordedPage } from "../src/testing-browser.ts";
 import { linkRouter } from "../src/link-router.ts";
 import { attachSsrRender } from "../src/ssr.ts";
-import { CLIENT_ONLY, ROOT } from "./conformance-cases.ts";
+import { CLIENT_ONLY, COMMENTS, ROOT } from "./conformance-cases.ts";
 
 const WRITE = process.env.FERROVUE_FIXTURES_WRITE === "1";
 const PAGES = join(ROOT, "pages");
@@ -20,7 +20,7 @@ const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrov
 const components: Record<string, Component> = Object.fromEntries(
   Object.entries(modules).map(([path, m]) => [path.replace(/^.*\/(\w+)\.vue$/, "$1"), m.default]),
 );
-for (const [name, component] of Object.entries(components)) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component);
+for (const [name, component] of Object.entries(components)) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component, { comments: COMMENTS });
 
 interface PageFixture {
   name: string;

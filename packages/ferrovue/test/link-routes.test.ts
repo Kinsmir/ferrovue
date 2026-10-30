@@ -10,7 +10,7 @@ import { type RouteEntry } from "../src/route-records.ts";
 import { attachSsrRender } from "../src/ssr.ts";
 import { fixtureApp } from "../src/testing-browser.ts";
 import { hydrationBody, renderFixture } from "../src/conformance.ts";
-import { cases, fixtureOf, OPTIONS, ROOT, ROUTES } from "./conformance-cases.ts";
+import { cases, COMMENTS, fixtureOf, OPTIONS, ROOT, ROUTES } from "./conformance-cases.ts";
 
 type Navigate = LinkRoutesOptions["navigate"];
 
@@ -517,7 +517,7 @@ async function lightApp(c: (typeof cases)[number], hydrate: boolean): Promise<Ap
 }
 
 describe("the conformance fixtures that read the route", () => {
-  for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component);
+  for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component, { comments: COMMENTS });
   it("covers every routed component but the one with a RouterView", () => {
     expect(ROUTED.length).toBeGreaterThanOrEqual(40);
   });

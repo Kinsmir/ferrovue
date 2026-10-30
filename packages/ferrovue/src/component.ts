@@ -281,7 +281,7 @@ export function refuseOptionsApi(comp: Component, script: N, isChild: boolean): 
  * further than its `<script>`, `optionsApi`, for `refuseOptionsApi` once every component is read. */
 export function readComponent(file: string, root: string, name = basename(file, ".vue")): { comp: Component; ast: N[]; ssr: string; optionsApi?: N } {
   const source = readSource(file);
-  const { descriptor, errors } = parseSfc(source, { filename: file });
+  const { descriptor, errors } = parseSfc(source, { filename: file, templateParseOptions: { comments: ctx.comments } });
   const rel = relativePath(root, file);
   const comp = blankComponent(name, snake(name), rel);
   comp.source = source;
@@ -400,7 +400,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
     filename: file,
     ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false, ssrCssVars: [], isProd: true }),
     ssr: true,
-    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), sourceMap: true, nodeTransforms: [mergedControls(controls)] },
+    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), comments: ctx.comments, sourceMap: true, nodeTransforms: [mergedControls(controls)] },
   });
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
   const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];

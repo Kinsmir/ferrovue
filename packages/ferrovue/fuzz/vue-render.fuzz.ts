@@ -4,6 +4,7 @@ import { it } from "vitest";
 import type { Component } from "vue";
 import type { Config } from "../src/config.ts";
 import { datePlansOf, fixtureOptions, renderFixture } from "../src/conformance.ts";
+import { templateComments } from "../src/context.ts";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
 import { attachSsrRender } from "../src/ssr.ts";
 import { fixtureApp, readFixture } from "../src/testing-browser.ts";
@@ -28,10 +29,10 @@ it("renders every fixture", async () => {
         const dir = dirname(c.file);
         for (const f of readdirSync(dir).filter((f) => f.endsWith(".vue") && join(dir, f) !== c.file)) {
           const helper = (await import(/* @vite-ignore */ join(dir, f))) as { default: Component };
-          attachSsrRender(join(dir, f), basename(f, ".vue"), helper.default);
+          attachSsrRender(join(dir, f), basename(f, ".vue"), helper.default, { comments: templateComments(c.config) });
         }
         const m = (await import(/* @vite-ignore */ c.file)) as { default: Component };
-        attachSsrRender(c.file, c.name, m.default);
+        attachSsrRender(c.file, c.name, m.default, { comments: templateComments(c.config) });
         return m.default;
       })();
       loaded.set(c.file, p);

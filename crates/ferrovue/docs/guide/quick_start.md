@@ -55,6 +55,7 @@ network access, point it at the installed package: `"./node_modules/ferrovue/sch
 | `scopeId` | no | How a `<style scoped>` id is hashed, as `@vitejs/plugin-vue` hashes it: `"filepath-source"` (the default, the plugin's in a production build) or `"filepath"`. See [`scoped_styles`](crate::guide::scoped_styles) |
 | `viteRoot` | no | Vite's root, relative to this file's directory, from which a component's path is hashed for its scope id (default `.`) |
 | `isProduction` | no | Whether `@vitejs/plugin-vue` compiles for production, as Vite's `isProduction`: `true` (the default) for `vite build`, `false` for the dev server. It names the variables `v-bind()` in `<style>` sets. See [`scoped_styles`](crate::guide::scoped_styles#v-bind-in-style) |
+| `comments` | no | Whether templates' HTML comments render, as plugin-vue's `template.compilerOptions.comments`: by default kept when `isProduction` is `false` and left out otherwise. See [`generated_code`](crate::guide::generated_code#html-comments) |
 | `cssModules` | no | `{ generateScopedName, hashPrefix?, context? }`, as Vite's `css.modules` names CSS module classes: needed for `<style module>`. `context` is the directory Vite runs in (default `viteRoot`). See [`scoped_styles`](crate::guide::scoped_styles#css-modules) |
 | `builders` | no | `false` leaves out each props struct's and shared type's `new()` and setters, for an app that builds its props as struct literals (default `true`). See [`props`](crate::guide::props#building-props) |
 

@@ -4,6 +4,8 @@ import { Bench } from "tinybench";
 import { expect, it } from "vitest";
 import { createSSRApp, version as vueVersion, type App, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
+import { loadConfig } from "../src/config.ts";
+import { templateComments } from "../src/context.ts";
 import { attachSsrRender } from "../src/ssr.ts";
 import { fixtureApp } from "../src/testing-browser.ts";
 import { type RouteEntry } from "../src/route-records.ts";
@@ -20,7 +22,7 @@ const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrov
 const components = new Map(
   Object.entries(modules).map(([path, m]) => [path.replace(/^.*\/(\w+)\.vue$/, "$1"), m.default]),
 );
-for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component);
+for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component, { comments: templateComments(loadConfig(ROOT)) });
 
 interface TreeProps {
   label: string;

@@ -103,7 +103,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(313 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + 4 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
+    out.reserve(295 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + 4 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
     let fv_tag = match props.tag { TagContentTag::Div => "div", TagContentTag::Form => "form" };
     out.push('<');
     out.push_str(fv_tag);
@@ -194,7 +194,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if !props.on {
         out.push_str(" disabled");
     }
-    out.push_str(" type=\"button\">b</button><!-- a comment --><img alt");
+    out.push_str(" type=\"button\">b</button><img alt");
     if props.label.is_empty() {
         out.push_str(" src");
     } else {

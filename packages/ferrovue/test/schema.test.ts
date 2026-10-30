@@ -132,6 +132,7 @@ const FULL = {
   scopeId: "filepath",
   viteRoot: ".",
   isProduction: false,
+  comments: true,
   cssModules: { generateScopedName: "[local]_[hash:base64:5]", hashPrefix: "p", context: "." },
   builders: false,
 };

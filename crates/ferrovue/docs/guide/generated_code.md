@@ -358,6 +358,35 @@ component that renders it: the content of the `<textarea>`, or its `v-model`, an
 do arrive. A parent that passes `value` or `type`, a bound or `radio` `type`, and a checkbox bound to
 a list are refused ([FV0424](crate::guide::error_codes#fv0424)).
 
+# HTML comments
+
+A template's HTML comments (`<!-- note -->`) render as the client build treats them.
+`@vitejs/plugin-vue` leaves them out of a production build and keeps them on the dev server, and its
+`template.compilerOptions.comments` sets either for both. The compiler decides it from
+`ferrovue.config.json` alone: `comments` when it is set, and otherwise whether `isProduction` is
+`false`. With neither key, the comments are left out, as in the production build the server ships
+with.
+
+| `@vitejs/plugin-vue` | `ferrovue.config.json` |
+|---|---|
+| `vite build` | neither key (comments left out) |
+| the dev server | `"isProduction": false` or `"comments": true` |
+| `template: { compilerOptions: { comments: true } }` | `"comments": true` |
+
+A comment left out changes more than the text: a component whose root element has a comment beside
+it has a single root in production, which a parent's class and other attributes fall through onto.
+A comment kept is written as Vue writes it, and a comment beside the root makes the root a fragment,
+written between `<!--[-->` and `<!--]-->`; attributes a parent passes still reach the one element
+in it, as in Vue's development build. A comment between `v-if` and `v-else` belongs to the branch
+after it.
+
+The Vite plugin reads plugin-vue's choice. The dev server writes the modules with the comments its
+client keeps, and a build fails when `ferrovue.config.json` decides otherwise than plugin-vue, so that
+`vite build` and the `ferrovue` command write the same modules; run `pnpm ferrovue` again before
+committing modules the dev server wrote. `attachSsrRender` from `ferrovue/testing/ssr` takes
+`{ comments }` for the same choice, and the conformance suite of `ferrovue/testing` passes the
+configuration's.
+
 # `<component :is>`
 
 `<component :is>` compiles when every value it can take is known when compiling. Each of these is

@@ -3,6 +3,7 @@ import { join, posix, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 import { type Alias, write, type Written } from "./compiler.ts";
 import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
+import { templateComments } from "./context.ts";
 import { type GenError } from "./errors.ts";
 import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { allPages, fileRoutes, pagesFolder } from "./file-routes.ts";
@@ -40,6 +41,16 @@ export function vueScopeIds(config: ResolvedConfig): { mode: "filepath" | "filep
   const generator = (vue?.api as { options?: { features?: { componentIdGenerator?: unknown } } } | undefined)?.options?.features?.componentIdGenerator;
   if (!vue || (generator !== undefined && generator !== "filepath" && generator !== "filepath-source")) return null;
   return { mode: generator ?? (config.isProduction ? "filepath-source" : "filepath"), root: resolve(config.root), production: config.isProduction };
+}
+
+/** Whether `@vitejs/plugin-vue`, as this build configures it, renders the HTML comments of
+ * templates: its `template.compilerOptions.comments`, or, as Vue decides it, whether it compiles
+ * for development. `null` without the plugin. */
+function vueComments(config: Pick<ResolvedConfig, "plugins" | "isProduction">): boolean | null {
+  const vue = config.plugins.find((p) => p.name === "vite:vue");
+  if (!vue) return null;
+  const set = (vue.api as { options?: { template?: { compilerOptions?: { comments?: unknown } } } } | undefined)?.options?.template?.compilerOptions?.comments;
+  return typeof set === "boolean" ? set : !config.isProduction;
 }
 
 function componentSources(root: string, config: Config): string[] {
@@ -86,6 +97,20 @@ export function scopeIdMismatch(root: string, vue: { mode: string; root: string;
     return `\`v-bind()\` in \`<style>\`: @vitejs/plugin-vue compiles ${vue.production ? "for production" : "for development"}, where ${configFile} has \`"isProduction": ${production}\`; set \`isProduction\` to ${vue.production}`;
   }
   return null;
+}
+
+const COMMENT = /<template\b[^]*<!--[^]*<\/template>/;
+
+/** Why the server would render the HTML comments of templates otherwise than the client, when a
+ * component's template has one and plugin-vue keeps them, `vue`, where the configuration,
+ * `configFile`, leaves them out, or the other way round. */
+function commentsMismatch(root: string, vue: boolean | null, configFile = CONFIG_FILE): string | null {
+  if (vue === null) return null;
+  const config = loadConfig(root, configFile, ignore);
+  const own = templateComments(config);
+  if (own === vue || !componentSources(root, config).some((s) => COMMENT.test(s))) return null;
+  const kept = (on: boolean): string => (on ? "keeps them" : "leaves them out");
+  return `the HTML comments of templates: @vitejs/plugin-vue ${kept(vue)}, where ${configFile} ${kept(own)}; set \`"comments": ${vue}\` in ${configFile}`;
 }
 
 /** Why the class names of the server's CSS modules would differ from those Vite gives the client,
@@ -201,7 +226,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     let config: Config | null = null;
     try {
       config = loadConfig(root, configFile, warn);
-      const written = write(root, config, { aliases });
+      const written = write(root, building || comments === null ? config : { ...config, comments }, { aliases });
       islands = written.islands;
       return written;
     } finally {
@@ -214,6 +239,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     return routesModule(root, fileRoutes(root, pages));
   };
   let vue: ReturnType<typeof vueScopeIds> = null;
+  let comments: boolean | null = null;
   let aliases: readonly Alias[] = [];
   let css: ResolvedConfig["css"] | undefined;
   let building = true;
@@ -236,6 +262,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     configResolved(config) {
       readsImportedTypes(config);
       vue = vueScopeIds(config);
+      comments = vueComments(config);
       aliases = config.resolve.alias;
       css = config.css;
       building = config.command === "build";
@@ -243,7 +270,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     buildStart() {
       try {
         regenerate((w) => this.warn(formatWarning(w)));
-        const mismatch = scopeIdMismatch(root, vue, configFile) ?? cssModulesMismatch(root, css, process.cwd(), configFile);
+        const mismatch = scopeIdMismatch(root, vue, configFile) ?? cssModulesMismatch(root, css, process.cwd(), configFile) ?? (building ? commentsMismatch(root, comments, configFile) : null);
         if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
         if (mismatch) this.warn(`ferrovue: ${mismatch}`);
       } catch (e) {

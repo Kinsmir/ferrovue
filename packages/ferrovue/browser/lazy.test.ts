@@ -5,7 +5,7 @@ import { escapeHtml } from "@vue/shared";
 import { chromium, firefox, webkit, type Browser, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ROOT } from "../test/conformance-cases.ts";
+import { COMMENTS, ROOT } from "../test/conformance-cases.ts";
 
 const ORIGIN = "http://lazy.test";
 const LAUNCHERS = { chromium, firefox, webkit };
@@ -33,7 +33,7 @@ beforeAll(async () => {
     configFile: false,
     root: import.meta.dirname,
     logLevel: "warn",
-    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
+    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: COMMENTS } } })],
     build: {
       write: false,
       minify: false,
