@@ -708,7 +708,7 @@ Each component's Rust module holds its own structs, so an interface declared in 
 
 Prop given a value of another type.
 
-The prop's Rust type cannot hold the value, and Vue would hand it to the child as it is, so the child would read another type than it declares. The message names both types. Pass a value of the prop's type, convert it where it is passed, or change the prop's declared type.
+The prop's Rust type cannot hold the value, and Vue would hand it to the child as it is, so the child would read another type than it declares. The message names both types. Pass a value of the prop's type, convert it where it is passed, or change the prop's declared type. A `boolean` prop takes `true` from an attribute written bare, `""` or the prop's name in kebab-case, which Vue casts; any other string reaches the child as a string.
 
 ## FV0512
 

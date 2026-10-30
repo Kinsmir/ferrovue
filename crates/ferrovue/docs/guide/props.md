@@ -96,6 +96,15 @@ other props), `mergeProps` leaves such a prop out when its value is falsy (`0`, 
 A required one that may be falsy there is refused (FV0517), and so is one given twice (FV0516).
 Elsewhere the value is passed on as written.
 
+# Boolean props given as attributes
+
+Vue casts a string given to a prop whose type is `Boolean` to `true` when the string is empty or is
+the prop's name in kebab-case, and the generated code passes `true` for it. So a child's `boolean`
+prop is `true` when the parent writes it bare (`<Button disabled />`), as `disabled=""` or
+`:disabled="''"`, or as its own name (`disabled="disabled"`, `is-open="is-open"` for `isOpen`), in
+an attribute or in `v-bind` of an object. Vue hands any other string to the child as it is, so that
+is refused (FV0511). A `boolean` prop the parent leaves out is `false`.
+
 # Optional props and defaults
 
 An optional prop is an `Option`, `None` unless its setter is called. A default from `withDefaults`

@@ -38,6 +38,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 - A template's HTML comments render as `comments` or `isProduction` in `ferrovue.config.json` say, left out by default as Vue's production build leaves them out.
   0.13.0 kept or left them out by `NODE_ENV`: [HTML comments](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#html-comments).
+- A child's `boolean` prop written bare (`<Button disabled />`), as `""` or as its kebab-case name is `true`, as Vue casts it; 0.13.0 refused it with FV0511.
+  [Boolean props given as attributes](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#boolean-props-given-as-attributes).
 - A field read by a key of a union that a `?:` narrows to some of its members compiles; 0.13.0 stopped with a `TypeError`.
   [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
 - `$slots` read in `<script setup>`, where Vue defines no such name, is refused with FV0601; 0.13.0 read it as the template's `$slots`.

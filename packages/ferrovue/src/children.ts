@@ -1,4 +1,4 @@
-import { isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
+import { hyphenate, isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
 import { type Component, type Field, type N, type Scope, type StructTy, type Ty, type Val, absence, camelize, declares, enumItems, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
@@ -99,7 +99,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
           if (twin) fail(s.comp, "FV0517", `\`${key}\`, a prop of ${child.name}, a Rust twin, is named like a listener, which Vue's \`mergeProps\` leaves out when it is falsy: rename the prop`, p);
           heard.add(field.js);
         }
-        given.set(field.js, p.value);
+        given.set(field.js, castToTrue(field, p.value) ? { type: "BooleanLiteral", value: true, loc: p.value.loc, start: p.value.start, end: p.value.end, __fv: p.value.__fv } : p.value);
         continue;
       }
       if (array(key)) fail(s.comp, "FV0505", `an attribute named \`${key}\`, which JavaScript would put before the others`, p);
@@ -126,6 +126,16 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     return fieldInit(f.rust, heard.has(f.js) ? mergedListener(s, child, f, want, v, code, node) : code);
   });
   callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
+}
+
+/** Whether Vue's boolean casting turns `value`, given to the prop `f`, into `true`: the prop's
+ * runtime type is `Boolean`, and the value is `""` (the attribute written bare) or the prop's name in
+ * kebab-case. */
+function castToTrue(f: Field, value: N): boolean {
+  const ty = f.ty.k === "opt" ? f.ty.of : f.ty;
+  if (ty.k !== "bool") return false;
+  const text = value.type === "StringLiteral" ? value.value : value.type === "TemplateLiteral" && value.expressions.length === 0 ? value.quasis[0].value.cooked : null;
+  return text === "" || text === hyphenate(camelize(f.js));
 }
 
 /** What `v`, a reference to a value of the prop `f` of type `ty`, passes when it is truthy: null when
