@@ -34,6 +34,30 @@ const PATCHED: Record<string, { browsers?: string[]; server: string; hydrated: s
       hydrated: '<i style="--d9e366c1-tone: maroon; --d9e366c1-size: 2;">a</i><i style="--d9e366c1-tone: maroon; --d9e366c1-size: 2;">b</i>',
     },
   ],
+  "CheckboxValues/empty.json": [
+    {
+      server: `<form><input type="checkbox"><input type="checkbox" checked=""><input type="checkbox" checked=""></form>`,
+      hydrated: `<form><input type="checkbox" true-value="yes" false-value="no"><input type="checkbox" checked="" true-value="" false-value=""><input type="checkbox" checked="" true-value=""></form>`,
+    },
+  ],
+  "CheckboxValues/hostile.json": [
+    {
+      server: `<form><input type="checkbox"><input type="checkbox" checked=""><input type="checkbox" checked=""></form>`,
+      hydrated: `<form><input type="checkbox" true-value="yes" false-value="no"><input type="checkbox" checked="" true-value="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;" false-value="&amp;amp;&lt;b&gt;'"><input type="checkbox" checked="" true-value="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;"></form>`,
+    },
+  ],
+  "CheckboxValues/typical.json": [
+    {
+      server: `<form><input type="checkbox" checked=""><input type="checkbox" checked=""><input type="checkbox" checked=""></form>`,
+      hydrated: `<form><input type="checkbox" checked="" true-value="yes" false-value="no"><input type="checkbox" checked="" true-value="yes" false-value="no"><input type="checkbox" checked="" true-value="yes"></form>`,
+    },
+  ],
+  "CheckboxValues/unchecked.json": [
+    {
+      server: `<form><input type="checkbox"><input type="checkbox"><input type="checkbox"></form>`,
+      hydrated: `<form><input type="checkbox" true-value="yes" false-value="no"><input type="checkbox" true-value="yes" false-value="no"><input type="checkbox" true-value="yes"></form>`,
+    },
+  ],
   "AttrQuirks/absent.json": [{ server: `a^="x">keys`, hydrated: `a^="x" value="x">keys` }],
   "AttrQuirks/empty.json": [{ server: `a^="">keys`, hydrated: `a^="" value="">keys` }],
   "AttrQuirks/full.json": [{ server: `a^="Go">keys`, hydrated: `a^="Go" value="Go">keys` }],
