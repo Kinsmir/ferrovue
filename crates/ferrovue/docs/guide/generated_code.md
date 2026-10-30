@@ -595,6 +595,11 @@ attribute bound to `test ? "literal" : undefined` as the literal inside `if test
 and a `.length` are compared and added as `i64`: a count of what fits in memory is far below 2⁵³,
 where the `i64` and JavaScript's number are the same.
 
+A `ref` seeded with a number, a boolean, a string literal, `null` or `undefined` has no local. Setup
+may write a ref only where the server never runs the write, as in `onMounted` or an event handler,
+so the server renders the seed. The render reads the value in its place and keeps only the branch
+it takes: `const fresh = ref(0)` makes `v-if="fresh > 0"` an `<!---->`.
+
 # `render_json`, for your own conformance tests
 
 `mod.rs` has, under `#[cfg(test)]`, a `render_json(component, json)` that renders a component by

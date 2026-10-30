@@ -6691,7 +6691,7 @@ function bump() {
 }
 </script>
 <template><button @click="bump">{{ count }}</button></template>`)).get("x.rs")!;
-    expect(out).toContain("fv::core::push_int(out, s_count)");
+    expect(out).toContain('out.push_str("<button>0</button>");');
   });
 
   it("binds each argument once, in order, and gives a missing one its default", () => {
@@ -7035,7 +7035,7 @@ const theme = useCssModule("theme");
 <style module="theme">.b { color: red }</style>`),
       MODULES,
     ).get("x.rs")!;
-    expect(out).toContain('fv::attrs::class_into(out, false, &["a_x", "b_x"]);\n    out.push_str("\\">a-b_x</p>");');
+    expect(out).toContain('out.push_str("<p class=\\"a_x b_x\\">a-b_x</p>");');
   });
 
   it("refuses a module bound whole", () => {
@@ -8709,5 +8709,40 @@ defineProps<{ note?: string; kind: Kind; mark: Mark; eager: boolean; on: boolean
     expect(out).toContain("if !props.flair.is_empty() {");
     expect(out).toContain('for fv_part in props.parts.iter() {\n        out.push_str("<i>");');
     expect(out).not.toContain("_ref");
+  });
+});
+
+describe("refs the browser alone writes", () => {
+  const mounted = (setup: string, template: string): string =>
+    compile(
+      island(`<script setup lang="ts">
+import { onMounted, ref } from "vue";
+const props = defineProps<{ n: number; items: string[] }>();
+${setup}
+</script>
+<template>${template}</template>`),
+    ).get("x.rs")!;
+
+  it("folds a test of a ref seeded with a number or a boolean, which the server renders with that value", () => {
+    const out = mounted(
+      "const fresh = ref(0);\nconst live = ref(false);\nonMounted(() => { fresh.value = 3; live.value = true; });",
+      `<div><span v-if="fresh > 0" :title="fresh + ' new'">+{{ fresh }}</span><i v-for="(item, i) in items" :class="[live && i !== 0 ? 'hidden' : '']">{{ item }}</i></div>`,
+    );
+    expect(out).toContain('out.push_str("<div><!----><!--[-->");');
+    expect(out).toContain('out.push_str("<i class=\\"\\">");');
+    expect(out).not.toContain("s_fresh");
+    expect(out).not.toContain("s_live");
+    expect(out).not.toContain("format!");
+  });
+
+  it("folds `NaN`, `-0` and fractions as JavaScript compares and writes them", () => {
+    const out = mounted("const m = ref(NaN);\nconst z = ref(-0);\nconst r = ref(1.5);", `<p v-if="m">a</p><p v-if="m !== m">{{ m }}|{{ 1 / z }}|{{ r > 1 }}|{{ r * 2 }}</p>`);
+    expect(out).toContain('out.push_str("<!--[--><!----><p>NaN|-Infinity|true|3</p><!--]-->");');
+  });
+
+  it("binds a ref seeded from a prop, whose value the server knows only when rendering", () => {
+    const out = mounted("const seen = ref(props.n);", `<p v-if="seen > 0">{{ seen }}</p>`);
+    expect(out).toContain("let s_seen = props.n;");
+    expect(out).toContain("if s_seen as f64 > 0.0 {");
   });
 });

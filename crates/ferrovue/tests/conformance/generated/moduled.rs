@@ -50,11 +50,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(582 + props.text.len() + props.tone.as_deref().map_or(0, str::len));
+    out.reserve(907 + props.text.len() + props.tone.as_deref().map_or(0, str::len));
     let s_picked = if props.on { "Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn" } else { "Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv" };
-    out.push_str("<section class=\"");
-    fv::attrs::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__card___G8aPs"]);
-    out.push_str("\" style=\"");
+    out.push_str("<section class=\"Moduled-vue-vue-type-style-index-0-lang-module__card___G8aPs\" style=\"");
     if let Some(v) = props.tone.as_deref() {
         out.push_str("--46bce602-tone:");
         if v.is_empty() {
@@ -66,21 +64,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("--46bce602-tone:initial;");
     }
-    out.push_str("\" data-v-46bce602><h2 class=\"");
-    fv::attrs::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4", &*fv::attrs::class_object(&[(props.on, "Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk")])]);
+    out.push_str("\" data-v-46bce602><h2 class=\"Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4");
+    fv::attrs::class_into(out, true, &[&*fv::attrs::class_object(&[(props.on, "Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk")])]);
     out.push_str("\" data-v-46bce602>");
     fv::core::escape_into(out, &props.text);
-    out.push_str("</h2><p class=\"");
-    fv::attrs::class_into(out, false, &["Moduled-vue-vue-type-style-index-0-lang-module__red-dash___3GAvp"]);
-    out.push_str("\" data-anim=\"Moduled-vue-vue-type-style-index-0-lang-module__spin___ciCju\" data-v-46bce602>");
+    out.push_str("</h2><p class=\"Moduled-vue-vue-type-style-index-0-lang-module__red-dash___3GAvp\" data-anim=\"Moduled-vue-vue-type-style-index-0-lang-module__spin___ciCju\" data-v-46bce602>");
     fv::core::escape_into(out, props.tone.as_deref().unwrap_or("#f00"));
     out.push_str("</p><p class=\"");
     fv::attrs::class_into(out, false, &[s_picked, "Moduled-vue-vue-type-style-index-0-lang-module__sm--hidden___SkXzu"]);
-    out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-0-lang-module__comp___MclRi Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4 Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk</p><span class=\"");
-    fv::attrs::class_into(out, false, &["Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn", "plain"]);
-    out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv</span><i class=\"");
-    fv::attrs::class_into(out, false, &["Moduled-vue-vue-type-style-index-2-scoped-46bce602-lang-module__dot___hS8nn"]);
-    out.push_str("\" data-v-46bce602></i>");
+    out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-0-lang-module__comp___MclRi Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4 Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk</p><span class=\"Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn plain\" data-v-46bce602>Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv</span><i class=\"Moduled-vue-vue-type-style-index-2-scoped-46bce602-lang-module__dot___hS8nn\" data-v-46bce602></i>");
     super::moduled_chip::try_render_scoped(out, &super::moduled_chip::Props { label: std::borrow::Cow::Borrowed(&*props.text) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"))?;
     out.push_str("</section>");
     Ok(())

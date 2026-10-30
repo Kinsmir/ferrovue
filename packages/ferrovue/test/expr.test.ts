@@ -626,7 +626,7 @@ describe("names and members", () => {
   });
 
   it("reads a ref's `.value` and the props object", () => {
-    expect(render("import { ref, computed } from 'vue';\nconst r = ref(1);\nconst c = computed(() => r.value + 1);", "<p>{{ c }}</p>")).toMatch(like("let s_c = s_r as f64 + 1.0;"));
+    expect(render("import { ref, computed } from 'vue';\nconst r = ref(1);\nconst c = computed(() => r.value + 1);", "<p>{{ c }}</p>")).toMatch(like("let s_c = 2i64;"));
     expect(render("import { ref, computed } from 'vue';\nconst r = ref('ab');\nconst c = computed(() => r.value.length);", "<p>{{ c }}</p>")).toMatch(like('let s_c = fv::strings::js_length("ab");'));
     expect(render("import { computed } from 'vue';\nconst props = defineProps<{ n: number }>();\nconst c = computed(() => props.n);", "<p>{{ c }}|{{ props.n }}</p>")).toMatch(like("let s_c = props.n;"));
   });
@@ -906,7 +906,7 @@ describe("names that setup and bodies bind", () => {
 
   it("reads the CSS module setup binds to `$style` where the template names `$style`", () => {
     const x = '<script setup lang="ts">\nimport { useCssModule } from "vue";\nconst $style = useCssModule("other");\n</script>\n<template><p :class="$style.b">x</p></template>\n<style module>\n.a { color: red; }\n</style>\n<style module="other">\n.b { color: blue; }\n</style>\n';
-    expect(render("", "", { files: { "X.vue": x }, config: { cssModules: { generateScopedName: "[local]_x" } } })).toMatch(like('fv::attrs::class_into(out, false, &["b_x"]);'));
+    expect(render("", "", { files: { "X.vue": x }, config: { cssModules: { generateScopedName: "[local]_x" } } })).toMatch(like('out.push_str("<p class=\\"b_x\\">x</p>");'));
   });
 
   it("refuses `[…]` of a CSS module by a name", () => {

@@ -145,6 +145,7 @@ pub mod model_is;
 pub mod model_parent;
 pub mod moduled;
 pub mod moduled_chip;
+pub mod mounted_refs;
 pub mod narrowed_rows;
 pub mod narrowed_tone;
 pub mod narrowing;
@@ -1062,6 +1063,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ModuledChip" => {
             let props: moduled_chip::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             moduled_chip::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "MountedRefs" => {
+            let props: mounted_refs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            mounted_refs::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "NarrowedRows" => {
             let props: narrowed_rows::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
