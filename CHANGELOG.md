@@ -13,7 +13,7 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - The guide's `upgrading_to_0_13` page: bump both halves, generate again for version 7, and `script.fs` on TypeScript 7.
   [`upgrading_to_0_13`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html).
 - `linkRoutes` from `ferrovue/link-routes`: `<RouterLink>` and `useRoute()` for an application that navigates on its own, with no router.
-  It resolves links as vue-router does, in about 4 KB gzipped of the client bundle: [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
+  It resolves links as vue-router does, in less than half the bytes of `linkRouter`: [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
 
 ### Changed
 

@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createSSRApp, defineComponent, h, inject, type App, type Component } from "vue";
+import { createSSRApp, defineComponent, h, inject, isReactive, isRef, toRefs, unref, watch, type App, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { RouterLink, routerKey, useRoute, type RouteLocationRaw, type Router } from "vue-router";
+import { RouterLink, routeLocationKey, routerKey, useRoute, useRouter, type RouteLocationRaw, type Router } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { linkRouter } from "../src/link-router.ts";
 import { linkRoutes, type LinkRoutesOptions } from "../src/link-routes.ts";
@@ -121,6 +121,71 @@ it("rejects a push to a name no route has, without calling navigate", async () =
   const router = routerOf(createSSRApp({ render: () => null }).use(links));
   await expect(router.push({ name: "nowhere" })).rejects.toThrow("No match");
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it("gives a reactive route and a currentRoute ref, which watch and toRefs take without a warning", async () => {
+  const links = linkRoutes(NESTED, { navigate: () => {}, location: "/users/ada?tab=posts" });
+  const seen: string[] = [];
+  const Watching = defineComponent({
+    setup() {
+      const route = useRoute();
+      const router = useRouter();
+      watch(route, () => {});
+      watch(router.currentRoute, () => {});
+      watch(() => route.params, () => {});
+      const { fullPath, params: routeParams } = toRefs(route);
+      seen.push(String(isReactive(route)), String(isRef(router.currentRoute)), unref(router.currentRoute).fullPath, fullPath.value, String(routeParams.value.name));
+      return () => h("p", fullPath.value);
+    },
+  });
+  const app = createSSRApp(Watching).use(links);
+  expect(await renderToString(app)).toBe("<p>/users/ada?tab=posts</p>");
+  expect(seen).toEqual(["true", "true", "/users/ada?tab=posts", "/users/ada?tab=posts", "ada"]);
+  expect(isReactive(links.route)).toBe(true);
+  expect(app.runWithContext(() => inject(routeLocationKey))).toBe(links.route);
+  expect(warnings).toEqual([]);
+});
+
+it("takes no base from the page's base element when the base option is left out, as the server does", async () => {
+  const element = document.createElement("base");
+  element.setAttribute("href", "/static/");
+  document.head.append(element);
+  try {
+    setUrl("http://link-routes.test/users/ada");
+    const navigate = vi.fn<Navigate>();
+    const links = linkRoutes(NESTED, { navigate });
+    expect(links.route.name).toBe("user");
+    expect(links.resolve("/account").href).toBe("/account");
+    const app = createSSRApp(Nav).use(links);
+    expect(await renderToString(app)).toContain('<a aria-current="page" href="/users/ada" class="router-link-active router-link-exact-active">ada</a>');
+    await routerOf(app).push("/account");
+    expect(navigate).toHaveBeenCalledWith("/account", expect.objectContaining({ name: "account" }));
+    const given = linkRoutes(NESTED, { navigate, base: "/static/", location: "/static/users/ada" });
+    expect(given.resolve("/account").href).toBe("/static/account");
+  } finally {
+    element.remove();
+  }
+});
+
+it("reports an error navigate throws with console.error, as vue-router does with no onError handler", async () => {
+  const errors: unknown[][] = [];
+  vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => void errors.push(args));
+  const failure = new Error("navigation failed");
+  const navigate = vi.fn<Navigate>(() => {
+    throw failure;
+  });
+  const links = linkRoutes(NESTED, { navigate, location: "/" });
+  const html = await renderToString(createSSRApp(Nav).use(links));
+  document.body.innerHTML = `<div id="app">${html}</div>`;
+  const app = createSSRApp(Nav).use(links);
+  app.mount("#app");
+  await expect(routerOf(app).push("/account")).rejects.toBe(failure);
+  expect(errors).toEqual([[failure]]);
+  document.querySelector<HTMLAnchorElement>('a[href="/users/ada"]')!.click();
+  await Promise.resolve();
+  expect(navigate).toHaveBeenCalledTimes(2);
+  expect(errors).toEqual([[failure], [failure]]);
+  app.unmount();
 });
 
 const DIR = join(import.meta.dirname, "../../../crates/ferrovue-router/tests/vectors");

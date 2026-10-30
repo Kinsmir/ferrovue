@@ -40,13 +40,15 @@ it("keeps ferrovue/link-router to vue-router and the routes it is given", () => 
   expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/route-records.ts"]);
 });
 
-it("keeps ferrovue/link-routes to vue-router's RouterLink and injection keys and the routes it is given", () => {
+it("keeps ferrovue/link-routes to Vue's shallow reactivity, vue-router's RouterLink and injection keys and the routes it is given", () => {
   const { files, packages } = graph("src/link-routes.ts");
-  expect([...packages].toSorted()).toEqual(["vue-router"]);
+  expect([...packages].toSorted()).toEqual(["vue", "vue-router"]);
   expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-routes.ts", "src/route-records.ts"]);
   const text = readFileSync(join(ROOT, "src/link-routes.ts"), "utf8");
-  const values = [...text.matchAll(/^import \{([^}]*)\} from "vue-router";$/gm)].flatMap((m) => m[1]!.split(",").map((s) => s.trim()).filter((s) => !s.startsWith("type ")));
-  expect(values.toSorted()).toEqual(["RouterLink", "routeLocationKey", "routerKey"]);
+  const values = (from: string): string[] =>
+    [...text.matchAll(new RegExp(`^import \\{([^}]*)\\} from "${from}";$`, "gm"))].flatMap((m) => m[1]!.split(",").map((s) => s.trim()).filter((s) => !s.startsWith("type ")));
+  expect(values("vue-router").toSorted()).toEqual(["RouterLink", "routeLocationKey", "routerKey"]);
+  expect(values("vue").toSorted()).toEqual(["shallowReactive", "shallowRef"]);
 });
 
 it("keeps ferrovue/volar to the compiler, naming Vue's language tools only for their types", () => {

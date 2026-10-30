@@ -1,4 +1,5 @@
-import { type Component } from "vue";
+import { toRefs, watch, type Component } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
 import { linkRoutes } from "../src/link-routes.ts";
 import { fixtureApp, readFixture, type RouterOptions } from "../src/testing-browser.ts";
@@ -47,7 +48,15 @@ async function hydrate(): Promise<Hydration> {
   const fixture = withDatePlans(readFixture(data.fixture), data.component, data.plans);
   const app = await fixtureApp(component, fixture, data.light ? null : data.routes, { ...data.options, hydrate: true });
   const navigated: string[] = (window.navigated = []);
-  if (data.light) app.use(linkRoutes(data.routes, { navigate: (href) => void navigated.push(href), location: fixture.route }));
+  if (data.light) {
+    app.use(linkRoutes(data.routes, { navigate: (href) => void navigated.push(href), location: fixture.route }));
+    app.runWithContext(() => {
+      const route = useRoute();
+      watch(route, () => {});
+      watch(useRouter().currentRoute, () => {});
+      toRefs(route);
+    });
+  }
   app.mount(root);
   const after = document.body.innerHTML;
   const kept = root.firstChild === first;
