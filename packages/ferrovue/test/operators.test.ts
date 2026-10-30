@@ -508,9 +508,7 @@ describe("equality", () => {
       'out.push_str(if props.os.as_deref().is_none() { "true" } else { "false" });',
       'out.push_str("|false|");',
       'out.push_str(if props.os.as_deref() == props.os.as_deref() { "true" } else { "false" });',
-      "out.push('|');",
-      'out.push_str(if props.m == props.m { "true" } else { "false" });',
-      "out.push('|');",
+      'out.push_str("|true|");',
       'out.push_str(if props.os.as_deref() != props.os.as_deref() { "true" } else { "false" });',
       'out.push_str("</p>");',
     ].join("\n"), true));
@@ -866,5 +864,45 @@ describe("other expressions", () => {
       `FV0706 \`.join()\` with no literal separator ${half}`,
       `FV0706 \`encodeURIComponent()\` ${half}; it throws a \`URIError\` on a half`,
     ]);
+  });
+});
+
+describe("an operand beside itself", () => {
+  it("writes `-`, `/`, `===`, `&&` and `||` of one place with itself as JavaScript computes them", () => {
+    const out = lines("<p>{{ n - n }}|{{ n / n }}|{{ f - f }}|{{ f / f }}|{{ s === s }}|{{ b && b }}|{{ b || b }}|{{ (n > 1) === (n > 1) }}|{{ n % n }}</p>");
+    expect(out).toContain('out.push_str("<p>0|");');
+    expect(out).toContain("fv::core::push_number(out, (props.n as f64).abs() / (props.n as f64).abs());");
+    expect(out).toContain("fv::core::push_number(out, props.f.abs() - props.f.abs());");
+    expect(out).toContain("fv::core::push_number(out, props.f.abs() / props.f.abs());");
+    expect(out).toContain('out.push_str("|true|");');
+    expect(out).toContain('out.push_str(if props.b { "true" } else { "false" });');
+    expect(out).toContain("props.n as f64 % props.n as f64");
+    expect(out).not.toMatch(/props\.(\w+)(?: as f64)? (?:-|\/|==|&&|\|\|) props\.\1\b/);
+  });
+
+  it("keeps a call that appears on both sides", () => {
+    expect(lines("<p>{{ s.trim() === s.trim() }}</p>")).toContain("==");
+  });
+
+  it("keeps the stronger of two bounds of one number joined by `&&`, and gives `false` for two that cannot hold together", () => {
+    const out = lines("<p>{{ n > 3 && n > 4 }}|{{ n >= 3 && n > 3 }}|{{ n > 3 && n < 2 }}|{{ n >= 2 && n < 2 }}|{{ 2 < n && n < 9 }}|{{ n <= 2 && n >= 2 }}</p>");
+    expect(out).toContain("if props.n as f64 > 4.0 {");
+    expect(out).toContain("if props.n as f64 > 3.0 {");
+    expect(out).toContain('out.push_str("|false|false|");');
+    expect(out).toContain("if 2.0 < props.n as f64 && (props.n as f64) < 9.0 {");
+    expect(out).toContain("if props.n as f64 == 2.0 {");
+  });
+
+  it("joins two comparisons of the same two numbers into one", () => {
+    const out = lines("<p>{{ n < f || n > f }}|{{ n <= f || f < n }}|{{ f === n || f !== n }}|{{ n < f && f < n }}|{{ n <= f && n >= f }}|{{ n === f || n < f }}</p>");
+    expect(out).toContain('out.push_str(if (props.n as f64).partial_cmp(&props.f).is_some_and(std::cmp::Ordering::is_ne) { "true" } else { "false" });');
+    expect(out).toContain('out.push_str(if (props.n as f64).partial_cmp(&props.f).is_some() { "true" } else { "false" });');
+    expect(out).toContain('out.push_str("|true|false|");');
+    expect(out).toContain('out.push_str(if props.n as f64 == props.f { "true" } else { "false" });');
+    expect(out).toContain('out.push_str(if props.n as f64 <= props.f { "true" } else { "false" });');
+  });
+
+  it("writes nothing for a `v-for` over a constant range of 0 or below", () => {
+    expect(lines('<p><i v-for="k in 0">{{ k }}</i><b v-for="(k, i) in -2">{{ i }}</b></p>')).toBe('out.push_str("<p><!--[--><!--]--><!--[--><!--]--></p>");');
   });
 });

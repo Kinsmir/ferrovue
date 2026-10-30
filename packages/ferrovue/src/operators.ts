@@ -1,7 +1,7 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, nothing, refusalAt, sameTy, STR } from "./model.ts";
 import { annotatedStr, enumEquality, knownLiteral, refuseOutside } from "./enums.ts";
 import { claim } from "./plugin.ts";
-import { atom, bare, binary, negate, not, strArg } from "./parens.ts";
+import { atom, bare, binary, negate, not, pure, strArg } from "./parens.ts";
 import { formatted, meet, stringsEqual } from "./strings.ts";
 import { arithmetic, asF64, compare, intFromF64, isNumber, negatedOrder, numberVal, power } from "./numbers.ts";
 import { boolOf, checkNullTest, nullTest, truthTested, truthy, typeofCompare, typeofTest, typeofVal } from "./narrowing.ts";
@@ -152,7 +152,7 @@ function valuesEqual(comp: Component, n: N, a: Val, b: Val): string {
 
 function scalarsEqual(comp: Component, n: N, a: Val, b: Val): string {
   const scalar = (t: Ty) => t.k === "str" || t.k === "int" || t.k === "bool";
-  if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) return binary(a.code, "==", b.code);
+  if (sameTy(a.ty, b.ty) && (scalar(a.ty) || (a.ty.k === "opt" && scalar(a.ty.of)))) return a.code === b.code && pure(a.code) ? "true" : binary(a.code, "==", b.code);
   if (a.ty.k === "opt" && sameTy(a.ty.of, b.ty) && scalar(b.ty)) return binary(a.code, "==", `Some(${bare(b.code)})`);
   if (b.ty.k === "opt" && sameTy(b.ty.of, a.ty) && scalar(a.ty)) return binary(`Some(${bare(a.code)})`, "==", b.code);
   return fail(comp, "FV0622", "`===` between these types", n);

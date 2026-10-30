@@ -1,6 +1,6 @@
 import { type Component, type N, type Piece, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
 import type { ErrorCode } from "./errors.ts";
-import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
+import { atom, bare, binary, condition, enclosed, pure, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";
 import { known } from "./narrowing.ts";
@@ -115,6 +115,7 @@ export function unquote(literal: string): string {
 
 export function stringsEqual(a: Val, b: Val): string {
   if (known(a) !== undefined && known(b) !== undefined) return String(unquote(a.code) === unquote(b.code));
+  if (a.code === b.code && pure(a.code)) return "true";
   if (a.code === '""' || b.code === '""') return `${receiver(a.code === '""' ? b.code : a.code)}.is_empty()`;
   return binary(a.code, "==", b.code);
 }

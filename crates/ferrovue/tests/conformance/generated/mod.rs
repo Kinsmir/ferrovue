@@ -68,6 +68,8 @@ pub mod divider;
 pub mod dollar_names;
 pub mod empty_arrays;
 pub mod empty_branch;
+pub mod empty_ranges;
+pub mod empty_slots;
 pub mod enum_members;
 pub mod escaped_idioms;
 pub mod escaped_null;
@@ -212,6 +214,7 @@ pub mod scoped_rack;
 pub mod scoped_root;
 pub mod scoped_shelf;
 pub mod scoped_tree;
+pub mod self_compare;
 pub mod session;
 pub mod setup;
 pub mod setup_values;
@@ -628,6 +631,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "EmptyBranch" => {
             let props: empty_branch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             empty_branch::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "EmptyRanges" => {
+            let props: empty_ranges::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            empty_ranges::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "EmptySlots" => {
+            let props: empty_slots::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            empty_slots::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "EnumMembers" => {
             let props: enum_members::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1390,6 +1401,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ScopedTree" => {
             let props: scoped_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             scoped_tree::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "SelfCompare" => {
+            let props: self_compare::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            self_compare::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Session" => {
             let props: session::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

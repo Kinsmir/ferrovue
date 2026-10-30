@@ -303,10 +303,16 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       if (staticallyFilled(body)) {
         statements({ ...inner, fill: false }, e, body);
         e.stmt("true");
-      } else {
-        e.stmt("let mut filled = false;");
-        statements({ ...inner, fill: true }, e, body);
-        e.stmt("filled");
+      } else fillable(inner);
+    };
+    const fillable = (inner: Scope): void => {
+      e.stmt("let mut filled = false;");
+      const declared = e.lines.length - 1;
+      statements({ ...inner, fill: true }, e, body);
+      if (e.reads("filled", declared + 1)) e.stmt("filled");
+      else {
+        e.lines.splice(declared, 1);
+        e.stmt("false");
       }
     };
     const unread = (opened: number, binding: string | null): void => {
@@ -330,6 +336,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       e.open(`${field}: Some(&|out: &mut String, ${sp}: &${m}::${shape.name}${life}${sidParam}${contextParams}| -> bool`);
       const opened = e.lines.length - 1;
       content({ ...s, locals, sid, vnode: asVnodes, opaque });
+      unread(opened, "out");
       unread(opened, sp);
       unread(opened, sid);
       for (const p of context) unread(opened, p.name);
@@ -342,6 +349,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       e.open(`${field}: Some(&|out: &mut String${sidParam}${contextParams}| -> bool`);
       const opened = e.lines.length - 1;
       content(inner);
+      unread(opened, "out");
       unread(opened, sid);
       for (const p of context) unread(opened, p.name);
       e.close("),");
@@ -349,6 +357,7 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       e.open(`${field}: Some(fv::render::Slot::slotted(&|out: &mut String${sidParam}| -> bool`);
       const opened = e.lines.length - 1;
       content(inner);
+      unread(opened, "out");
       unread(opened, sid);
       e.close(")),");
     } else if (staticallyFilled(body)) {
@@ -357,9 +366,9 @@ export function callWith(s: Scope, e: Emitter, child: Component, m: string, head
       e.close(")),");
     } else {
       e.open(`${field}: Some(fv::render::Slot::markup(&|out: &mut String| -> bool`);
-      e.stmt("let mut filled = false;");
-      statements({ ...inner, fill: true }, e, body);
-      e.stmt("filled");
+      const opened = e.lines.length - 1;
+      fillable(inner);
+      unread(opened, "out");
       e.close(")),");
     }
   }
