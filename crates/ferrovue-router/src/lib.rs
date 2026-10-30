@@ -1211,7 +1211,11 @@ fn resolve_relative_path(to: &str, from: &str) -> String {
     }
     let mut position = from_segments.len() - 1;
     let mut to_position = 0;
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while to_position < to_segments.len() {
+        #[cfg(test)]
+        turns.next();
         match to_segments[to_position] {
             "." => {}
             ".." => {
@@ -1260,3 +1264,15 @@ fn decode(text: &str) -> String {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[derive(Default)]
+struct Turns(u32);
+
+#[cfg(test)]
+impl Turns {
+    fn next(&mut self) {
+        self.0 += 1;
+        assert!(self.0 < 10_000_000, "a loop turned ten million times");
+    }
+}

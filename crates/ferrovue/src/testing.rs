@@ -102,7 +102,11 @@ fn check_one(
 
 fn floor_boundary(s: &str, mut at: usize) -> usize {
     at = at.min(s.len());
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while !s.is_char_boundary(at) {
+        #[cfg(test)]
+        turns.next();
         at -= 1;
     }
     at

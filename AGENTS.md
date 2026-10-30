@@ -113,7 +113,8 @@ No comments that say what code does or why, in code, tests, config or CI files. 
 - short rustdoc and TSDoc on public items
 - lint-allow reasons (`// oxlint-disable-next-line rule -- reason`, `#[allow(..., reason = "...")]`)
 - `@generated` headers, and the comments the compiler writes into generated code
-- the reasons in `.cargo/mutants-equivalent.txt` and `stryker-equivalent.txt`
+- the reasons in `.cargo/mutants-equivalent.txt`, `.cargo/mutants-timeout.txt`,
+  `stryker-equivalent.txt` and `stryker-timeout.txt`
 - the recipe descriptions in `justfile`, which `just --list` shows
 
 ## Prose
@@ -172,7 +173,8 @@ Mutation testing runs weekly in the Mutants workflow, outside the per-PR checks:
 the runtime and `pnpm mutants:ts` (Stryker) on the compiler modules `stryker.config.json` lists.
 After changing one of those modules, run `pnpm exec stryker run -m <file>` and
 `node scripts/stryker-survivors.ts`, and close each new survivor with a test or an entry in
-`stryker-equivalent.txt` with its reason.
+`stryker-equivalent.txt` with its reason, and each new timeout with a test or an entry in
+`stryker-timeout.txt`.
 
 ## Git and pull requests
 

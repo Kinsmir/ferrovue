@@ -1,0 +1,9 @@
+# Mutants that make a loop run forever, which cargo-mutants records as timeouts (TESTING.md,
+# "Mutation testing"). One per line, as cargo-mutants names it in mutants.out/timeout.txt but
+# without the line and column; the Mutants workflow fails on a timeout not listed here. Every entry
+# says why. A loop a crate's own unit tests reach counts its turns under `cfg(test)` (`Turns`),
+# which makes such a mutant fail its tests and leave this list.
+
+# An infinite loop: `Router::tree`'s binary search stops advancing when `lower = mid * 1` leaves
+# `lower` at `mid`. The conformance suite of `ferrovue` reaches it before the router's own tests run.
+crates/ferrovue-router/src/lib.rs: replace + with * in Router::tree

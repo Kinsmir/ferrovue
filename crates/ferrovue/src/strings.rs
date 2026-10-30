@@ -509,7 +509,11 @@ pub fn js_last_index_of_from(s: &str, search: &str, position: f64) -> i64 {
         return start as i64;
     }
     let mut end = (char_start(s, start) + search.len()).min(s.len());
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while !s.is_char_boundary(end) {
+        #[cfg(test)]
+        turns.next();
         end -= 1;
     }
     s[..end].rfind(search).map_or(-1, |at| js_length(&s[..at]))
@@ -659,7 +663,11 @@ pub fn js_split<'s>(s: &'s str, separator: &str) -> Vec<Cow<'s, str>> {
 
 fn substitute(out: &mut String, replacement: &str, s: &str, start: usize, end: usize) {
     let mut rest = replacement;
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while let Some(i) = rest.find('$') {
+        #[cfg(test)]
+        turns.next();
         out.push_str(&rest[..i]);
         let (text, used) = match rest.as_bytes().get(i + 1) {
             Some(b'$') => ("$", 2),
@@ -732,7 +740,11 @@ fn replace_between_units(s: &str, replacement: &str) -> String {
     let mut out: Vec<u16> = Vec::with_capacity(units.len() * (repl.len() + 1) + repl.len());
     for at in 0..=units.len() {
         let mut i = 0;
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while i < repl.len() {
+            #[cfg(test)]
+            turns.next();
             let next = repl.get(i + 1).copied();
             if repl[i] == u16::from(b'$') {
                 match next.and_then(|c| u8::try_from(c).ok()) {
@@ -968,7 +980,11 @@ fn power_of_two_value(digits: &[u8], radix: u32) -> f64 {
 fn decimal_prefix(s: &str) -> Option<usize> {
     let b = s.as_bytes();
     let digits_from = |mut i: usize| {
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while i < b.len() && b[i].is_ascii_digit() {
+            #[cfg(test)]
+            turns.next();
             i += 1;
         }
         i
