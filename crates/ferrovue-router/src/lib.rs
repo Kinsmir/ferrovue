@@ -1047,7 +1047,7 @@ impl Pattern {
             return Pattern {
                 path: path.to_owned(),
                 parent: None,
-                tokens: Vec::new(),
+                tokens: vec![Token::Static(String::new())],
                 score: vec![ROOT],
                 name,
                 matchable: true,

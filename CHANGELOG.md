@@ -23,6 +23,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   0.13.0 read it from the ref's value, so `r.length` rendered a length where Vue renders nothing: [FV0638](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0638).
 - An empty `TrustedHtml` or `InlineHtml` prop is falsy in `v-if`, `v-show`, `!` and `?:`, as in Vue; 0.13.0 took an empty one as true.
   [`v-html` and `TrustedHtml`](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#v-html-and-trustedhtml).
+- The location `//` matches the route `/`, as vue-router matches it; 0.13.0 matched it to a catch-all or to no route.
+  [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#a-router-per-application-a-route-per-request).
 
 ## [0.13.0] - 2026-10-29
 

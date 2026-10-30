@@ -167,6 +167,10 @@ immutable and `Send + Sync`. For each request, resolve the location with
 history's base, as vue-router's history reports it. The [`Route`](crate::router::Route) it returns borrows
 the router, and is what every component that links or reads the route takes.
 
+A path matches a route as vue-router matches it: case-insensitively, with or without one trailing
+slash. The route `/` also matches `//`, a location vue-router warns about and still resolves to it, so
+a request for `//` renders the home page and its links as the client will.
+
 The server can read the same route to decide what to render:
 
 ```rust

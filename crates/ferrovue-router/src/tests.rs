@@ -355,6 +355,48 @@ fn the_location_path_drops_the_query_and_hash() {
 }
 
 #[test]
+fn the_root_route_matches_one_or_two_slashes_as_vue_router_does() {
+    let router = Router::named(&[("/", Some("home")), ("/:missing(.*)", Some("missing"))]);
+    for at in ["/", "//", "//?q=1#h"] {
+        let route = router.at(at);
+        assert_eq!(route.name(), Some("home"), "{at}");
+        assert_eq!(route.param("missing"), None, "{at}");
+        let link = route.link("/");
+        assert!(link.active && link.exact, "{at}");
+    }
+    assert!(router.at("/").link("//").exact);
+    let tripled = router.at("///");
+    assert_eq!(tripled.param("missing"), Some("//"));
+    assert!(!tripled.link("/").active);
+    assert_eq!(router.at("//a").param("missing"), Some("/a"));
+    assert_eq!(router.at("").name(), Some("home"));
+}
+
+#[test]
+fn only_the_root_route_takes_a_doubled_slash() {
+    let router = Router::named(&[
+        ("/a", Some("a")),
+        ("/:x?", Some("x")),
+        ("/:lang?/about", Some("about")),
+    ]);
+    assert_eq!(router.at("/a/").name(), Some("a"));
+    assert_eq!(router.at("/a//").name(), None);
+    assert_eq!(router.at("//a").name(), None);
+    assert_eq!(router.at("/").name(), Some("x"));
+    assert_eq!(router.at("//").name(), None);
+    assert_eq!(router.at("//about").name(), None);
+    let root = Router::tree(&[RouteDef::new("/")
+        .with_view(false)
+        .with_children(&[RouteDef::new("").with_name("home")])]);
+    assert_eq!(root.at("//").name(), Some("home"));
+    assert_eq!(
+        root.at("//").link_named("home", &[], "", "").href,
+        "/",
+        "the root's own path is one slash"
+    );
+}
+
+#[test]
 fn a_link_matching_no_route_is_never_active() {
     let router = Router::new(&["/a"]);
     let link = router.at("/nowhere").link("/nowhere");
