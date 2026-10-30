@@ -10,7 +10,7 @@ documentation = "https://docs.rs/ferrovue"
 readme = "README.md"
 keywords = ["vue", "ssr", "html", "templates", "hydration"]
 categories = ["template-engine", "web-programming"]
-exclude = ["/benches/expected/", "/benches/instructions.json", "/tests/chrono_dates/", "/tests/closed_unions/", "/tests/conformance/", "/tests/literal_props/", "/tests/own_dates/", "/tests/own_unions/", "/tests/tsconfig.json", "/tests/vectors/"]
+exclude = ["/benches/expected/", "/benches/instructions.json", "/tests/chrono_dates/", "/tests/closed_unions/", "/tests/conformance/", "/tests/literal_props/", "/tests/own_dates/", "/tests/own_unions/", "/tests/sanitised/", "/tests/tsconfig.json", "/tests/vectors/"]
 
 [features]
 default = ["router", "i18n"]

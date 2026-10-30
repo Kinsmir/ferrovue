@@ -147,7 +147,7 @@ function routesTree(root: string, routes: FileRoute[], indent: string, lazy: boo
 
 /** The `ferrovue/routes` module: the routes vue-router's file-based routing builds from the pages,
  * as vue-router's records with each page loaded lazily (`routes`), and as a routes file lists them
- * (the default export), for `routeRecords` and `linkRouter`. */
+ * (the default export), for `routeRecords` and `linkRoutes`. */
 export function routesModule(root: string, routes: FileRoute[]): string {
   return `export const routes = [
 ${routesTree(root, routes, "  ", true)}
