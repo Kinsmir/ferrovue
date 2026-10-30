@@ -31,6 +31,7 @@ pub mod builtins;
 pub mod card;
 pub mod cart;
 pub mod catalog;
+pub mod checkbox_values;
 pub mod chips;
 pub mod client_side;
 pub mod comment_box;
@@ -73,6 +74,7 @@ pub mod empty_branch;
 pub mod empty_ranges;
 pub mod empty_slots;
 pub mod enum_members;
+pub mod enumerated;
 pub mod escaped_idioms;
 pub mod escaped_null;
 pub mod exprs;
@@ -93,6 +95,7 @@ pub mod filled_joins;
 pub mod flattened;
 pub mod folded_wide;
 pub mod form;
+pub mod form_modifiers;
 pub mod form_root;
 pub mod form_wrapped;
 pub mod formatters;
@@ -172,6 +175,7 @@ pub mod on_props;
 pub mod on_props_bare;
 pub mod on_props_kid;
 pub mod on_props_root;
+pub mod optgroup_select;
 pub mod optional_chains;
 pub mod own_keys;
 pub mod page;
@@ -233,6 +237,7 @@ pub mod string_of;
 pub mod string_search;
 pub mod strings;
 pub mod styles;
+pub mod svg_xlink;
 pub mod swatch;
 pub mod swatch_shelf;
 pub mod tab;
@@ -470,6 +475,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: catalog::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             catalog::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "CheckboxValues" => {
+            let props: checkbox_values::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            checkbox_values::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "Chips" => {
             let props: chips::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             chips::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -655,6 +664,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: enum_members::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             enum_members::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "Enumerated" => {
+            let props: enumerated::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            enumerated::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "EscapedIdioms" => {
             let props: escaped_idioms::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             escaped_idioms::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -743,6 +756,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Form" => {
             let props: form::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             form::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FormModifiers" => {
+            let props: form_modifiers::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            form_modifiers::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "FormRoot" => {
             let props: form_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1201,6 +1218,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: on_props_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             on_props_root::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "OptgroupSelect" => {
+            let props: optgroup_select::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            optgroup_select::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "OptionalChains" => {
             let props: optional_chains::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             optional_chains::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1493,6 +1514,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Styles" => {
             let props: styles::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             styles::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "SvgXlink" => {
+            let props: svg_xlink::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            svg_xlink::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Swatch" => {
             let props: swatch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

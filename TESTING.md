@@ -115,6 +115,8 @@ A fixture is a JSON object of props plus optional keys:
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
 | `Attrs` | Boolean attributes, `:hidden`, empty values, numbers, absent optionals, `data-` / `aria-`, all class shapes |
+| `Enumerated` | The enumerated attributes `contenteditable`, `spellcheck` and `draggable` bound to booleans (written as `"true"` and `"false"`), strings, `""`, `null`, an absent optional, literals and static values, with hostile strings |
+| `SvgXlink` | `xlink:href` and `xlink:title` in SVG, static and bound on `<use>`, `<a>` and `<image>`, with a URL holding `&`, empty values and hostile ones |
 | `AttrParts` | Attribute values joined with `+` and template literals, on the root and on an inner element: string, integer, `Float`, boolean, optional and list parts, a value that is one string, an empty one written bare on the root, a literal, `NaN`, the infinities, `-0`, integers beyond 2⁵³ and markup-breaking characters in every string |
 | `BoundObject` | `v-bind` of an object literal on elements, before and after their own attributes: strings, numbers, booleans, `undefined`, `data-` / `aria-`, a class array after a static class, a style object merged with a static `style`, a form control's `value` and `disabled` |
 | `Styles`, `Shown` | `:style` objects, arrays, strings and conditional objects merged with a static `style`; `v-show`, including on the root; a global `<style>` block |
@@ -133,6 +135,9 @@ A fixture is a JSON object of props plus optional keys:
 | `Model`, `ModelParent` | `defineModel` (named, required, default) and `v-model` on a component |
 | `Form` | `v-model` on input, checkbox, select, radio and textarea |
 | `SelectText` | `<option>`s with no `value` under a `<select>` with `v-model` of a string (text that is `null`, an interpolation, beside an option with a `value`), and `v-model` that may be absent, `undefined` or `null`, on a `<select>` and on radio buttons whose values are `"undefined"` and `"null"` |
+| `FormModifiers` | `v-model.number` on a number input, a `Float` and a string, `v-model.trim` on text inputs and a `<textarea>`, `.lazy` and `.number.trim` together, which the server writes as the plain value: zero, negatives, `1e21`, padded and empty strings, and hostile values that close the attribute or the `<textarea>` |
+| `CheckboxValues` | Checkboxes with `v-model` and `true-value` / `false-value`, static, bound and bound alone, checked when the model equals `true-value`: the false value, empty strings and a hostile `true-value` equal to the model |
+| `OptgroupSelect` | `<select v-model>` whose options sit in `<optgroup>`s, static, `disabled`, with a bound `label`, a `v-for` and a `v-if`: the selection in each group, none, an empty group and hostile labels and values |
 | `FormWrapped`, `FormRoot` | A `<textarea>` with content of its own and an `<input v-model>` inside the element that takes the root's attributes; a `<select v-model>` as the root |
 | `Builtins` | `Transition`, `TransitionGroup`, `KeepAlive`, `Suspense`, `v-text`, `v-once`, `v-pre`, `v-memo`, a client-only directive |
 | `DirectedEmpty` | A client-only directive on elements with no content, alone, beside attributes bound by name and in a `v-for` |
@@ -275,7 +280,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays`, `UnionListBuilt`, `FoldedWide`, `EmptyRanges` |
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | HTML comments | `Comments`, `CommentBox`, `TagContent` |
-| Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
+| Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary`, `Enumerated`, `SvgXlink` |
 | `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
 | `style` | `Styles`, `Shown`, `BoundObject` |
 | Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `KebabTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
@@ -286,7 +291,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
 | Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe`, `EmptySlots` |
-| Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls`, `SelectText` |
+| Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls`, `SelectText`, `FormModifiers`, `CheckboxValues`, `OptgroupSelect` |
 | Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
 | Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo`, `LinkSpaces`, `FallSpaces` |
 | Pinia | `Badge`, `Cart`, `Counter`, `Session` |
