@@ -657,3 +657,9 @@ describe("lookup keys built when rendering", () => {
     expect(refusals(script, "<p>{{ O[`${k}${k}`] }}</p>")).toEqual([string]);
   });
 });
+
+describe("modules that export a list of names", () => {
+  it("reads a constant of a `.ts` file that also writes `export { … }`", () => {
+    expect(render('import { LIMIT } from "./limits";', "<p>{{ LIMIT }}</p>", { "limits.ts": "const OTHER = 1;\nexport { OTHER };\nexport const LIMIT = 3;\n" })).toContain('out.push_str("<p>3</p>");');
+  });
+});
