@@ -54,12 +54,25 @@ These sources compiled with 0.13 and are refused with 0.14:
 
 | Source | 0.14 |
 |---|---|
+| `$slots` read in `<script setup>`, where Vue defines no such name | FV0601 |
+| a member of a `ref`, a `shallowRef` or a `computed` other than `.value` read in `<script setup>`, such as `r.length` | FV0638 |
 | an initial value in `<script setup>` the compiler does not translate that assigns, uses `++` or `--`, calls a function of setup, changes a value of setup with a method such as `push`, or gives a value of setup to a function of another library: `const x = (n.value = 5)`, `const y = items.value.push(z)` | FV0105 |
 | an initial value that runs `watchEffect`, `watchSyncEffect` or `watchPostEffect`: `const stop = watchEffect(…)` | FV0103 |
 | an initial value that runs `watch` with `immediate`: `const stop = watch(source, callback, { immediate: true })` | FV0102 |
 | an initial value that runs `onServerPrefetch` | FV0104 |
 
+0.13 read `$slots` as the template's `$slots` and a ref's member from the ref's value, and rendered state
+as it was before an initial value changed it. See [the error codes](crate::guide::error_codes).
+
 # Behaviour that changed
+
+## A `<RouterLink>`'s active class names keep their spaces
+
+A `<RouterLink>`'s classes are merged as vue-router merges them. An active class name keeps the
+spaces written in it, so `active-class=" on "` gives `class="on  router-link-exact-active"` where
+0.13 trimmed it to `on router-link-exact-active`. Names that are array indices come first, and an
+own `class` equal to the link's classes is written once. See
+[configuring the routes](crate::guide::routing#configuring-the-routes).
 
 ## An empty `TrustedHtml` or `InlineHtml` is false
 

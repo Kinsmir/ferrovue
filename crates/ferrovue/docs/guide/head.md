@@ -177,10 +177,11 @@ components updates the head as it would in any Vue app. `@unhead/vue` is an opti
 
 unhead's server escapes a title as text, but an attribute value only for its quotes (`&` and `<`
 are written as they are) and the content of a `script`, `style` or `noscript` only for its closing
-tag. ferrovue writes exactly that. A value holding `&amp;` or markup in an attribute or a
-`<style>` is then read back by the browser as something other than what unhead's client holds,
-and the client rewrites that tag; keep text you do not control out of `style` and `script`
-content, as with unhead itself.
+tag. ferrovue writes exactly that. A value holding `&amp;` or markup in an attribute, a
+`<style>` or a `<noscript>` is then read back by the browser as something other than what unhead's
+client holds, and the client rewrites that tag. `<`, `&` and quotes in `noscript` content are
+written as they are, so its markup is the page's own where the browser runs no script. Keep text
+you do not control out of `style`, `script` and `noscript` content, as with unhead itself.
 
 # Testing
 

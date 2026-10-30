@@ -36,7 +36,7 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - A field read by a key of a union that a `?:` narrows to some of its members compiles; 0.13.0 stopped with a `TypeError`.
   [Types](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#types).
 - `$slots` read in `<script setup>`, where Vue defines no such name, is refused with FV0601; 0.13.0 read it as the template's `$slots`.
-  [`slots`](https://docs.rs/ferrovue/latest/ferrovue/guide/slots/index.html).
+  [FV0601](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0601).
 - A member of a `ref` other than `.value` read in `<script setup>`, which Vue reads from the ref object, is refused with FV0638.
   0.13.0 read it from the ref's value, so `r.length` rendered a length where Vue renders nothing: [FV0638](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0638).
 - An empty `TrustedHtml` or `InlineHtml` prop is falsy in `v-if`, `v-show`, `!` and `?:`, as in Vue; 0.13.0 took an empty one as true.

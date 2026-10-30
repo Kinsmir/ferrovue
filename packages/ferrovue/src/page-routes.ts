@@ -10,7 +10,7 @@ function unwritten(): never {
 export const routes: RouteRecordRaw[] = unwritten();
 
 /** The same routes as a routes file lists them, with `view: false` on a folder: what `routeRecords`
- * and `linkRouter` take, for a client whose pages the server renders. */
+ * and `linkRoutes` take, for a client whose pages the server renders. */
 const entries: RouteEntry[] = unwritten();
 
 
