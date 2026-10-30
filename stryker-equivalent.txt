@@ -405,6 +405,16 @@ packages/ferrovue/src/template.ts: ConditionalExpression: v.ty.k === "opt" => fa
 packages/ferrovue/src/template.ts: StringLiteral: "opt" => "" in if (literals === null || v === undefined || kept === undef … = undefined) return { scope: narrowed, test: () => null };
 packages/ferrovue/src/template.ts: ConditionalExpression: enumOf(v.ty) === undefined => false in if (literals === null || v === undefined || kept === undef … = undefined) return { scope: narrowed, test: () => null };
 
+# constants.ts, `constOf`: an object that is not a name has no `name`, so it is neither `$setup` nor
+# `_ctx`. Vue writes a name `<script setup>` declares or imports as `$setup.x`, from the binding
+# metadata ferrovue passes it, and `_ctx.x` for a name setup does not declare, which `s.consts`,
+# filled from `<script setup>` alone, does not hold. `s.consts` is keyed by names, so `get(undefined)`
+# finds nothing.
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/constants.ts: ConditionalExpression: n.object.name === "_ctx" => false in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/constants.ts: StringLiteral: "_ctx" => "" in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
+packages/ferrovue/src/constants.ts: ConditionalExpression: name !== undefined => true in const c = name !== undefined ? s.consts.get(name) : undefined;
+
 # constants.ts, `declareConsts`: a destructuring `const` is stored under the key `undefined`, and
 # every lookup of a declared constant is by an identifier's name; the one loop over a module's
 # declarations (`moduleOf` in functions.ts) evaluates it and keeps the result or the refusal under
@@ -904,6 +914,14 @@ packages/ferrovue/src/operators.ts: StringLiteral: "`+`" => "" in const joined =
 packages/ferrovue/src/operators.ts: LogicalOperator: n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) => n.right.type === "NumericLiteral" || Number.isInteger(n.right.value) in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
 packages/ferrovue/src/operators.ts: ConditionalExpression: n.right.type === "NumericLiteral" => true in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
 
+# members.ts, `memberOf`: the property of a member read without brackets is a name, or a private
+# name `#x`, which has no `name`, so it is not `length`.
+packages/ferrovue/src/members.ts: ConditionalExpression: n.property.type === "Identifier" => true in if (!n.computed && n.property.type === "Identifier" && n.property.name === "length") {
+
+# members.ts, `namedMember`: an object that is not a name has no `name`, which `BUILTINS` does not
+# hold.
+packages/ferrovue/src/members.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (n.object.type === "Identifier" && BUILTINS.has(n.objec … etup.has(n.object.name)) return builtinMember(s, n, prop);
+
 # members.ts, `refValue`: an object that is not a name has no `name`, which `refs` does not hold.
 packages/ferrovue/src/members.ts: ConditionalExpression: o.type !== "Identifier" => false in if (o.type !== "Identifier" || !s.refs.has(o.name) || s.locals.has(o.name)) return false;
 
@@ -1245,6 +1263,44 @@ packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.object.type === "Iden
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "Identifier" => true in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Identifier" && n.callee.name === "_ssrRenderComponent") {
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Iden … RenderSlot" && n.arguments[1]?.type === "StringLiteral") {
+
+# dynamic.ts, `dynamicOf`: every caller passes a node. Babel, with the options `templateAst` gives
+# it, puts a node under `expression` only in an `ExpressionStatement` (an arrow function holds a
+# boolean there, and parentheses are `extra`), so a test of the type is the test of `expression`.
+# A callee that is not a name has no `name`. Vue writes `_createVNode(_resolveDynamicComponent(…))`
+# as the second argument of `_ssrRenderVNode` alone: a call of another name has no such argument,
+# and `dynamicOf` gives null for it at the next test.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: st?.type === "ExpressionStatement" => true in const c = st?.type === "ExpressionStatement" ? st.expression : null;
+packages/ferrovue/src/dynamic.ts: OptionalChaining: st?.type => st.type in const c = st?.type === "ExpressionStatement" ? st.expression : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: c.callee.type !== "Identifier" => false in if (c?.type !== "CallExpression" || c.callee.type !== "Identifier" || c.callee.name !== "_ssrRenderVNode") return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: c.callee.name !== "_ssrRenderVNode" => false in if (c?.type !== "CallExpression" || c.callee.type !== "Identifier" || c.callee.name !== "_ssrRenderVNode") return null;
+
+# dynamic.ts, `expanded` and `prepareDynamic`: in a template's AST `__fv` is the string `tagAst`
+# sets and `loc` a source location of positions and names, so walking them finds no
+# `_ssrRenderVNode` and no picked node. An array walked by its entries visits the same items, and
+# no array is a picked node.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: Array.isArray(x) => false in if (Array.isArray(x)) {
+packages/ferrovue/src/dynamic.ts: BlockStatement: { x.forEach(find); return; } => {} in if (Array.isArray(x)) {
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" && key !== "__fv" => true in for (const [key, v] of Object.entries(x)) if (key !== "loc" && key !== "__fv") find(v);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: key !== "loc" && key !== "__fv" => key !== "loc" || key !== "__fv" in for (const [key, v] of Object.entries(x)) if (key !== "loc" && key !== "__fv") find(v);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" => true in for (const [key, v] of Object.entries(x)) if (key !== "loc" && key !== "__fv") find(v);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "__fv" => true in for (const [key, v] of Object.entries(x)) if (key !== "loc" && key !== "__fv") find(v);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "loc" => "" in for (const [key, v] of Object.entries(x)) if (key !== "loc" && key !== "__fv") find(v);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "__fv" => "" in for (const [key, v] of Object.entries(x)) if (key !== "loc" && key !== "__fv") find(v);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" && key !== "__fv" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);
+packages/ferrovue/src/dynamic.ts: LogicalOperator: key !== "loc" && key !== "__fv" => key !== "loc" || key !== "__fv" in for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "loc" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: key !== "__fv" => true in for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "loc" => "" in for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);
+packages/ferrovue/src/dynamic.ts: StringLiteral: "__fv" => "" in for (const [key, v] of Object.entries(n)) if (key !== "loc" && key !== "__fv") visit(v);
+
+# dynamic.ts, `expanded`: `find` walks each node's keys in the order babel sets them, which for the
+# statements and calls of Vue's SSR code is their order in the source, so `inner` is already sorted.
+packages/ferrovue/src/dynamic.ts: MethodExpression: inner.sort((a, b) => a.start - b.start) => inner in inner.sort((a, b) => a.start - b.start);
+
+# dynamic.ts, `prepareDynamic`: `outletsOf` finds an outlet only at an `_ssrRenderSlot` call, so a
+# template without one gives none, and an empty set in `vnodeSlots` answers as no set does.
+packages/ferrovue/src/dynamic.ts: StringLiteral: "_ssrRenderSlot" => "" in if (!p.picks.size && !p.code.includes("_ssrRenderSlot")) continue;
 
 # dynamic.ts, `propOf`, `tableOf`, `entry`, `pickOf` and `outletsOf`: a `null` or `undefined` key
 # finds nothing. No local, declaration, import or destructured prop is named `null`;
