@@ -4,7 +4,7 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, CLIENT_ONLY, CSS_MODULES, datePlans, OPTIONS, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, COMMENTS, CSS_MODULES, datePlans, OPTIONS, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import { hydrationBody, recordedHead } from "../src/conformance.ts";
 import type { PageData } from "./entry.ts";
 
@@ -49,7 +49,7 @@ beforeAll(async () => {
     configFile: false,
     root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
-    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } } })],
+    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: COMMENTS } } })],
     css: { modules: { generateScopedName: CSS_MODULES.generateScopedName } },
     resolve: { alias: [{ find: /^ferrovue$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },

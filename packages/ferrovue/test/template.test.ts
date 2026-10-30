@@ -22,13 +22,13 @@ function project(source: string, others: Record<string, string>): string {
 }
 
 function render(source: string, others: Record<string, string> = {}, config: Record<string, unknown> = {}): string {
-  const out = generate(project(source, others), { components: "components", out: "out", ...config }).get("x.rs")!;
+  const out = generate(project(source, others), { components: "components", out: "out", comments: true, ...config }).get("x.rs")!;
   return /pub fn try_render[\s\S]*?\n}\n/.exec(out)![0];
 }
 
 function refusals(source: string, others: Record<string, string> = {}, config: Record<string, unknown> = {}): string[] {
   try {
-    generate(project(source, others), { components: "components", out: "out", ...config });
+    generate(project(source, others), { components: "components", out: "out", comments: true, ...config });
   } catch (e) {
     if (e instanceof GenErrors) return e.errors.map((one) => (one instanceof GenError ? `${one.code} ${one.what}` : String(one)));
     if (e instanceof GenError) return [`${e.code} ${e.what}`];

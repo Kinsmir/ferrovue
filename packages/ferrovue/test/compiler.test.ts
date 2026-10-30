@@ -7010,6 +7010,47 @@ p { color: v-bind(color); gap: v-bind(gap); width: v-bind('color + "px"'); }
   });
 });
 
+describe("HTML comments in a template", () => {
+  const child = `<script setup lang="ts">
+defineProps<{ label: string }>();
+</script>
+<template>
+  <!-- the box -->
+  <div class="box"><!-- inside --><slot><!-- empty -->{{ label }}</slot></div>
+</template>`;
+  const parent = `<script setup lang="ts">
+import Box from "./Box.vue";
+defineProps<{ label: string; on: boolean }>();
+</script>
+<template>
+  <section><!-- before --><Box class="outer" :label="label"><!-- slotted --><b>{{ label }}</b></Box>
+    <i v-if="on">yes</i>
+    <!-- between branches -->
+    <i v-else>no</i>
+  </section>
+</template>`;
+  const uncommented = (text: string): string => text.replace(/<!--[^]*?-->/g, (c) => " ".repeat(c.length));
+  const written = (config: object, strip = false) => {
+    const files = generate(island(strip ? uncommented(parent) : parent, { Box: strip ? uncommented(child) : child }), { ...CONFIG, ...config });
+    return { x: files.get("x.rs")!, box: files.get("box.rs")! };
+  };
+
+  it("leaves them out by default, as Vue's production build, so a root beside a comment takes a parent's attributes", () => {
+    const out = written({});
+    expect(out).toEqual(written({}, true));
+    expect(`${out.x}${out.box}`).not.toMatch(/<!-- |-->"/);
+    expect(out.box).toContain("fv_attrs.list()");
+  });
+
+  it("keeps them with `comments` or `isProduction: false`, as Vue's development build, a comment beside the root making a fragment", () => {
+    const out = written({ comments: true });
+    for (const text of ["<!-- the box -->", "<!-- inside -->", "<!-- before -->", "<!-- slotted -->", "<!-- between branches -->"]) expect(`${out.x}${out.box}`).toContain(text);
+    expect(out.box).toContain("<!--[-->");
+    expect(written({ isProduction: false })).toEqual(out);
+    expect(written({ isProduction: false, comments: false })).toEqual(written({}));
+  });
+});
+
 describe("`<style module>`", () => {
   const MODULES = { ...CONFIG, cssModules: { generateScopedName: "[local]_x" } };
   const refusalWith = (source: string): GenError => {
@@ -7093,6 +7134,7 @@ describe("the configuration", () => {
     ["a misspelt key in `router`", { ...CONFIG, router: { routes: "routes.json", linkActiveClas: "on" } }, "FV1114", /^`router` in ferrovue\.config\.json has no key `linkActiveClas`: did you mean `linkActiveClass`\?/],
     ["a string of client directives", { ...CONFIG, clientDirectives: "focus" }, "FV1115", /^`clientDirectives` in ferrovue\.config\.json is a list of directive names/],
     ["`isProduction` that is not a boolean", { ...CONFIG, isProduction: "yes" }, "FV1115", /^`isProduction` in ferrovue\.config\.json is `true` or `false`/],
+    ["`comments` that is not a boolean", { ...CONFIG, comments: "keep" }, "FV1115", /^`comments` in ferrovue\.config\.json is `true` or `false`/],
     ["`cssModules` without a pattern", { ...CONFIG, cssModules: {} }, "FV1115", /^`cssModules\.generateScopedName` in ferrovue\.config\.json is a string/],
     ["`cssModules` that is a string", { ...CONFIG, cssModules: "[local]" }, "FV1115", /^`cssModules` in ferrovue\.config\.json is an object/],
     ["a misspelt key in `cssModules`", { ...CONFIG, cssModules: { generateScopedName: "[local]", hashPrefx: "" } }, "FV1114", /did you mean `hashPrefix`\?/],
@@ -7143,6 +7185,7 @@ describe("the configuration", () => {
       clientDirectives: ["focus"],
       scopeId: "filepath",
       viteRoot: ".",
+      comments: true,
       builders: false,
     };
     expect(loadConfig(configured(full))).toEqual(full);

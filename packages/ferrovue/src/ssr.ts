@@ -25,9 +25,17 @@ function cssVarNames(file: string, component: Component, count: number): string[
   return client.map((k) => getEscapedCssVarName(JSON.parse(`"${k}"`) as string, true));
 }
 
+/** How `attachSsrRender` compiles a component's template. */
+export interface SsrRenderOptions {
+  /** Whether the template's HTML comments render, as `comments` in `ferrovue.config.json`
+   * decides it for the generated code: `false` by default. */
+  comments?: boolean;
+}
+
 /** Give a component compiled for the browser the `ssrRender` its SSR build would have. */
-export function attachSsrRender(file: string, name: string, component: Component): void {
-  const { descriptor } = parseSfc(readFileSync(file, "utf8"), { filename: file });
+export function attachSsrRender(file: string, name: string, component: Component, options: SsrRenderOptions = {}): void {
+  const comments = options.comments ?? false;
+  const { descriptor } = parseSfc(readFileSync(file, "utf8"), { filename: file, templateParseOptions: { comments } });
   const fs = { fileExists: existsSync, readFile: (f: string): string => readFileSync(f, "utf8"), realpath: realpathSync };
   const script = descriptor.script || descriptor.scriptSetup ? compileScript(descriptor, { id: name, fs }) : null;
   const scopeId = (component as { __scopeId?: string }).__scopeId;
@@ -45,7 +53,7 @@ export function attachSsrRender(file: string, name: string, component: Component
     ssr: true,
     ssrCssVars: descriptor.cssVars,
     isProd: true,
-    compilerOptions: script?.bindings ? { bindingMetadata: script.bindings } : {},
+    compilerOptions: { ...(script?.bindings ? { bindingMetadata: script.bindings } : {}), comments },
   }).code.replace(/^(\s*)":--[^"]*":/gm, (_, indent: string) => `${indent}":--${varNames[named++]!}":`);
   const body = code
     .replace(/import \{([^}]*)\} from "vue"/g, (_, names: string) => `const {${names.replace(/ as /g, ": ")}} = __vue;`)

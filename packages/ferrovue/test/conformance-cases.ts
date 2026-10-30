@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadConfig } from "../src/config.ts";
 import { datePlansOf } from "../src/conformance.ts";
+import { templateComments } from "../src/context.ts";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
 import { type Fixture, readFixture, type RouterOptions } from "../src/testing-browser.ts";
 import type { RouteEntry } from "../src/route-records.ts";
@@ -15,6 +16,8 @@ const CONFIG = JSON.parse(readFileSync(join(ROOT, "ferrovue.config.json"), "utf8
   cssModules: { generateScopedName: string };
 };
 export const CSS_MODULES = CONFIG.cssModules;
+/** Whether the conformance components' HTML comments render, as the generated code renders them. */
+export const COMMENTS = templateComments(loadConfig(ROOT));
 let plans: DatePlans | undefined;
 
 /** The date plans of the conformance components, compiled once, on first use. */

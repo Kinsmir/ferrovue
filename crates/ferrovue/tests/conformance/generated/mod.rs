@@ -31,6 +31,8 @@ pub mod cart;
 pub mod catalog;
 pub mod chips;
 pub mod client_side;
+pub mod comment_box;
+pub mod comments;
 pub mod constants;
 pub mod counter;
 pub mod css_vars;
@@ -459,6 +461,16 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ClientSide" => {
             let props: client_side::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             client_side::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "CommentBox" => {
+            let props: comment_box::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
+            comment_box::try_render(&mut out, &props, comment_box::Slots { default: fixture.slot("default").map(|_| ferrovue::render::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+        }
+        "Comments" => {
+            let props: comments::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            comments::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Constants" => {
             let props: constants::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

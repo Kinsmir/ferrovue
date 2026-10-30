@@ -5,7 +5,7 @@ import type { Component } from "vue";
 import { generate } from "../src/compiler.ts";
 import { attachSsrRender } from "../src/ssr.ts";
 import { fixtureApp } from "../src/testing-browser.ts";
-import { cases, CLIENT_ONLY, fixtureOf, OPTIONS, ROOT, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
+import { cases, CLIENT_ONLY, COMMENTS, fixtureOf, OPTIONS, ROOT, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "./conformance-cases.ts";
 import { clientRenderDifference, HEAD, hydrationBody, placeHead, recordedHead, renderFixture, TELEPORTS } from "../src/conformance.ts";
 import { headRendered, settled, stillLoading } from "../src/settle.ts";
 
@@ -17,7 +17,7 @@ const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrov
 const components = new Map(
   Object.entries(modules).map(([path, m]) => [path.replace(/^.*\/(\w+)\.vue$/, "$1"), m.default]),
 );
-for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component);
+for (const [name, component] of components) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, component, { comments: COMMENTS });
 
 it("has fixtures for every component, and recorded HTML for every fixture", () => {
   expect(components.size).toBeGreaterThanOrEqual(120);

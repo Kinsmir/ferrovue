@@ -7,7 +7,12 @@
 import type { Component } from 'vue';
 
 // @public
-export function attachSsrRender(file: string, name: string, component: Component): void;
+export function attachSsrRender(file: string, name: string, component: Component, options?: SsrRenderOptions): void;
+
+// @public
+export interface SsrRenderOptions {
+    comments?: boolean;
+}
 
 // (No @packageDocumentation comment for this package)
 

@@ -13,7 +13,7 @@ const props = JSON.parse(process.argv[3] ?? "{}") as Record<string, unknown>;
 const name = basename(file, ".vue");
 const source = readFileSync(file, "utf8");
 
-const { descriptor } = parse(source, { filename: file });
+const { descriptor } = parse(source, { filename: file, templateParseOptions: { comments: false } });
 const fs = { fileExists: existsSync, readFile: (f: string): string => readFileSync(f, "utf8"), realpath: realpathSync };
 const script = descriptor.script || descriptor.scriptSetup ? compileScript(descriptor, { id: name, fs }) : null;
 const scopeId = descriptor.styles.some((st) => st.scoped)
@@ -27,7 +27,7 @@ const { code } = compileTemplate({
   slotted: descriptor.slotted,
   ssr: true,
   ssrCssVars: descriptor.cssVars,
-  compilerOptions: script?.bindings ? { bindingMetadata: script.bindings } : {},
+  compilerOptions: { ...(script?.bindings ? { bindingMetadata: script.bindings } : {}), comments: false },
 });
 console.log("── Vue SSR compilation ──\n" + code);
 

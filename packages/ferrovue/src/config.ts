@@ -107,6 +107,10 @@ export interface Config {
    * default) for `vite build`, `false` for the dev server. It decides the names of the CSS
    * variables `v-bind()` in `<style>` sets: a hash in production, the expression in development. */
   isProduction?: boolean;
+  /** Whether the HTML comments of templates render, as `@vitejs/plugin-vue`'s
+   * `template.compilerOptions.comments`: by default as Vue decides it, kept when `isProduction` is
+   * `false` and left out when it is `true`. */
+  comments?: boolean;
   /** CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue
    * computes as postcss-modules does. Without it, `<style module>` is refused. */
   cssModules?: {

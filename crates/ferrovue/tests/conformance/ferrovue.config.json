@@ -4,6 +4,7 @@
   "scopeId": "filepath",
   "viteRoot": "../../../..",
   "isProduction": false,
+  "comments": false,
   "cssModules": {
     "generateScopedName": "[name]__[local]___[hash:base64:5]"
   },
