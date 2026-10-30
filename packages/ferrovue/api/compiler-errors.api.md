@@ -1601,7 +1601,7 @@ export const ERRORS: {
     };
     readonly FV1708: {
         readonly title: "`useHeadSafe`";
-        readonly detail: "`useHeadSafe` passes its input through unhead's safe input plugin, which keeps only the tags and attributes it deems safe. ferrovue does not reproduce that filter. Use `useHead` with values the page trusts, and keep text you do not control out of `script` and `style`.";
+        readonly detail: "`useHeadSafe` passes its input through unhead's safe input plugin, which keeps only the tags and attributes it deems safe. ferrovue does not reproduce that filter. Use `useHead` with values the page trusts, and keep text you do not control out of `script`, `style` and `noscript`.";
     };
     readonly FV1709: {
         readonly title: "`useSeoMeta` key or value ferrovue does not translate";

@@ -1592,7 +1592,7 @@ export const ERRORS = {
   },
   FV1708: {
     title: "`useHeadSafe`",
-    detail: "`useHeadSafe` passes its input through unhead's safe input plugin, which keeps only the tags and attributes it deems safe. ferrovue does not reproduce that filter. Use `useHead` with values the page trusts, and keep text you do not control out of `script` and `style`.",
+    detail: "`useHeadSafe` passes its input through unhead's safe input plugin, which keeps only the tags and attributes it deems safe. ferrovue does not reproduce that filter. Use `useHead` with values the page trusts, and keep text you do not control out of `script`, `style` and `noscript`.",
   },
   FV1709: {
     title: "`useSeoMeta` key or value ferrovue does not translate",
