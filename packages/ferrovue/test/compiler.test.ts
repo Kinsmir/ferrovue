@@ -5499,6 +5499,16 @@ defineProps<{ k?: "a" | "b" }>();
       /"z" is not one of "a" \| "b", the members of `XK`, so the comparison is always true/,
     ],
     [
+      "a member of a ref other than `.value` read in setup",
+      `<script setup lang="ts">
+import { computed, ref } from "vue";
+const r = ref<string[]>([]);
+const n = computed(() => r.length);
+</script>
+<template><p>{{ n }}</p></template>`,
+      /X\.vue:4:26: `r\.length` reads a member of the ref `r`, which in setup has only `\.value`: read `r\.value\.length`/,
+    ],
+    [
       "a union compared with a literal outside it in a computed's switch",
       `<script setup lang="ts">
 import { computed } from "vue";
@@ -6190,6 +6200,7 @@ defineProps<{ chip: Chip }>();
     "a ref typed as a union whose value may be another string": "FV0111",
     "a union compared with a literal outside it": "FV0637",
     "an optional union compared with a literal outside it": "FV0637",
+    "a member of a ref other than `.value` read in setup": "FV0638",
     "a union compared with a literal outside it in a computed's switch": "FV0637",
     "a union's default outside it": "FV0322",
     "a lookup table's value outside the union its type gives": "FV0228",

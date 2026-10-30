@@ -646,6 +646,10 @@ export const ERRORS = {
     title: "Comparison of a union of string literals with a literal outside it",
     detail: "A value typed as a union of string literals is a Rust enum, and `===` or `!==` with a literal compares it with one of its variants. A literal outside the union is no variant: the comparison would always be `false` (or `true` for `!==`), and TypeScript refuses it as a comparison of types with no overlap. Compare with one of the union's members, or fix the literal's spelling.",
   },
+  FV0638: {
+    title: "Member of a ref other than `.value` read in setup",
+    detail: "In `<script setup>`, a `ref`, a `shallowRef` or a `computed` is the ref object itself, whose only member is `.value`: `r.label` is `undefined`, `r.length` is `undefined` and `r.join()` throws. The template unwraps a ref, so there `r.label` reads the field of its value. Read the member through `.value` in setup: `r.value.label`.",
+  },
 
   FV0701: {
     title: "`Number()` of an unsupported value",
