@@ -73,7 +73,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(186 + 38 * props.counts.len() + 34 * props.labels.len() + 23 * props.scores.len() + 18 * props.groups.len() + 23 * props.counts.len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
+    out.reserve(186 + 38 * props.counts.len() + 34 * props.labels.len() + 25 * props.scores.len() + 18 * props.groups.len() + 23 * props.counts.len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
     out.push_str("<section><ul><!--[-->");
     for (fv_i, (fv_name, fv_count_ref)) in props.counts.iter().enumerate() {
         let fv_count = *fv_count_ref;
@@ -100,8 +100,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--></dl><!--[-->");
     for (fv_id, fv_value_ref) in props.scores.iter() {
         let fv_value = fv_value_ref;
-        out.push_str("<p id=\"");
-        fv::core::escape_into(out, &format!("s-{}", fv_id));
+        out.push_str("<p id=\"s-");
+        fv::core::escape_into(out, fv_id);
         out.push_str("\">");
         fv::core::push_int(out, fv_value.points);
         out.push_str(" by ");

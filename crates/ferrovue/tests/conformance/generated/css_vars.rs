@@ -68,14 +68,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(372 + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len());
+    out.reserve(380 + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len());
     let s_doubled = props.size as f64 * 2.0;
     let s_theme = props.label.as_deref().unwrap_or("plain");
     out.push_str("<section");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"vars\" style=\"margin:0;--own:1;padding:");
-        fv::core::escape_into(out, &format!("{}px", fv::core::Js(props.size)));
-        out.push_str(";color:");
+        fv::core::push_int(out, props.size);
+        out.push_str("px;color:");
         fv::core::escape_into(out, &props.color);
         out.push_str(";--b3187d50-color:");
         if props.color.is_empty() {

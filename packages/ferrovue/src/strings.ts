@@ -1,4 +1,4 @@
-import { type Component, type N, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
+import { type Component, type N, type Piece, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
 import type { ErrorCode } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
@@ -131,7 +131,7 @@ export function stringOf(comp: Component, v: Val, n: N, what: string, code: Erro
   if (SCALAR.has(v.ty.k)) return v;
   if (nothing(v.ty)) return { code: rustStr(v.ty.k === "null" ? "null" : "undefined"), ty: STR };
   const lone = loneOf(v);
-  const written = (arg: string): Val => ({ code: `&*format!("{}", ${arg})`, ty: STR, format: { text: "{}", args: [arg] }, ...lone });
+  const written = (arg: string): Val => ({ code: `&*format!("{}", ${arg})`, ty: STR, format: { text: "{}", args: [arg], pieces: [{ shown: arg }] }, ...lone });
   if (v.ty.k === "opt" && SCALAR.has(v.ty.of.k)) {
     if (v.ty.none === "either") {
       fail(comp, "FV0721", `${what} of a value that may be \`null\` or \`undefined\`, which JavaScript writes as \`null\` or \`undefined\` and its Rust \`Option\` cannot tell apart: give it a fallback with \`??\``, n);
@@ -179,6 +179,12 @@ function mayBeEmpty(v: Val): boolean {
 export function formatted(comp: Component, given: (string | Val)[], n: N, what: string): Val {
   let fmt = "";
   const args: string[] = [];
+  const pieces: Piece[] = [];
+  const add = (p: Piece) => {
+    const last = pieces.length - 1;
+    if (typeof p === "string" && typeof pieces[last] === "string") pieces[last] += p;
+    else if (p !== "") pieces.push(p);
+  };
   let before: Val | undefined;
   const parts = given.map((p) => (typeof p === "string" ? p : stringOf(comp, p, n, what, "FV0708")));
   const lone = loneOf(...parts.map((p) => (typeof p === "string" ? undefined : p)));
@@ -188,6 +194,7 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
       const text = typeof part === "string" ? part : unquote(part.code);
       if (text !== "") before = undefined;
       fmt += text.replace(/[{}]/g, (c) => c + c);
+      add(text);
       continue;
     }
     if (before) meet(comp, before, part, what, n, "join");
@@ -195,10 +202,18 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
     if (part.format) {
       fmt += part.format.text;
       args.push(...part.format.args);
+      part.format.pieces.forEach(add);
       continue;
     }
-    if (part.ty.k === "str") args.push(receiver(part.code).replace(/^(fv::core::Js\(.*\))\.to_string\(\)$/s, "$1"));
-    else if (isNumber(part.ty)) args.push(`fv::core::Js(${bare(asWritten(part).code)})`);
+    if (part.ty.k === "str") {
+      const arg = receiver(part.code).replace(/^(fv::core::Js\(.*\))\.to_string\(\)$/s, "$1");
+      args.push(arg);
+      add(arg === receiver(part.code) ? part : { shown: arg });
+      fmt += "{}";
+      continue;
+    }
+    add(part);
+    if (isNumber(part.ty)) args.push(`fv::core::Js(${bare(asWritten(part).code)})`);
     else args.push(`if ${condition(part.code)} { "true" } else { "false" }`);
     fmt += "{}";
   }
@@ -206,7 +221,7 @@ export function formatted(comp: Component, given: (string | Val)[], n: N, what: 
   const one = parts.filter((p) => (typeof p === "string" ? p !== "" : p.code !== '""'));
   if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "str") return one[0]!;
   if (fmt === "{}" && one.length === 1 && typeof one[0] !== "string" && one[0]!.ty.k === "bool") return { code: args[0]!, ty };
-  return { code: `&*format!(${rustStr(fmt)}, ${args.join(", ")})`, ty, format: { text: fmt, args }, ...lone };
+  return { code: `&*format!(${rustStr(fmt)}, ${args.join(", ")})`, ty, format: { text: fmt, args, pieces }, ...lone };
 }
 
 const CLASS_ESCAPES: Record<string, "none" | "all"> = { d: "none", D: "all", w: "none", W: "all", s: "none", S: "all" };

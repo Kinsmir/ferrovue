@@ -109,7 +109,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(275 + 33 * props.rows.len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
+    out.reserve(293 + 33 * props.rows.len() + props.name.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.author.as_ref().map_or(0, |v| v.name.len() + v.site.as_deref().map_or(0, str::len)) + props.rows.iter().map(|v| v.label.len()).sum::<usize>() + props.pick.as_deref().map_or(0, str::len));
     out.push_str("<div><p>");
     fv::core::push_number(out, props.n as f64 - props.m as f64);
     out.push('|');
@@ -129,10 +129,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_number(out, (props.m as f64).abs());
     out.push_str("</p><p title=\"");
-    fv::core::escape_into(out, &format!("{} has {} item{}", props.name, fv::core::Js(props.n), (if props.n as f64 == 1.0 { "" } else { "s" })));
-    out.push_str("\">");
-    fv::core::escape_into(out, &format!("[{}]", props.name));
-    out.push('|');
+    fv::core::escape_into(out, &props.name);
+    out.push_str(" has ");
+    fv::core::push_int(out, props.n);
+    out.push_str(" item");
+    fv::core::escape_into(out, if props.n as f64 == 1.0 { "" } else { "s" });
+    out.push_str("\">[");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("]|");
     fv::core::escape_into(out, &fv::core::Js(props.n).to_string());
     out.push('|');
     fv::core::escape_into(out, &fv::core::Js(props.n).to_string());

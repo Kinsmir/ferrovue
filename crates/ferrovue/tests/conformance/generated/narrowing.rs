@@ -78,7 +78,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(267 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2));
+    out.reserve(274 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2));
     out.push_str("<section>");
     if let Some(fv_label) = props.label.as_deref() {
         out.push_str("<p>");
@@ -96,8 +96,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, fv_count as f64 + 1.0);
         out.push('|');
         fv::core::push_number(out, fv_count as f64 % 3.0);
-        out.push('|');
-        fv::core::escape_into(out, &format!("#{}", fv::core::Js(fv_count)));
+        out.push_str("|#");
+        fv::core::push_int(out, fv_count);
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");

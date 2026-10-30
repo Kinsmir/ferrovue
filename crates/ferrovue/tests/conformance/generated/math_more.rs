@@ -41,13 +41,13 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(532);
+    out.reserve(540);
     let s_root = props.x.sqrt();
     out.push_str("<section data-sign=\"");
     fv::core::push_number(out, fv::core::js_sign(props.x));
     out.push_str("\" style=\"width:");
-    fv::core::escape_into(out, &format!("{}px", fv::core::Js((props.n as f64).sqrt() * 10.0)));
-    out.push_str(";\"><p>");
+    fv::core::push_number(out, (props.n as f64).sqrt() * 10.0);
+    out.push_str("px;\"><p>");
     fv::core::push_number(out, props.x.sqrt());
     out.push('|');
     fv::core::push_number(out, (props.n as f64).sqrt());

@@ -52,6 +52,10 @@ export function isTuple(st: Struct): boolean {
   return st.fields.length > 0 && st.fields.every((f, i) => f.js === String(i));
 }
 
+/** A piece of a joined string: literal text, a value, or a Rust expression whose `Display` writes
+ * text that needs no escaping and is never empty. */
+export type Piece = string | Val | { shown: string };
+
 export interface Val {
   code: string;
   ty: Ty;
@@ -63,7 +67,9 @@ export interface Val {
   slice?: boolean;
   num?: number;
   pick?: true;
-  format?: { text: string; args: string[] };
+  /** For a string `format!` builds, its format string and arguments, and the same value as the
+   * pieces it joins. */
+  format?: { text: string; args: string[]; pieces: Piece[] };
   owned?: true;
   /** For a value of a generated enum, the Rust expression of the enum (an `Option` of it when the
    * value is optional), where `code` is its string. */

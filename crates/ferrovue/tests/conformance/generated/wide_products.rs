@@ -41,7 +41,7 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(90);
+    out.reserve(96);
     let s_square = props.n as f64 * props.n as f64;
     out.push_str("<p title=\"");
     fv::core::push_number(out, props.n as f64 * props.n as f64);
@@ -56,7 +56,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push(' ');
     fv::core::push_number(out, s_square);
     out.push(' ');
-    fv::core::escape_into(out, &format!("{}", fv::core::Js(props.n as f64 * props.m as f64)));
+    fv::core::push_number(out, props.n as f64 * props.m as f64);
     out.push(' ');
     fv::core::escape_into(out, &fv::core::Js(props.n as f64 * props.n as f64).to_string());
     out.push(' ');

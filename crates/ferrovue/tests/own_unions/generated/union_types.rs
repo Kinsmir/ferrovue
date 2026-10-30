@@ -66,7 +66,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(151 + 8 + 8 + 8 + 8 + props.label.len());
+    out.reserve(152 + 8 + 8 + 8 + 8 + props.label.len());
     let s_loud = if props.tone == crate::domain::Shade::Warm { "loud" } else { "quiet" };
     let s_chosen = props.other.unwrap_or(props.tone);
     out.push_str("<section class=\"");
@@ -101,7 +101,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, fv::strings::js_length(fv::props::Union::as_str(props.tone)));
     out.push('|');
-    fv::core::escape_into(out, &format!("{}/{}", fv::props::Union::as_str(props.tone), fv::props::Union::as_str(props.fallback.unwrap_or(crate::domain::Shade::XCool))));
+    fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
+    out.push('/');
+    fv::core::escape_into(out, fv::props::Union::as_str(props.fallback.unwrap_or(crate::domain::Shade::XCool)));
     out.push('|');
     fv::core::escape_into(out, &props.label);
     out.push_str("</p>");

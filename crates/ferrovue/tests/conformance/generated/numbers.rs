@@ -50,15 +50,15 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(228);
+    out.reserve(249);
     let s_total = props.price * props.qty as f64;
     out.push_str("<div data-ratio=\"");
     fv::core::push_number(out, props.ratio);
     out.push_str("\" style=\"opacity:");
     fv::core::push_number(out, props.ratio);
     out.push_str(";width:");
-    fv::core::escape_into(out, &format!("{}px", fv::core::Js(props.price)));
-    out.push_str(";\"><p>");
+    fv::core::push_number(out, props.price);
+    out.push_str("px;\"><p>");
     fv::core::push_number(out, s_total);
     out.push('|');
     fv::core::escape_into(out, &fv::core::js_to_fixed(s_total, 2));
@@ -95,7 +95,9 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
         fv::core::push_number(out, v);
     }
     out.push('|');
-    fv::core::escape_into(out, &format!("{}/{}", fv::core::Js(props.price), fv::core::Js(props.qty)));
+    fv::core::push_number(out, props.price);
+    out.push('/');
+    fv::core::push_int(out, props.qty);
     out.push('|');
     fv::core::escape_into(out, &fv::core::Js(props.ratio).to_string());
     out.push('|');

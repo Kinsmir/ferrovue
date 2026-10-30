@@ -55,6 +55,18 @@ describe("text", () => {
 });
 
 describe("attribute values", () => {
+  it("writes a joined value piece by piece, and tests it for emptiness without building it", () => {
+    const out = compile(
+      island(component("rank: number; score: Float; sub: string; tail: string; on: boolean; m?: number", '<li :aria-label="\'rank \' + rank" :title="sub + tail" :data-a="`${on}${sub}`" :data-m="`${m}`"><a :title="score + \' points\'">x</a></li>', 'import type { Float } from "ferrovue/types";\n')),
+    ).get("x.rs")!;
+    expect(out).not.toContain("format!");
+    expect(out).toContain(`out.push_str("<li aria-label=\\"rank ");\n    fv::core::push_int(out, props.rank);\n    out.push('"');\n    if props.sub.is_empty() && props.tail.is_empty() {`);
+    expect(out).toContain(`fv::core::escape_into(out, &props.sub);\n        fv::core::escape_into(out, &props.tail);`);
+    expect(out).toContain(`out.push_str(" data-a=\\"");\n    out.push_str(if props.on { "true" } else { "false" });\n    fv::core::escape_into(out, &props.sub);`);
+    expect(out).toContain(`{ use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined")); }`);
+    expect(out).toContain(`fv::core::push_number(out, props.score);\n    out.push_str(" points\\">x</a></li>");`);
+  });
+
   it("asks for a string, a number or a boolean where a record is bound to an attribute", () => {
     const e = refusal(island(component("tags: { [key: string]: string }", `<div><p :title="tags">x</p></div>`)));
     expect(e.code).toBe("FV0403");

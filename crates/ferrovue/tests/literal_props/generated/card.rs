@@ -38,14 +38,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(96 + 18 * props.tags.len() + props.title.len() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(103 + 18 * props.tags.len() + props.title.len() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<article><h2>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h2><p>");
     fv::core::escape_into(out, &props.owner.name);
     if let Some(fv_email) = props.owner.email.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<a href=\"");
-        fv::core::escape_into(out, &format!("mailto:{}", fv_email));
+        out.push_str("<a href=\"mailto:");
+        fv::core::escape_into(out, fv_email);
         out.push_str("\">");
         fv::core::escape_into(out, fv_email);
         out.push_str("</a>");

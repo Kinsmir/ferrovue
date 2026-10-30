@@ -18,6 +18,7 @@ pub mod arrays;
 pub mod async_class;
 pub mod async_class_root;
 pub mod attr_objects;
+pub mod attr_parts;
 pub mod attr_quirks;
 pub mod attrs;
 pub mod badge;
@@ -395,6 +396,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "AttrObjects" => {
             let props: attr_objects::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             attr_objects::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "AttrParts" => {
+            let props: attr_parts::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            attr_parts::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "AttrQuirks" => {
             let props: attr_quirks::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

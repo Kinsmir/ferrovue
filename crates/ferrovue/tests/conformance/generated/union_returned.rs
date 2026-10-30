@@ -52,7 +52,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(120 + 7 + 10 + 7 + props.label.len());
+    out.reserve(121 + 7 + 10 + 7 + props.label.len());
     let s_shown = fv::props::Union::as_str(props.mood);
     let s_spared = props.spare.map(fv::props::Union::as_str);
     out.push_str("<section");
@@ -91,7 +91,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push(' ');
-    fv::core::escape_into(out, &format!("{}/{}", s_shown, fv::props::Union::as_str(props.mark)));
+    fv::core::escape_into(out, s_shown);
+    out.push('/');
+    fv::core::escape_into(out, fv::props::Union::as_str(props.mark));
     out.push_str("</em></section>");
     Ok(())
 }

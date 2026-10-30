@@ -45,7 +45,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(129 + props.label.len());
+    out.reserve(134 + props.label.len());
     let s_sum = props.x + props.n as f64;
     let s_shown = format!("{}: {}", props.label, fv::core::js_to_precision(props.x, 3));
     out.push_str("<div");
@@ -138,7 +138,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><p>");
     fv::core::escape_into(out, &s_shown);
     out.push('|');
-    fv::core::escape_into(out, &format!("{} and {}", fv::core::js_to_exponential(props.x, Some(2)), fv::core::js_to_precision(props.n as f64, 3)));
+    fv::core::escape_into(out, &fv::core::js_to_exponential(props.x, Some(2)));
+    out.push_str(" and ");
+    fv::core::escape_into(out, &fv::core::js_to_precision(props.n as f64, 3));
     out.push_str("</p></div>");
     Ok(())
 }

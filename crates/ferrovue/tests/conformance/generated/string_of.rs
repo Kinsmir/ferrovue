@@ -98,7 +98,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(140 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(143 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
     let s_line = format!("{}/{}/{}/{}", props.label.as_deref().unwrap_or("undefined"), fv::strings::JsOr(props.count.map(fv::core::Js), "undefined"), props.nick.as_deref().unwrap_or("null"), props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
     let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) as f64 > 1.0).collect::<Vec<_>>().join(",");
     out.push_str("<section");
@@ -109,27 +109,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
         out.push('"');
     }
-    if format!("{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")).is_empty() {
-        out.push_str(" data-n");
-    } else {
-        out.push_str(" data-n=\"");
-        fv::core::escape_into(out, &format!("{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")));
-        out.push('"');
-    }
-    out.push_str("><p>");
+    out.push_str(" data-n=\"");
+    { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")); }
+    out.push_str("\"><p>");
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
     out.push('|');
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
     out.push('|');
-    fv::core::escape_into(out, &format!("{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")));
+    { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")); }
     out.push('|');
-    fv::core::escape_into(out, &format!("{}", fv::strings::JsOr(props.ratio.map(fv::core::Js), "undefined")));
+    { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.ratio.map(fv::core::Js), "undefined")); }
     out.push('|');
     fv::core::escape_into(out, if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     fv::core::escape_into(out, props.nick.as_deref().unwrap_or("null"));
     out.push('|');
-    fv::core::escape_into(out, &format!("{}", fv::strings::JsOr(props.score.map(fv::core::Js), "null")));
+    { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.score.map(fv::core::Js), "null")); }
     out.push_str("</p><p>");
     if let Some(v) = props.label.as_deref() {
         fv::core::escape_into(out, v);
@@ -158,16 +153,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_t_2.to_uppercase()).into_owned())).collect::<Vec<_>>().join(","));
     out.push('|');
     fv::core::escape_into(out, &props.nums.iter().copied().map(|fv_n| fv_n as f64 / 2.0).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
-    out.push('|');
-    fv::core::escape_into(out, &format!("({})", fv::strings::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>().join(",")));
-    out.push('|');
+    out.push_str("|(");
+    fv::core::escape_into(out, &fv::strings::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>().join(","));
+    out.push_str(")|");
     fv::core::escape_into(out, &s_kept);
     out.push('|');
     fv::core::escape_into(out, &s_line);
-    out.push_str("</p><p>");
-    fv::core::escape_into(out, &format!("<{}>{}", props.label.as_deref().unwrap_or(""), fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")));
+    out.push_str("</p><p>&lt;");
+    fv::core::escape_into(out, props.label.as_deref().unwrap_or(""));
+    out.push_str("&gt;");
+    { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")); }
     out.push('|');
-    fv::core::escape_into(out, &format!("{}{}{}", props.nick.as_deref().unwrap_or("-"), fv::strings::JsOr(props.score.map(fv::core::Js), "null"), (if props.on.unwrap_or(false) { "true" } else { "false" })));
+    fv::core::escape_into(out, props.nick.as_deref().unwrap_or("-"));
+    { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.score.map(fv::core::Js), "null")); }
+    fv::core::escape_into(out, if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("none"));
     out.push('|');

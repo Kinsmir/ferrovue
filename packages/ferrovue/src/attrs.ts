@@ -1,5 +1,5 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
-import { type N, type Scope, type Ty, type Val, fail, nothing, rustStr } from "./model.ts";
+import { type N, type Piece, type Scope, type Ty, type Val, fail, nothing, rustStr } from "./model.ts";
 import { type ErrorCode, GenError } from "./errors.ts";
 import { asWritten } from "./numbers.ts";
 import { CONFIG_FILE } from "./config.ts";
@@ -16,7 +16,30 @@ import { mergedStyle, renderStyle, styleAttr } from "./styles.ts";
 
 const NUMBER_BYTES = 6;
 
+function piecesOf(v: Val): Piece[] | undefined {
+  const f = v.format;
+  if (v.ty.k !== "str" || f === undefined || v.code !== `&*format!(${rustStr(f.text)}, ${f.args.join(", ")})`) return undefined;
+  return f.pieces;
+}
+
+function emptyTest(v: Val): string {
+  const pieces = piecesOf(v);
+  if (pieces === undefined) return `${receiver(v.code)}.is_empty()`;
+  const strs = pieces.filter((p): p is Val => typeof p !== "string" && !("shown" in p) && p.ty.k === "str");
+  if (strs.length < pieces.length) return "false";
+  return strs.map((p) => `${receiver(p.code)}.is_empty()`).join(" && ");
+}
+
 export function display(e: Emitter, v: Val): boolean {
+  const pieces = piecesOf(v);
+  if (pieces !== undefined) {
+    for (const p of pieces) {
+      if (typeof p === "string") e.lit(escapeHtml(p));
+      else if ("shown" in p) e.stmt(`{ use std::fmt::Write as _; let _ = write!(out, "{}", ${p.shown}); }`);
+      else display(e, p);
+    }
+    return true;
+  }
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
@@ -120,8 +143,9 @@ export function renderDynamicAttr(s: Scope, e: Emitter, key: string, v: Val, n: 
     e.lit(` ${name}`);
     return;
   }
-  if (v.ty.k === "str" && known(v) === undefined) {
-    e.open(`if ${receiver(v.code)}.is_empty()`);
+  const empty = v.ty.k === "str" && known(v) === undefined ? emptyTest(v) : "false";
+  if (empty !== "false") {
+    e.open(`if ${empty}`);
     e.lit(` ${name}`);
     e.close(" else {");
     e.lit(` ${name}="`);
