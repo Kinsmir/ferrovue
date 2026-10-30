@@ -1425,7 +1425,7 @@ defineProps<{ href: string }>();
 </script>
 <template><header><Nav :href="href" /></header></template>`;
       const out = withRoutes(island(parent, { Nav: nav }));
-      expect(out.get("nav.rs")).toContain('fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-exact-active", &["tab"]);');
+      expect(out.get("nav.rs")).toContain('fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-active router-link-exact-active", &["tab"], true);');
       expect(out.get("x.rs")).toContain("pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>)");
       expect(out.get("x.rs")).toContain(", fv_route)?;");
       expect(out.get("route_table.rs")).toContain('"/users/:id",');
@@ -1442,7 +1442,7 @@ defineProps<{ href: string }>();
 <template>${template}</template>
 <style scoped>a { color: red }</style>`;
       const out = withRoutes(island(scoped(`<nav><RouterLink :to="href">go</RouterLink></nav>`))).get("x.rs")!;
-      expect(out).toMatch(/fv::attrs::link_open\(out, &fv_route\.link\(&props\.href\), "page", "router-link-active", "router-link-exact-active", &\[\]\);\n\s+out\.push_str\(" data-v-[0-9a-f]{8}>go<\/a><\/nav>"\);/);
+      expect(out).toMatch(/fv::attrs::link_open\(out, &fv_route\.link\(&props\.href\), "page", "router-link-active", "router-link-active router-link-exact-active", &\[\], false\);\n\s+out\.push_str\(" data-v-[0-9a-f]{8}>go<\/a><\/nav>"\);/);
       expect(() => withRoutes(island(scoped(`<main><RouterView /></main>`)))).toThrow(/`<RouterView>` in a component with `<style scoped>`/);
       expect(() => withRoutes(island(scoped(`<nav><RouterLink :to="href"><slot /></RouterLink></nav>`)))).toThrow(/X\.vue:4:33: a `<slot>` inside a `<RouterLink>` that takes scope ids/);
       const card = `<script setup lang="ts">
@@ -1477,10 +1477,20 @@ defineProps<{ id: string }>();
     it("resolves a named route with its parameters, and writes the base and class names configured", () => {
       const out = named(island(linkTo("{ name: 'user', params: { id } }")), { base: "/app/", linkActiveClass: "on", linkExactActiveClass: "here" });
       expect(out.get("x.rs")).toContain('fv_route.link_named("user", &[("id", &*props.id)], "", "")');
-      expect(out.get("x.rs")).toContain('fv::attrs::link_open(out, &fv_link, "page", "on", "here", &[]);');
+      expect(out.get("x.rs")).toContain('fv::attrs::link_open(out, &fv_link, "page", "on", "on here", &[], false);');
       const same = named(island(linkTo("'/users/' + id\" active-class=\"same\" exact-active-class=\"same\" aria-current-value=\"a&quot;<b>")));
-      expect(same.get("x.rs")).toContain('fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.id)), "a&quot;&lt;b&gt;", "", "same", &[]);');      expect(out.get("route_table.rs")).toContain('pub const BASE: &str = "/app/";');
+      expect(same.get("x.rs")).toContain('fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.id)), "a&quot;&lt;b&gt;", "", "same", &[], false);');
+      expect(out.get("route_table.rs")).toContain('pub const BASE: &str = "/app/";');
       expect(out.get("route_table.rs")).toContain('ferrovue::router::RouteDef::new("/users/:id").with_name("user"),');
+    });
+
+    it("keeps the spaces of the class names configured or given, as vue-router's class object does", () => {
+      const spaced = named(island(linkTo("'/users/' + id")), { linkActiveClass: " on ", linkExactActiveClass: "h  ere " });
+      expect(spaced.get("x.rs")).toContain('"page", "on", "on  h  ere", &[], false);');
+      const given = named(island(linkTo("'/users/' + id\" active-class=\"2\" exact-active-class=\"1\" :class=\"id")), { linkActiveClass: " on " });
+      expect(given.get("x.rs")).toContain('"page", "2", "1 2", &[&*props.id], true);');
+      const listed = named(island(linkTo("'/users/' + id\" active-class=\" \" :class=\"[id]")));
+      expect(listed.get("x.rs")).toContain('"page", "", "router-link-exact-active", &[&*props.id], false);');
     });
 
     it("writes nested routes as a tree, and asks a nested route for its parent's parameters too", () => {

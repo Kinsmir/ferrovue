@@ -51,12 +51,12 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::rou
     {
         let fv_link = fv_route.link(&props.to);
         if fv_attrs.is_empty() {
-            fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &["link"]);
+            fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &["link"], true);
             out.push_str(" title=\"own\"");
             out.push_str(&fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
         } else {
             out.push_str("<a");
-            fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }])))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link")), ("title", fv::attrs::Attr::str("own"))], fv_attrs.list()])], 1, &fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
+            fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::str(if fv_link.exact { "router-link-active router-link-exact-active" } else if fv_link.active { "router-link-active" } else { "" }))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link")), ("title", fv::attrs::Attr::str("own"))], fv_attrs.list()])], 1, &fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
         }
         out.push_str(">go</a>");
     }

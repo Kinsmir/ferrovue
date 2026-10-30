@@ -52,13 +52,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(161 + props.to.len() + props.extra.len() + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
-    fv::attrs::link_open(out, &fv_route.link(&props.to), "a&quot;&lt;b&gt;", "on", "here", &[&*props.extra, props.tone.as_deref().unwrap_or("")]);
+    fv::attrs::link_open(out, &fv_route.link(&props.to), "a&quot;&lt;b&gt;", "on", "on here", &[&*props.extra, props.tone.as_deref().unwrap_or("")], false);
     out.push('>');
     fv::core::escape_into(out, &props.to);
     out.push_str("</a>");
-    fv::attrs::link_open(out, &fv_route.link("/account/orders"), "page", "", "same", &[if props.tone.as_deref().is_some_and(|v| !v.is_empty()) { "toned" } else { "" }]);
+    fv::attrs::link_open(out, &fv_route.link("/account/orders"), "page", "", "same", &[if props.tone.as_deref().is_some_and(|v| !v.is_empty()) { "toned" } else { "" }], false);
     out.push_str(">orders</a>");
-    fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.extra)), "page", "router-link-active", "router-link-exact-active", &["user"]);
+    fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.extra)), "page", "router-link-active", "router-link-active router-link-exact-active", &["user"], true);
     out.push('>');
     fv::core::escape_into(out, &props.extra);
     out.push_str("</a></nav>");

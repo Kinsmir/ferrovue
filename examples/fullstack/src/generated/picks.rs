@@ -61,7 +61,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         let fv_link = {
             fv_route.link_named("/", &[], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &["brand"]);
+        fv::attrs::link_open(out, &fv_link, "page", "", "active", &["brand"], true);
         out.push('>');
         fv::core::escape_into(out, &props.shop);
         out.push_str("</a>");
@@ -71,7 +71,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         let fv_link = {
             fv_route.link_named("/picks", &[], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
         out.push_str(">Staff picks</a>");
     }
     out.push_str("</nav></header><main>");
@@ -91,7 +91,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                 fv::router::query_into(&mut fv_search, "featured", &fv_book.id);
                 fv_route.link_named("/picks", &[], &fv_search, "")
             };
-            fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+            fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
             out.push('>');
             fv::core::escape_into(out, &fv_book.title);
             out.push_str("</a>");

@@ -233,29 +233,37 @@ mod links {
     use super::link_open;
     use crate::router::{RouteDef, Router};
 
-    fn open(location: &str, to: &str, active: &str, classes: &[&str]) -> String {
+    fn open(
+        location: &str,
+        to: &str,
+        names: (&str, &str),
+        classes: &[&str],
+        string: bool,
+    ) -> String {
         let router = Router::tree(&[
             RouteDef::new("/"),
             RouteDef::new("/blog").with_children(&[RouteDef::new(":slug")]),
         ]);
         let link = router.at(location).link(to);
         let mut out = String::new();
-        link_open(&mut out, &link, "page", active, "here", classes);
+        link_open(&mut out, &link, "page", names.0, names.1, classes, string);
         out
     }
 
+    const NAMES: (&str, &str) = ("near", "near here");
+
     #[test]
-    fn an_exact_link_takes_aria_current_and_both_classes_before_its_own() {
+    fn an_exact_link_takes_aria_current_and_its_exact_names_before_its_own() {
         assert_eq!(
-            open("/blog/intro", "/blog/intro", "near", &["tab", " "]),
+            open("/blog/intro", "/blog/intro", NAMES, &["tab", " "], false),
             r#"<a aria-current="page" href="/blog/intro" class="near here tab""#
         );
     }
 
     #[test]
-    fn an_active_link_takes_the_active_class_alone() {
+    fn an_active_link_takes_its_active_names() {
         assert_eq!(
-            open("/blog/intro", "/blog", "near", &["", "tab"]),
+            open("/blog/intro", "/blog", NAMES, &["", "tab"], false),
             r#"<a href="/blog" class="near tab""#
         );
     }
@@ -263,24 +271,88 @@ mod links {
     #[test]
     fn a_link_elsewhere_takes_its_own_classes_with_no_separator_before_them() {
         assert_eq!(
-            open("/", "/blog/a?b=<c>", "near", &["tab"]),
+            open("/", "/blog/a?b=<c>", NAMES, &["tab"], false),
             r#"<a href="/blog/a?b=&lt;c&gt;" class="tab""#
         );
         assert_eq!(
-            open("/", "/blog", "near", &[]),
+            open("/", "/blog", NAMES, &[], false),
             r#"<a href="/blog" class="""#
         );
     }
 
     #[test]
-    fn an_empty_active_class_leaves_the_exact_class_alone() {
+    fn empty_active_names_leave_an_active_link_its_own_classes_alone() {
         assert_eq!(
-            open("/blog/intro", "/blog/intro", "", &[]),
+            open("/blog/intro", "/blog/intro", ("", "here"), &[], false),
             r#"<a aria-current="page" href="/blog/intro" class="here""#
         );
         assert_eq!(
-            open("/blog/intro", "/blog", "", &[]),
-            r#"<a href="/blog" class="""#
+            open("/blog/intro", "/blog", ("", "here"), &[" tab "], true),
+            r#"<a href="/blog" class="tab""#
+        );
+    }
+
+    #[test]
+    fn the_names_keep_their_inner_spaces() {
+        assert_eq!(
+            open(
+                "/blog/intro",
+                "/blog/intro",
+                ("on", "on  here"),
+                &[" a ", "b"],
+                false
+            ),
+            r#"<a aria-current="page" href="/blog/intro" class="on  here a b""#
+        );
+    }
+
+    #[test]
+    fn an_own_class_equal_to_the_names_is_written_once() {
+        assert_eq!(
+            open(
+                "/blog/intro",
+                "/blog/intro",
+                NAMES,
+                &["near", "here"],
+                false
+            ),
+            r#"<a aria-current="page" href="/blog/intro" class="near here""#
+        );
+        assert_eq!(
+            open("/blog/intro", "/blog", NAMES, &["near"], true),
+            r#"<a href="/blog" class="near""#
+        );
+        assert_eq!(
+            open("/blog/intro", "/blog", NAMES, &[" near "], false),
+            r#"<a href="/blog" class="near""#
+        );
+        assert_eq!(
+            open("/blog/intro", "/blog", ("&lt;a", "&lt;a b"), &["<a"], true),
+            r#"<a href="/blog" class="&lt;a""#
+        );
+    }
+
+    #[test]
+    fn an_own_string_with_spaces_around_it_is_written_after_equal_names() {
+        assert_eq!(
+            open("/blog/intro", "/blog", NAMES, &[" near "], true),
+            r#"<a href="/blog" class="near near""#
+        );
+        assert_eq!(
+            open("/blog/intro", "/blog/intro", NAMES, &["near here\t"], true),
+            "<a aria-current=\"page\" href=\"/blog/intro\" class=\"near here near here\""
+        );
+    }
+
+    #[test]
+    fn an_own_class_that_only_starts_like_the_names_is_written_after_them() {
+        assert_eq!(
+            open("/blog/intro", "/blog", NAMES, &["near", "by"], false),
+            r#"<a href="/blog" class="near near by""#
+        );
+        assert_eq!(
+            open("/blog/intro", "/blog/intro", NAMES, &["near"], true),
+            r#"<a aria-current="page" href="/blog/intro" class="near here near""#
         );
     }
 }

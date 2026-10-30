@@ -36,6 +36,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [`v-html` and `TrustedHtml`](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#v-html-and-trustedhtml).
 - The location `//` matches the route `/`, as vue-router matches it; 0.13.0 matched it to a catch-all or to no route.
   [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#a-router-per-application-a-route-per-request).
+- A `<RouterLink>`'s class keeps the spaces in its active class names, puts index names first and writes an own class equal to them once, as vue-router does.
+  0.13.0 trimmed each name, so `active-class=" on "` rendered `on here` where Vue renders `on  here`: [`routing`](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#configuring-the-routes).
 
 ## [0.13.0] - 2026-10-29
 

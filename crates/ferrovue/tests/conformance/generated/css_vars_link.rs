@@ -51,7 +51,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::rou
     {
         let fv_link = fv_route.link("/about");
         if fv_attrs.is_empty() {
-            fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &["link"]);
+            fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &["link"], true);
             out.push_str(" style=\"--318464e0-tone:");
             if props.tone.is_empty() {
                 out.push(' ');
@@ -61,7 +61,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::rou
             out.push_str(";\" data-v-318464e0");
         } else {
             out.push_str("<a");
-            fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }])))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link"))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--318464e0-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]])], 1, " data-v-318464e0");
+            fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::str(if fv_link.exact { "router-link-active router-link-exact-active" } else if fv_link.active { "router-link-active" } else { "" }))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link"))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--318464e0-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]])], 1, " data-v-318464e0");
         }
         out.push('>');
         fv::core::escape_into(out, &props.tone);

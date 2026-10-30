@@ -50,7 +50,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("/", &[], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
         out.push_str(">Back to all books</a>");
     }
     out.push_str("</section>");

@@ -47,23 +47,23 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("account", &[], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
         out.push_str(">account</a>");
     }
     {
         let fv_link = {
             fv_route.link_named("account-home", &[], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "in", "here", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "in", "in here", &[], false);
         out.push_str(">home</a>");
     }
-    fv::attrs::link_open(out, &fv_route.link("/account/orders"), "page", "router-link-active", "router-link-exact-active", &["orders"]);
+    fv::attrs::link_open(out, &fv_route.link("/account/orders"), "page", "router-link-active", "router-link-active router-link-exact-active", &["orders"], true);
     out.push_str(">orders</a>");
     {
         let fv_link = {
             fv_route.link_named("order", &[("order", &*props.order)], "", "")
         };
-        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[]);
+        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[], false);
         out.push_str(">order ");
         fv::core::escape_into(out, &props.order);
         out.push_str("</a>");

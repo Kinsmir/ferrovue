@@ -748,9 +748,12 @@ pub fn class_object(entries: &[(bool, &str)]) -> String {
 }
 
 /// The anchor a `<RouterLink>` renders, up to the end of its `class`: `<a`, `aria-current` with
-/// the escaped value `current` where the link is exact, the escaped `href`, and the classes
-/// `active` and `exact` where the link is active and exact, before `classes`. An `active` of `""`
-/// stands for a class the link takes only where it is exact.
+/// the escaped value `current` where the link is exact, the escaped `href`, and the class. That
+/// class is `normalizeClass([names, own])`, where `names` is `exact` where the link is exact,
+/// `active` where it is only active, and empty elsewhere, both given escaped and normalised, and
+/// `own` is the link's own class, given as `classes`. As in `mergeProps`, an own class equal to
+/// `names` is written once; `string` says the own class is one string, which counts as equal
+/// only with no spaces around it.
 #[doc(hidden)]
 #[cfg(feature = "router")]
 pub fn link_open(
@@ -760,6 +763,7 @@ pub fn link_open(
     active: &str,
     exact: &str,
     classes: &[&str],
+    string: bool,
 ) {
     out.push_str("<a");
     if link.exact {
@@ -770,16 +774,24 @@ pub fn link_open(
     out.push_str(" href=\"");
     escape_into(out, &link.href);
     out.push_str("\" class=\"");
-    let start = out.len();
-    class_into(
-        out,
-        false,
-        &[
-            if link.active { active } else { "" },
-            if link.exact { exact } else { "" },
-        ],
-    );
-    class_into(out, out.len() > start, classes);
+    let names = if link.exact {
+        exact
+    } else if link.active {
+        active
+    } else {
+        ""
+    };
+    if names.is_empty() {
+        class_into(out, false, classes);
+    } else {
+        out.push_str(names);
+        let at = out.len();
+        class_into(out, true, classes);
+        let spaced = string && classes.first().is_some_and(|c| js_trim(c).len() != c.len());
+        if out.len() > at && &out[at + 1..] == names && !spaced {
+            out.truncate(at);
+        }
+    }
     out.push('"');
 }
 
