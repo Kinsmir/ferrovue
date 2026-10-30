@@ -904,9 +904,8 @@ packages/ferrovue/src/operators.ts: StringLiteral: "`+`" => "" in const joined =
 packages/ferrovue/src/operators.ts: LogicalOperator: n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) => n.right.type === "NumericLiteral" || Number.isInteger(n.right.value) in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
 packages/ferrovue/src/operators.ts: ConditionalExpression: n.right.type === "NumericLiteral" => true in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;
 
-# members.ts, `memberOf`, `.value`: a member that is not a name has no `name`, which `refs` does not
-# hold.
-packages/ferrovue/src/members.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (!n.computed && n.property.name === "value" && n.object … refs.has(n.object.name) && !s.locals.has(n.object.name)) {
+# members.ts, `refValue`: an object that is not a name has no `name`, which `refs` does not hold.
+packages/ferrovue/src/members.ts: ConditionalExpression: o.type !== "Identifier" => false in if (o.type !== "Identifier" || !s.refs.has(o.name) || s.locals.has(o.name)) return false;
 
 # members.ts, `computedMember`, `$setup["name"]`: Vue writes `$setup["name"]` only where it resolves a
 # component or a directive by its name (`resolveSetupReference`), which `renderChild`, the dynamic

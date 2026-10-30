@@ -11,6 +11,7 @@ import { callFunction } from "./functions.ts";
 import { constOf, mapCall } from "./constants.ts";
 import { refuseInPlace } from "./objects.ts";
 import { globalCall, mathCall, staticCall } from "./globals.ts";
+import { refValue } from "./members.ts";
 
 export function call(s: Scope, n: N): Val {
   const callee = n.callee;
@@ -71,6 +72,7 @@ function includeBooleanAttr(s: Scope, args: N[]): Val {
 }
 
 function memberCall(s: Scope, n: N): Val {
+  refValue(s, n.callee);
   const object = n.callee.object;
   const method = n.callee.property.name as string;
   const args: N[] = n.arguments;

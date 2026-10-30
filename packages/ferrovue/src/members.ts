@@ -37,14 +37,23 @@ const NUMBER_CONSTANTS = new Map([
 
 /** The value of a member access `object.property` or `object[key]`. */
 export function memberOf(s: Scope, n: N): Val {
+  if (refValue(s, n)) return expr(s, n.object);
   if (!n.computed && n.property.type === "Identifier" && n.property.name === "length") {
     const length = lengthOf(s, n);
     if (length !== null) return length;
   }
-  if (!n.computed && n.property.name === "value" && n.object.type === "Identifier" && s.refs.has(n.object.name) && !s.locals.has(n.object.name)) {
-    return expr(s, n.object);
-  }
   return n.computed ? computedMember(s, n) : namedMember(s, n);
+}
+
+/** Whether the member access `n` reads the `.value` of a ref in setup; a refusal for any other
+ * member of a ref, which in setup is the ref object. */
+export function refValue(s: Scope, n: N): boolean {
+  const o = n.object;
+  if (o.type !== "Identifier" || !s.refs.has(o.name) || s.locals.has(o.name)) return false;
+  if (!n.computed && n.property.name === "value") return true;
+  if (n.computed && n.property.type === "StringLiteral" && n.property.value === "value") return false;
+  const member = n.computed ? "[…]" : `.${n.property.name as string}`;
+  return fail(s.comp, "FV0638", `\`${o.name}${member}\` reads a member of the ref \`${o.name}\`, which in setup has only \`.value\`: read \`${o.name}.value${member}\``, n);
 }
 
 function lengthOf(s: Scope, n: N): Val | null {

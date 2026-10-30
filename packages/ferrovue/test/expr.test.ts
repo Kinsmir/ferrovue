@@ -620,7 +620,7 @@ describe("names and members", () => {
 
   it("reads a ref's `.value` and the props object", () => {
     expect(render("import { ref, computed } from 'vue';\nconst r = ref(1);\nconst c = computed(() => r.value + 1);", "<p>{{ c }}</p>")).toMatch(like("let s_c = s_r as f64 + 1.0;"));
-    expect(render("import { ref, computed } from 'vue';\nconst r = ref('ab');\nconst c = computed(() => r.length);", "<p>{{ c }}</p>")).toMatch(like('let s_c = fv::strings::js_length("ab");'));
+    expect(render("import { ref, computed } from 'vue';\nconst r = ref('ab');\nconst c = computed(() => r.value.length);", "<p>{{ c }}</p>")).toMatch(like('let s_c = fv::strings::js_length("ab");'));
     expect(render("import { computed } from 'vue';\nconst props = defineProps<{ n: number }>();\nconst c = computed(() => props.n);", "<p>{{ c }}|{{ props.n }}</p>")).toMatch(like("let s_c = props.n;"));
   });
 
@@ -1255,7 +1255,24 @@ describe("names of the template read in `<script setup>`", () => {
     expect(refusals('import { computed } from "vue";\nconst has = computed(() => ($slots.side ? 1 : 0));', '<i>{{ has }}<slot name="side" /></i>')).toEqual([expect.stringMatching(/^FV0601 `\$slots` is not available when rendering on the server/)]);
   });
 
-  it.fails("refuses a member of a `ref` other than `.value`, which Vue reads as `undefined`", () => {
-    expect(refusals('import { computed, ref } from "vue";\ninterface Item { a: string }\nconst r = ref<Item>({ a: "x" });\nconst c = computed(() => r.a);', "<p>{{ c }}</p>")).toHaveLength(1);
+  const refs = 'import { computed, ref } from "vue";\ninterface Item { a: string }\ninterface Wrap { b: string }\nconst props = defineProps<{ words: string[] }>();\nconst r = ref<Item>({ a: "x" });\nconst w = ref<string[]>(props.words);';
+  const member = (read: string) => `FV0638 \`${read}\` reads a member of the ref \``;
+
+  it.each([
+    ["a field in a `computed`", "const c = computed(() => r.a);", "<p>{{ c }}</p>", "r.a"],
+    ["`.length` in a `computed`", "const c = computed(() => w.length);", "<p>{{ c }}</p>", "w.length"],
+    ["a method in a `computed`", 'const c = computed(() => w.join("-"));', "<p>{{ c }}</p>", "w.join"],
+    ["an item by `[…]` in a `computed`", "const c = computed(() => w[0]);", "<p>{{ c }}</p>", "w[…]"],
+    ["a field in a setup function", "function label(): string { return r.a; }", "<p>{{ label() }}</p>", "r.a"],
+    ["a field in an object literal", "const c = computed((): Wrap => ({ b: r.a }));", "<p>{{ c.b }}</p>", "r.a"],
+    ["a field of a `computed`", "const k = computed(() => r.value);\nconst c = computed(() => k.a);", "<p>{{ c }}</p>", "k.a"],
+  ])("refuses a member of a `ref` other than `.value` read in setup, which Vue reads from the ref object: %s", (_, script, template, read) => {
+    expect(refusals(`${refs}\n${script}`, template)).toEqual([expect.stringContaining(member(read))]);
+  });
+
+  it("reads a member of a `ref` through `.value` in setup, and directly in the template, which unwraps it", () => {
+    const out = render(`${refs}\nfunction label(): string { return r.value.a; }\nconst n = computed(() => w.value.length);`, "<p>{{ label() }}|{{ r.a }}|{{ n }}|{{ w.length }}</p>");
+    expect(out.match(/escape_into\(out, &s_r\.a\)/g)).toHaveLength(2);
+    expect(out).toMatch(like("let s_n = s_w.len() as i64;"));
   });
 });

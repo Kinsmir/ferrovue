@@ -651,6 +651,10 @@ export const ERRORS: {
         readonly title: "Comparison of a union of string literals with a literal outside it";
         readonly detail: "A value typed as a union of string literals is a Rust enum, and `===` or `!==` with a literal compares it with one of its variants. A literal outside the union is no variant: the comparison would always be `false` (or `true` for `!==`), and TypeScript refuses it as a comparison of types with no overlap. Compare with one of the union's members, or fix the literal's spelling.";
     };
+    readonly FV0638: {
+        readonly title: "Member of a ref other than `.value` read in setup";
+        readonly detail: "In `<script setup>`, a `ref`, a `shallowRef` or a `computed` is the ref object itself, whose only member is `.value`: `r.label` is `undefined`, `r.length` is `undefined` and `r.join()` throws. The template unwraps a ref, so there `r.label` reads the field of its value. Read the member through `.value` in setup: `r.value.label`.";
+    };
     readonly FV0701: {
         readonly title: "`Number()` of an unsupported value";
         readonly detail: "`Number(x)` is translated for a string, read by JavaScript's grammar for numbers with `js_number`, a number and a boolean, each present. `Number()` gives `NaN` for `undefined` and `0` for `null`, and converts an object or a list through its `String()`, which the server's typed values do not reproduce. Narrow an optional value with `v-if` or give it a fallback with `??`, and read a date with `.getTime()`.";
