@@ -186,7 +186,6 @@ function notBooleans(comp: Component, n: N, left: Ty, right: Ty | undefined): ne
 }
 
 function alwaysTruthy(ty: Ty): boolean {
-  if (ty.k === "html") return false;
   const literals = literalsOf(ty);
   if (literals !== undefined && literals.length > 0) return literals.every((l) => l !== "" && l !== 0);
   return truthy({ code: "v", ty }) === "true";

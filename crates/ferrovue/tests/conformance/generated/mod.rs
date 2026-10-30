@@ -101,6 +101,7 @@ pub mod head_server;
 pub mod head_theme;
 pub mod head_theme_page;
 pub mod hollow;
+pub mod html_truth;
 pub mod imported_props;
 pub mod imported_props_mixed;
 pub mod inline_prose;
@@ -784,6 +785,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Hollow" => {
             let props: hollow::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             hollow::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "HtmlTruth" => {
+            let props: html_truth::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            html_truth::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "ImportedProps" => {
             let props: imported_props::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

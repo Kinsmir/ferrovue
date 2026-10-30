@@ -66,8 +66,8 @@ function looseEqual(s: Scope, args: N[], n: N): Val {
 function includeBooleanAttr(s: Scope, args: N[]): Val {
   const a = expr(s, args[0]);
   if (a.konst !== undefined) return a;
-  if (a.ty.k === "str") return { code: "true", ty: BOOL, konst: true };
-  if (a.ty.k === "opt" && a.ty.of.k === "str") return { code: `${atom(a.code)}.is_some()`, ty: BOOL };
+  if (a.ty.k === "str" || a.ty.k === "html") return { code: "true", ty: BOOL, konst: true };
+  if (a.ty.k === "opt" && (a.ty.of.k === "str" || a.ty.of.k === "html")) return { code: `${atom(a.code)}.is_some()`, ty: BOOL };
   return boolOf(truthy(a));
 }
 

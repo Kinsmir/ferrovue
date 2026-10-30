@@ -25,6 +25,8 @@ export function truthy(v: Val): string {
   switch (v.ty.k) {
     case "str":
       return `!${receiver(v.code)}.is_empty()`;
+    case "html":
+      return `!fv::html::TrustedHtml::trusted_html(${bare(v.code)}).is_empty()`;
     case "int":
       return binary(v.code, "!=", "0");
     case "float":
@@ -231,7 +233,7 @@ export function presence(s: Scope, n: N): Presence | null {
     const kept = empty ? keptLiterals(of, (l) => l !== "") : of;
     return { path, of: kept, negated, truthy: byTruth, option, present: `${atom(option)}.is_some()`, pattern: (name) => `let Some(${name}) = ${option}`, variant: true, source: { code: v.variant!, def } };
   }
-  const scalar = of.k === "str" || of.k === "int" || of.k === "float" || of.k === "bool";
+  const scalar = of.k === "str" || of.k === "html" || of.k === "int" || of.k === "float" || of.k === "bool";
   const filtered = byTruth && scalar;
   const option = filtered ? `${atom(v.code)}.filter(|v| ${truthy({ code: "*v", ty: of })})` : v.code;
   const present = filtered ? truthy(v) : `${atom(v.code)}.is_some()`;

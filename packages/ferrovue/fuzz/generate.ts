@@ -1182,7 +1182,7 @@ function randomValue(r: Rng, spec: Spec, ifaces: Map<string, Iface>, hostile: bo
     case "enum":
       return r.pick(spec.values);
     case "html":
-      return basicHtml(r, hostile, 0, spec.inline ? "inline" : "flow");
+      return r.chance(0.15) ? "" : basicHtml(r, hostile, 0, spec.inline ? "inline" : "flow");
   }
 }
 
@@ -2615,6 +2615,10 @@ class Gen {
         branches.push(this.dateBranch(r.pick(lazy.length && r.chance(0.6) ? lazy : guards), depth, ctx));
         continue;
       }
+      if (this.scope.htmls.length && r.chance(0.2)) {
+        branches.push(this.htmlBranch(r.pick(this.scope.htmls), depth, ctx));
+        continue;
+      }
       const narrowable = this.scope.vars.filter((v) => v.opt);
       if (narrowable.length && r.chance(0.3)) {
         const v = r.pick(narrowable);
@@ -2644,6 +2648,16 @@ class Gen {
     }
     if (r.chance(0.5)) branches.push({ cond: null, node: this.carrier(depth, ctx) });
     return { k: "if", branches };
+  }
+
+  htmlBranch(v: Var, depth: number, ctx: "block" | "inline" | "list"): { cond: Expr; node: Node & { k: "el" } } {
+    const r = this.r;
+    const text = r.pick([v.name, v.name, `!${v.name}`, `!!${v.name}`, `${v.name} ? false : true`]);
+    const cond: Expr = { ...atom("bool", text), fixed: true };
+    const el = this.carrier(depth, ctx);
+    const fits = !el.void && ["div", "section", "article", "p", "span", "li", "em"].includes(el.tag) && (v.inline || !(this.para || el.tag === "p"));
+    if (text === v.name && fits && r.chance(0.6)) return { cond, node: { ...el, kids: [], html: { ...this.varRef(v), fixed: true } } };
+    return { cond, node: el };
   }
 
   dateBranch(v: DateVar, depth: number, ctx: "block" | "inline" | "list"): { cond: Expr; node: Node & { k: "el" } } {

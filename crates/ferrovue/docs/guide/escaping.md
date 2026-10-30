@@ -68,6 +68,10 @@ On the server, that prop's type is whatever `trustedHtml` names in `ferrovue.con
 that implements [`TrustedHtml`](crate::html::TrustedHtml). `v-html` of anything else, a plain string or a
 translated message, is refused at compile time.
 
+A `TrustedHtml` or `InlineHtml` prop is a string in TypeScript, and its truth is a string's: empty
+HTML is falsy in `v-if`, `v-show`, `!`, `?:`, `&&` and `||`, as it is in Vue. `v-if="body"` around a
+`v-html="body"` renders the other branch for `""` and for an optional prop that is absent.
+
 There are four ways to have one:
 
 | Type | Needs | Takes | Use it for |
