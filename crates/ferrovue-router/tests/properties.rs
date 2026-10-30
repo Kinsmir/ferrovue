@@ -24,6 +24,14 @@ proptest! {
     }
 
     #[test]
+    fn the_root_route_takes_one_or_two_slashes_and_nothing_else(at in "/[/a]{0,5}") {
+        let router = Router::named(&[("/", Some("home")), ("/a", Some("a")), ("/:rest(.*)", Some("rest"))]);
+        let route = router.at(&at);
+        prop_assert_eq!(route.name() == Some("home"), at == "/" || at == "//");
+        prop_assert_eq!(route.link("/").exact, at == "/" || at == "//");
+    }
+
+    #[test]
     fn an_absolute_link_keeps_its_query_and_hash_as_written(path in "/[a-z/]{0,10}", query in "[a-z=&]{0,6}", hash in "[a-z]{0,6}") {
         let router = Router::new(&["/"]);
         let to = format!("{path}?{query}#{hash}");

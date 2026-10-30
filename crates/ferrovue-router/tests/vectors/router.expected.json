@@ -214,6 +214,26 @@
     [
       "/blog//x",
       "/blog//x"
+    ],
+    [
+      "//",
+      "/"
+    ],
+    [
+      "/",
+      "//"
+    ],
+    [
+      "///",
+      "/"
+    ],
+    [
+      "//?x=1#h",
+      "/"
+    ],
+    [
+      "/blog//intro",
+      "/blog/intro"
     ]
   ],
   "names": {
@@ -466,7 +486,10 @@
     "/search?q=1#h?x",
     "/search?q=%22quoted%22&q=back%5Cslash&q",
     "/search#only-hash",
-    "/search?q=caf%C3%A9&n=1&n=2&n=3"
+    "/search?q=caf%C3%A9&n=1&n=2&n=3",
+    "//",
+    "///",
+    "//?q=1#h"
   ],
   "bases": [
     [
@@ -674,6 +697,14 @@
       [
         "/q/1",
         "/p/7"
+      ],
+      [
+        "//",
+        "/"
+      ],
+      [
+        "//",
+        "/users/7"
       ]
     ],
     "named": [
@@ -741,7 +772,8 @@
       "/p/7",
       "/q/1",
       "/about",
-      "/team"
+      "/team",
+      "//"
     ]
   },
   "files": {
@@ -970,6 +1002,26 @@
       [
         "/en/about",
         "/en/about"
+      ],
+      [
+        "//",
+        "/"
+      ],
+      [
+        "/",
+        "//"
+      ],
+      [
+        "///",
+        "/"
+      ],
+      [
+        "//",
+        "/cart"
+      ],
+      [
+        "//cart",
+        "/cart"
       ]
     ],
     "named": [
@@ -1155,7 +1207,11 @@
       "/shelf",
       "/about",
       "/en/about",
-      "/en"
+      "/en",
+      "//",
+      "///",
+      "//cart",
+      "/books//"
     ]
   },
   "expected": [
@@ -1361,6 +1417,26 @@
     ],
     [
       "/blog//x",
+      false
+    ],
+    [
+      "/",
+      true
+    ],
+    [
+      "//",
+      true
+    ],
+    [
+      "/",
+      false
+    ],
+    [
+      "/",
+      true
+    ],
+    [
+      "/blog/intro",
       false
     ]
   ],
@@ -1691,6 +1767,35 @@
           ]
         ]
       ]
+    },
+    {
+      "path": "//",
+      "hash": "",
+      "name": "home",
+      "params": {},
+      "fullPath": "//",
+      "query": []
+    },
+    {
+      "path": "///",
+      "hash": "",
+      "name": null,
+      "params": {},
+      "fullPath": "///",
+      "query": []
+    },
+    {
+      "path": "//",
+      "hash": "#h",
+      "name": "home",
+      "params": {},
+      "fullPath": "//?q=1#h",
+      "query": [
+        [
+          "q",
+          "1"
+        ]
+      ]
     }
   ],
   "expectedBases": [
@@ -1835,6 +1940,16 @@
         "/p/7",
         false,
         false
+      ],
+      [
+        "/",
+        true,
+        true
+      ],
+      [
+        "/users/7",
+        false,
+        false
       ]
     ],
     "named": [
@@ -1941,6 +2056,11 @@
         "params": {
           "any": "team"
         }
+      },
+      {
+        "path": "//",
+        "name": "home",
+        "params": {}
       }
     ]
   },
@@ -2105,6 +2225,31 @@
         "/en/about",
         true,
         true
+      ],
+      [
+        "/",
+        true,
+        true
+      ],
+      [
+        "//",
+        true,
+        true
+      ],
+      [
+        "/",
+        false,
+        false
+      ],
+      [
+        "/cart",
+        false,
+        false
+      ],
+      [
+        "/cart",
+        false,
+        false
       ]
     ],
     "named": [
@@ -2350,6 +2495,32 @@
         "name": "/[...path]",
         "params": {
           "path": "en"
+        }
+      },
+      {
+        "path": "//",
+        "name": "/",
+        "params": {}
+      },
+      {
+        "path": "///",
+        "name": "/[...path]",
+        "params": {
+          "path": "//"
+        }
+      },
+      {
+        "path": "//cart",
+        "name": "/[...path]",
+        "params": {
+          "path": "/cart"
+        }
+      },
+      {
+        "path": "/books//",
+        "name": "/[...path]",
+        "params": {
+          "path": "books//"
         }
       }
     ]

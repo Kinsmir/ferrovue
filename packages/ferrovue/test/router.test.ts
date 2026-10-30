@@ -121,9 +121,9 @@ async function recordNested(v: NestedVectors): Promise<{
 it("holds every router vector it was written with", () => {
   const sizes = (v: NestedVectors): number[] => [v.links.length, v.named.length, v.locations.length];
   const floor = (got: number[], least: number[]): number[] => got.map((n, i) => Math.min(n, least[i]!));
-  expect(floor([vectors.links.length, vectors.objects.length, vectors.locations.length, vectors.bases.length], [51, 22, 18, 6])).toEqual([51, 22, 18, 6]);
-  expect(floor(sizes(vectors.nested), [23, 6, 9])).toEqual([23, 6, 9]);
-  expect(floor(sizes(vectors.files), [32, 22, 22])).toEqual([32, 22, 22]);
+  expect(floor([vectors.links.length, vectors.objects.length, vectors.locations.length, vectors.bases.length], [56, 22, 21, 6])).toEqual([56, 22, 21, 6]);
+  expect(floor(sizes(vectors.nested), [25, 6, 10])).toEqual([25, 6, 10]);
+  expect(floor(sizes(vectors.files), [37, 22, 26])).toEqual([37, 22, 26]);
 });
 
 it("records what RouterLink and useRoute() give for each vector", async () => {

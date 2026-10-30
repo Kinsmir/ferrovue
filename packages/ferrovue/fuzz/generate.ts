@@ -3158,6 +3158,10 @@ function randomLocation(r: Rng, router: AppRouter): string {
     return `/${r.pick(PARAM_VALUES)}`;
   }) || "/";
   if (r.chance(0.15)) path = r.pick(["/nowhere", "/blog", "/account/orders/7/x"]);
+  if (r.chance(0.1)) {
+    const at = r.pick([...path.matchAll(/\//g)].map((m) => m.index));
+    path = `${path.slice(0, at)}/${path.slice(at)}`;
+  }
   if (r.chance(0.4)) path += r.pick(["?q=rust", "?q=a&q=b", "?tab=x&q=", "?flag", "?q=%3Cb%3E"]);
   if (r.chance(0.2)) path += r.pick(["#top", "#a-b"]);
   return path;
