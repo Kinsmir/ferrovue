@@ -41,7 +41,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(87 + props.title.len());
+    out.reserve(11 + props.title.len());
     out.push_str("<div>");
     super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
@@ -51,10 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     })?;
     super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
-        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
-            out.push_str("<!-- only a comment -->");
-            false
-        })),
+        default: None,
     })?;
     super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: Some(fv::render::Slot::markup(&|_out: &mut String| -> bool {
@@ -69,12 +66,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         })),
     })?;
     super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
-        head: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
-            out.push_str("<!-- a comment -->");
+        head: Some(fv::render::Slot::markup(&|_out: &mut String| -> bool {
             false
         })),
-        default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
-            out.push_str("<!-- another -->");
+        default: Some(fv::render::Slot::markup(&|_out: &mut String| -> bool {
             false
         })),
     })?;
@@ -87,8 +82,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         default: None,
     })?;
     super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed(&*props.title), note: None }, super::data_list::Slots {
-        header: Some(&|out: &mut String, _fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
-            out.push_str("<!-- {{ note }} -->");
+        header: Some(&|_out: &mut String, _fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             false
         }),
         row: None,
