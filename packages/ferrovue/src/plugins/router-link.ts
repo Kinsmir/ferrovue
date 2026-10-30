@@ -39,12 +39,16 @@ export function urlText(s: Scope, v: Val, n: N): string {
   return fail(s.comp, "FV1201", "a route parameter is a string or a number that is present", n);
 }
 
+function linkCall(s: Scope, to: N): string {
+  const target = expr(s, to);
+  if (target.ty.k !== "str") fail(s.comp, "FV1202", "`<RouterLink>`'s `to` is a string or an object literal", to);
+  noHalves(s, target, to);
+  return `fv_route.link(${strArg(target.code)})`;
+}
+
 export function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (to.type !== "ObjectExpression") {
-    const target = expr(s, to);
-    if (target.ty.k !== "str") fail(s.comp, "FV1202", "`<RouterLink>`'s `to` is a string or an object literal", to);
-    noHalves(s, target, to);
-    e.stmt(`let fv_link = fv_route.link(${strArg(target.code)});`);
+    e.stmt(`let fv_link = ${linkCall(s, to)};`);
     return;
   }
   const parts = new Map<string, N>();
@@ -164,12 +168,15 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const activeClass = literal("activeClass", runOf(router).linkActive);
   const exactClass = literal("exactActiveClass", runOf(router).linkExactActive);
   const ariaCurrent = literal("ariaCurrentValue", "page");
-  e.open("");
-  resolveLink(s, e, to);
-  e.lit("<a");
   const parts = mergedParts(rawProps);
   const passedOn = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
   const fallsThrough = parts.some(passedOn);
+  const inline = !fallsThrough && to.type !== "ObjectExpression";
+  const link = inline ? `&${linkCall(s, to)}` : "&fv_link";
+  if (!inline) {
+    e.open("");
+    resolveLink(s, e, to);
+  }
   if (fallsThrough) {
     for (const name of s.comp.attrNames) {
       const key = camelize(name);
@@ -180,20 +187,16 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     }
     e.open(`if ${s.fallthrough}.is_empty()`);
   }
-  e.open("if fv_link.exact");
-  e.lit(` aria-current="${escapeHtml(ariaCurrent)}"`);
-  e.close();
-  e.lit(' href="');
-  e.stmt("fv::core::escape_into(out, &fv_link.href);");
-  e.lit('" class="');
+  const current = escapeHtml(ariaCurrent);
   const linkItems =
     activeClass === exactClass
       ? [`if fv_link.exact { ${rustStr(exactClass)} } else { "" }`]
       : [`if fv_link.active { ${rustStr(activeClass)} } else { "" }`, `if fv_link.exact { ${rustStr(exactClass)} } else { "" }`];
   const cls = fields.get("class");
   const own = cls ? classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code)) : [];
-  e.stmt(`fv::attrs::class_into(out, false, &[${[...linkItems, ...own].join(", ")}]);`);
-  e.lit('"');
+  const active = activeClass === exactClass ? "" : activeClass;
+  e.stmt(`fv::attrs::link_open(out, ${link}, ${rustStr(current)}, ${rustStr(active)}, ${rustStr(exactClass)}, &[${own.join(", ")}]);`);
+  e.expect(Buffer.byteLength(`<a aria-current="${current}" href="" class=""`));
   for (const p of attrs) {
     const key: string = p.key.value;
     if (key === "style") {
@@ -209,6 +212,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   } else e.stmt(`out.push_str(&fv::attrs::scope_attrs(${base ?? '""'}, ${scopeId === null ? '""' : rustStr(scopeId)}, ${slotted ?? '""'}));`);
   if (fallsThrough) {
     e.close(" else {");
+    e.lit("<a");
     const sources: string[] = [];
     for (const p of parts) {
       if (passedOn(p)) sources.push(`${s.fallthrough}.list()`);
@@ -244,5 +248,5 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     statements({ ...s, fill: false, vnode: true }, e, slotBody(s, p.value));
   }
   e.lit("</a>");
-  e.close();
+  if (!inline) e.close();
 }

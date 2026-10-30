@@ -52,49 +52,26 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(138 + props.href.len() + props.label.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
-    {
-        let fv_link = fv_route.link("/blog/intro");
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
-        out.push_str("\">intro</a>");
-    }
-    out.push(' ');
-    {
-        let fv_link = fv_route.link(&props.href);
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }]);
-        out.push('"');
-        if props.label.is_empty() {
-            out.push_str(" title");
-        } else {
-            out.push_str(" title=\"");
-            fv::core::escape_into(out, &props.label);
-            out.push('"');
-        }
-        out.push('>');
+    fv::attrs::link_open(out, &fv_route.link("/blog/intro"), "page", "router-link-active", "router-link-exact-active", &["tab"]);
+    out.push_str(">intro</a> ");
+    fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-exact-active", &["tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }]);
+    if props.label.is_empty() {
+        out.push_str(" title");
+    } else {
+        out.push_str(" title=\"");
         fv::core::escape_into(out, &props.label);
-        if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
-            out.push_str("<i>");
-            fv::core::escape_into(out, fv_note);
-            out.push_str("</i>");
-        } else {
-            out.push_str("<!--v-if-->");
-        }
-        out.push_str("</a>");
+        out.push('"');
     }
-    out.push_str("</nav>");
+    out.push('>');
+    fv::core::escape_into(out, &props.label);
+    if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
+        out.push_str("<i>");
+        fv::core::escape_into(out, fv_note);
+        out.push_str("</i>");
+    } else {
+        out.push_str("<!--v-if-->");
+    }
+    out.push_str("</a></nav>");
     Ok(())
 }
 

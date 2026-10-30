@@ -747,5 +747,41 @@ pub fn class_object(entries: &[(bool, &str)]) -> String {
     js_trim(&s).to_owned()
 }
 
+/// The anchor a `<RouterLink>` renders, up to the end of its `class`: `<a`, `aria-current` with
+/// the escaped value `current` where the link is exact, the escaped `href`, and the classes
+/// `active` and `exact` where the link is active and exact, before `classes`. An `active` of `""`
+/// stands for a class the link takes only where it is exact.
+#[doc(hidden)]
+#[cfg(feature = "router")]
+pub fn link_open(
+    out: &mut String,
+    link: &crate::router::Link,
+    current: &str,
+    active: &str,
+    exact: &str,
+    classes: &[&str],
+) {
+    out.push_str("<a");
+    if link.exact {
+        out.push_str(" aria-current=\"");
+        out.push_str(current);
+        out.push('"');
+    }
+    out.push_str(" href=\"");
+    escape_into(out, &link.href);
+    out.push_str("\" class=\"");
+    let start = out.len();
+    class_into(
+        out,
+        false,
+        &[
+            if link.active { active } else { "" },
+            if link.exact { exact } else { "" },
+        ],
+    );
+    class_into(out, out.len() > start, classes);
+    out.push('"');
+}
+
 #[cfg(test)]
 mod tests;

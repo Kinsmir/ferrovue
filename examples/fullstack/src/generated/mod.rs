@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(7);
+ferrovue::__compat!(8);
 
 pub mod add_to_basket;
 pub mod basket_summary;

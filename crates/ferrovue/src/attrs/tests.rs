@@ -227,3 +227,60 @@ mod class {
         );
     }
 }
+
+#[cfg(feature = "router")]
+mod links {
+    use super::link_open;
+    use crate::router::{RouteDef, Router};
+
+    fn open(location: &str, to: &str, active: &str, classes: &[&str]) -> String {
+        let router = Router::tree(&[
+            RouteDef::new("/"),
+            RouteDef::new("/blog").with_children(&[RouteDef::new(":slug")]),
+        ]);
+        let link = router.at(location).link(to);
+        let mut out = String::new();
+        link_open(&mut out, &link, "page", active, "here", classes);
+        out
+    }
+
+    #[test]
+    fn an_exact_link_takes_aria_current_and_both_classes_before_its_own() {
+        assert_eq!(
+            open("/blog/intro", "/blog/intro", "near", &["tab", " "]),
+            r#"<a aria-current="page" href="/blog/intro" class="near here tab""#
+        );
+    }
+
+    #[test]
+    fn an_active_link_takes_the_active_class_alone() {
+        assert_eq!(
+            open("/blog/intro", "/blog", "near", &["", "tab"]),
+            r#"<a href="/blog" class="near tab""#
+        );
+    }
+
+    #[test]
+    fn a_link_elsewhere_takes_its_own_classes_with_no_separator_before_them() {
+        assert_eq!(
+            open("/", "/blog/a?b=<c>", "near", &["tab"]),
+            r#"<a href="/blog/a?b=&lt;c&gt;" class="tab""#
+        );
+        assert_eq!(
+            open("/", "/blog", "near", &[]),
+            r#"<a href="/blog" class="""#
+        );
+    }
+
+    #[test]
+    fn an_empty_active_class_leaves_the_exact_class_alone() {
+        assert_eq!(
+            open("/blog/intro", "/blog/intro", "", &[]),
+            r#"<a aria-current="page" href="/blog/intro" class="here""#
+        );
+        assert_eq!(
+            open("/blog/intro", "/blog", "", &[]),
+            r#"<a href="/blog" class="""#
+        );
+    }
+}

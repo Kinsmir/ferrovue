@@ -46,64 +46,32 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     out.reserve(252 + props.href.len() + props.label.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ScopedNav.vue");
     out.push_str("<nav class=\"nav\" data-v-f60bf031>");
-    {
-        let fv_link = fv_route.link("/blog/intro");
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "tab"]);
-        out.push_str("\" data-v-f60bf031>intro</a>");
-    }
-    {
-        let fv_link = fv_route.link(&props.href);
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-        out.push('"');
-        if props.label.is_empty() {
-            out.push_str(" title");
-        } else {
-            out.push_str(" title=\"");
-            fv::core::escape_into(out, &props.label);
-            out.push('"');
-        }
-        out.push_str(" data-v-f60bf031>");
+    fv::attrs::link_open(out, &fv_route.link("/blog/intro"), "page", "router-link-active", "router-link-exact-active", &["tab"]);
+    out.push_str(" data-v-f60bf031>intro</a>");
+    fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-exact-active", &[]);
+    if props.label.is_empty() {
+        out.push_str(" title");
+    } else {
+        out.push_str(" title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push_str(" <i data-v-f60bf031>");
-        fv::core::escape_into(out, &props.href);
-        out.push_str("</i>");
-        fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031"))?;
-        out.push_str("</a>");
+        out.push('"');
     }
+    out.push_str(" data-v-f60bf031>");
+    fv::core::escape_into(out, &props.label);
+    out.push_str(" <i data-v-f60bf031>");
+    fv::core::escape_into(out, &props.href);
+    out.push_str("</i>");
+    fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031"))?;
+    out.push_str("</a>");
     fv_refusals.check(super::scoped_link::try_render_scoped(out, &super::scoped_link::Props { to: std::borrow::Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031"))?;
     fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
-            {
-                let fv_link = fv_route.link("/");
-                out.push_str("<a");
-                if fv_link.exact {
-                    out.push_str(" aria-current=\"page\"");
-                }
-                out.push_str(" href=\"");
-                fv::core::escape_into(out, &fv_link.href);
-                out.push_str("\" class=\"");
-                fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-                out.push('"');
-                out.push_str(&fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id));
-                out.push_str(">home ");
-                fv::core::escape_into(out, &props.label);
-                out.push_str("</a>");
-            }
+            fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-exact-active", &[]);
+            out.push_str(&fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id));
+            out.push_str(">home ");
+            fv::core::escape_into(out, &props.label);
+            out.push_str("</a>");
             fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id)));
             true
         })),
