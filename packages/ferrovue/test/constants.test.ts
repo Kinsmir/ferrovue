@@ -370,7 +370,7 @@ describe("constant objects", () => {
 
   it("leaves a name a `v-for` or setup binds over a constant", () => {
     expect(render('const O = { a: 1 };', '<p v-for="O in [1, 2]">{{ O }}</p>')).toMatch(like("fv::core::push_int(out, o);"));
-    expect(render('import { ref } from "vue";\nconst O = ref(1);', "<p>{{ O }}</p>")).toMatch(like("fv::core::push_int(out, s_o);"));
+    expect(render('import { ref } from "vue";\nconst props = defineProps<{ n: number }>();\nconst O = ref(props.n);', "<p>{{ O }}</p>")).toMatch(like("fv::core::push_int(out, s_o);"));
   });
 
   const refused: [string, string, string, string][] = [

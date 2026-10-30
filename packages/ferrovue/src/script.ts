@@ -438,8 +438,14 @@ function setupValue(scope: Scope, b: SetupInit): Val | null {
   return annotated(comp, b, empty ?? expr(setupScope(scope, b), source), empty, untyped);
 }
 
-function bindValue(s: Setup, local: string, v: Val, isComputed: boolean): void {
-  if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined)) {
+function settled(v: Val): boolean {
+  if (v.ty.k === "bool") return v.code === "true" || v.code === "false";
+  if (v.ty.k === "int") return v.num !== undefined && /^-?\d+i64$/.test(v.code);
+  return v.ty.k === "float" && v.num !== undefined;
+}
+
+function bindValue(s: Setup, local: string, v: Val, isComputed: boolean, isRef: boolean): void {
+  if (nothing(v.ty) || (v.ty.k === "str" && known(v) !== undefined) || (isRef && settled(v))) {
     s.scope.setup.set(local, v);
     return;
   }
@@ -467,7 +473,7 @@ function valueBinding(s: Setup, st: N, d: N): void {
     s.scope.clientOnly.set(b.local, "it is not a value the server computes: only `ref(…)`, `computed(() => …)` and plain expressions are");
     return;
   }
-  bindValue(s, b.local, v, b.isComputed);
+  bindValue(s, b.local, v, b.isComputed, b.isRef && !b.isComputed);
 }
 
 function namedBinding(s: Setup, st: N, d: N): void {

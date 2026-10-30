@@ -52,11 +52,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(908 + props.label.len() + props.note.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(895 + props.label.len() + props.note.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
     let s_picked = &*props.label;
     let s_unlabelled = props.label.is_empty();
     let s_prefixed = format!("{}!", props.label).is_empty();
-    let s_limit = 0i64;
     out.push_str("<section><p>no status</p><p>still none</p><p>calm &amp; &lt;quiet&gt; &quot;x&quot; &#39;y&#39;</p><p>no echo</p><!----><p>status empty</p><p>mood set</p>");
     if !props.label.is_empty() {
         out.push_str("<p>");
@@ -134,15 +133,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if s_picked.is_empty() {
         out.push_str(" checked");
     }
-    out.push_str(" value=\"\">");
-    if s_limit != 0 {
-        out.push_str("<p>");
-        fv::core::push_int(out, s_limit);
-        out.push_str("</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.count as f64 > s_limit as f64 {
+    out.push_str(" value=\"\"><!---->");
+    if props.count as f64 > 0.0 {
         out.push_str("<p>");
         fv::core::push_int(out, props.count);
         out.push_str("</p>");

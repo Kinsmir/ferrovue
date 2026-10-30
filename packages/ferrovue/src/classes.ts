@@ -3,7 +3,7 @@ import { type N, type Scope, type Val, directiveOwner, fail, nothing, rustStr, S
 import { expr } from "./expr.ts";
 import { choice, cond, known, narrowing, narrowTo, presence, truthy } from "./narrowing.ts";
 import { pickPresent } from "./constants.ts";
-import { meet } from "./strings.ts";
+import { meet, unquote } from "./strings.ts";
 import { atom, bare, condition, logical, not, occurrences, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { stringAttr } from "./attrs.ts";
@@ -69,6 +69,9 @@ export function classItems(s: Scope, n: N): ClassItem[] {
       break;
   }
   const v = expr(s, n);
+  const literal = v.ty.k === "str" && known(v) !== undefined ? unquote(v.code) : null;
+  if (literal === "") return [];
+  if (literal !== null && literal === literal.trim()) return [{ lit: literal }];
   if (v.ty.k === "str") return [{ code: v.code }];
   if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
   if (nothing(v.ty)) return [];
