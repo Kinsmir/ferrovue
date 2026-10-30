@@ -3431,6 +3431,14 @@ const props = defineProps<{ a: string }>();
       /`\.toLocaleUpperCase\(\)` maps case by the locale the server runs in/,
     ],
     [
+      "toLocaleLowerCase, which depends on the server's locale",
+      `<script setup lang="ts">
+const props = defineProps<{ a: string }>();
+</script>
+<template><i>{{ a.toLocaleLowerCase("tr") }}</i></template>`,
+      /`\.toLocaleLowerCase\(\)` maps case by the locale the server runs in/,
+    ],
+    [
       "replace with a regular expression",
       `<script setup lang="ts">
 const props = defineProps<{ a: string }>();
@@ -4232,6 +4240,30 @@ defineProps<{ at: string }>();
 </script>
 <template><p>{{ new Date(at).toLocaleDateString("en-GB") }}</p></template>`,
       /`\.toLocaleDateString\(\)` formats by locale/,
+    ],
+    [
+      "a time formatted by locale",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date(at).toLocaleTimeString() }}</p></template>`,
+      /`\.toLocaleTimeString\(\)` formats by locale/,
+    ],
+    [
+      "a date formatted by locale as a whole",
+      `<script setup lang="ts">
+defineProps<{ at: string }>();
+</script>
+<template><p>{{ new Date(at).toLocaleString("en-GB") }}</p></template>`,
+      /`\.toLocaleString\(\)` formats by locale/,
+    ],
+    [
+      "a list formatted by locale",
+      `<script setup lang="ts">
+defineProps<{ ns: number[] }>();
+</script>
+<template><p>{{ ns.toLocaleString() }}</p></template>`,
+      /`\.toLocaleString\(\)` formats by locale/,
     ],
     [
       "strings compared by locale",
