@@ -9,8 +9,10 @@
 /fuzz export-ignore
 /.cargo/mutants.toml export-ignore
 /.cargo/mutants-equivalent.txt export-ignore
+/.cargo/mutants-timeout.txt export-ignore
 /stryker.config.json export-ignore
 /stryker-equivalent.txt export-ignore
+/stryker-timeout.txt export-ignore
 /scripts/stryker-*.ts export-ignore
 /AGENTS.md export-ignore
 

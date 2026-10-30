@@ -521,7 +521,11 @@ pub async fn load<'a, T, E>(
         let finished = poll_fn(|cx| {
             let mut finished = Vec::new();
             let mut i = 0;
+            #[cfg(test)]
+            let mut turns = crate::Turns::default();
             while i < running.len() {
+                #[cfg(test)]
+                turns.next();
                 if let Poll::Ready(result) = running[i].future.0.as_mut().poll(cx) {
                     finished.push((running.remove(i), result));
                 } else {

@@ -49,3 +49,15 @@ pub use ferrovue_i18n as i18n;
 #[cfg_attr(docsrs, doc(cfg(feature = "router")))]
 #[doc(inline)]
 pub use ferrovue_router as router;
+
+#[cfg(test)]
+#[derive(Default)]
+struct Turns(u32);
+
+#[cfg(test)]
+impl Turns {
+    fn next(&mut self) {
+        self.0 += 1;
+        assert!(self.0 < 10_000_000, "a loop turned ten million times");
+    }
+}

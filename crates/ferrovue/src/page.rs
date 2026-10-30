@@ -1027,7 +1027,11 @@ pub(crate) fn json_escaped_into(out: &mut String, json: &str) {
     out.reserve(json.len());
     let bytes = json.as_bytes();
     let (mut last, mut i) = (0, 0);
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while i < bytes.len() {
+        #[cfg(test)]
+        turns.next();
         let (rep, width) = match bytes[i] {
             b'<' => ("\\u003c", 1),
             b'>' => ("\\u003e", 1),

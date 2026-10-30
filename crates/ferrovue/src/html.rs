@@ -729,7 +729,11 @@ fn build(untrusted: &str, inline: bool) -> String {
         ..Builder::default()
     };
     let mut rest = untrusted;
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while let Some(at) = rest.find(['<', '&', '\0', '\r']) {
+        #[cfg(test)]
+        turns.next();
         escape_into(&mut html.out, &rest[..at]);
         rest = &rest[at..];
         let taken = match rest.as_bytes()[0] {
@@ -890,7 +894,11 @@ impl Builder {
     }
 
     fn close_while(&mut self, keep_closing: impl Fn(Tag) -> bool) {
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while self.open.last().is_some_and(|&t| keep_closing(t)) {
+            #[cfg(test)]
+            turns.next();
             self.close_top();
         }
     }

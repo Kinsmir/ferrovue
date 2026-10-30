@@ -567,12 +567,18 @@ fn strip_comments(css: &str) -> Cow<'_, str> {
     let chars: Vec<char> = css.chars().collect();
     let mut out = String::with_capacity(css.len());
     let mut i = 0;
+    #[cfg(test)]
+    let mut turns = crate::Turns::default();
     while i < chars.len() {
+        #[cfg(test)]
+        turns.next();
         let c = chars[i];
         if c == '"' || c == '\'' {
             let mut j = i + 1;
             let mut closed = false;
             while j < chars.len() {
+                #[cfg(test)]
+                turns.next();
                 if chars[j] == '\\' {
                     j += 2;
                     continue;

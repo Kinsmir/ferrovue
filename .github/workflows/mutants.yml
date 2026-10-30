@@ -76,7 +76,7 @@ jobs:
           if-no-files-found: warn
 
   equivalents:
-    name: Every listed equivalent still survives
+    name: Every listed equivalent and timeout still holds
     needs: mutants
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
@@ -100,24 +100,71 @@ jobs:
           done
           if (( ${#incomplete[@]} > 0 )); then
             echo "complete=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Equivalents not checked::Shards ${incomplete[*]} did not run to the end, so their missed mutants are unknown"
+            echo "::warning title=Lists not checked for stale entries::Shards ${incomplete[*]} did not run to the end, so their missed and timed-out mutants are unknown"
             {
-              echo "### Every listed equivalent still survives"
+              echo "### Every listed equivalent and timeout still holds"
               echo
               echo "Not checked: shards ${incomplete[*]} of $SHARDS did not run to the end."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "complete=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: No entry of .cargo/mutants-equivalent.txt is stale
-        if: steps.shards.outputs.complete == 'true'
+      - name: Every missed and timed-out mutant is listed
         run: |
-          cat "$RUNNER_TEMP"/shards/*/missed.txt | sed -E 's/^([^:]+):[0-9]+:[0-9]+: /\1: /' | sort > "$RUNNER_TEMP/missed.txt"
-          grep -v -e '^#' -e '^$' .cargo/mutants-equivalent.txt | sort > "$RUNNER_TEMP/known.txt"
-          comm -13 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/known.txt" > "$RUNNER_TEMP/stale.txt"
-          if [[ -s "$RUNNER_TEMP/stale.txt" ]]; then
+          shopt -s nullglob
+          reported() { cat /dev/null "$@" | sed -E 's/^([^:]+):[0-9]+:[0-9]+: /\1: /' | sort; }
+          entries() { sed -e '/^#/d' -e '/^$/d' "$1" | sort; }
+          section() {
+            if [[ -s "$2" ]]; then
+              echo
+              echo "$1"
+              echo
+              echo '```text'
+              cat "$2"
+              echo '```'
+            fi
+          }
+          reported "$RUNNER_TEMP"/shards/*/missed.txt > "$RUNNER_TEMP/missed.txt"
+          reported "$RUNNER_TEMP"/shards/*/timeout.txt > "$RUNNER_TEMP/timeout.txt"
+          entries .cargo/mutants-equivalent.txt > "$RUNNER_TEMP/equivalent.txt"
+          entries .cargo/mutants-timeout.txt > "$RUNNER_TEMP/listed-timeout.txt"
+          sort "$RUNNER_TEMP/equivalent.txt" "$RUNNER_TEMP/listed-timeout.txt" > "$RUNNER_TEMP/listed.txt"
+          comm -23 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/equivalent.txt" > "$RUNNER_TEMP/unexplained-missed.txt"
+          comm -23 "$RUNNER_TEMP/timeout.txt" "$RUNNER_TEMP/listed.txt" > "$RUNNER_TEMP/unexplained-timeout.txt"
+          comm -12 "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/equivalent.txt" > "$RUNNER_TEMP/listed-missed.txt"
+          comm -12 "$RUNNER_TEMP/timeout.txt" "$RUNNER_TEMP/listed.txt" > "$RUNNER_TEMP/listed-timed-out.txt"
+          {
+            echo "### Missed and timed-out mutants"
+            echo
+            echo "| Missed (unexplained) | Timed out (unexplained) | Missed (known equivalent) | Timed out (listed) |"
+            echo "|---:|---:|---:|---:|"
+            echo "| $(wc -l < "$RUNNER_TEMP/unexplained-missed.txt") | $(wc -l < "$RUNNER_TEMP/unexplained-timeout.txt") | $(wc -l < "$RUNNER_TEMP/listed-missed.txt") | $(wc -l < "$RUNNER_TEMP/listed-timed-out.txt") |"
+            section "Missed, with no test and no entry in .cargo/mutants-equivalent.txt: close it with a test, or list it there with its reason" "$RUNNER_TEMP/unexplained-missed.txt"
+            section "Timed out, with no entry in .cargo/mutants-timeout.txt: make the loop fail under test, or list it there with its reason" "$RUNNER_TEMP/unexplained-timeout.txt"
+            section "Missed, listed in .cargo/mutants-equivalent.txt:" "$RUNNER_TEMP/listed-missed.txt"
+            section "Timed out, listed in .cargo/mutants-timeout.txt:" "$RUNNER_TEMP/listed-timed-out.txt"
+          } >> "$GITHUB_STEP_SUMMARY"
+          while IFS= read -r mutant; do echo "::error title=Missed mutant with no entry::$mutant"; done < "$RUNNER_TEMP/unexplained-missed.txt"
+          while IFS= read -r mutant; do echo "::error title=Timed-out mutant with no entry::$mutant"; done < "$RUNNER_TEMP/unexplained-timeout.txt"
+          if [[ -s "$RUNNER_TEMP/unexplained-missed.txt" || -s "$RUNNER_TEMP/unexplained-timeout.txt" ]]; then
+            echo "Missed or timed out, and listed in neither .cargo/mutants-equivalent.txt nor .cargo/mutants-timeout.txt: close each with a test, or list it with its reason"
+            exit 1
+          fi
+      - name: No entry of .cargo/mutants-equivalent.txt or .cargo/mutants-timeout.txt is stale
+        if: ${{ !cancelled() && steps.shards.outputs.complete == 'true' }}
+        run: |
+          sort "$RUNNER_TEMP/missed.txt" "$RUNNER_TEMP/timeout.txt" > "$RUNNER_TEMP/reported.txt"
+          comm -13 "$RUNNER_TEMP/reported.txt" "$RUNNER_TEMP/equivalent.txt" > "$RUNNER_TEMP/stale-equivalent.txt"
+          comm -13 "$RUNNER_TEMP/reported.txt" "$RUNNER_TEMP/listed-timeout.txt" > "$RUNNER_TEMP/stale-timeout.txt"
+          if [[ -s "$RUNNER_TEMP/stale-equivalent.txt" ]]; then
             echo "Listed as equivalent, but no shard missed them: remove them from .cargo/mutants-equivalent.txt"
-            cat "$RUNNER_TEMP/stale.txt"
+            cat "$RUNNER_TEMP/stale-equivalent.txt"
+          fi
+          if [[ -s "$RUNNER_TEMP/stale-timeout.txt" ]]; then
+            echo "Listed as timing out, but no shard timed out on them: remove them from .cargo/mutants-timeout.txt"
+            cat "$RUNNER_TEMP/stale-timeout.txt"
+          fi
+          if [[ -s "$RUNNER_TEMP/stale-equivalent.txt" || -s "$RUNNER_TEMP/stale-timeout.txt" ]]; then
             exit 1
           fi
 
@@ -148,10 +195,10 @@ jobs:
         with:
           persist-credentials: false
       - uses: $/.github/actions/pnpm
-      - name: Run Stryker on these modules, and hold their survivors to stryker-equivalent.txt
+      - name: Run Stryker on these modules, and hold their survivors and timeouts to stryker-equivalent.txt and stryker-timeout.txt
         if: github.ref != 'refs/heads/main'
         run: pnpm mutants:ts $MODULES
-      - name: Run Stryker on these modules, upload their report to the Stryker Dashboard, and hold their survivors to stryker-equivalent.txt
+      - name: Run Stryker on these modules, upload their report to the Stryker Dashboard, and hold their survivors and timeouts to stryker-equivalent.txt and stryker-timeout.txt
         if: github.ref == 'refs/heads/main'
         env:
           STRYKER_DASHBOARD_API_KEY: ${{ secrets.STRYKER_DASHBOARD_API_KEY }}

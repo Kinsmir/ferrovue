@@ -647,12 +647,23 @@ a comment saying why it changes nothing. Where the right answer is defined by Ja
 vue-router or vue-i18n, the test that closes a gap takes it from them: a vector recorded with
 `pnpm vectors:record`, or a conformance fixture recorded with `pnpm conformance:record`.
 
+A mutant that makes a loop run forever is a **timeout**: cargo-mutants stops the tests after 90
+seconds. Where the crate's own unit tests reach the loop, the loop counts its turns under
+`cfg(test)` (`Turns` in the crate's `lib.rs`), and a test that passes ten million turns fails, so
+cargo-mutants records the mutant as caught within a second. Release builds compile none of it. The
+other timeouts are listed in `.cargo/mutants-timeout.txt`, in the same form, under a comment saying
+which loop stops advancing and why no unit test reaches it first: `cargo test` runs the
+`ferrovue` crate's tests before the router's, for one.
+
 The **Mutants** workflow (`.github/workflows/mutants.yml`) runs every Monday and by hand, in
 sixteen shards built without debug information, six at a time to leave runners for other
-workflows, and fails on any survivor that is not in the list
-and on any entry of the list that no shard missed, which a test now catches and the list no longer
-needs. It is too slow for every pull request; run it locally on the functions a change touches
-(`-F`, or `--in-diff` with a diff file).
+workflows. It fails on any survivor that is not in `.cargo/mutants-equivalent.txt`, on any timeout
+that is in neither list, and, once all sixteen shards ran to the end, on any entry of either list
+that no shard missed or timed out on, which a test now catches and the list no longer needs. A
+listed equivalent that times out uses its entry, as a run under load can time out on it. The
+summary of its **Every listed equivalent and timeout still holds** job lists every missed and
+timed-out mutant, the unexplained ones first. It is too slow for every pull request; run it
+locally on the functions a change touches (`-F`, or `--in-diff` with a diff file).
 
 ### The compiler
 
@@ -693,9 +704,13 @@ A survivor is closed by a test or listed in `stryker-equivalent.txt`, under a co
 it cannot change what the compiler writes or refuses. An entry names the file, the mutator, the
 source text before and after and the line the mutant starts on, on one line and without the line's
 number, as `scripts/stryker-survivors.ts` prints it; a mutant that survives twice with the same
-text is listed twice. `pnpm mutants:ts` fails on a survivor the list does not explain and on an
-entry no survivor of the modules it holds uses. A listed mutant that times out uses its entry:
-under load, a mutant whose tests all pass can still run past the timeout. The **Mutants** workflow
+text is listed twice. A mutant that makes a loop or a recursion run forever times out, and is
+listed in the same form in `stryker-timeout.txt`, under a comment saying why it never ends.
+`pnpm mutants:ts` fails on a survivor `stryker-equivalent.txt` does not explain, on a timeout
+neither list explains, and on an entry of either list that no mutant of the modules it holds uses.
+A listed equivalent that times out uses its entry: under load, a mutant whose tests all pass can
+still run past the timeout. Its summary lists every mutant that timed out, after the unexplained
+survivors and timeouts. The **Mutants** workflow
 runs it every Monday beside cargo-mutants and uploads each job's HTML report. On `main`, each job
 also sends its report to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/Kinsmir/ferrovue/main),
 as a module named after its modules (`attrs-template`, `constants`, `dynamic`, `expr`), with the

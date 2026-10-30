@@ -1,0 +1,45 @@
+# Mutants of the compiler that make a loop run forever, which Stryker reports as timeouts
+# (TESTING.md, "Mutation testing"). One per line, as scripts/stryker-survivors.ts names it: the
+# file, the mutator, the text before and after, and the line the mutant starts on, without its
+# number. `pnpm mutants:ts` fails on a timeout not listed here or in stryker-equivalent.txt. Every
+# entry says why its loop never ends.
+
+# template.ts, `asVnodes`: an infinite loop. `at` stops advancing through the text, or moves back
+# to where it was: with the loop's body gone, with the end of the text never taken when no `<` is
+# left (`lt` is -1, so `at` returns to 0), with a comment's end searched for before the comment,
+# with an empty tag taken at a `<` that starts none, and with `at` moved back past a tag, an
+# attribute or a character.
+packages/ferrovue/src/template.ts: BlockStatement: { const tag = ctx.vnodeTag; if (tag === null) { const lt = … at] === ">") ctx.vnodeTag = null; out += text[at]; at++; } => {} in while (at < text.length) {
+packages/ferrovue/src/template.ts: ConditionalExpression: lt < 0 => false in if (lt < 0) {
+packages/ferrovue/src/template.ts: EqualityOperator: lt < 0 => lt >= 0 in if (lt < 0) {
+packages/ferrovue/src/template.ts: BlockStatement: { out += text.slice(at); break; } => {} in if (lt < 0) {
+packages/ferrovue/src/template.ts: ArithmeticOperator: lt + 4 => lt - 4 in const end = text.indexOf("-->", lt + 4);
+packages/ferrovue/src/template.ts: StringLiteral: "<" => "" in const taken = start?.[0] ?? "<";
+packages/ferrovue/src/template.ts: ArithmeticOperator: lt + taken.length => lt - taken.length in at = lt + taken.length;
+packages/ferrovue/src/template.ts: AssignmentOperator: at += all.length => at -= all.length in at += all.length;
+packages/ferrovue/src/template.ts: UpdateOperator: at++ => at-- in at++;
+
+# dynamic.ts, `prepareDynamic`: an infinite loop. The search for slots rendered as virtual nodes
+# repeats while a pass adds one, and a pass then always reports a change: with its body gone or
+# `changed` never cleared, with a slot added again whether or not the set holds it, and with the
+# set it added to dropped before the next pass.
+packages/ferrovue/src/dynamic.ts: BlockStatement: { changed = false; for (const p of prepared) { if (!p.pick … ame); changed = true; } } vnodeSlots.set(p.comp, set); } } => {} in for (let changed = true; changed; ) {
+packages/ferrovue/src/dynamic.ts: BooleanLiteral: false => true in changed = false;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: o.vnode && !set.has(o.name) => true in if (o.vnode && !set.has(o.name)) {
+packages/ferrovue/src/dynamic.ts: LogicalOperator: o.vnode && !set.has(o.name) => o.vnode || !set.has(o.name) in if (o.vnode && !set.has(o.name)) {
+packages/ferrovue/src/dynamic.ts: CallExpression: set.add(o.name); => ; in set.add(o.name);
+packages/ferrovue/src/dynamic.ts: CallExpression: vnodeSlots.set(p.comp, set); => ; in vnodeSlots.set(p.comp, set);
+
+# members.ts, `optionalChain`: an infinite loop. With the loop's body gone, `link` never moves
+# along the chain to its optional link.
+packages/ferrovue/src/members.ts: BlockStatement: { link = link.type === "OptionalCallExpression" ? link.cal … this optional chain is not supported ${placeIn(s)}`, n); } => {} in while (!link.optional) {
+
+# members.ts, `computedLength`: an infinite loop. The search for the `.map(` the length is taken
+# before stops advancing: with -1 from `indexOf` kept in the loop (`||`, `true` and `<= 0`, which
+# start again from the first `.map(`), with an empty search string at the end of the text, and with
+# the next search starting before the match it just found.
+packages/ferrovue/src/members.ts: LogicalOperator: at > 0 && !enclosed(iter.slice(at + 4)) => at > 0 || !enclosed(iter.slice(at + 4)) in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
+packages/ferrovue/src/members.ts: ConditionalExpression: at > 0 => true in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
+packages/ferrovue/src/members.ts: EqualityOperator: at > 0 => at <= 0 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
+packages/ferrovue/src/members.ts: StringLiteral: ".map(" => "" in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
+packages/ferrovue/src/members.ts: ArithmeticOperator: at + 1 => at - 1 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
