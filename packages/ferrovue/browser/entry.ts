@@ -1,5 +1,6 @@
 import { type Component } from "vue";
 import { type DatePlans, withDatePlans } from "../src/date-plans.ts";
+import { linkRoutes } from "../src/link-routes.ts";
 import { fixtureApp, readFixture, type RouterOptions } from "../src/testing-browser.ts";
 import type { RouteEntry } from "../src/route-records.ts";
 import { headRendered, settled } from "../src/settle.ts";
@@ -17,6 +18,7 @@ export interface PageData {
   routes: RouteEntry[];
   options: RouterOptions;
   plans: DatePlans;
+  light?: boolean;
 }
 
 export interface Hydration {
@@ -30,6 +32,7 @@ export interface Hydration {
 declare global {
   interface Window {
     hydration?: Promise<Hydration>;
+    navigated?: string[];
   }
 }
 
@@ -41,7 +44,10 @@ async function hydrate(): Promise<Hydration> {
   const first = root.firstChild;
   const before = document.body.innerHTML;
   const head = document.head.innerHTML;
-  const app = await fixtureApp(component, withDatePlans(readFixture(data.fixture), data.component, data.plans), data.routes, { ...data.options, hydrate: true });
+  const fixture = withDatePlans(readFixture(data.fixture), data.component, data.plans);
+  const app = await fixtureApp(component, fixture, data.light ? null : data.routes, { ...data.options, hydrate: true });
+  const navigated: string[] = (window.navigated = []);
+  if (data.light) app.use(linkRoutes(data.routes, { navigate: (href) => void navigated.push(href), location: fixture.route }));
   app.mount(root);
   const after = document.body.innerHTML;
   const kept = root.firstChild === first;

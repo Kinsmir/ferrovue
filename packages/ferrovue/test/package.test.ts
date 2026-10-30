@@ -40,6 +40,15 @@ it("keeps ferrovue/link-router to vue-router and the routes it is given", () => 
   expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/route-records.ts"]);
 });
 
+it("keeps ferrovue/link-routes to vue-router's RouterLink and injection keys and the routes it is given", () => {
+  const { files, packages } = graph("src/link-routes.ts");
+  expect([...packages].toSorted()).toEqual(["vue-router"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-routes.ts", "src/route-records.ts"]);
+  const text = readFileSync(join(ROOT, "src/link-routes.ts"), "utf8");
+  const values = [...text.matchAll(/^import \{([^}]*)\} from "vue-router";$/gm)].flatMap((m) => m[1]!.split(",").map((s) => s.trim()).filter((s) => !s.startsWith("type ")));
+  expect(values.toSorted()).toEqual(["RouterLink", "routeLocationKey", "routerKey"]);
+});
+
 it("keeps ferrovue/volar to the compiler, naming Vue's language tools only for their types", () => {
   const { files, packages } = graph("src/volar.ts");
   expect(packages.has("@vue/language-core")).toBe(false);
@@ -50,7 +59,7 @@ it("keeps ferrovue/volar to the compiler, naming Vue's language tools only for t
 });
 
 it("keeps every browser entry free of the compiler", () => {
-  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts", "src/route-records.ts", "src/testing-browser.ts"]) {
+  for (const entry of ["src/client.ts", "src/types.ts", "src/islands.ts", "src/page-routes.ts", "src/link-router.ts", "src/link-routes.ts", "src/route-records.ts", "src/testing-browser.ts"]) {
     const { files } = graph(entry);
     expect([...files].some((f) => basename(f) === "compiler.ts"), entry).toBe(false);
   }

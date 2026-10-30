@@ -105,7 +105,8 @@ packages/ferrovue/           the compiler (npm package)
   src/client.ts              `ferrovue`: the browser API, `mountIslands`, `mountPage`, `readPage`, `renderPage`, `hydrateState`, `<ClientOnly>`, the loaders
   src/loads.ts               the loaders' results the page carries, which the browser API and the tests share
   src/islands.ts             `ferrovue/islands`, which the Vite plugin writes: every island, loaded lazily
-  src/link-router.ts         `ferrovue/link-router`: `<RouterLink>` while the application navigates on its own
+  src/link-routes.ts         `ferrovue/link-routes`: `<RouterLink>` and `useRoute()` while the application navigates on its own, with no router
+  src/link-router.ts         `ferrovue/link-router`, deprecated: the same with a whole vue-router
   src/route-records.ts       `ferrovue/route-records`: a routes file as vue-router's route records
   src/file-routes.ts         the routes vue-router's file-based routing builds from a folder of pages
   src/page-routes.ts         `ferrovue/routes`, which the Vite plugin writes from the pages
@@ -265,6 +266,8 @@ from 1.0, after at least one minor release in which it still works and warns:
   compiler still reads it, and warns with `warning[FV1117]` naming the replacement; the JSON Schema
   marks it deprecated, so editors strike it through. A misspelt key is never taken for a deprecated
   one.
+- **An export of the npm package** gets a `@deprecated` tag in its TSDoc naming the replacement,
+  which editors strike through and the API report shows.
 - **A command-line option** gets `deprecated: { since: "X.Y.Z", use: "'--new'" }` in `FLAGS`; it
   still works, warns with `warning[FV1118]`, and `--help` marks it.
 

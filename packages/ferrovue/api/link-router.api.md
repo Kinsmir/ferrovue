@@ -8,10 +8,10 @@ import { RouteLocationNormalized } from 'vue-router';
 import { Router } from 'vue-router';
 import { RouterHistory } from 'vue-router';
 
-// @public
+// @public @deprecated
 export function linkRouter(routes: RouteEntry[], options: LinkRouterOptions): Router;
 
-// @public
+// @public @deprecated
 export interface LinkRouterOptions {
     base?: string;
     history?: RouterHistory;

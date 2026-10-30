@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, expect, it } from "vitest";
 
 const SRC = join(import.meta.dirname, "../src");
-const ENTRIES = ["client", "compiler", "config", "errors", "types", "testing", "testing-browser", "ssr", "link-router", "route-records", "islands", "vite", "volar"];
+const ENTRIES = ["client", "compiler", "config", "errors", "types", "testing", "testing-browser", "ssr", "link-router", "link-routes", "route-records", "islands", "vite", "volar"];
 let root = "";
 let result: Record<string, unknown> = {};
 
@@ -71,6 +71,7 @@ it("loads every entry of the package without the optional peers, vitest included
     "testing-browser": "loaded",
     ssr: "loaded",
     "link-router": expect.stringContaining("vue-router") as unknown,
+    "link-routes": expect.stringContaining("vue-router") as unknown,
     "route-records": "loaded",
     islands: expect.stringContaining("ferrovue/islands is written by the Vite plugin") as unknown,
     vite: "loaded",
