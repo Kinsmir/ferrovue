@@ -1303,6 +1303,7 @@ interface Var {
   inline?: boolean;
   members?: string[];
   wide?: true;
+  filled?: true;
 }
 interface ListVar {
   name: string;
@@ -1405,6 +1406,18 @@ class Gen {
     } finally {
       this.scope = saved;
     }
+  }
+
+  filledJoin(d: number): Expr {
+    const r = this.r;
+    const plain = this.vars("str").filter((v) => !v.filled && !v.lone && v.members === undefined);
+    const [t, v, other] = [this.test(d - 1), this.varRef(r.pick(this.filled())), plain.length && r.chance(0.7) ? this.varRef(r.pick(plain)) : this.str(d - 1)];
+    const [a, b] = r.chance(0.5) ? [v, other] : [other, v];
+    return { ...node("str", [t, a, b], ([c, x, y]) => `(${c} ? ${x} : ${y})`, 0, true), ...(other.lone ? { lone: true } : {}) };
+  }
+
+  filled(): Var[] {
+    return this.scope.vars.filter((v) => v.filled && v.ty === "str" && !v.opt && !v.lone);
   }
 
   vars(ty: Ty, maxBound = Infinity, opt = false): Var[] {
@@ -1550,6 +1563,15 @@ class Gen {
         const sep = r.pick([",", " ", "", "a", "🦀", ", "]);
         const limit = r.chance(0.3) ? `, ${r.pick(["0", "1", "2", "3", "-1", "4294967297", "1.5"])}` : "";
         return { of: { k: "str" }, kids: [s], fmt: (k, at) => `${s.atom ? recv(k[at]) : `(${k[at]})`}.split(${quoted(sep)}${limit})`, lone: !!s.lone || sep === "" };
+      }],
+      [this.filled().length ? 3 : 0, () => {
+        const [v, other] = [this.varRef(r.pick(this.filled())), this.str(d - 1)];
+        const items = r.chance(0.5) ? [v, other] : [other, v];
+        return { of: { k: "str" }, kids: items, fmt: (k, at) => `[${k.slice(at, at + 2).join(", ")}]`, lone: !!other.lone };
+      }],
+      [2, () => {
+        const items = Array.from({ length: r.int(2, 3) }, () => this.str(d - 1));
+        return { of: { k: "str" }, kids: items, fmt: (k, at) => `[${k.slice(at, at + items.length).join(", ")}]`, lone: items.some((i) => i.lone) };
       }],
     ])();
     for (let ops = r.weighted([[3, 0], [4, 1], [2, 2]]); ops > 0; ops--) {
@@ -1871,6 +1893,7 @@ class Gen {
       return r.weighted<() => Expr>([
         [vs.length ? 6 : 0, () => this.varRef(r.pick(vs))],
         [2, () => strLit(r.pick(STR_LITS))],
+        [d > 0 && this.filled().length ? 2 : 0, () => this.filledJoin(d)],
         [opts.length ? 2 : 0, () => {
           const v = r.pick(opts);
           const safe = v.members?.filter(plainLit) ?? [];
@@ -1921,6 +1944,12 @@ class Gen {
         const e = str([a, b], ([x, y]) => `${x} ?? ${y}`);
         const [ma, mb] = [literalsOf(a), literalsOf(b)];
         return a.members !== undefined && ma !== undefined && mb !== undefined ? { ...e, members: [...new Set([...ma, ...mb])] } : e;
+      }],
+      [this.filled().length ? 4 : 0, () => this.filledJoin(d)],
+      [1, () => {
+        const pool = [...this.vars("str"), ...opts].filter((v) => !v.lone);
+        if (!pool.length) return leaf();
+        return str([this.varRef(r.pick(pool)), this.str(d - 1)], ([x, y]) => `(${x} || undefined) ?? ${y}`);
       }],
       [
         4,
@@ -2301,6 +2330,7 @@ class Gen {
       [1, () => this.float(d - 1)],
       [optVars.length ? 2 : 0, () => this.varRef(r.pick(optVars))],
       [optVars.length ? 1 : 0, () => this.optChain(false) ?? this.bool(d)],
+      [d > 0 && this.filled().length ? 2 : 0, () => this.filledJoin(d)],
       [this.scope.lists.length ? 1 : 0, () => atom("int", `${r.pick(this.scope.lists).name}.length`, 2 ** 31)],
     ])();
   }
@@ -2626,8 +2656,9 @@ class Gen {
         const typed = r.chance(0.5) ? `typeof ${v.name} === '${kind}'` : `typeof ${v.name} !== '${v.nul ? "object" : "undefined"}'`;
         const test = r.chance(0.3) ? `!= ${r.pick(["null", "undefined"])}` : `!== ${v.nul ? "null" : "undefined"}`;
         const cond: Expr = { ...r.weighted<() => Expr>([[6, () => this.varRef(v)], [3, () => node("bool", [this.varRef(v)], ([a]) => `${a} ${test}`)], [2, () => atom("bool", typed)]])(), fixed: true };
+        const filled = v.ty === "str" && cond.ref === v.name ? { filled: true as const } : {};
         const el = this.withScope(() => {
-          this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false } : x));
+          this.scope.vars = this.scope.vars.map((x) => (x === v ? { ...x, opt: false, ...filled } : x));
           return this.carrier(depth, ctx);
         });
         branches.push({ cond, node: el });
@@ -2640,7 +2671,7 @@ class Gen {
         };
         walk(cond);
         const el = this.withScope(() => {
-          this.scope.vars = this.scope.vars.map((x) => (x.opt && narrowed.has(x.name) ? { ...x, opt: false } : x));
+          this.scope.vars = this.scope.vars.map((x) => (x.opt && narrowed.has(x.name) ? { ...x, opt: false, ...(x.ty === "str" ? { filled: true as const } : {}) } : x));
           return this.carrier(depth, ctx);
         });
         branches.push({ cond, node: el });

@@ -821,6 +821,14 @@ export function joinTy(a: Ty, b: Ty): Ty {
     return of === a.of ? a : { ...a, of };
   }
   const other = b.k === "opt" ? b.of : b;
+  const joined = joinedScalar(a, other);
+  if (a.k !== "str") return joined;
+  const filled = neverEmpty(a) && neverEmpty(other);
+  if (neverEmpty(joined) === filled) return joined;
+  return filled ? filledTy(joined) : strTy(isAscii(joined));
+}
+
+function joinedScalar(a: Ty, other: Ty): Ty {
   const ascii = a.k === "str" && isAscii(a) && isAscii(other);
   const mine = LITERALS.get(a);
   if (mine === undefined || (a.k !== "str" && a.k !== "int")) return a.k === "str" && ASCII.has(a) && !ascii ? STR : a;
