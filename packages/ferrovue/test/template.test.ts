@@ -788,7 +788,7 @@ describe("v-if", () => {
 describe("refusals", () => {
   it("refuses an input whose type and v-model are bound", () => {
     expect(refusals(sfc("t: string; x: string", `<div><input :type="t" v-model="x"></div>`))).toEqual([
-      "FV0006 this expression cannot be rendered on the server",
+      "FV0426 `v-model` on an `<input>` whose `type` is bound, where Vue's server chooses as it renders whether to write `checked` or `value`: write a literal `type`, or one `<input>` for each type under `v-if`",
     ]);
   });
 

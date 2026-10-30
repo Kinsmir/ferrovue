@@ -1,4 +1,4 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, distinctFields, fail, nothing, rustStr, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, directiveOwner, distinctFields, fail, nothing, rustStr, snake } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";
@@ -16,11 +16,22 @@ function borrowed(code: string): string {
 /** The properties of a component call's slots object with their keys, `_` aside. */
 export function givenSlots(s: Scope, slots: N): [string, N][] {
   if (!slots || slots.type === "NullLiteral") return [];
-  if (slots.type !== "ObjectExpression") fail(s.comp, "FV0901", "slots must be an object literal", slots);
+  if (slots.type !== "ObjectExpression") refuseDynamicSlots(s, slots);
   return slots.properties.flatMap((p: N): [string, N][] => {
     const key: string = p.key?.type === "Identifier" ? p.key.name : p.key?.value;
     return key === "_" ? [] : [[key, p]];
   });
+}
+
+function refuseDynamicSlots(s: Scope, slots: N): never {
+  const entry = slots.type === "CallExpression" && slots.callee.type === "Identifier" && slots.callee.name === "_createSlots" ? slots.arguments[1]?.elements?.find(Boolean) : undefined;
+  const from = entry?.type === "ConditionalExpression" ? entry.test : entry?.type === "CallExpression" ? entry.arguments[0] : undefined;
+  const el = from === undefined ? null : directiveOwner(s.comp, from);
+  const structural = el?.props.find((p: N) => p.type === 7 && ["if", "else-if", "else", "for"].includes(p.name));
+  if (!el || !structural) fail(s.comp, "FV0901", "slots must be an object literal", slots);
+  const at = { type: "VueTemplate", loc: { start: { line: el.loc.start.line, column: el.loc.start.column - 1 } }, __fv: "source" };
+  const what = structural.name === "for" ? "`v-for`" : `\`v-${structural.name}\``;
+  return fail(s.comp, "FV0901", `a slot given under ${what} makes the child's slots depend on the data: give the slot always, and put the ${what} on an element or a \`<template>\` inside its content`, at);
 }
 
 export function slotBody(s: Scope, value: N): N[] {

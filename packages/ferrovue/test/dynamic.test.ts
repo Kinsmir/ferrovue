@@ -437,7 +437,9 @@ describe("the components `<component :is>` renders", () => {
   });
 
   it("refuses slots a chosen component is given by `v-if`", () => {
-    expect(refusals('import Y from "./Y.vue";\ndefineProps<{ on: boolean }>();', "<component :is=\"on ? Y : 'b'\"><template v-if=\"on\" #default>d</template></component>")).toEqual(["FV0901 slots must be an object literal"]);
+    expect(refusals('import Y from "./Y.vue";\ndefineProps<{ on: boolean }>();', "<component :is=\"on ? Y : 'b'\"><template v-if=\"on\" #default>d</template></component>")).toEqual([
+      "FV0901 a slot given under `v-if` makes the child's slots depend on the data: give the slot always, and put the `v-if` on an element or a `<template>` inside its content",
+    ]);
   });
 
   it("hands a chosen component the scope ids of its parent and of the slot it is in, and an element's outlet the slot's", () => {

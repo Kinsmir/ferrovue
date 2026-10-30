@@ -566,7 +566,7 @@ A value given to an attribute that may fall through to a child, through `$attrs`
 
 `v-model` comparing values of types it cannot compare.
 
-`v-model` on a checkbox, a radio button or a `<select>` marks the option whose value is loosely equal to the model, which the server reproduces between two strings. Other pairs of types follow JavaScript's loose equality, which the server does not. Bind string values and a string model, or bind `:checked` or `:selected` yourself.
+`v-model` on a checkbox, a radio button or a `<select>` marks the option whose value is loosely equal to the model, which the server reproduces for a model that is a string, or a string that may be absent, against a string value, and for an `<option>` with no `value`, which Vue's server compares with `null`. Other pairs of types follow JavaScript's loose equality, which the server does not. Bind string values and a string model, or bind `:checked` or `:selected` yourself.
 
 ## FV0414
 
@@ -639,6 +639,12 @@ Vue's server renderer reads a `<textarea>`'s content, and an `<input v-model>`'s
 Element with no content given a custom directive and attributes that may hold its content.
 
 Vue's server renderer writes an element with no content and a custom directive with the `textContent` or `innerHTML` among the attributes it merges into the element: those passed to the component, when the element is its root, those of a `v-bind` of an object or an attribute named at run time, and a bound `textContent` or `innerHTML`. The compiler does not translate that reading. Wrap a root element in another element, such as a `<div>`, which then takes the attributes passed to the component, bind each attribute by its name, and write the content inside the element.
+
+## FV0426
+
+`v-model` on an `<input>` whose `type` is bound.
+
+With a bound `type`, Vue's server renderer chooses as it renders what `v-model` writes: `checked` for a checkbox or a radio button, `value` for any other type, each by its own comparison with the model. The compiler translates `v-model` on an `<input>` of a literal `type`. Write the `type` as a literal, or write one `<input>` for each type under `v-if` and `v-else-if`.
 
 # Child components: FV05xx
 
@@ -1126,9 +1132,9 @@ Value that may be `null` or `undefined` written as a string.
 
 ## FV0724
 
-Integer beyond the range of `i64` where the template needs one, as it renders.
+Integer beyond the range of `i64` where the generated code holds one, as it renders.
 
-Integer arithmetic is done on doubles, as JavaScript does it, and a result written into the page is written from the double. Where the template needs the result as an integer, as a child's `number` prop, an index or the count of a `v-for` over a range, it is held as an `i64`, which stops at ±2⁶³: a result beyond that is refused as the component renders, where a cast to `i64` would change the number. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Keep integer props within ±2⁵³, where JavaScript's integers are exact, or type the child's prop `Float`. See [`numbers`](crate::guide::numbers).
+Integer arithmetic is done on doubles, as JavaScript does it, and a result written into the page is written from the double. Where the generated code holds the result as an integer, as a child's `number` prop, an index, the count of a `v-for` over a range, or an integer a `computed`, a variable, a list or a callback such as `.reduce()`'s keeps, it is held as an `i64`, which stops at ±2⁶³: a result beyond that is refused as the component renders, where a cast to `i64` would change the number. A generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the expression, so a server can answer `400 Bad Request`; `render` panics with its message. See [`errors_and_limits`](crate::guide::errors_and_limits#refused-at-render-time). Keep integer props within ±2⁵³, where JavaScript's integers are exact, or type the numbers it is computed from `Float`. See [`numbers`](crate::guide::numbers).
 
 ## FV0725
 

@@ -290,8 +290,9 @@ fn refuse(refused: &Refused) -> ! {
 
 const I64_LIMIT: f64 = 9_223_372_036_854_775_808.0;
 
-/// An integer the template computed as JavaScript does, as a double, held as the `i64` a child's
-/// `number` prop, an index or a range needs.
+/// An integer the template computed as JavaScript does, as a double, held as an `i64`: a child's
+/// `number` prop, an index, a range's count, or an integer a `computed`, a variable, a list or a
+/// callback keeps.
 ///
 /// # Errors
 ///
@@ -313,10 +314,11 @@ fn int_refused(x: f64) -> Refused {
     Refused::new(
         "FV0724",
         format!(
-            "the number {shown} is beyond the range of i64, where the template needs an integer (a \
-             child's `number` prop, an index or a range): check the props before rendering and keep \
-             them within ±2⁵³, where JavaScript's integers are exact, or type the child's prop \
-             `Float`"
+            "the number {shown} is beyond the range of i64, where the generated code holds an integer \
+             as an i64 (a child's `number` prop, an index, a range's count, or an integer a \
+             `computed`, a variable, a list or a callback such as `.reduce()`'s keeps): check the \
+             props before rendering and keep them within ±2⁵³, where JavaScript's integers are \
+             exact, or type the numbers it is computed from `Float`"
         ),
     )
 }

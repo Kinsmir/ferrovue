@@ -422,7 +422,8 @@ What is teleported out of the page is not compared.
 
 With `clientRender: true`, `conformanceSuite` holds every fixture to the same comparison: a fresh
 client render of each shows its recorded HTML. Where Vue's own client render differs from its server render, list the fixture
-in `clientDiffers`: a `v-model` `<select>` whose value matches no option, an attribute such as
+in `clientDiffers`: a `v-model` `<select>` whose value matches no option, an `<option>` with no
+`value`, which the client compares by its text and the server with `null`, an attribute such as
 `disabled` bound on an element without that property, a `<TransitionGroup>`'s `name`, the slot
 scope ids of a slotted component, an async component beside a `<ClientOnly>`, and the `v-bind()`
 variables in `<style>` the client sets on a root `v-for`'s elements or a `<Transition>` root, where

@@ -37,6 +37,15 @@ fn an_integer_beyond_i64_or_a_fraction_is_refused() {
             .starts_with("the number 16000000000000000000 is beyond the range of i64"),
         "{refused}"
     );
+    for held in [
+        "a child's `number` prop",
+        "an index",
+        "a range's count",
+        "a `computed`",
+        "`.reduce()`",
+    ] {
+        assert!(refused.message().contains(held), "{held}: {refused}");
+    }
 }
 
 #[test]
