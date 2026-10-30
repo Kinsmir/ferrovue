@@ -109,6 +109,7 @@ pub mod inline_prose;
 pub mod inline_types;
 pub mod kebab_tree;
 pub mod keywords;
+pub mod known_values;
 pub mod lifecycle;
 pub mod links;
 pub mod list_access;
@@ -818,6 +819,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Keywords" => {
             let props: keywords::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             keywords::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "KnownValues" => {
+            let props: known_values::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            known_values::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Lifecycle" => {
             let props: lifecycle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

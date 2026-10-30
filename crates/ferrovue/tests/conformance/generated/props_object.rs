@@ -97,7 +97,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &s_loud);
     out.push_str("</h3>");
     super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::NONE)?;
-    if props.tags.as_deref().unwrap_or(&[]).len() as i64 != 0 {
+    if !props.tags.as_deref().unwrap_or(&[]).is_empty() {
         out.push_str("<ul><!--[-->");
         for fv_t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {
             let fv_t: &str = fv_t_ref;

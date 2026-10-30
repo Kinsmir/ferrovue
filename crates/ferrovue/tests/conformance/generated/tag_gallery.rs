@@ -177,7 +177,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(340 + 2 + props.title.len() + props.note.as_deref().map_or(0, str::len) + 2);
+    out.reserve(330 + 2 + props.title.len() + props.note.as_deref().map_or(0, str::len) + 2);
     out.push_str("<article data-v-71d8588a>");
     super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
@@ -247,14 +247,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
         let fv_tag = match props.level { TagGalleryLevel::H1 => "h1", TagGalleryLevel::H2 => "h2", TagGalleryLevel::H3 => "h3" };
         out.push('<');
         out.push_str(fv_tag);
-        if fv_note_2.is_empty() {
-            out.push_str(" data-note");
-        } else {
-            out.push_str(" data-note=\"");
-            fv::core::escape_into(out, fv_note_2);
-            out.push('"');
-        }
-        out.push_str(" data-v-71d8588a>");
+        out.push_str(" data-note=\"");
+        fv::core::escape_into(out, fv_note_2);
+        out.push_str("\" data-v-71d8588a>");
         fv::core::escape_into(out, fv_note_2);
         out.push_str("</");
         out.push_str(fv_tag);

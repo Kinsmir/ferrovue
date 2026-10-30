@@ -123,7 +123,7 @@ describe("`&&` and `||`", () => {
       "fv::core::push_int(out, v);",
       "}",
       "out.push('|');",
-      "if let Some(v) = props.q.as_ref().filter(|v| true).map(|fv_o1| &*fv_o1.t) {",
+      "if let Some(v) = props.q.as_ref().map(|fv_o1| &*fv_o1.t) {",
       "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',

@@ -110,17 +110,11 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(134 + 1 + 1 + 4);
+    out.reserve(128 + 1 + 1 + 4);
     let s_key = props.k;
-    out.push_str("<p");
-    if (match props.k { K::A => "A", K::B => "B", K::C => "C" }).is_empty() {
-        out.push_str(" title");
-    } else {
-        out.push_str(" title=\"");
-        fv::core::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
-        out.push('"');
-    }
-    out.push_str(" class=\"");
+    out.push_str("<p title=\"");
+    fv::core::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+    out.push_str("\" class=\"");
     fv::attrs::class_into(out, false, &[match props.k { K::B => "y", K::A | K::C => "x" }]);
     out.push_str("\" style=\"opacity:");
     fv::core::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });

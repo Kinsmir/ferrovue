@@ -47,7 +47,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(43 + props.word.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/UnreadSteps.vue");
-    let s_guarded = std::cell::LazyCell::new(|| if (props.count as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("-") } else { { let fv_copies = fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 8, 18); std::borrow::Cow::<str>::Owned((if fv::strings::js_length(&fv_copies) as f64 > 3.0 { &*fv_copies } else { "short" }).to_owned()) } });
+    let s_guarded = std::cell::LazyCell::new(|| if (props.count as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("-") } else { { let fv_copies = fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 8, 18); std::borrow::Cow::<str>::Owned((if fv::strings::js_length(&fv_copies) > 3 { &*fv_copies } else { "short" }).to_owned()) } });
     let s_late = std::cell::LazyCell::new(|| { let fv_copies_2 = fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 14, 18); std::borrow::Cow::<str>::Owned((if !props.show { std::borrow::Cow::<str>::Borrowed("hidden") } else { std::borrow::Cow::<str>::Owned(format!("{}!", fv_copies_2)) }).into_owned()) });
     out.push_str("<!--[--><p>");
     fv::core::escape_into(out, &s_guarded);

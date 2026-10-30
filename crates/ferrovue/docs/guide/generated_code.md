@@ -589,6 +589,12 @@ let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv
 # assert_eq!(s_total, 5.0);
 ```
 
+A render tests only what can go either way. It writes no test of the empty string for a value
+a `v-if` or `|| undefined` has found present, or for a union with no `""` member, and it writes an
+attribute bound to `test ? "literal" : undefined` as the literal inside `if test`. A `v-for` index
+and a `.length` are compared and added as `i64`: a count of what fits in memory is far below 2⁵³,
+where the `i64` and JavaScript's number are the same.
+
 # `render_json`, for your own conformance tests
 
 `mod.rs` has, under `#[cfg(test)]`, a `render_json(component, json)` that renders a component by

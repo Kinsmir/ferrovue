@@ -98,8 +98,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</dd><!--]-->");
     }
     out.push_str("<!--]--></dl><!--[-->");
-    for (fv_id, fv_value_ref) in props.scores.iter() {
-        let fv_value = fv_value_ref;
+    for (fv_id, fv_value) in props.scores.iter() {
         out.push_str("<p id=\"s-");
         fv::core::escape_into(out, fv_id);
         out.push_str("\">");
@@ -109,8 +108,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</p>");
     }
     out.push_str("<!--]--><!--[-->");
-    for (fv_group, fv_members_ref) in props.groups.iter() {
-        let fv_members = fv_members_ref;
+    for (fv_group, fv_members) in props.groups.iter() {
         out.push_str("<p>");
         fv::core::escape_into(out, fv_group);
         out.push_str(": ");
@@ -128,8 +126,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.scores.keys().count() as i64);
     out.push_str("</p><ol><!--[-->");
-    for (fv_i_2, (fv_key_2, fv_value_ref_2)) in props.counts.iter().enumerate() {
-        let fv_value_2 = *fv_value_ref_2;
+    for (fv_i_2, (fv_key_2, fv_value_ref)) in props.counts.iter().enumerate() {
+        let fv_value_2 = *fv_value_ref;
         let fv_i_2 = fv_i_2 as i64;
         out.push_str("<li>");
         fv::core::push_int(out, fv_i_2);

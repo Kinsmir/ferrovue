@@ -88,10 +88,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(" (");
     fv::core::push_int(out, s_total);
     out.push_str(" of max 3)</p>");
-    if s_panels.len() as i64 != 0 {
+    if !s_panels.is_empty() {
         out.push_str("<p><!--[-->");
-        for fv_panel_ref in s_panels.iter() {
-            let fv_panel = fv_panel_ref;
+        for fv_panel in s_panels.iter() {
             out.push_str("<b>");
             fv::core::escape_into(out, &fv_panel.title);
             out.push_str("</b>");
@@ -101,8 +100,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for fv_item_ref in props.items.iter() {
-        let fv_item = fv_item_ref;
+    for fv_item in props.items.iter() {
         out.push_str("<li>#");
         fv::core::push_int(out, fv_item.id);
         out.push(' ');

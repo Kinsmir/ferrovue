@@ -52,23 +52,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::NONE)?;
     super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::merged(&[&[("title", fv::attrs::Attr::str("tip"))]], ""))?;
     out.push_str("<!--[-->");
-    for fv_l_ref in props.leaves.iter() {
-        let fv_l = fv_l_ref;
+    for fv_l in props.leaves.iter() {
         super::listen_leaf::try_render_scoped(out, fv_l, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_l_ref_2 in props.leaves.iter() {
-        let fv_l_2 = fv_l_ref_2;
+    for fv_l_2 in props.leaves.iter() {
         super::listen_leaf::try_render_scoped(out, fv_l_2, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_l_ref_3 in props.leaves.iter() {
-        let fv_l_3 = fv_l_ref_3;
+    for fv_l_3 in props.leaves.iter() {
         super::listen_leaf::try_render_scoped(out, fv_l_3, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_l_ref_4 in props.leaves.iter() {
-        let fv_l_4 = fv_l_ref_4;
+    for fv_l_4 in props.leaves.iter() {
         super::listen_leaf::try_render_scoped(out, fv_l_4, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]-->");

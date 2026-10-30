@@ -66,7 +66,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
                 filled = true;
                 fv_refusals.join(super::row_chip::try_render(out, &super::row_chip::Props { row: fv_slot_props_2.row.to_owned(), first: fv_slot_props_2.first }));
             } else {
-                if fv_slot_props_2.tags.len() as i64 != 0 {
+                if !fv_slot_props_2.tags.is_empty() {
                     filled = true;
                     out.push_str("<b data-index=\"");
                     fv::core::push_int(out, fv_slot_props_2.index);

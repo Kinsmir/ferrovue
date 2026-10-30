@@ -118,8 +118,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_number(out, props.entry.meta.count as f64 + props.price as f64);
     out.push_str("</p><ul><!--[-->");
-    for (fv_i, fv_row_ref) in props.rows.iter().enumerate() {
-        let fv_row = fv_row_ref;
+    for (fv_i, fv_row) in props.rows.iter().enumerate() {
         let fv_i = fv_i as i64;
         out.push_str("<li data-tag=\"");
         fv::core::escape_into(out, &fv_row.meta.tag);

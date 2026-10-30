@@ -121,7 +121,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<p>no icon</p>");
     }
-    if let Some(fv_steps) = (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).filter(|v| !v.is_empty()) {
+    if let Some(fv_steps) = match props.level { 1 => Some("first"), 2 => Some("second"), _ => None } {
         out.push_str("<b>");
         fv::core::escape_into(out, fv_steps);
         out.push_str("</b>");
@@ -131,8 +131,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<i>");
     fv::core::escape_into(out, (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).unwrap_or("later"));
     out.push_str("</i><ul><!--[-->");
-    for fv_b_ref in props.badges.iter() {
-        let fv_b = fv_b_ref;
+    for fv_b in props.badges.iter() {
         out.push_str("<li class=\"");
         fv::attrs::class_into(out, false, &[if !matches!(fv_b.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "" }]);
         out.push_str("\" style=\"font-weight:");

@@ -4,6 +4,7 @@ import { fresh, jsHint } from "./names.ts";
 import { expr, fieldVal } from "./expr.ts";
 import { isObjectCall } from "./calls.ts";
 import { atom, operand, OR } from "./parens.ts";
+import { COUNT } from "./numbers.ts";
 import { Emitter } from "./emitter.ts";
 import { statements } from "./template.ts";
 import { unbound } from "./narrowing.ts";
@@ -67,16 +68,16 @@ export function list(s: Scope, e: Emitter, c: N): void {
   } else if (src.ty.k === "list") {
     of = src.ty.of;
     if (of.k === "undef") fail(s.comp, "FV0819", "`v-for` over an empty array literal", c);
-    const itemCode = fresh("a", `${itemHint}_ref`);
+    const direct = of.k === "struct" || of.k === "child";
+    const itemCode = direct ? itemName : fresh("a", `${itemHint}_ref`);
     walk = `${atom(src.code)}.iter()`;
     bound = itemCode;
     e.open(loop(bound, idx));
     if (of.k === "str") e.stmt(`let ${itemName}: &str = ${itemCode};`);
-    else if (of.k === "struct" || of.k === "child") e.stmt(`let ${itemName} = ${itemCode};`);
     else if (of.k === "opt" && of.of.k === "str") e.stmt(`let ${itemName} = ${itemCode}.as_deref();`);
     else if (of.k === "opt" && !["int", "float", "bool", "date"].includes(of.of.k)) e.stmt(`let ${itemName} = ${itemCode}.as_ref();`);
-    else e.stmt(`let ${itemName} = *${itemCode};`);
-    itemLet = e.lines.length - 1;
+    else if (!direct) e.stmt(`let ${itemName} = *${itemCode};`);
+    if (!direct) itemLet = e.lines.length - 1;
   } else {
     return fail(s.comp, "FV0820", "`v-for` walks an array, or counts to a number", c);
   }
@@ -97,7 +98,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   } else if (item.type === "ArrayPattern" && of.k === "entry") bindEntry(s.comp, item, { code: itemName, ty: of, ...(src.lone ? { lone: true } : {}) }, inner, [], "FV0818");
   else if (item.type === "ArrayPattern" && tupleParts(s.comp, of) !== null) bindTuple(s.comp, item, { code: itemName, ty: of }, inner, [], "FV0821");
   else fail(s.comp, "FV0822", `a \`v-for\` item is a name or ${of.k === "entry" ? "an array pattern of a `[key, value]` pair" : "an object pattern, or an array pattern of a tuple"}`, item);
-  if (index) inner.set(index.name, { code: idx!, ty: INT });
+  if (index) inner.set(index.name, { code: idx!, ty: INT, upTo: COUNT });
   const before = e.literalBytes;
   const over = src.enums?.place ?? src.code;
   const fromProps = src.ty.k === "list" && (src.iter === undefined || src.enums !== undefined) && /^\(?props\./.test(over);
@@ -124,14 +125,15 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   for (const p of [key, index]) if (p && p.type !== "Identifier") fail(s.comp, "FV0823", "a record's key and index in `v-for` are plain names", p);
   const vHint = value?.type === "Identifier" ? jsHint(value.name) : "value";
   const v = fresh(value?.type === "Identifier" ? "a" : "value", vHint);
-  const vRef = fresh("a", `${vHint}_ref`);
+  const direct = !["str", "int", "float", "bool", "date"].includes(of.k);
+  const vRef = direct ? v : fresh("a", `${vHint}_ref`);
   const k = key ? fresh("a", jsHint(key.name)) : fresh("key", "key");
   const i = index ? fresh("i", jsHint(index.name)) : fresh("index", "index");
   e.open(`for (${i}, (${k}, ${vRef})) in ${atom(r.code)}.iter().enumerate()`);
   const head = e.lines.length - 1;
   const indent = /^ */.exec(e.lines[head]!)![0];
   const inner = new Map(s.locals);
-  e.stmt(of.k === "str" ? `let ${v}: &str = ${vRef};` : of.k === "int" || of.k === "float" || of.k === "bool" ? `let ${v} = *${vRef};` : of.k === "date" ? `let ${v} = fv::date::js_time_of(${vRef});` : `let ${v} = ${vRef};`);
+  if (!direct) e.stmt(of.k === "str" ? `let ${v}: &str = ${vRef};` : of.k === "date" ? `let ${v} = fv::date::js_time_of(${vRef});` : `let ${v} = *${vRef};`);
   e.stmt(`let ${i} = ${i} as i64;`);
   const bodyFrom = e.lines.length;
   if (value?.type === "Identifier") inner.set(value.name, { code: v, ty: of });
@@ -145,13 +147,13 @@ function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, k
   } else if (value?.type === "ArrayPattern" && tupleParts(s.comp, of) !== null) bindTuple(s.comp, value, { code: v, ty: of }, inner, [], "FV0821");
   else if (value) fail(s.comp, "FV0822", "a `v-for` item is a name, an object pattern of an object, or an array pattern of a tuple", value);
   if (key) inner.set(key.name, { code: k, ty: STR });
-  if (index) inner.set(index.name, { code: i, ty: INT });
+  if (index) inner.set(index.name, { code: i, ty: INT, upTo: COUNT });
   const before = e.literalBytes;
   statements({ ...s, locals: inner, narrowed: rebound(s, inner) }, e, fn.body.body);
   const reads = (name: string) => e.reads(name, bodyFrom);
   const [readsV, readsK, readsI] = [reads(v), reads(k), reads(i)];
-  if (!readsI) e.lines.splice(head + 2, 1);
-  if (!readsV) e.lines.splice(head + 1, 1);
+  if (!readsI) e.lines.splice(head + (direct ? 1 : 2), 1);
+  if (!readsV && !direct) e.lines.splice(head + 1, 1);
   const pair = `(${readsK ? k : "_"}, ${readsV ? vRef : "_"})`;
   e.lines[head] = `${indent}for ${readsI ? `(${i}, ${pair}) in ${atom(r.code)}.iter().enumerate()` : `${pair} in ${atom(r.code)}.iter()`} {`;
   e.close();

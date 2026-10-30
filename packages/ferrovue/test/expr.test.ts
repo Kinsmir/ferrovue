@@ -519,7 +519,7 @@ describe("`.length`", () => {
   });
 
   it("counts an empty array literal, and one handed to a parameter whose items have no type, as 0", () => {
-    expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ [].length + xs.length }}</p>")).toMatch(like("fv::core::push_number(out, 0.0 + props.xs.len() as i64 as f64);"));
+    expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ [].length + xs.length }}</p>")).toMatch(like("fv::core::push_int(out, props.xs.len() as i64);"));
     const out = render("function f(xs: unknown[]) { return xs.length; }", "<p>{{ f([]) }}</p>");
     expect(out).toMatch(like('out.push_str("<p>0</p>");'));
     expect(out).not.toMatch(/= &\[\];/);
@@ -659,9 +659,9 @@ describe("names and members", () => {
 describe("`&&` and `||` that narrow their left side", () => {
   it("reads the right side where the left side narrows it", () => {
     expect(render("defineProps<{ s?: string }>();", '<p v-if="!s || s.length > 2">a</p>')).toMatch(like(
-      "if if let Some(n2) = props.s.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(n2) as f64 > 2.0 } else { true } {",
+      "if if let Some(n2) = props.s.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(n2) > 2 } else { true } {",
     ));
-    expect(render("defineProps<{ s?: string }>();", '<p v-if="s != null && s.length > 2">a</p>')).toMatch(like("if let Some(n1) = props.s.as_deref() && fv::strings::js_length(n1) as f64 > 2.0 {"));
+    expect(render("defineProps<{ s?: string }>();", '<p v-if="s != null && s.length > 2">a</p>')).toMatch(like("if let Some(n1) = props.s.as_deref() && fv::strings::js_length(n1) > 2 {"));
   });
 
   it("refuses a right side that is no boolean", () => {
@@ -1060,7 +1060,7 @@ describe("names holding `$`", () => {
   it("names the locals of parameters, `const`s and `v-for` items holding `$` without the `$`", () => {
     const out = render("interface R { $tag: string }\nconst props = defineProps<{ s: string; rows: R[] }>();\nfunction shout($v: string): string { const $w = $v.toUpperCase() + props.s; return $w; }", '<p>{{ shout(s) }}</p><i v-for="($t, $i) in rows">{{ $t.$tag }}{{ $i }}</i>');
     expect(rustOnly(out)).not.toContain("$");
-    expect(flat(out)).toContain(["for (fv_i, fv_t_ref) in props.rows.iter().enumerate() {", "let fv_t = fv_t_ref;", "let fv_i = fv_i as i64;"].join("\n"));
+    expect(flat(out)).toContain(["for (fv_i, fv_t) in props.rows.iter().enumerate() {", "let fv_i = fv_i as i64;"].join("\n"));
   });
 
   it("names slot props holding `$` without the `$`", () => {

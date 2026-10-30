@@ -253,9 +253,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.prices.iter().copied().map(|fv_p| fv_p * 2.0).collect::<Vec<_>>().into_iter().rposition(|fv_item_12| fv_item_12 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::core::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_4| fv::strings::js_length(fv_w_4) as f64 > 0.0).collect::<Vec<_>>().into_iter().rposition(|fv_item_13| *fv_item_13 == *props.word).map_or(-1, |i| i as i64));
+    fv::core::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_4| fv::strings::js_length(fv_w_4) > 0).collect::<Vec<_>>().into_iter().rposition(|fv_item_13| *fv_item_13 == *props.word).map_or(-1, |i| i as i64));
     out.push_str("</p><p>");
-    if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rev().find(|fv_w_5| fv::strings::js_length(fv_w_5) as f64 > 1.0).as_deref() {
+    if let Some(v) = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).rev().find(|fv_w_5| fv::strings::js_length(fv_w_5) > 1).as_deref() {
         fv::core::escape_into(out, v);
     }
     out.push('|');

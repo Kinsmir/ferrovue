@@ -52,16 +52,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(89 + props.label.as_deref().map_or(0, str::len));
+    out.reserve(83 + props.label.as_deref().map_or(0, str::len));
     if let Some(fv_label) = props.label.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<span class=\"leaf\"");
-        if fv_label.is_empty() {
-            out.push_str(" title");
-        } else {
-            out.push_str(" title=\"");
-            fv::core::escape_into(out, fv_label);
-            out.push('"');
-        }
+        out.push_str("<span class=\"leaf\" title=\"");
+        fv::core::escape_into(out, fv_label);
+        out.push('"');
         out.push_str(fv_attrs);
         out.push_str(" data-v-f1fc277f>");
         fv::core::escape_into(out, fv_label);

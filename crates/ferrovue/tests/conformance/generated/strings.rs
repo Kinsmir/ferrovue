@@ -113,7 +113,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &fv::strings::js_split(&props.text, ",").into_iter().collect::<Vec<_>>().join(" / "));
     out.push('|');
-    fv::core::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) as f64 > 2.0).collect::<Vec<_>>().join("+"));
+    fv::core::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 2).collect::<Vec<_>>().join("+"));
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split(&props.text, &props.sep).len() as i64);
     out.push_str("</p><p>");
@@ -157,7 +157,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape_into(out, &(if (fv::strings::js_length(&s_short) as f64) < 3.0 { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
+    fv::core::escape_into(out, &(if fv::strings::js_length(&s_short) < 3 { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
     out.push_str("</p>");
     if &*fv::strings::js_slice(&props.text, 0.0f64, Some(1.0f64)) == "a" {
         out.push_str("<b>starts with a</b>");

@@ -107,8 +107,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     out.push_str("<ul><!--[-->");
-    for fv_p_ref in props.places.iter() {
-        let fv_p = fv_p_ref;
+    for fv_p in props.places.iter() {
         out.push_str("<li class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_p.align)]);
         out.push_str("\">");
@@ -116,8 +115,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><dl><!--[-->");
-    for (fv_k, fv_p_ref_2) in props.named.iter() {
-        let fv_p_2 = fv_p_ref_2;
+    for (fv_k, fv_p_2) in props.named.iter() {
         out.push_str("<!--[--><dt>");
         fv::core::escape_into(out, fv_k);
         out.push_str("</dt><dd class=\"");
@@ -131,8 +129,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::escape_into(out, props.slot.place.as_ref().map(|fv_place_2| fv::props::Union::as_str(fv_place_2.shade)).unwrap_or("none"));
     out.push_str("</p><ol><!--[-->");
-    for fv_s_ref in props.slots.iter() {
-        let fv_s = fv_s_ref;
+    for fv_s in props.slots.iter() {
         out.push_str("<li class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_s.align)]);
         out.push_str("\">");

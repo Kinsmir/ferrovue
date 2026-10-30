@@ -53,8 +53,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!---->");
     }
     out.push_str("</p><ul><!--[-->");
-    for fv_tag_ref in props.tags.iter() {
-        let fv_tag = fv_tag_ref;
+    for fv_tag in props.tags.iter() {
         out.push_str("<li");
         if let Some(v) = fv_tag.hint.as_deref() {
             out.push_str(" title=\"");

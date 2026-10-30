@@ -166,7 +166,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(117 + props.label.len() + 2 + 2);
+    out.reserve(104 + props.label.len() + 2 + 2);
     out.push_str("<section");
     if props.label.is_empty() {
         out.push_str(" title");
@@ -189,14 +189,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let fv_tag_2 = match props.model_value { ModelIsModelValue::B => "b", ModelIsModelValue::I => "i", ModelIsModelValue::Em => "em" };
     out.push('<');
     out.push_str(fv_tag_2);
-    if fv::props::Union::as_str(props.heading.unwrap_or(ModelIsHeading::H3)).is_empty() {
-        out.push_str(" data-heading");
-    } else {
-        out.push_str(" data-heading=\"");
-        fv::core::escape_into(out, fv::props::Union::as_str(props.heading.unwrap_or(ModelIsHeading::H3)));
-        out.push('"');
-    }
-    out.push('>');
+    out.push_str(" data-heading=\"");
+    fv::core::escape_into(out, fv::props::Union::as_str(props.heading.unwrap_or(ModelIsHeading::H3)));
+    out.push_str("\">");
     fv::core::escape_into(out, &props.label);
     out.push(' ');
     fv::core::escape_into(out, fv::props::Union::as_str(props.model_value));

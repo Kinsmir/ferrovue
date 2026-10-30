@@ -141,7 +141,8 @@ export function not(code: string): string {
   const order = cmps.length === 1 ? cmps[0]! : null;
   if (order) {
     const [a, b] = [code.slice(0, order.at), code.slice(order.at + order.op.length + 2)];
-    const nan = [a, b].filter((x) => !/^-?[\d.]+(?:e-?\d+)?(?:f64)?$/.test(x)).map((x) => `${receiver(x)}.is_nan()`);
+    const whole = [a, b].some((x) => /^-?\d+$/.test(x));
+    const nan = whole ? [] : [a, b].filter((x) => !/^-?[\d.]+(?:e-?\d+)?(?:f64)?$/.test(x)).map((x) => `${receiver(x)}.is_nan()`);
     return [binary(a, FLIPPED[order.op]!, b), ...nan].join(" || ");
   }
   return `!${operand(code, UNARY)}`;

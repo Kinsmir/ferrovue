@@ -42,13 +42,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(294 + 131 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "client/components/Reviews.vue");
     out.push_str("<div class=\"review-list\" data-v-458b887c>");
-    if props.reviews.len() as i64 != 0 {
+    if !props.reviews.is_empty() {
         out.push_str("<ol data-v-458b887c><!--[-->");
-        for (fv_i, fv_r_ref) in props.reviews.iter().enumerate() {
-            let fv_r = fv_r_ref;
+        for (fv_i, fv_r) in props.reviews.iter().enumerate() {
             let fv_i = fv_i as i64;
             out.push_str("<li style=\"");
-            if (fv_i as f64) >= 2.0 || (fv_i as f64).is_nan() {
+            if fv_i >= 2 {
                 out.push_str("display:none;");
             }
             out.push_str("\" data-v-458b887c>");
@@ -72,7 +71,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<p data-v-458b887c>No reviews yet.</p>");
     }
-    if props.reviews.len() as i64 as f64 > 2.0 {
+    if props.reviews.len() as i64 > 2 {
         out.push_str("<button type=\"button\" class=\"more\" data-v-458b887c>Show all ");
         fv::core::push_int(out, props.reviews.len() as i64);
         out.push_str(" reviews</button>");

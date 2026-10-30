@@ -43,18 +43,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(45 + 8 + props.text.len());
+    out.reserve(35 + 8 + props.text.len());
     out.push_str("<span class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone)]);
-    out.push('"');
-    if fv::props::Union::as_str(props.tone).is_empty() {
-        out.push_str(" data-tone");
-    } else {
-        out.push_str(" data-tone=\"");
-        fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
-        out.push('"');
-    }
-    out.push('>');
+    out.push_str("\" data-tone=\"");
+    fv::core::escape_into(out, fv::props::Union::as_str(props.tone));
+    out.push_str("\">");
     fv::core::escape_into(out, &props.text);
     out.push_str("</span>");
     Ok(())

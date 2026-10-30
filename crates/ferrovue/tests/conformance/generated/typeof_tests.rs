@@ -153,7 +153,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    if let Some(fv_nick) = props.nick.as_deref() && fv::strings::js_length(fv_nick) as f64 > 2.0 {
+    if let Some(fv_nick) = props.nick.as_deref() && fv::strings::js_length(fv_nick) > 2 {
         out.push_str("<i>");
         fv::core::escape_into(out, fv_nick);
         out.push_str("</i>");

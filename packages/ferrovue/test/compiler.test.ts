@@ -582,19 +582,19 @@ ${setup}
     ])("takes its element type from the other branch of `?:` where it %s, borrowing the prop's list", (_, setup) => {
       const out = tree(setup);
       expect(out).toMatch(/let s_a = if let Some\(fv_item\) = props\.item\.as_ref\(\) \{ &fv_item\.children\[\.\.\] \} else \{ (?:&\[\]|s_none|<&\[Props<'_>\]>::default\(\)) \};/);
-      expect(out).toContain("for fv_x_ref in s_a.iter() {");
+      expect(out).toContain("for fv_x in s_a.iter() {");
       expect(out).not.toContain(".collect::<Vec<_>>()");
     });
 
     it("walks a `?:` between a list and an empty one in the template", () => {
       const out = tree("", `<i v-for="x in (flag ? others : [])">{{ x.label }}</i><b>{{ (item ? item.children : []).length }}</b>`);
-      expect(out).toContain("for fv_x_ref in (if props.flag { &props.others[..] } else { &[] }).iter() {");
+      expect(out).toContain("for fv_x in (if props.flag { &props.others[..] } else { &[] }).iter() {");
       expect(out).toMatch(/\(if let Some\(fv_item\) = props\.item\.as_ref\(\) \{ &fv_item\.children\[\.\.\] \} else \{ &\[\] \}\)\.len\(\) as i64/);
     });
 
     it("types the empty array literal a `?:` with a constant test chooses by the branch it leaves", () => {
       const out = tree("", `<i v-for="x in (false ? others : [])">{{ x.label }}</i><b>{{ (true ? [] : item?.tags ?? []).length }}</b>`);
-      expect(out).toContain("for fv_x_ref in <&[Props<'_>]>::default().iter() {");
+      expect(out).toContain("for fv_x in <&[Props<'_>]>::default().iter() {");
       expect(out).toContain("<&[std::borrow::Cow<str>]>::default().len() as i64");
     });
 
@@ -691,7 +691,7 @@ const props = defineProps<{ items: ChildProps[] }>();
 </script>
 <template><ul><Child v-for="item in items" v-bind="item" /></ul></template>`;
       const out = compile(island(parent, { Child: child })).get("x.rs")!;
-      expect(out).toContain("let fv_item = fv_item_ref;");
+      expect(out).toContain("for fv_item in props.items.iter() {");
       expect(out).toContain("super::child::try_render(out, fv_item)?;");
       expect(out).not.toContain("use std::borrow::Cow;");
     });
@@ -1020,7 +1020,7 @@ const props = defineProps<{ items: string[]; name: string }>();
 </script>
 <template><ul v-if="items.length" :title="'list of ' + name"><li v-for="i in items">{{ i }}</li></ul></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("props.items.len() as i64");
+      expect(out).toContain("if !props.items.is_empty() {");
       expect(out).toContain('out.push_str("<ul title=\\"list of ");\n        fv::core::escape_into(out, &props.name);\n        out.push_str("\\"><!--[-->");');
     });
 
@@ -1051,8 +1051,8 @@ const props = defineProps<{ items: string[]; note?: string }>();
 </script>
 <template><p v-if="!items.length">none</p><p v-if="!items.length || note">either</p></template>`),
       ).get("x.rs")!;
-      expect(out).toContain("if props.items.len() as i64 == 0 {");
-      expect(out).toContain("if props.items.len() as i64 == 0 || props.note.as_deref().is_some_and(|v| !v.is_empty()) {");
+      expect(out).toContain("if props.items.is_empty() {");
+      expect(out).toContain("if props.items.is_empty() || props.note.as_deref().is_some_and(|v| !v.is_empty()) {");
       expect(out).not.toMatch(/!props\.items/);
     });
   });
@@ -2395,7 +2395,7 @@ export enum Tone { Calm = "calm", Loud = "loud" }
     OptionsItem { label: Cow::Borrowed("b"), price: 1.5f64, sale: Some(true) },
 ];`,
       );
-      expect(out.get("x.rs")).toContain("for fv_o_ref in super::types::OPTIONS.iter()");
+      expect(out.get("x.rs")).toContain("for fv_o in super::types::OPTIONS.iter()");
       expect(out.get("x.rs")).toContain('out.push_str("<!--]-->loud</p>");');
     });
 
@@ -6777,7 +6777,7 @@ const p = computed((): Pair => ({ left: { [KEY]: "l", count: 1, owner: null, tag
   it("builds a `.map()` callback's literal as the item type of the list it makes, owning what it reads from the callback's own values", () => {
     const typed = x("const rows = computed<Card[]>(() => props.words.map((w, i) => ({ title: w.toUpperCase(), count: i, owner: w, tags: [] })));", '<p v-for="r in rows">{{ r.title }}</p>');
     expect(typed).toContain("Card { title: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), count: fv_i, owner: Some(std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w))), tags: Vec::new(), note: None } }).collect::<Vec<_>>();");
-    expect(typed).toContain("for fv_r_ref in s_rows.iter() {");
+    expect(typed).toContain("for fv_r in s_rows.iter() {");
     const returned = x("const rows = computed(() => props.words.map((w): Card => ({ title: w, count: 0, owner: null, tags: [] })));", "{{ rows.length }}");
     expect(returned).toContain(".collect::<Vec<_>>();");
     expect(returned).toContain("s_rows.len() as i64");
@@ -6940,7 +6940,7 @@ describe("constant lookups", () => {
     expect(out).toContain('fv::core::escape_into(out, (match props.kind { XKind::A => Some("A"), XKind::B => Some("B"), XKind::C => None }).unwrap_or("-"));');
     expect(out).toContain('if let Some(v) = match props.kind { XKind::A => Some("x"), XKind::B | XKind::C => None } {');
     expect(out).toContain('if matches!(props.kind, XKind::A) {\n        out.push_str("<b>x</b>");');
-    expect(out).toMatch(/if let Some\((fv_t)\) = \(match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \}\)\.filter\(\|v\| !v\.is_empty\(\)\) \{\n {8}out\.push_str\("<s>"\);\n {8}fv::core::escape_into\(out, \1\);/);
+    expect(out).toMatch(/if let Some\((fv_t)\) = match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \} \{\n {8}out\.push_str\("<s>"\);\n {8}fv::core::escape_into\(out, \1\);/);
   });
 
   it("forgets the literals of a list item or a `??` that another value may be", () => {
@@ -8579,7 +8579,7 @@ ${script}
 
   it("keeps a return inside a loop for after it, and breaks out", () => {
     const body = render('function first(words: string[]): string {\n  for (const w of words) if (w.length > 2) return w;\n  return "none";\n}', "{{ first(words) }}");
-    expect(body).toContain("let mut fv_returned: Option<String> = None; for fv_w in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if fv::strings::js_length(&fv_w) as f64 > 2.0 { fv_returned = Some(String::from(&*fv_w)); break; } }");
+    expect(body).toContain("let mut fv_returned: Option<String> = None; for fv_w in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if fv::strings::js_length(&fv_w) > 2 { fv_returned = Some(String::from(&*fv_w)); break; } }");
     expect(body).toContain('if fv_returned.is_some() { fv_returned.as_deref().unwrap_or_default() } else { "none" }');
   });
 
@@ -8639,7 +8639,7 @@ const total = computed(() => {
     const out = compile(island(x(), { Y: other("") })).get("x.rs")!;
     expect(out).toContain("let s_total = { let mut fv_row_count: f64 = 0.0f64; for fv_row in props.rows.iter() { fv_row_count += fv_row.n as f64; } fv_row_count };");
     expect(out).toContain("if let Some(fv_title) = props.title.as_deref().filter(|v| !v.is_empty()) {");
-    expect(out).toContain("for (fv_i, fv_item_ref) in props.rows.iter().enumerate() {\n        let fv_item = fv_item_ref;\n        let fv_i = fv_i as i64;");
+    expect(out).toContain("for (fv_i, fv_item) in props.rows.iter().enumerate() {\n        let fv_i = fv_i as i64;");
     expect(out).toContain(".filter(|fv_item_2| !fv_item_2.is_empty())");
     expect(out).toContain("let fv_word = fv::strings::js_trim(&props.label);");
     expect(out).toContain("let fv_word_2 = props.label.to_uppercase();");
@@ -8658,5 +8658,56 @@ const total = computed(() => {
     expect(edited.get("y.rs")).toContain("if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {");
     expect(edited.get("x.rs")).toContain("for fv_tag_ref in props.tags.iter() {");
     expect(edited.get("x.rs")).toContain(".any(|fv_r| fv_r.n as f64 > 1.0)");
+  });
+});
+
+describe("branches that cannot run", () => {
+  const known = (template: string): string =>
+    compile(
+      island(`<script setup lang="ts">
+type Kind = "text" | "link";
+type Mark = "" | "new";
+interface Part { label: string; tags: string[] }
+defineProps<{ note?: string; kind: Kind; mark: Mark; eager: boolean; on: boolean; flair: string[]; parts: Part[]; n: number }>();
+</script>
+<template>${template}</template>`),
+    ).get("x.rs")!;
+
+  it("tests a value for the empty string only where it may be one", () => {
+    const out = known(`<div :title="note || undefined" :data-kind="kind" :data-mark="mark"></div>`);
+    expect(out).toContain('if let Some(v) = props.note.as_deref().filter(|v| !v.is_empty()) {\n        out.push_str(" title=\\"");\n        fv::core::escape_into(out, v);');
+    expect(out).toContain('out.push_str(" data-kind=\\"");\n    fv::core::escape_into(out, fv::props::Union::as_str(props.kind));');
+    expect(out).toContain('if fv::props::Union::as_str(props.mark).is_empty() {\n        out.push_str(" data-mark");');
+    expect(out.match(/is_empty\(\) \{/g)).toHaveLength(1);
+    const guarded = known(`<div v-if="note" :data-note="note"></div>`);
+    expect(guarded).toContain('if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {\n        out.push_str("<div data-note=\\"");\n        fv::core::escape_into(out, fv_note);');
+    expect(guarded).not.toContain("fv_note.is_empty()");
+  });
+
+  it("writes an attribute bound to a literal or `undefined` as the literal where the test holds", () => {
+    const out = known(`<iframe :loading="eager ? undefined : 'lazy'" :title="on ? 'a&quot;<b>' : undefined" :data-on="on ? '' : undefined"></iframe>`);
+    expect(out).toContain('if !props.eager {\n        out.push_str(" loading=\\"lazy\\"");\n    }');
+    expect(out).toContain('if props.on {\n        out.push_str(" title=\\"a&quot;&lt;b&gt;\\"");\n    }');
+    expect(out).toContain('if props.on {\n        out.push_str(" data-on");\n    }');
+    expect(out).not.toContain("escape_into");
+  });
+
+  it("compares and adds counts as integers, and numbers that may be beyond 2⁵³ as JavaScript does", () => {
+    const out = known(`<p v-for="(part, i) in parts" :class="{ first: i === 0, last: i + 1 === parts.length }">{{ i + 2 }}{{ i * 2 }}{{ i + n }}{{ part.label }}</p>`);
+    expect(out).toContain('if fv_i == 0 { "first" }');
+    expect(out).toContain("fv_i + 1 == props.parts.len() as i64");
+    expect(out).toContain("fv::core::push_int(out, fv_i + 2);");
+    expect(out).toContain("fv::core::push_number(out, fv_i as f64 * 2.0);");
+    expect(out).toContain("fv_i as f64 + props.n as f64");
+    const shown = known(`<b v-for="(part, i) in parts" v-show="i < 2" :title="part.tags.length > i ? 'more' : 'less'"></b>`);
+    expect(shown).toContain("if fv_i >= 2 {");
+    expect(shown).toContain("fv_part.tags.len() as i64 as f64 > fv_i as f64");
+  });
+
+  it("tests a list's length for truth as whether it is empty, and walks a list of objects with no binding of each item again", () => {
+    const out = known(`<b v-if="flair.length">x</b><i v-for="part in parts">{{ part.label }}</i>`);
+    expect(out).toContain("if !props.flair.is_empty() {");
+    expect(out).toContain('for fv_part in props.parts.iter() {\n        out.push_str("<i>");');
+    expect(out).not.toContain("_ref");
   });
 });

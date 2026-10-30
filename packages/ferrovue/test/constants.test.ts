@@ -432,7 +432,7 @@ describe("constants read by a key known only when rendering", () => {
 }
 `, true));
     expect(read('k: "b" | "d"', '{ a: { x: "1" }, c: { x: "2" } }', '<p v-if="T[k]">x</p>')).toMatch(like('out.push_str("<!---->");'));
-    expect(read('k: "b" | "a"', '{ a: "1" }', '<p v-if="T[k]">x</p>')).toMatch(like('if (match props.k { XK::B => None, XK::A => Some("1") }).is_some_and(|v| !v.is_empty()) {'));
+    expect(read('k: "b" | "a"', '{ a: "1" }', '<p v-if="T[k]">x</p>')).toMatch(like('if (match props.k { XK::B => None, XK::A => Some("1") }).is_some() {'));
   });
 
   it("writes a table of booleans as a test of the keys", () => {

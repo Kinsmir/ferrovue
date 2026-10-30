@@ -19,6 +19,21 @@ export function intFromF64(f64: string, at: string | null): Val {
   return { code: kept(`fv::render::try_int(${bare(f64)})`, at), ty: INT, f64, at };
 }
 
+/** A bound on the magnitude of a count of items held in memory, as an index or a length is. */
+export const COUNT = 2 ** 48;
+
+/** The bound on the magnitude of an integer whose `i64` gives the same value as its `f64`, where it
+ * has one: a count, a safe integer literal, or a sum of those within 2⁵³. */
+function exactBound(v: Val): number | undefined {
+  if (v.ty.k !== "int" || isCast(v)) return undefined;
+  if (v.num !== undefined) return Number.isSafeInteger(v.num) && !Object.is(v.num, -0) ? Math.abs(v.num) : undefined;
+  return v.upTo;
+}
+
+function exactCode(v: Val): string {
+  return v.num !== undefined ? String(v.num) : v.code;
+}
+
 /** Whether `v` is an integer computed as an `f64` and held as an `i64`. */
 export function isCast(v: Val): boolean {
   return v.ty.k === "int" && v.f64 !== undefined && (v.num === undefined || v.code.endsWith(" as i64") || v.code.startsWith(`${REFUSALS}.keep(fv::render::try_int(`));
@@ -95,6 +110,12 @@ function fold(a: number, op: string, b: number): number | boolean {
 
 export function arithmetic(a: Val, op: string, b: Val, int: boolean, at: string): Val {
   if (a.num !== undefined && b.num !== undefined) return numberVal(fold(a.num, op, b.num) as number, int, at);
+  const [ab, bb] = [exactBound(a), exactBound(b)];
+  if (int && (op === "+" || op === "-") && ab !== undefined && bb !== undefined && ab + bb <= 2 ** 53) {
+    if (b.num === 0) return a;
+    if (a.num === 0 && op === "+") return b;
+    return { code: binary(exactCode(a), op, exactCode(b)), ty: INT, upTo: ab + bb };
+  }
   const negated = op === "*" ? (b.num === -1 ? a : a.num === -1 ? b : null) : null;
   const f64 = negated ? `-${operand(asF64(negated), UNARY)}` : binary(asF64(a), op, asF64(b));
   return int ? intFromF64(f64, at) : { code: f64, ty: FLOAT };
@@ -110,6 +131,8 @@ export function compare(a: Val, op: string, b: Val): Val {
     if (a.ty.k === "int") return { code: "true", ty: BOOL, konst: true };
     return { code: `!${atom(asF64(a))}.is_nan()`, ty: BOOL };
   }
+  const literal = a.num !== undefined || b.num !== undefined;
+  if (exactBound(a) !== undefined && exactBound(b) !== undefined && (op === "==" || literal)) return { code: binary(exactCode(a), op, exactCode(b)), ty: BOOL };
   return { code: binary(asF64(a), op, asF64(b)), ty: BOOL };
 }
 

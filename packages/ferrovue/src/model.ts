@@ -95,6 +95,9 @@ export interface Val {
   /** For an integer computed as an `f64`, where the template computes it, as `fv::render::Refusals::keep`
    * takes it. */
   at?: string;
+  /** For an integer computed as an `i64`, a bound on its magnitude, at most 2⁵³, within which
+   * `i64` and `f64` arithmetic give the same value. */
+  upTo?: number;
 }
 
 export const STR: Ty = { k: "str" };
@@ -826,6 +829,28 @@ export function joinTy(a: Ty, b: Ty): Ty {
 }
 
 const DECLARED = new WeakSet<Ty>();
+
+const FILLED = new WeakSet<Ty>();
+
+/** `ty`, a string type, as known to hold no empty string, as a test of its truth leaves it. */
+export function filledTy(ty: Ty): Ty {
+  if (ty.k !== "str" || neverEmpty(ty)) return ty;
+  const left = LITERALS.get(ty)?.filter((l) => l !== "") ?? [];
+  const made = left.length ? derived([ty], literalTy("str", left)) : { k: "str" as const };
+  const def = ENUMS.get(ty);
+  if (def !== undefined) ENUMS.set(made, def);
+  if (ASCII.has(ty)) ASCII.add(made);
+  FILLED.add(made);
+  return made;
+}
+
+/** Whether a string type's values are known never to be the empty string. */
+export function neverEmpty(ty: Ty): boolean {
+  if (ty.k !== "str") return false;
+  if (FILLED.has(ty)) return true;
+  const literals = LITERALS.get(ty);
+  return literals !== undefined && literals.length > 0 && !literals.includes("") && !DECLARED.has(ty);
+}
 
 /** `ty`, with each string type in it that holds literals and is no generated enum marked as
  * declared for a value the Rust caller holds as a string, which the compiler does not check

@@ -44,18 +44,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     out.reserve(104 + props.heading.len());
     let s_summary = format!("{} line(s), {} doubled", fv::core::Js(fv_stores.cart.lines.len() as i64), fv::core::Js(fv_stores.prefs.count as f64 * 2.0));
     out.push_str("<aside class=\"");
-    fv::attrs::class_into(out, false, &[if &*fv_stores.prefs.density == "compact" { "compact" } else { "" }, if fv_stores.cart.lines.len() as i64 as f64 == 0.0 { "empty" } else { "" }]);
+    fv::attrs::class_into(out, false, &[if &*fv_stores.prefs.density == "compact" { "compact" } else { "" }, if fv_stores.cart.lines.len() as i64 == 0 { "empty" } else { "" }]);
     out.push_str("\"><h3>");
     fv::core::escape_into(out, &props.heading);
     out.push_str(": ");
     fv::core::escape_into(out, &fv_stores.cart.owner);
     out.push_str("&#39;s cart</h3>");
-    if fv_stores.cart.lines.len() as i64 as f64 == 0.0 {
+    if fv_stores.cart.lines.len() as i64 == 0 {
         out.push_str("<p>nothing yet</p>");
     } else {
         out.push_str("<ul><!--[-->");
-        for fv_l_ref in fv_stores.cart.lines.iter() {
-            let fv_l = fv_l_ref;
+        for fv_l in fv_stores.cart.lines.iter() {
             out.push_str("<li>");
             fv::core::escape_into(out, &fv_l.sku);
             out.push_str(" × ");

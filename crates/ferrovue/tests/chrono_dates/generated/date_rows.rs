@@ -105,8 +105,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_edits = props.rows.iter().filter(|fv_r| fv_r.edited.as_ref().map(fv::date::js_time_of).is_some()).count() as i64;
     let s_first = fv::strings::js_item_at(props.days.iter().map(fv::date::js_time_of), 0.0f64);
     out.push_str("<section><!--[-->");
-    for fv_row_ref in props.rows.iter() {
-        let fv_row = fv_row_ref;
+    for fv_row in props.rows.iter() {
         out.push_str("<article><h3>");
         fv::core::escape_into(out, &fv_row.title);
         out.push_str("</h3>");

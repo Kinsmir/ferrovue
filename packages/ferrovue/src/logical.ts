@@ -1,4 +1,4 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, FLOAT, joinTy, keptLiterals, literalsOf, nothing, opt, refusalAt, sameTy, STR, unionStr, variantPath, withAbsence } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, filledTy, FLOAT, joinTy, keptLiterals, literalsOf, nothing, opt, refusalAt, sameTy, STR, unionStr, variantPath, withAbsence } from "./model.ts";
 import { enumListVal, exactlyEnum, intoEnum, knownLiteral } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, logical, strArg } from "./parens.ts";
@@ -166,7 +166,8 @@ function orValues(comp: Component, n: N, a: Val, b: Val): Val {
 function orUndefined(a: Val): Val {
   const inner: Ty = keptLiterals(a.ty.k === "opt" ? a.ty.of : a.ty, (l) => !falsyLiteral(l));
   const src = a.ty.k === "opt" ? atom(a.code) : `Some(${bare(a.code)})`;
-  return { code: `${src}.filter(|v| ${truthy({ code: "*v", ty: inner })})`, ty: opt(inner) };
+  const each = truthy({ code: "*v", ty: a.ty.k === "opt" ? a.ty.of : a.ty });
+  return { code: each === "true" ? src : `${src}.filter(|v| ${each})`, ty: opt(filledTy(inner)) };
 }
 
 function orSame(comp: Component, n: N, a: Val, b: Val): Val {

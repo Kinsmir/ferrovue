@@ -90,7 +90,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><p>");
     fv::core::escape_into(out, props.labels.iter().find(|fv_item_8| fv_item_8.0.starts_with(&*props.word)).map(|fv_value| &**fv_value.1).unwrap_or("none"));
     out.push('|');
-    fv::core::escape_into(out, props.labels.iter().collect::<Vec<_>>().into_iter().rev().find(|fv_item_9| fv::strings::js_length(fv_item_9.1) as f64 > 1.0).map(|fv_value_2| fv_value_2.0).unwrap_or("-"));
+    fv::core::escape_into(out, props.labels.iter().collect::<Vec<_>>().into_iter().rev().find(|fv_item_9| fv::strings::js_length(fv_item_9.1) > 1).map(|fv_value_2| fv_value_2.0).unwrap_or("-"));
     out.push('|');
     fv::core::escape_into(out, &props.labels.iter().map(|fv_pair| std::borrow::Cow::<str>::Owned(format!("{}{}{}", fv_pair.0, fv::core::Js(2i64), fv_pair.1))).collect::<Vec<_>>().join(","));
     out.push('|');
@@ -133,7 +133,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><ul><!--[-->");
-    for fv_item_18 in props.tags.iter().filter(|fv_item_19| fv_item_19.1.len() as i64 as f64 > 0.0) {
+    for fv_item_18 in props.tags.iter().filter(|fv_item_19| fv_item_19.1.len() as i64 > 0) {
         out.push_str("<li>");
         fv::core::escape_into(out, fv_item_18.0);
         out.push_str(": ");
