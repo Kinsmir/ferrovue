@@ -47,55 +47,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("account", &[], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-        out.push_str("\">account</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &[]);
+        out.push_str(">account</a>");
     }
     {
         let fv_link = {
             fv_route.link_named("account-home", &[], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "in" } else { "" }, if fv_link.exact { "here" } else { "" }]);
-        out.push_str("\">home</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "in", "here", &[]);
+        out.push_str(">home</a>");
     }
-    {
-        let fv_link = fv_route.link("/account/orders");
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "orders"]);
-        out.push_str("\">orders</a>");
-    }
+    fv::attrs::link_open(out, &fv_route.link("/account/orders"), "page", "router-link-active", "router-link-exact-active", &["orders"]);
+    out.push_str(">orders</a>");
     {
         let fv_link = {
             fv_route.link_named("order", &[("order", &*props.order)], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
-        out.push_str("\">order ");
+        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[]);
+        out.push_str(">order ");
         fv::core::escape_into(out, &props.order);
         out.push_str("</a>");
     }

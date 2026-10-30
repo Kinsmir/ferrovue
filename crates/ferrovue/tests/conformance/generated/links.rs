@@ -50,59 +50,26 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(201 + props.user.len() + props.tab.as_deref().map_or(0, str::len));
     out.push_str("<nav>");
-    {
-        let fv_link = fv_route.link("/");
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-        out.push_str("\">home</a>");
-    }
-    out.push(' ');
-    {
-        let fv_link = fv_route.link(&format!("/users/{}", props.user));
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-        out.push('"');
-        if props.user.is_empty() {
-            out.push_str(" data-user");
-        } else {
-            out.push_str(" data-user=\"");
-            fv::core::escape_into(out, &props.user);
-            out.push('"');
-        }
-        out.push_str(" rel=\"author\">");
+    fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-exact-active", &[]);
+    out.push_str(">home</a> ");
+    fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-exact-active", &[]);
+    if props.user.is_empty() {
+        out.push_str(" data-user");
+    } else {
+        out.push_str(" data-user=\"");
         fv::core::escape_into(out, &props.user);
-        out.push_str("</a>");
+        out.push('"');
     }
-    out.push(' ');
+    out.push_str(" rel=\"author\">");
+    fv::core::escape_into(out, &props.user);
+    out.push_str("</a> ");
     if let Some(fv_tab) = props.tab.as_deref().filter(|v| !v.is_empty()) {
-        {
-            let fv_link = fv_route.link(&format!("/blog/{}/{}", props.user, fv_tab));
-            out.push_str("<a");
-            if fv_link.exact {
-                out.push_str(" aria-current=\"page\"");
-            }
-            out.push_str(" href=\"");
-            fv::core::escape_into(out, &fv_link.href);
-            out.push_str("\" class=\"");
-            fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-            out.push_str("\" title=\"");
-            fv::core::escape_into(out, fv_tab);
-            out.push_str("\">");
-            fv::core::escape_into(out, fv_tab);
-            out.push_str("</a>");
-        }
+        fv::attrs::link_open(out, &fv_route.link(&format!("/blog/{}/{}", props.user, fv_tab)), "page", "router-link-active", "router-link-exact-active", &[]);
+        out.push_str(" title=\"");
+        fv::core::escape_into(out, fv_tab);
+        out.push_str("\">");
+        fv::core::escape_into(out, fv_tab);
+        out.push_str("</a>");
     } else {
         out.push_str("<!---->");
     }

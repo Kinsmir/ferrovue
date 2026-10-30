@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(7);
+ferrovue::__compat!(8);
 
 pub mod account_nav;
 pub mod and_chains;
@@ -111,6 +111,7 @@ pub mod kebab_tree;
 pub mod keywords;
 pub mod known_values;
 pub mod lifecycle;
+pub mod link_open;
 pub mod links;
 pub mod list_access;
 pub mod list_building;
@@ -828,6 +829,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Lifecycle" => {
             let props: lifecycle::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             lifecycle::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "LinkOpen" => {
+            let props: link_open::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            link_open::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
         }
         "Links" => {
             let props: links::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

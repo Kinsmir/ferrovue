@@ -61,15 +61,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         let fv_link = {
             fv_route.link_named("/", &[], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }, "brand"]);
-        out.push_str("\">");
+        fv::attrs::link_open(out, &fv_link, "page", "", "active", &["brand"]);
+        out.push('>');
         fv::core::escape_into(out, &props.shop);
         out.push_str("</a>");
     }
@@ -78,15 +71,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         let fv_link = {
             fv_route.link_named("/picks", &[], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
-        out.push_str("\">Staff picks</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+        out.push_str(">Staff picks</a>");
     }
     out.push_str("</nav></header><main>");
     fv::render::slot_into(out, fv_slots.default, None);
@@ -105,15 +91,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                 fv::router::query_into(&mut fv_search, "featured", &fv_book.id);
                 fv_route.link_named("/picks", &[], &fv_search, "")
             };
-            out.push_str("<a");
-            if fv_link.exact {
-                out.push_str(" aria-current=\"page\"");
-            }
-            out.push_str(" href=\"");
-            fv::core::escape_into(out, &fv_link.href);
-            out.push_str("\" class=\"");
-            fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
-            out.push_str("\">");
+            fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+            out.push('>');
             fv::core::escape_into(out, &fv_book.title);
             out.push_str("</a>");
         }

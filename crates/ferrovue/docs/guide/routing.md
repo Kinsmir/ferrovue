@@ -347,34 +347,12 @@ defineProps<{ user: string }>();
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
 #     out.reserve(137 + props.user.len());
 #     out.push_str("<div id=\"app\"><nav>");
-#     {
-#         let fv_link = fv_route.link("/");
-#         out.push_str("<a");
-#         if fv_link.exact {
-#             out.push_str(" aria-current=\"page\"");
-#         }
-#         out.push_str(" href=\"");
-#         fv::core::escape_into(out, &fv_link.href);
-#         out.push_str("\" class=\"");
-#         fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-#         out.push_str("\">home</a>");
-#     }
-#     out.push(' ');
-#     {
-#         let fv_link = fv_route.link(&format!("/users/{}", props.user));
-#         out.push_str("<a");
-#         if fv_link.exact {
-#             out.push_str(" aria-current=\"page\"");
-#         }
-#         out.push_str(" href=\"");
-#         fv::core::escape_into(out, &fv_link.href);
-#         out.push_str("\" class=\"");
-#         fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-#         out.push_str("\">");
-#         fv::core::escape_into(out, &props.user);
-#         out.push_str("</a>");
-#     }
-#     out.push_str("</nav><main>");
+#     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-exact-active", &[]);
+#     out.push_str(">home</a> ");
+#     fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-exact-active", &[]);
+#     out.push('>');
+#     fv::core::escape_into(out, &props.user);
+#     out.push_str("</a></nav><main>");
 #     fv_slots.router_view.render_to(out);
 #     out.push_str("</main></div>");
 # }

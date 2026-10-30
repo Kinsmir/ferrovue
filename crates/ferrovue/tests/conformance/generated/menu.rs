@@ -64,29 +64,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("home", &[], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "on" } else { "" }, if fv_link.exact { "here" } else { "" }]);
-        out.push_str("\">home</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "on", "here", &[]);
+        out.push_str(">home</a>");
     }
     {
         let fv_link = {
             fv_route.link_named("post", &[("slug", &*props.slug)], "", "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"location\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "post"]);
-        out.push_str("\">");
+        fv::attrs::link_open(out, &fv_link, "location", "router-link-active", "router-link-exact-active", &["post"]);
+        out.push('>');
         fv::core::escape_into(out, &props.slug);
         out.push_str("</a>");
     }
@@ -94,15 +80,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         let fv_link = {
             fv_route.link_named("post-tab", &[("slug", &*props.slug), ("tab", props.tab.as_deref().unwrap_or("view"))], "", "#top")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.exact { "same" } else { "" }]);
-        out.push_str("\">tab</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[]);
+        out.push_str(">tab</a>");
     }
     {
         let fv_link = {
@@ -114,15 +93,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             fv::router::query_into(&mut fv_search, "empty", "");
             fv_route.link_named("search", &[], &fv_search, "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }]);
-        out.push_str("\">search</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &[]);
+        out.push_str(">search</a>");
     }
     {
         let fv_link = {
@@ -130,15 +102,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             fv::router::query_into(&mut fv_search, "from", "menu");
             fv_route.link_path(&format!("/users/{}", props.slug), &fv_search, "")
         };
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "user"]);
-        out.push_str("\">user</a>");
+        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-exact-active", &["user"]);
+        out.push_str(">user</a>");
     }
     out.push_str("</nav>");
     Ok(())

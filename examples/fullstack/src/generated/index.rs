@@ -66,15 +66,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
                 let fv_link = {
                     fv_route.link_named("/books/[id]", &[("id", &*fv_book.id)], "", "")
                 };
-                out.push_str("<a");
-                if fv_link.exact {
-                    out.push_str(" aria-current=\"page\"");
-                }
-                out.push_str(" href=\"");
-                fv::core::escape_into(out, &fv_link.href);
-                out.push_str("\" class=\"");
-                fv::attrs::class_into(out, false, &[if fv_link.exact { "active" } else { "" }]);
-                out.push_str("\">");
+                fv::attrs::link_open(out, &fv_link, "page", "", "active", &[]);
+                out.push('>');
                 fv::core::escape_into(out, &fv_book.title);
                 out.push_str("</a>");
             }

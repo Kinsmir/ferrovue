@@ -21,6 +21,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [The locals of a render](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-locals-of-a-render).
 - A `ref` seeded with a number or a boolean is that value in generated code, and a test of it leaves only the branch the server renders.
   [The locals of a render](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-locals-of-a-render).
+- Generated code is version 8, which writes each `<RouterLink>` with one call the 0.13 crate lacks; the 0.14 crate builds versions 6 and 7 too.
+  Generate every component again: [`upgrading_to_0_14`](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_14/index.html#2-generate-every-component-again).
 
 ### Fixed
 

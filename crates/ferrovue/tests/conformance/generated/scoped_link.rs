@@ -48,20 +48,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     out.reserve(75 + props.to.len());
-    {
-        let fv_link = fv_route.link(&props.to);
-        out.push_str("<a");
-        if fv_link.exact {
-            out.push_str(" aria-current=\"page\"");
-        }
-        out.push_str(" href=\"");
-        fv::core::escape_into(out, &fv_link.href);
-        out.push_str("\" class=\"");
-        fv::attrs::class_into(out, false, &[if fv_link.active { "router-link-active" } else { "" }, if fv_link.exact { "router-link-exact-active" } else { "" }, "link"]);
-        out.push('"');
-        out.push_str(&fv::attrs::scope_attrs(fv_attrs, "data-v-667124f1", ""));
-        out.push_str(">go <b data-v-667124f1>there</b></a>");
-    }
+    fv::attrs::link_open(out, &fv_route.link(&props.to), "page", "router-link-active", "router-link-exact-active", &["link"]);
+    out.push_str(&fv::attrs::scope_attrs(fv_attrs, "data-v-667124f1", ""));
+    out.push_str(">go <b data-v-667124f1>there</b></a>");
     Ok(())
 }
 
