@@ -41,6 +41,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
   let bound: string;
   let itemLet = -1;
   let itemOf: Val | undefined;
+  const empty = src.ty.k === "int" && src.num !== undefined && src.num <= 0 ? e.mark() : null;
   const loop = (it: string, i: string | null) => (i ? `for (${i}, ${it}) in ${atom(walk)}.enumerate()` : `for ${it} in ${walk}`);
   if (src.ty.k === "list" && src.enums !== undefined) {
     of = src.ty.of;
@@ -117,6 +118,7 @@ export function list(s: Scope, e: Emitter, c: N): void {
     const outer = s.loop;
     e.perItem.push(`${body === 1 ? "" : `${body} * `}${atom(outer.over)}.iter().map(|${outer.item}| ${src.code}.len()).sum::<usize>()`);
   }
+  empty?.();
 }
 
 function recordLoop(s: Scope, e: Emitter, r: Val, fn: N, value: N | undefined, key: N | undefined, index: N | undefined): void {

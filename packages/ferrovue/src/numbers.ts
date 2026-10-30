@@ -1,6 +1,6 @@
 import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, kept, REFUSALS } from "./model.ts";
 import type { ErrorCode } from "./errors.ts";
-import { AS, atom, bare, binary, FLIPPED, operand, UNARY } from "./parens.ts";
+import { AS, atom, bare, binary, FLIPPED, operand, pure, receiver, UNARY } from "./parens.ts";
 import { expr } from "./expr.ts";
 
 export function isNumber(ty: Ty): boolean {
@@ -110,6 +110,7 @@ function fold(a: number, op: string, b: number): number | boolean {
 
 export function arithmetic(a: Val, op: string, b: Val, int: boolean, at: string): Val {
   if (a.num !== undefined && b.num !== undefined) return numberVal(fold(a.num, op, b.num) as number, int, at);
+  if ((op === "-" || op === "/") && asF64(a) === asF64(b) && pure(asF64(a))) return selfArithmetic(a, op, int, at);
   const [ab, bb] = [exactBound(a), exactBound(b)];
   if (int && (op === "+" || op === "-") && ab !== undefined && bb !== undefined && ab + bb <= 2 ** 53) {
     if (b.num === 0) return a;
@@ -118,6 +119,13 @@ export function arithmetic(a: Val, op: string, b: Val, int: boolean, at: string)
   }
   const negated = op === "*" ? (b.num === -1 ? a : a.num === -1 ? b : null) : null;
   const f64 = negated ? `-${operand(asF64(negated), UNARY)}` : binary(asF64(a), op, asF64(b));
+  return int ? intFromF64(f64, at) : { code: f64, ty: FLOAT };
+}
+
+function selfArithmetic(a: Val, op: string, int: boolean, at: string): Val {
+  if (op === "-" && a.ty.k === "int" && a.f64 === undefined) return numberVal(0, int, at);
+  const x = `${receiver(asF64(a))}.abs()`;
+  const f64 = binary(x, op, x);
   return int ? intFromF64(f64, at) : { code: f64, ty: FLOAT };
 }
 

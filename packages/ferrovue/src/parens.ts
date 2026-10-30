@@ -148,7 +148,65 @@ export function not(code: string): string {
   return `!${operand(code, UNARY)}`;
 }
 
+/** Whether `code` calls nothing, so that evaluating it once or twice is the same. */
+export function pure(code: string): boolean {
+  const text = code.replace(/\|\|/g, " ");
+  return !/["'{}[;|]/.test(text) && !/(?:[\w)\]]|\w!)\s*\(/.test(text);
+}
+
+const SWAPPED: Record<string, string> = { "<": ">", ">": "<", "<=": ">=", ">=": "<=" };
+
+const OUTCOMES: Record<string, number> = { "<": 1, "==": 2, "<=": 3, ">": 4, ">=": 6, "!=": 13 };
+const BY_OUTCOMES = new Map(Object.entries(OUTCOMES).map(([op, set]) => [set, op]));
+
+function comparison(code: string): { l: string; op: string; r: string } | null {
+  const inner = bare(code);
+  const o = binding(inner) === CMP && topLevel(inner)!.filter((t) => t.p === CMP).length === 1 ? outermost(inner) : null;
+  if (!o) return null;
+  const [l, r] = [bare(o.left), bare(o.right)];
+  return pure(l) && pure(r) ? { l, op: o.op, r } : null;
+}
+
+function sameOperands(a: string, op: "&&" | "||", b: string): string | null {
+  const [p, q] = [comparison(a), comparison(b)];
+  if (!p || !q) return null;
+  const qop = p.l === q.l && p.r === q.r ? q.op : p.l === q.r && p.r === q.l ? (SWAPPED[q.op] ?? q.op) : null;
+  if (qop === null) return null;
+  const set = op === "&&" ? OUTCOMES[p.op]! & OUTCOMES[qop]! : OUTCOMES[p.op]! | OUTCOMES[qop]!;
+  if (set === 0 || set === 15) return String(set === 15);
+  const one = BY_OUTCOMES.get(set);
+  if (one !== undefined) return binary(p.l, one, p.r);
+  const ordering = `${receiver(p.l)}.partial_cmp(&${operand(p.r, UNARY)})`;
+  if (set === 5) return `${ordering}.is_some_and(std::cmp::Ordering::is_ne)`;
+  return set === 7 ? `${ordering}.is_some()` : null;
+}
+
+function bound(code: string): { x: string; op: string; c: number } | null {
+  const o = comparison(code);
+  if (!o || !(o.op in SWAPPED)) return null;
+  const num = (t: string) => (/^-?\d[\d_]*(?:\.\d+)?(?:e-?\d+)?(?:f64|i64)?$/.test(t) ? Number(t.replace(/_|f64|i64/g, "")) : null);
+  const [cl, cr] = [num(o.l), num(o.r)];
+  if (cr !== null && cl === null) return { x: o.l, op: o.op, c: cr };
+  if (cl !== null && cr === null) return { x: o.r, op: SWAPPED[o.op]!, c: cl };
+  return null;
+}
+
+function bothBounds(a: string, b: string): string | null {
+  const [p, q] = [bound(a), bound(b)];
+  if (!p || !q || p.x !== q.x) return null;
+  const lower = (t: { op: string }) => t.op.startsWith(">");
+  if (lower(p) === lower(q)) {
+    const past = (p.c - q.c) * (lower(p) ? 1 : -1);
+    return past > 0 || (past === 0 && p.op.length === 1) ? a : b;
+  }
+  const [lo, hi] = lower(p) ? [p, q] : [q, p];
+  return lo.c > hi.c || (lo.c === hi.c && (lo.op.length === 1 || hi.op.length === 1)) ? "false" : null;
+}
+
 export function logical(a: string, op: "&&" | "||", b: string): string {
+  if (a === b && pure(a)) return a;
+  const both = sameOperands(a, op, b) ?? (op === "&&" ? bothBounds(a, b) : null);
+  if (both !== null) return both;
   const absorbing = op === "&&" ? "false" : "true";
   if (a === absorbing || b === absorbing) return absorbing;
   const identity = op === "&&" ? "true" : "false";

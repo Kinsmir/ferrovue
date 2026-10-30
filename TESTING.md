@@ -109,6 +109,9 @@ A fixture is a JSON object of props plus optional keys:
 | `DollarNames` | Names holding `$`: a `computed` `$label` beside a `computed` `label`, a prop `price$`, interface fields `$meta`, `$tag` beside `tag` and `count$` read from a prop and from `v-for` items, a function's parameter and `const` named with `$`, and `v-for` items and indexes named with `$` |
 | `Exprs` | `-`, `*`, `%`, comparisons, unary `-`, `Math`, template literals, `?.`, string and list methods (Unicode case mapping included), array literals, ranges, destructured `v-for` items |
 | `EmptyArrays` | The length of an empty array literal, in text, an attribute, a `computed`, a `?:` beside a list prop and `===`, and of `[]` handed to a function's `unknown[]` parameter |
+| `EmptyRanges` | `v-for` over a range whose bound is a constant of 0 or below (a literal, a negative literal, a `const`, arithmetic of constants, `n - n`), with an index and on `<template>`, beside ranges that count |
+| `EmptySlots` | Slot content that writes nothing or only comments: an empty `<template #default>`, a comment, an empty named slot, an empty scoped slot, destructured or not |
+| `SelfCompare` | An operand compared, subtracted, divided or joined by `&&` and `\|\|` with itself (`x !== x`, `n - n`, `f / f`, `on && on`) of every scalar, `NaN` and the infinities included, and two bounds of one number joined by `&&`, one implied by the other or the two impossible together |
 | `Branches` | `v-if` / `v-else-if` / `v-else`, `!`, `&&` / `\|\|`, `===` / `!==`, `undefined`, narrowing, `<template v-if>` |
 | `Lists` | `v-for` over strings, numbers and objects, index, nesting, `<template v-for>`, empty lists |
 | `Attrs` | Boolean attributes, `:hidden`, empty values, numbers, absent optionals, `data-` / `aria-`, all class shapes |
@@ -266,8 +269,8 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups`, `RegexText` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
-| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic`, `UnionOptionalRef` |
-| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays`, `UnionListBuilt`, `FoldedWide` |
+| Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic`, `UnionOptionalRef`, `SelfCompare` |
+| Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays`, `UnionListBuilt`, `FoldedWide`, `EmptyRanges` |
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | HTML comments | `Comments`, `CommentBox`, `TagContent` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary` |
@@ -280,7 +283,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | `<component :is>` | `ShapePicker`, `ShapeRoot`, `TagHeading`, `TagGallery`, `TagContent`, `TagCasing`, `ThemedChoice`, `HeadChoice`, `UnionEnums`, `RenamedProps`, `ModelIs` |
 | Escape hatches | `ClientSide`, `Rated`, `EscapedIdioms`, `EscapedNull` |
 | Fallthrough attributes | `Fallthrough`, `FallLeaf`, `FallInner`, `FallPair`, `FallRoot`, `FallBare`, `FallUse`, `FallLink`, `FallSwitch`, `FallFade`, `FallBinds`, `ScopedFallthrough` |
-| Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe` |
+| Slots | `Frame`, `Forward`, `Page`, `Card`, `Panel`, `Dashboard`, `DataList`, `DataTable`, `Hollow`, `Blank`, `SlotProbe`, `EmptySlots` |
 | Forms | `Form`, `Constants`, `Model`, `FormWrapped`, `FormRoot`, `RootControls` |
 | Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
 | Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo`, `LinkSpaces`, `FallSpaces` |
