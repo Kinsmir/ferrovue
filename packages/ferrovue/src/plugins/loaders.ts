@@ -1,7 +1,7 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, enumOf, fail, nothing, rustStr, sameTy, snake } from "../model.ts";
 import { GenError } from "../errors.ts";
 import { ctx } from "../context.ts";
-import { type Declared } from "../constants.ts";
+import { type Declared, exportedConst } from "../constants.ts";
 import { resolveImport } from "../resolve.ts";
 import { bareDates, datePlan, lookupStruct, markHome, readTypeFile, tyOfTs } from "../typescript.ts";
 import { coerce, describeTy, expr, fieldVal } from "../expr.ts";
@@ -385,11 +385,10 @@ export const loaders: Plugin<LoadersRun, LoadersScope> = {
     const file = resolveImport(s.comp.file, from);
     if (file === null) return false;
     readTypeFile(file);
-    const decls = ctx.constDecls.get(file);
     for (const sp of st.specifiers) {
       if (sp.type !== "ImportSpecifier" || sp.importKind === "type") continue;
-      const d = decls?.get(sp.imported.name ?? sp.imported.value);
-      if (d?.exported && isLoader(d, file)) scopeOf(loaders, s).locals.set(sp.local.name, { d, file });
+      const d = exportedConst(file, sp.imported.name ?? sp.imported.value);
+      if (d && isLoader(d, file)) scopeOf(loaders, s).locals.set(sp.local.name, { d, file });
     }
     return false;
   },

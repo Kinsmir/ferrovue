@@ -22,7 +22,7 @@ export const PickKey: InjectionKey<(name: string) => void> = Symbol("pick");
 export const Bare = Symbol("bare");
 export interface Day { at: Date }
 export const DaysKey: InjectionKey<Day[]> = Symbol("days");
-`;
+`.concat("export { ThemeKey as Theme };\n");
 
 function project(components: Record<string, string>, extra: Partial<Config> = {}): Map<string, string> {
   const root = mkdtempSync(join(tmpdir(), "ferrovue-"));
@@ -62,6 +62,15 @@ describe("provide and inject", () => {
     expect(out.get("x.rs")).toContain('fv_provides.theme_key.unwrap_or("light")');
     expect(out.get("x.rs")).not.toContain("pub fn island");
     expect(out.get("provides.rs")).toContain("pub struct Provides<'p> {\n    /// What is provided under `ThemeKey`, exported from `types/keys.ts`.\n    pub theme_key: Option<&'p str>,\n}");
+  });
+
+  it("reads a key exported under a second name as the key it names", () => {
+    const aliased = sfc('import { Theme } from "../types/keys";\nconst theme = inject(Theme, "light");', '<button :class="theme">{{ label }}</button>');
+    const scope = sfc('provide(ThemeKey, "dark");', '<Button label="in" />', 'import Button from "./Button.vue";');
+    const out = project({ X: scope, Button: aliased });
+    expect(out.get("x.rs")).toContain('let fv_provides = super::provides::Provides { theme_key: Some("dark") };');
+    expect(out.get("button.rs")).toContain('fv_provides.theme_key.unwrap_or("light")');
+    expect(out.get("provides.rs")).toContain("/// What is provided under `ThemeKey`, exported from `types/keys.ts`.\n    pub theme_key: Option<&'p str>,");
   });
 
   it("overlays what a component provides on what it was given, and reads its own injections from what it was given", () => {

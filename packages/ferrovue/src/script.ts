@@ -1,18 +1,18 @@
 import { basename } from "node:path";
-import { type Component, type Fn, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, patternNames, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, patternNames, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
-import { constOfDecl, type Declared, declareConsts } from "./constants.ts";
+import { constOfDecl, type Declared, declareConsts, exportedConst } from "./constants.ts";
 import { localTy } from "./rust.ts";
 import { expr, fieldVal, typedBy } from "./expr.ts";
 import { atom, occurrences } from "./parens.ts";
 import { known } from "./narrowing.ts";
 import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
 import { annotatedStr, declaredUnion, exactlyEnum, intoEnum, knownLiteral, refField } from "./enums.ts";
-import { functionOf } from "./functions.ts";
+import { exportedFunction, functionOf } from "./functions.ts";
 import { CLIENT_HOOKS, INERT_CALLS, refuseServerWrites, type SetupNames, setupNames } from "./setup-writes.ts";
 
 export function setupStatement(comp: Component, st: N): void {
@@ -278,27 +278,23 @@ function importedKey(sp: N): string | undefined {
   return sp.type === "ImportDefaultSpecifier" ? "default" : undefined;
 }
 
-type ModuleFunctions = Map<string, { fn: Fn; exported: boolean }> | undefined;
-
-function importedValue(scope: Scope, sp: N, decls: Map<string, Declared>, fns: ModuleFunctions): void {
+function importedValue(scope: Scope, sp: N, file: string): void {
   const key = importedKey(sp);
   if (key === undefined) return;
-  const f = fns?.get(key);
-  if (f?.exported) {
-    scope.functions.set(sp.local.name, f.fn);
-    scope.clientOnly.set(sp.local.name, `it is a function imported from ${f.fn.home.file}, which the template and a \`computed\` may call, and only an event handler may name without calling it`);
+  const f = exportedFunction(file, key);
+  if (f) {
+    scope.functions.set(sp.local.name, f);
+    scope.clientOnly.set(sp.local.name, `it is a function imported from ${f.home.file}, which the template and a \`computed\` may call, and only an event handler may name without calling it`);
     return;
   }
-  const d = decls.get(key);
-  if (d?.exported) evaluable(scope, sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
+  const d = exportedConst(file, key);
+  if (d) evaluable(scope, sp.local.name, d, `it is imported from ${d.home.file}, where it is not a constant the compiler evaluates`);
 }
 
 function moduleValues(scope: Scope, st: N, file: string): void {
   if (st.specifiers.some((sp: N) => sp.type === "ImportDefaultSpecifier")) readTypeFile(file);
-  const decls = ctx.constDecls.get(file);
-  if (decls === undefined) return;
-  const fns = ctx.tsModules.get(file)?.functions;
-  for (const sp of st.specifiers) importedValue(scope, sp, decls, fns);
+  if (!ctx.constDecls.has(file)) return;
+  for (const sp of st.specifiers) importedValue(scope, sp, file);
 }
 
 function moduleImport(scope: Scope, st: N, from: string): void {

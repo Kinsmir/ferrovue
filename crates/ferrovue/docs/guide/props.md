@@ -876,6 +876,12 @@ A constant that is anything else (`Date.now()`, a function, an operator of a lis
 where the template reads it, with the code of what stops it, at the place it is declared. So are an
 object constant read whole, and `new` of anything but `Date` and `Map`.
 
+A file exports a constant, an `enum` or a function on its declaration (`export const`), by name
+(`export { SIZES, SORTS as ORDERS }`) or as its default (`export default LABELS`), and a component
+imports it under the name it is exported as. A name exported as a type only, or from another module
+(`export { SIZES } from "./sizes"`), has no value on the server: import it from the file that
+declares it.
+
 ## Lookup tables
 
 An object constant, imported from a `.ts` file or declared with `const` in `<script setup>`, may be

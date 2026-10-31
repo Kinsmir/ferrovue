@@ -22,7 +22,6 @@ type Scalar = string | number | boolean | null;
 export interface Declared {
   node: N;
   home: Component;
-  exported: boolean;
 }
 
 const files = new WeakMap<Component, Map<string, Declared>>();
@@ -35,15 +34,40 @@ let enumScope: { name: string; fields: Map<string, Const>; node: N } | null = nu
 export function declareConsts(home: Component, body: N[]): Map<string, Declared> {
   const found = new Map<string, Declared>();
   for (const st of body) {
-    const exported = st.type === "ExportNamedDeclaration";
-    const d = exported ? st.declaration : st;
-    if (d?.type === "TSEnumDeclaration") found.set(d.id.name, { node: d, home, exported });
+    const d = st.type === "ExportNamedDeclaration" ? st.declaration : st;
+    if (d?.type === "TSEnumDeclaration") found.set(d.id.name, { node: d, home });
     if (d?.type === "VariableDeclaration" && d.kind === "const") {
-      for (const v of d.declarations) if (v.id.type === "Identifier" && v.init) found.set(v.id.name, { node: v, home, exported });
+      for (const v of d.declarations) if (v.id.type === "Identifier" && v.init) found.set(v.id.name, { node: v, home });
     }
   }
   files.set(home, found);
   return found;
+}
+
+/** The local name of each name a `.ts` file exports: by `export const`, `export function`, `export enum`, `export { a, b as c }` and `export default a`. */
+export function exportsOf(body: N[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const st of body) {
+    if (st.type === "ExportDefaultDeclaration") {
+      const d = st.declaration;
+      names.set("default", d.type === "Identifier" ? d.name : "default");
+    }
+    if (st.type !== "ExportNamedDeclaration" || st.exportKind === "type") continue;
+    const d = st.declaration;
+    if (d?.type === "VariableDeclaration") for (const v of d.declarations) if (v.id.type === "Identifier") names.set(v.id.name, v.id.name);
+    if (d?.id?.type === "Identifier") names.set(d.id.name, d.id.name);
+    if (d || st.source) continue;
+    for (const sp of st.specifiers) {
+      if (sp.type === "ExportSpecifier" && sp.exportKind !== "type") names.set(sp.exported.name ?? sp.exported.value, sp.local.name);
+    }
+  }
+  return names;
+}
+
+/** The constant or enum a `.ts` file exports as `name`. */
+export function exportedConst(file: string, name: string): Declared | undefined {
+  const local = ctx.tsModules.get(file)?.exports.get(name);
+  return local === undefined ? undefined : ctx.constDecls.get(file)?.get(local);
 }
 
 /** What a declared constant or enum stands for, evaluated once. */

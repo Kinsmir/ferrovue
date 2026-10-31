@@ -1,6 +1,6 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, fail, nothing, opt, sameTy, snake } from "../model.ts";
 import { ctx } from "../context.ts";
-import { type Declared } from "../constants.ts";
+import { type Declared, exportedConst } from "../constants.ts";
 import { lookupStruct, markHome, refuseDates, tyOfTs } from "../typescript.ts";
 import { resolveImport } from "../resolve.ts";
 import { describeTy, expr } from "../expr.ts";
@@ -138,10 +138,11 @@ function keyOf(comp: Component, n: N, script: N[]): Key {
   if (n?.type === "Identifier") {
     const imported = importOf(script, n.name);
     const file = imported ? resolveImport(comp.file, imported.from) : null;
-    const decl = file !== null ? ctx.constDecls.get(file)?.get(imported!.name) : undefined;
-    if (decl?.exported && decl.node.type === "VariableDeclarator" && symbolInit(decl.node.init)) {
+    const decl = file !== null ? exportedConst(file, imported!.name) : undefined;
+    if (decl?.node.type === "VariableDeclarator" && symbolInit(decl.node.init)) {
       const rel = relativePath(ctx.rootDir, file!);
-      return keyNamed(comp, n, `${rel}#${imported!.name}`, `\`${imported!.name}\``, rel, snake(imported!.name), () => declaredOf(decl));
+      const own: string = decl.node.id.name;
+      return keyNamed(comp, n, `${rel}#${own}`, `\`${own}\``, rel, snake(own), () => declaredOf(decl));
     }
   }
   return fail(comp, "FV1601", "an injection key is a string literal, or a `Symbol` exported from one of the project's `.ts` files: `export const ThemeKey: InjectionKey<string> = Symbol()`", n);

@@ -227,7 +227,7 @@ export const ctx = {
   typeReached: new Set<string>(),
   typeRead: new Set<string>(),
   constDecls: new Map<string, Map<string, Declared>>(),
-  tsModules: new Map<string, { home: Component; body: N[]; functions: Map<string, { fn: Fn; exported: boolean }> }>(),
+  tsModules: new Map<string, { home: Component; body: N[]; functions: Map<string, Fn>; exports: Map<string, string> }>(),
   typeConsts: new Map<string, { of: unknown; file: string; text: string }>(),
   enums: new Map<string, Map<string, EnumDef>>(),
   components: new Map<string, Component>(),
