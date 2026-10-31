@@ -15,6 +15,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
+- A constant, `enum` or function a `.ts` file exports by name (`export { A, B as C }`), as `export default A`, or from another file (`export { A } from`, `export * from`) is read as one exported on its declaration; 0.14.0 refused it with FV0601.
+  [Constants](https://docs.rs/ferrovue/latest/ferrovue/guide/props/index.html#constants).
 - `linkRoutes` sets `$router` to the router `useRouter()` gives, as vue-router's `install` does; 0.14.0 left `$router` unset.
   [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
 

@@ -77,6 +77,7 @@ pub mod enum_members;
 pub mod enumerated;
 pub mod escaped_idioms;
 pub mod escaped_null;
+pub mod exported_names;
 pub mod exprs;
 pub mod fall_bare;
 pub mod fall_binds;
@@ -676,6 +677,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "EscapedNull" => {
             let props: escaped_null::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             escaped_null::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ExportedNames" => {
+            let props: exported_names::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            exported_names::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Exprs" => {
             let props: exprs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

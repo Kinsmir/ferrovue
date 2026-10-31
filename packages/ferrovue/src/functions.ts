@@ -1,7 +1,7 @@
 import { type Component, type Fn, type N, type Scope, type Ty, type Val, fail, placeOf } from "./model.ts";
 import { GenError } from "./errors.ts";
 import type { Const } from "./constants.ts";
-import { constOfDecl } from "./constants.ts";
+import { constOfDecl, exportedConst, exportedFunction } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { expr, typedBy } from "./expr.ts";
 import { bodyExpr, bound, destructured } from "./blocks.ts";
@@ -19,23 +19,23 @@ export function functionOf(st: N): { name: string; node: N } | null {
 }
 
 /** The functions a `.ts` file declares at its top level, exported or not. */
-export function declareFunctions(home: Component, body: N[], file: string): Map<string, { fn: Fn; exported: boolean }> {
-  const found = new Map<string, { fn: Fn; exported: boolean }>();
+export function declareFunctions(home: Component, body: N[], file: string): Map<string, Fn> {
+  const found = new Map<string, Fn>();
   for (const st of body) {
     if (st.type === "ExportDefaultDeclaration" && (st.declaration.type === "FunctionDeclaration" || FUNCTION_INITS.has(st.declaration.type))) {
-      found.set("default", { fn: { name: st.declaration.id?.name ?? "default", node: st.declaration, home, file }, exported: true });
+      found.set("default", { name: st.declaration.id?.name ?? "default", node: st.declaration, home, file });
       continue;
     }
-    const exported = st.type === "ExportNamedDeclaration";
-    const d = exported ? st.declaration : st;
+    const d = st.type === "ExportNamedDeclaration" ? st.declaration : st;
     const decls: N[] = d?.type === "VariableDeclaration" && d.kind === "const" ? d.declarations : [d];
     for (const x of decls) {
       const f = functionOf(x);
-      if (f) found.set(f.name, { fn: { name: f.name, node: f.node, home, file }, exported });
+      if (f) found.set(f.name, { name: f.name, node: f.node, home, file });
     }
   }
   return found;
 }
+
 
 interface Module {
   home: Component;
@@ -62,7 +62,7 @@ function moduleOf(file: string): Module {
       m.refusedBy.set(local, e);
     }
   };
-  for (const [name, { fn }] of read.functions) {
+  for (const [name, fn] of read.functions) {
     m.functions.set(name, fn);
     m.clientOnly.set(name, `it is a function of ${read.home.file}, which a template or a function may call, but not read as a value`);
   }
@@ -75,10 +75,10 @@ function moduleOf(file: string): Module {
     for (const sp of st.specifiers) {
       if (sp.importKind === "type") continue;
       const imported: string = sp.type === "ImportSpecifier" ? (sp.imported.name ?? sp.imported.value) : "default";
-      const f = other?.functions.get(imported);
-      const d = from !== null ? ctx.constDecls.get(from)?.get(imported) : undefined;
-      if (f?.exported) m.functions.set(sp.local.name, f.fn);
-      else if (d?.exported && sp.type === "ImportSpecifier") constant(sp.local.name, d, `it is imported from ${other!.home.file}`);
+      const f = from !== null ? exportedFunction(from, imported) : undefined;
+      const d = from !== null ? exportedConst(from, imported) : undefined;
+      if (f) m.functions.set(sp.local.name, f);
+      else if (d && sp.type === "ImportSpecifier") constant(sp.local.name, d, `it is imported from ${other!.home.file}`);
       else m.clientOnly.set(sp.local.name, `it is imported from \`${st.source.value}\`, which the server does not run`);
     }
   }

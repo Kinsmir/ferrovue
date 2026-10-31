@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Config, TypeName } from "./config.ts";
 import type { Plugin } from "./plugin.ts";
-import type { Declared } from "./constants.ts";
+import type { Declared, Exports } from "./constants.ts";
 import type { Alias } from "./compiler.ts";
 import type { TsProject } from "./resolve.ts";
 import { type Component, type EnumDef, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, INT, opt, RUST_KEYWORDS, STR } from "./model.ts";
@@ -227,7 +227,7 @@ export const ctx = {
   typeReached: new Set<string>(),
   typeRead: new Set<string>(),
   constDecls: new Map<string, Map<string, Declared>>(),
-  tsModules: new Map<string, { home: Component; body: N[]; functions: Map<string, { fn: Fn; exported: boolean }> }>(),
+  tsModules: new Map<string, { home: Component; body: N[]; functions: Map<string, Fn>; exports: Exports }>(),
   typeConsts: new Map<string, { of: unknown; file: string; text: string }>(),
   enums: new Map<string, Map<string, EnumDef>>(),
   components: new Map<string, Component>(),

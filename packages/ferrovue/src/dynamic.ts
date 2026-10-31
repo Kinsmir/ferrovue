@@ -4,6 +4,7 @@ import { basename } from "node:path";
 import { type Component, type N, type Scope, type Ty, camelize, directiveOwner, fail, isAttribute, literalsOf, placeOf, rustStr, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
+import { exportedConst } from "./constants.ts";
 import { matchOver } from "./enums.ts";
 import { expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";
@@ -222,8 +223,8 @@ function tableOf(s: Scope, n: N): Table | null {
     const sp = st.specifiers.find((x: N) => x.type === "ImportSpecifier" && x.local.name === name && x.importKind !== "type");
     if (!sp) continue;
     const file = resolveImport(s.comp.file, st.source.value);
-    const d = file === null ? undefined : ctx.constDecls.get(file)?.get(sp.imported.name ?? sp.imported.value);
-    if (!d?.exported || d.node.type !== "VariableDeclarator") return null;
+    const d = file === null ? undefined : exportedConst(file, sp.imported.name ?? sp.imported.value);
+    if (!d || d.node.type !== "VariableDeclarator") return null;
     const entries = objectEntries(d.home, name, d.node.init);
     if (!entries) return null;
     const body: N[] = parseJs(d.home.source ?? "", { sourceType: "module", plugins: ["typescript"] }).program.body;
