@@ -23,7 +23,7 @@ export interface LinkRoutesOptions {
 /** A Vue plugin giving `<RouterLink>` and `useRoute()` the page's route, with no router. */
 export interface LinkRoutes {
   /** Registers vue-router's `<RouterLink>` and provides the page's route to it, to `useRoute()`
-   * and to `$route`. */
+   * and to `$route`, and the small router to `useRouter()` and `$router`. */
   install(app: App): void;
   /** `to` resolved as vue-router's `router.resolve(to)` resolves it on this page. */
   resolve(to: RouteLocationRaw): RouteLocationResolved;
@@ -455,7 +455,8 @@ export function linkRoutes(routes: RouteEntry[], options: LinkRoutesOptions): Li
     resolve: resolve as (to: RouteLocationRaw) => RouteLocationResolved,
     install(app) {
       app.component("RouterLink", RouterLink);
-      app.config.globalProperties.$route = current as never;
+      app.config.globalProperties.$router = router;
+      Object.defineProperty(app.config.globalProperties, "$route", { enumerable: true, get: () => router.currentRoute.value });
       app.provide(routerKey, router as unknown as Router);
       app.provide(routeLocationKey, reactive as unknown as RouteLocationNormalizedLoaded);
     },

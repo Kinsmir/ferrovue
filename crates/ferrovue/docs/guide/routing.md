@@ -458,8 +458,8 @@ await mountIslands(islands, { plugins: [links] });
 ```
 
 Components keep importing `RouterLink` and `useRoute` from vue-router. The plugin registers
-vue-router's own `<RouterLink>` and provides it, `useRoute()` and `$route` with a small object of
-its own in place of a router:
+vue-router's own `<RouterLink>` and provides it, `useRoute()`, `useRouter()`, `$route` and
+`$router` with a small object of its own in place of a router:
 
 - **The page's route.** It is resolved once, from `location` or the browser's location, with the
   base taken off. `links.route` is the route `useRoute()` gives, a shallow reactive object as
@@ -487,9 +487,9 @@ its own in place of a router:
 What works is what `<RouterLink>` and `useRoute()` read: `href` with the base, the
 `router-link-active` and `router-link-exact-active` classes (nested routes included),
 `aria-current="page"`, and `useRoute()`'s path, name, params, query, hash and `matched`. There is no
-router: `$router` is not set, `useRouter()` gives only what `<RouterLink>` reads (`resolve`, `push`,
-`replace`, `options` and `currentRoute`), and `<RouterView>` is not registered, so hydrated
-components must not hold one. The route stays the one the plugin was built at, so when the
+router: `useRouter()` and `$router` give only what `<RouterLink>` reads (`resolve`, `push`,
+`replace`, `options` and `currentRoute`), `$route` is `currentRoute.value` as under vue-router, and
+`<RouterView>` is not registered, so hydrated components must not hold one. The route stays the one the plugin was built at, so when the
 application swaps in another page, unmount the islands and mount them again with a new
 `linkRoutes`, built at the new location.
 
