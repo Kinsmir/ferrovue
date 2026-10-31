@@ -64,9 +64,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(128 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2 + 2 + props.note.as_deref().map_or(0, str::len));
-    out.push_str("<div class=\"card");
-    fv::attrs::class_into(out, true, &[&*format!("card-{}", fv::props::Union::as_str(props.size.unwrap_or(super::types::Size::Md)))]);
+    out.reserve(134 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2 + 2 + props.note.as_deref().map_or(0, str::len));
+    out.push_str("<div class=\"card card-");
+    fv::core::escape_into(out, fv::strings::js_trim_end(fv::props::Union::as_str(props.size.unwrap_or(super::types::Size::Md))));
     out.push_str("\">");
     if let Some(fv_avatar) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<img src=\"");

@@ -119,6 +119,7 @@ pub mod imported_props;
 pub mod imported_props_mixed;
 pub mod inline_prose;
 pub mod inline_types;
+pub mod join_branches;
 pub mod kebab_tree;
 pub mod keywords;
 pub mod known_values;
@@ -883,6 +884,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "InlineTypes" => {
             let props: inline_types::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             inline_types::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "JoinBranches" => {
+            let props: join_branches::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            join_branches::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "KebabTree" => {
             let props: kebab_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

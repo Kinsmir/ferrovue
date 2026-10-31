@@ -58,15 +58,25 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(113 + 9 * props.items.len() + props.title.len() + props.base.len() + props.path.iter().map(|v| v.len()).sum::<usize>() + props.query.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(119 + 12 * props.items.len() + props.title.len() + props.base.len() + props.path.iter().map(|v| v.len()).sum::<usize>() + props.query.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
     let s_summary = format!("{} {}", (&*{ let fv_abs = (props.count as f64).abs(); if fv_abs >= 1000000000.0 { std::borrow::Cow::<str>::Owned(format!("{}B", (&*{ let fv_text = fv::core::js_to_fixed(props.count as f64 / 1000000000.0, 1); std::borrow::Cow::<str>::Owned((if fv_text.ends_with(".0") { std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&fv_text, 0.0f64, Some(-2.0f64)).into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_text) }).into_owned()) }))) } else { if fv_abs >= 1000000.0 { std::borrow::Cow::<str>::Owned(format!("{}M", (&*{ let fv_text_2 = fv::core::js_to_fixed(props.count as f64 / 1000000.0, 1); std::borrow::Cow::<str>::Owned((if fv_text_2.ends_with(".0") { std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&fv_text_2, 0.0f64, Some(-2.0f64)).into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_text_2) }).into_owned()) }))) } else { if fv_abs >= 1000.0 { std::borrow::Cow::<str>::Owned(format!("{}k", (&*{ let fv_text_3 = fv::core::js_to_fixed(props.count as f64 / 1000.0, 1); std::borrow::Cow::<str>::Owned((if fv_text_3.ends_with(".0") { std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&fv_text_3, 0.0f64, Some(-2.0f64)).into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_text_3) }).into_owned()) }))) } else { std::borrow::Cow::<str>::Owned(fv::core::Js(props.count).to_string()) } } } }), (if props.count as f64 == 1.0 { "view" } else { "views" }));
     let s_link = { let fv_query = props.query.as_deref(); { let fv_parts = props.path.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_p| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv::core::js_encode_uri_component(&fv_p)).into_owned())).collect::<Vec<_>>().join("/"); std::borrow::Cow::<str>::Owned((if let Some(fv_query_2) = fv_query { if fv_query_2.is_empty() { std::borrow::Cow::<str>::Owned(format!("{}/{}", props.base, fv_parts)) } else { std::borrow::Cow::<str>::Owned(format!("{}/{}?q={}", props.base, fv_parts, fv::core::js_encode_uri_component(fv_query_2))) } } else { std::borrow::Cow::<str>::Owned(format!("{}/{}", props.base, fv_parts)) }).into_owned()) } };
     out.push_str("<section><h2 title=\"");
     fv::core::escape_into(out, &props.title);
     out.push_str("\">");
-    fv::core::escape_into(out, &(if fv::strings::js_length(&props.title) <= 12 { std::borrow::Cow::<str>::Borrowed(&*props.title) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(11.0f64))))) }));
+    if fv::strings::js_length(&props.title) <= 12 {
+        fv::core::escape_into(out, &props.title);
+    } else {
+        fv::core::escape_into(out, fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(11.0f64))));
+        out.push('…');
+    }
     out.push('|');
-    fv::core::escape_into(out, &(if fv::strings::js_length(&props.title) <= 5 { std::borrow::Cow::<str>::Borrowed(&*props.title) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(4.0f64))))) }));
+    if fv::strings::js_length(&props.title) <= 5 {
+        fv::core::escape_into(out, &props.title);
+    } else {
+        fv::core::escape_into(out, fv::strings::js_trim_end(&fv::strings::js_slice(&props.title, 0.0f64, Some(4.0f64))));
+        out.push('…');
+    }
     out.push_str("</h2><p>");
     fv::core::escape_into(out, &s_summary);
     out.push('|');
@@ -87,7 +97,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_item_ref in props.items.iter() {
         let fv_item: &str = fv_item_ref;
         out.push_str("<li>");
-        fv::core::escape_into(out, &(if fv::strings::js_length(fv_item) <= 4 { std::borrow::Cow::<str>::Borrowed(fv_item) } else { std::borrow::Cow::<str>::Owned(format!("{}…", fv::strings::js_trim_end(&fv::strings::js_slice(fv_item, 0.0f64, Some(3.0f64))))) }));
+        if fv::strings::js_length(fv_item) <= 4 {
+            fv::core::escape_into(out, fv_item);
+        } else {
+            fv::core::escape_into(out, fv::strings::js_trim_end(&fv::strings::js_slice(fv_item, 0.0f64, Some(3.0f64))));
+            out.push('…');
+        }
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></section>");

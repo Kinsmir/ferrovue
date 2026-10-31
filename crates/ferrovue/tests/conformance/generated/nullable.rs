@@ -82,7 +82,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(499 + 31 * props.entries.len() + 18 * props.tags.len() + props.label.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)) + props.entries.iter().map(|v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(524 + 31 * props.entries.len() + 18 * props.tags.len() + props.label.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)) + props.entries.iter().map(|v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Nullable.vue");
     let s_scaled = std::cell::LazyCell::new(|| props.count.map(|fv_count| fv_refusals.keep(fv::render::try_int(fv_count as f64 * 10.0), 16, 55)));
     let s_fallback = props.label.as_deref();
@@ -240,7 +240,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_entry_6) = props.entry.as_ref() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_entry_6.title);
-        fv::core::escape_into(out, &(if let Some(fv_deleted_at) = fv_entry_6.deleted_at.as_deref() { std::borrow::Cow::<str>::Owned(format!(" (deleted {})", fv_deleted_at)) } else { std::borrow::Cow::<str>::Borrowed("") }));
+        if let Some(fv_deleted_at) = fv_entry_6.deleted_at.as_deref() {
+            out.push_str(" (deleted ");
+            fv::core::escape_into(out, fv_deleted_at);
+            out.push(')');
+        }
         out.push_str("</p>");
     } else {
         out.push_str("<!---->");
@@ -292,7 +296,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         default: Some(&|out: &mut String, fv_slot_props: &super::null_child::DefaultSlotProps<'_>| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
-            fv::core::escape_into(out, &(if let Some(fv_v) = fv_slot_props.v { std::borrow::Cow::<str>::Owned(format!("slot:{}", fv_v)) } else { std::borrow::Cow::<str>::Borrowed("slot:null") }));
+            if let Some(fv_v) = fv_slot_props.v {
+                out.push_str("slot:");
+                fv::core::escape_into(out, fv_v);
+            } else {
+                out.push_str("slot:null");
+            }
             fv::core::escape_into(out, fv_slot_props.e.and_then(|fv_e_2| fv_e_2.deleted_at.as_deref()).unwrap_or(""));
             filled |= !fv::render::is_comment(&out[fv_chunk..]);
             filled

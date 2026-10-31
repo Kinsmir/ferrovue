@@ -1,15 +1,15 @@
 import { escapeHtml } from "@vue/shared";
-import { type N, type Scope, type Val, directiveOwner, fail, nothing, rustStr, STR } from "./model.ts";
+import { type N, type Piece, type Scope, type Val, directiveOwner, fail, nothing, rustStr, STR } from "./model.ts";
 import { expr } from "./expr.ts";
 import { choice, cond, known, narrowing, narrowTo, presence, truthy } from "./narrowing.ts";
 import { pickPresent } from "./constants.ts";
-import { meet, unquote } from "./strings.ts";
+import { meet, piecesOf, unquote } from "./strings.ts";
 import { atom, bare, condition, logical, not, occurrences, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { stringAttr } from "./attrs.ts";
+import { displayPieces, stringAttr } from "./attrs.ts";
 import { fresh, jsHint } from "./names.ts";
 
-export type ClassItem = { lit: string } | { code: string };
+export type ClassItem = { lit: string } | { code: string; join?: Val };
 
 export function classItems(s: Scope, n: N): ClassItem[] {
   switch (n.type) {
@@ -72,7 +72,7 @@ export function classItems(s: Scope, n: N): ClassItem[] {
   const literal = v.ty.k === "str" && known(v) !== undefined ? unquote(v.code) : null;
   if (literal === "") return [];
   if (literal !== null && literal === literal.trim()) return [{ lit: literal }];
-  if (v.ty.k === "str") return [{ code: v.code }];
+  if (v.ty.k === "str") return [piecesOf(v) === undefined ? { code: v.code } : { code: v.code, join: v }];
   if (v.ty.k === "opt" && v.ty.of.k === "str") return [{ code: `${atom(v.code)}.unwrap_or("")` }];
   if (nothing(v.ty)) return [];
   return fail(s.comp, "FV1004", "a class is a string, an array, or an object of conditions", n);
@@ -109,10 +109,44 @@ export function renderClass(s: Scope, e: Emitter, n: N, after = false): void {
     e.lit((wrote ? " " : "") + escapeHtml(it.lit));
     wrote = true;
   }
-  if (i < items.length) {
-    const rest = items.slice(i).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
-    e.stmt(`fv::attrs::class_into(out, ${wrote}, &[${rest.join(", ")}]);`);
+  let group: string[] = [];
+  let at: string | null = null;
+  for (; i < items.length; i++) {
+    const it = items[i]!;
+    const parts = "join" in it && it.join !== undefined ? trimmedParts(it.join) : null;
+    if (parts === null) {
+      if (!group.length && !wrote && items.slice(i + 1).some((later) => "join" in later && later.join !== undefined)) {
+        at = fresh("at", "class");
+        e.stmt(`let ${at} = out.len();`);
+      }
+      group.push("lit" in it ? rustStr(it.lit) : it.code);
+      continue;
+    }
+    if (group.length) e.stmt(`fv::attrs::class_into(out, ${wrote}, &[${group.join(", ")}]);`);
+    if (wrote) e.lit(" ");
+    else if (group.length && at !== null) e.stmt(`if out.len() != ${at} { out.push(' '); }`);
+    displayPieces(e, parts);
+    [group, at, wrote] = [[], null, true];
   }
+  if (group.length) e.stmt(`fv::attrs::class_into(out, ${wrote}, &[${group.join(", ")}]);`);
+}
+
+/** The pieces of a joined class name with the spaces `normalizeClass` trims taken off its ends,
+ * when only its first or last piece may hold them and the join writes a name: null otherwise. */
+function trimmedParts(v: Val): Piece[] | null {
+  const pieces = [...piecesOf(v)!];
+  const solid = (p: Piece | undefined, start: boolean): boolean =>
+    p !== undefined && (typeof p === "string" ? p !== "" && p === (start ? p.trimStart() : p.trimEnd()) : "shown" in p || p.ty.k !== "str");
+  for (const start of [true, false]) {
+    const edge = start ? 0 : pieces.length - 1;
+    const next = start ? 1 : pieces.length - 2;
+    const p = pieces[edge]!;
+    if (typeof p === "string") pieces[edge] = start ? p.trimStart() : p.trimEnd();
+    if (solid(pieces[edge], start)) continue;
+    if (typeof p === "string" || "shown" in p || pieces.length < 2 || !solid(pieces[next], start)) return null;
+    pieces[edge] = { code: `fv::strings::js_trim_${start ? "start" : "end"}(${strArg(p.code)})`, ty: STR };
+  }
+  return pieces;
 }
 
 const UNWRITTEN = new Set(["on", "if", "else-if", "else", "for", "slot", "once", "memo", "cloak", "pre"]);

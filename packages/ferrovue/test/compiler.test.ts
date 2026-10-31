@@ -1706,7 +1706,7 @@ export const usePrefs = defineStore("prefs", () => ({}));
     it("translates a getter of the state where a component reads it", () => {
       const withGetter = store.replace("});\n", `, getters: { label: (s) => s.density + "!" } });\n`);
       const out = withStore(island(reader.replace("prefs.density", "prefs.label")), withGetter);
-      expect(out.get("x.rs")).toContain('format!("{}!", fv_stores.prefs.density)');
+      expect(out.get("x.rs")).toContain('fv::core::escape_into(out, fv::strings::js_trim_start(&fv_stores.prefs.density));\n    out.push_str("!\\" data-wide');
     });
 
     it("refuses a getter read by `[…]`", () => {
@@ -6750,14 +6750,14 @@ describe("a `?:` whose branches differ in type, where it is shown as text", () =
 
   it("writes each branch as `{{ }}` writes it, a number by JavaScript's rules and an absent one as nothing", () => {
     const out = render("n: number; o?: Float; on: boolean", '<i>{{ n > 0 ? n : "none" }}</i><b>{{ on ? o : "absent" }}</b><s>{{ on ? true : "off" }}</s>');
-    expect(out).toContain('fv::core::escape_into(out, &(if props.n as f64 > 0.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n))) } else { std::borrow::Cow::<str>::Borrowed("none") }));');
+    expect(out).toContain('    if props.n as f64 > 0.0 {\n        fv::core::push_int(out, props.n);\n    } else {\n        out.push_str("none");\n    }');
     expect(out).toMatch(/if let Some\(v\) = \(if props\.on \{ props\.o\.map\(\|(fv_o)\| std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::core::Js\(\1\)\)\)\) \} else \{ Some\(std::borrow::Cow::<str>::Borrowed\("absent"\)\) \}\)\.as_deref\(\) \{/);
   });
 
   it("writes each branch of an attribute's value as text, leaving the attribute out where a branch is absent", () => {
     const out = render("n: number; o?: number", `<div><i :title="n > 0 ? n : 'none'" :aria-label="o === undefined ? 'unset' : o"></i></div>`);
     expect(out).toContain('out.push_str("<div><i title=\\"");');
-    expect(out).toMatch(/aria-label=\\""\);\n {4}fv::core::escape_into\(out, &\(if let Some\((fv_o)\) = props\.o \{ std::borrow::Cow::<str>::Owned\(format!\("\{\}", fv::core::Js\(\1\)\)\) \} else \{ std::borrow::Cow::<str>::Borrowed\("unset"\) \}\)\);/);
+    expect(out).toMatch(/aria-label=\\""\);\n {4}if let Some\((fv_o)\) = props\.o \{\n {8}fv::core::push_int\(out, \1\);\n {4}\} else \{\n {8}out\.push_str\("unset"\);\n {4}\}/);
   });
 
   it("writes each branch in a template literal as `String()` does, `null` and `undefined` too", () => {

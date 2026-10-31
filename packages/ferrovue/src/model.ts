@@ -70,6 +70,9 @@ export interface Val {
   /** For a string `format!` builds, its format string and arguments, and the same value as the
    * pieces it joins. */
   format?: { text: string; args: string[]; pieces: Piece[] };
+  /** For a string `?:` chooses where a branch is a join: the test the Rust `if` takes and the
+   * value of each branch, while `code` is `of`. */
+  branches?: { of: string; test: string; yes: Val; no: Val };
   owned?: true;
   /** For a value of a generated enum, the Rust expression of the enum (an `Option` of it when the
    * value is optional), where `code` is its string. */

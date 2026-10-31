@@ -82,7 +82,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\"></i>");
     if let Some(fv_os1) = props.os1.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<ul><li lang=\"");
-        fv::core::escape_into(out, &(if props.ob2.unwrap_or(false) { std::borrow::Cow::<str>::Owned(format!("{}{}", fv_os1, fv_os1)) } else { std::borrow::Cow::<str>::Borrowed(fv_os1) }));
+        if props.ob2.unwrap_or(false) {
+            fv::core::escape_into(out, fv_os1);
+            fv::core::escape_into(out, fv_os1);
+        } else {
+            fv::core::escape_into(out, fv_os1);
+        }
         out.push_str("\"></li></ul>");
     } else {
         out.push_str("<!---->");

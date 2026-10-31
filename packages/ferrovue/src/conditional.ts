@@ -2,9 +2,9 @@ import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, ab
 import { GenError } from "./errors.ts";
 import { annotatedStr, exactlyEnum, intoEnum, knownLiteral } from "./enums.ts";
 import { ctx } from "./context.ts";
-import { atom, bare, enclosed, occurrences, strArg } from "./parens.ts";
+import { atom, bare, condition, enclosed, occurrences, strArg } from "./parens.ts";
 import { collected, sliced, typedEmpty, untypedEmpty } from "./lists.ts";
-import { asCow, isTemporary, loneOf } from "./strings.ts";
+import { asCow, isTemporary, loneOf, piecesOf } from "./strings.ts";
 import { asF64, intFromF64, isCast, isNumber } from "./numbers.ts";
 import { choice, known, literalNarrowing, narrowTo, type Presence, presence, truthTested, truthy } from "./narrowing.ts";
 import { ownedStruct, ownedStructs } from "./objects.ts";
@@ -20,6 +20,7 @@ interface Branches {
   emptyA: boolean;
   emptyB: boolean;
   choose: (yes: string, no: string) => string;
+  head: () => { test: string; yes: Val; no: Val };
   lone: { lone?: true };
 }
 
@@ -70,7 +71,13 @@ function branches(s: Scope, n: N, t: Val): Val {
   const [emptyA, emptyB] = [untypedEmpty(a), untypedEmpty(b)];
   if (emptyA && b.ty.k === "list") a = { ...a, ty: b.ty };
   if (emptyB && a.ty.k === "list") b = { ...b, ty: a.ty };
-  return choiceOf({ comp, n, a, b, emptyA, emptyB, choose: chooser(t, p, name, a), lone: loneOf(a, b) });
+  const [x, y] = [a, b];
+  const head = (): { test: string; yes: Val; no: Val } => {
+    if (!p) return { test: condition(truthy(t)), yes: x, no: y };
+    const [present, absent] = p.negated ? [y, x] : [x, y];
+    return { test: occurrences(present.code, name) ? p.pattern(name) : condition(p.present), yes: present, no: absent };
+  };
+  return choiceOf({ comp, n, a, b, emptyA, emptyB, choose: chooser(t, p, name, a), head, lone: loneOf(a, b) });
 }
 
 function chooser(t: Val, p: Presence | null, name: string, a: Val): (yes: string, no: string) => string {
@@ -91,7 +98,9 @@ function choiceOf(c: Branches): Val {
   const owned = a.owned || b.owned ? ownedBranches(c) : null;
   if (owned !== null) return owned;
   if (sameTy(a.ty, b.ty) && a.ty.k === "str" && (isTemporary(a) || isTemporary(b))) {
-    return { code: `&*(${choose(asCow(a), asCow(b))})`, ty: STR, ...lone };
+    const code = `&*(${choose(asCow(a), asCow(b))})`;
+    const joins = (v: Val): boolean => piecesOf(v) !== undefined || v.branches?.of === v.code;
+    return { code, ty: STR, ...lone, ...(joins(a) || joins(b) ? { branches: { of: code, ...c.head() } } : {}) };
   }
   if (sameTy(a.ty, b.ty) && a.ty.k === "list" && a.ty.of.k !== "undef") return listChoice(c);
   return scalarChoice(c);

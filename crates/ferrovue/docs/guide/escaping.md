@@ -25,7 +25,10 @@ built for it: its literal text escaped as ferrovue compiles it, each string part
 [`push_number`](crate::core::push_number), whose text holds nothing to escape. The bytes are the
 ones Vue writes for the joined string. On a component's root, where Vue writes an empty value as a
 bare attribute, the value is tested for emptiness by its parts: it is never empty where it holds
-literal text, a number or a boolean.
+literal text, a number or a boolean. A `?:` whose branches are such joins writes the parts of the
+branch it takes. A class name joined in `:class` (`'mosaic-' + shape`) is written part by part too,
+where Vue's trim of the whole name can reach only its first or last part: that part goes through
+[`js_trim_start`](crate::strings::js_trim_start) or [`js_trim_end`](crate::strings::js_trim_end).
 
 The property tests check that escaped text holds no markup and reads back as it was, for any
 string.

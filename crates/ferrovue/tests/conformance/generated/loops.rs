@@ -72,7 +72,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(102 + props.words.iter().map(|v| v.len()).sum::<usize>() + props.s.len() + props.rows.iter().map(|v| v.name.len()).sum::<usize>() + props.target.len());
+    out.reserve(118 + props.words.iter().map(|v| v.len()).sum::<usize>() + props.s.len() + props.rows.iter().map(|v| v.name.len()).sum::<usize>() + props.target.len());
     let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv_sum += fv_r.score as f64; } fv_sum };
     let s_mean = { let mut fv_sum_2: f64 = 0.0f64; let mut fv_count: f64 = 0.0f64; for fv_r_2 in props.rows.iter() { fv_sum_2 += fv_r_2.score as f64 * props.ratio; fv_count += 1.0; } if fv_count == 0.0 { std::borrow::Cow::<str>::Borrowed("none") } else { std::borrow::Cow::<str>::Owned(fv::core::js_to_fixed(fv_sum_2 / fv_count, 2)) } };
     let s_best = { let fv_top = f64::NEG_INFINITY; { let fv_low = f64::INFINITY; { let mut fv_top_2: f64 = fv_top; let mut fv_who: String = String::new(); let mut fv_low_2: f64 = fv_low; for fv_r_3 in props.rows.iter() { if fv_r_3.score as f64 > fv_top_2 { if (fv_r_3.score as f64) < fv_low_2 { fv_top_2 = fv_r_3.score as f64; fv_who = String::from(&*fv_r_3.name); fv_low_2 = fv_r_3.score as f64; } else { fv_top_2 = fv_r_3.score as f64; fv_who = String::from(&*fv_r_3.name); } } else { if (fv_r_3.score as f64) < fv_low_2 { fv_low_2 = fv_r_3.score as f64; } } } std::borrow::Cow::<str>::Owned(format!("{}:{}/{}", fv_who, fv::core::Js(fv_top_2), fv::core::Js(fv_low_2))) } } };
@@ -119,7 +119,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &{ let fv_left = props.n.min(6i64); { let mut fv_out_16: String = String::new(); let mut fv_left_2: f64 = fv_left as f64; let mut fv_i_7: f64 = fv_left as f64; while fv_i_7 > 0.0 { { use std::fmt::Write as _; let _ = write!(fv_out_16, "{} ", fv::core::Js(fv_i_7)); } fv_left_2 -= 2.0; fv_i_7 -= 2.0; } std::borrow::Cow::<str>::Owned(format!("{}({})", fv_out_16, fv::core::Js(fv_left_2))) } });
     out.push('|');
-    fv::core::escape_into(out, &(if props.n as f64 > 100.0 { std::borrow::Cow::<str>::Owned(format!("large{}", (if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" }))) } else { if props.n as f64 > 10.0 { std::borrow::Cow::<str>::Owned(format!("medium{}", (if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" }))) } else { std::borrow::Cow::<str>::Owned(format!("small{}", (if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" }))) } }));
+    if props.n as f64 > 100.0 {
+        out.push_str("large");
+        fv::core::escape_into(out, if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
+    } else {
+        if props.n as f64 > 10.0 {
+            out.push_str("medium");
+            fv::core::escape_into(out, if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
+        } else {
+            out.push_str("small");
+            fv::core::escape_into(out, if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
+        }
+    }
     out.push_str("</p><p>");
     fv::core::escape_into(out, &s_backwards);
     out.push_str("</p></section>");

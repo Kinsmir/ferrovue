@@ -589,7 +589,11 @@ describe("`?:`", () => {
       "out.push('|');",
       "fv::core::escape_into(out, if props.b { &props.d } else { fv::strings::js_trim(&props.s) });",
       "out.push('|');",
-      'fv::core::escape_into(out, &(if props.b { std::borrow::Cow::<str>::Borrowed(&*props.s) } else { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n))) }));',
+      "if props.b {",
+      "fv::core::escape_into(out, &props.s);",
+      "} else {",
+      "fv::core::push_int(out, props.n);",
+      "}",
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
