@@ -133,6 +133,8 @@ resolves a location as `router.resolve(to)` did. `navigate` is called with the s
 as before, the link to the current page included, and an error it throws is logged with
 `console.error`, as vue-router logs a navigation error. With `base` left out there is no base, as on
 the server: `linkRouter` read the page's `<base href>` then, so a page with one gives `base` the
-value of `router.base`. An application that read `useRouter()` or
-`$router`, rendered a `<RouterView>`, or passed its own `history`, builds a vue-router of its own.
+value of `router.base`. `useRouter()` and `$router` give the members `<RouterLink>` reads:
+`resolve`, `push`, `replace`, `options` and `currentRoute`. An application that used any other
+member of the router, rendered a `<RouterView>`, or passed its own `history`, builds a vue-router of
+its own.
 See [links when the application navigates on its own](crate::guide::routing#links-when-the-application-navigates-on-its-own).

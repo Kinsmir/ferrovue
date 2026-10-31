@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSSRApp, defineComponent, h, inject, isReactive, isRef, toRefs, unref, watch, type App, type Component } from "vue";
 import { renderToString } from "vue/server-renderer";
-import { RouterLink, routeLocationKey, routerKey, useRoute, useRouter, type RouteLocationRaw, type Router } from "vue-router";
+import { RouterLink, routeLocationKey, routerKey, useRoute, useRouter, type RouteLocationNormalizedLoaded, type RouteLocationRaw, type Router } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { linkRouter } from "../src/link-router.ts";
 import { linkRoutes, type LinkRoutesOptions } from "../src/link-routes.ts";
@@ -53,6 +53,8 @@ it("hands every navigation to navigate with the href and the route, and stays on
   const app = createSSRApp(Nav).use(links);
   expect(app.config.globalProperties.$route).toMatchObject({ fullPath: "/users/ada", href: "/users/ada" });
   const router = routerOf(app);
+  expect(app.config.globalProperties.$router).toBe(router);
+  expect(app.config.globalProperties.$route).toBe(router.currentRoute.value);
   await router.push("/account/orders?page=2#top");
   expect(navigate).toHaveBeenCalledTimes(1);
   expect(navigate.mock.calls[0]![0]).toBe("/account/orders?page=2#top");
@@ -121,6 +123,17 @@ it("rejects a push to a name no route has, without calling navigate", async () =
   const router = routerOf(createSSRApp({ render: () => null }).use(links));
   await expect(router.push({ name: "nowhere" })).rejects.toThrow("No match");
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it("gives $router and $route as vue-router's install gives them", async () => {
+  const links = linkRoutes(NESTED, { navigate: () => {}, location: "/users/ada?tab=posts" });
+  const Reading = defineComponent({
+    render() {
+      const { $router, $route } = this as unknown as { $router: Router; $route: RouteLocationNormalizedLoaded };
+      return h("p", `${$router.currentRoute.value.fullPath} ${String($route.params.name)}`);
+    },
+  });
+  expect(await renderToString(createSSRApp(Reading).use(links))).toBe("<p>/users/ada?tab=posts ada</p>");
 });
 
 it("gives a reactive route and a currentRoute ref, which watch and toRefs take without a warning", async () => {

@@ -13,6 +13,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - A class name joined with `+` in `:class`, and a join in a branch of `?:`, are written part by part, with no `String` built for them.
   [Escaping](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 
+### Fixed
+
+- `linkRoutes` sets `$router` to the router `useRouter()` gives, as vue-router's `install` does; 0.14.0 left `$router` unset.
+  [Links when the application navigates on its own](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#links-when-the-application-navigates-on-its-own).
+
 ## [0.14.0] - 2026-10-31
 
 ### Added
