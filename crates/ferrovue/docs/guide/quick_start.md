@@ -25,7 +25,7 @@ let-chains, and the latest stable Rust.
 
 ```json
 {
-  "$schema": "https://cdn.jsdelivr.net/npm/ferrovue@0.13.0/schema.json",
+  "$schema": "https://cdn.jsdelivr.net/npm/ferrovue@0.14.0/schema.json",
   "components": "client/components",
   "out": "src/generated",
   "routes": "client/routes.json"
