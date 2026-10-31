@@ -99,7 +99,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(65 + props.name.len() + 4);
+    out.reserve(67 + props.name.len() + 4);
     out.push_str("<!--[--><p class=\"");
     fv::attrs::class_into(out, false, &[if props.tone == ExportedNamesTone::Loud { "loud" } else { "calm" }]);
     out.push_str("\" title=\"");
@@ -111,7 +111,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         fv::core::escape_into(out, &props.name);
     }
-    out.push_str("</p><!--[-->");
+    out.push(' ');
+    fv::core::escape_into(out, &"size".to_uppercase());
+    out.push_str("!</p><!--[-->");
     for fv_s_ref in ["sm", "md", "lg"].iter() {
         let fv_s: &str = fv_s_ref;
         out.push_str("<span data-label=\"size\">");

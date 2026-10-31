@@ -5,14 +5,14 @@ import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { definePropsType, readTypeFile, refuseDates, tyOfTs } from "./typescript.ts";
 import { resolveImport } from "./resolve.ts";
-import { constOfDecl, type Declared, declareConsts, exportedConst } from "./constants.ts";
+import { constOfDecl, type Declared, declareConsts, exportedConst, exportedFunction } from "./constants.ts";
 import { localTy } from "./rust.ts";
 import { expr, fieldVal, typedBy } from "./expr.ts";
 import { atom, occurrences } from "./parens.ts";
 import { known } from "./narrowing.ts";
 import { bindingOf, bodyExpr, panicky } from "./blocks.ts";
 import { annotatedStr, declaredUnion, exactlyEnum, intoEnum, knownLiteral, refField } from "./enums.ts";
-import { exportedFunction, functionOf } from "./functions.ts";
+import { functionOf } from "./functions.ts";
 import { CLIENT_HOOKS, INERT_CALLS, refuseServerWrites, type SetupNames, setupNames } from "./setup-writes.ts";
 
 export function setupStatement(comp: Component, st: N): void {

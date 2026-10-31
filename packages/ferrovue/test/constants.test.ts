@@ -152,12 +152,28 @@ describe("constants a `.ts` file declares", () => {
     expect(render('import { double, capped } from "./c";', "<p>{{ double(4) }} {{ capped(4) }}</p>", { "c.ts": ts })).toMatch(like('out.push_str("<p>8 ");\n    fv::core::push_int(out, 8i64.min(3i64));'));
   });
 
-  it("has no value for a name `export { … }` exports under another name, as a type, or from another module", () => {
+  it("reads what a file passes on from another with `export … from` and `export * from`", () => {
+    const files = {
+      "c.ts": 'export { A, B as C } from "./d";\nexport * from "./e";\nexport { default as D } from "./d";',
+      "d.ts": "const LIMIT = 3;\nexport const A = 1;\nexport const B = 2;\nexport function capped(n: number): number {\n  return Math.min(n, LIMIT);\n}\nexport default 0 as const;\nconst Z = 4;\nexport { Z };",
+      "e.ts": 'export * from "./f";\nexport const E = "e";',
+      "f.ts": 'export * from "./e";\nexport enum F { One = 5 }',
+    };
+    expect(render('import { A, C, E, F } from "./c";', "<p>{{ A }} {{ C }} {{ E }} {{ F.One }}</p>", files)).toMatch(like('out.push_str("<p>1 2 e 5</p>");'));
+    expect(render('import { capped } from "./c";\nimport { capped as direct } from "./d";', "<p>{{ capped(9) }}{{ direct(9) }}</p>", { ...files, "c.ts": 'export { capped } from "./d";' })).toMatch(like("fv::core::push_int(out, 9i64.min(3i64));\n    fv::core::push_int(out, 9i64.min(3i64));"));
+  });
+
+  it("has no value for a name exported under another name, as a type, as a namespace, by two `export *`, or as a default `export *` leaves out", () => {
     const unavailable = (name: string) => [`FV0601 \`${name}\` is imported from \`./c\`, a module the server does not run`];
     expect(imported("A", "const A = 1;\nexport { A as B };", "<p>{{ A }}</p>")).toEqual(unavailable("A"));
     expect(imported("A", "const A = 1;\nexport type { A };", "<p>{{ A }}</p>")).toEqual(unavailable("A"));
     expect(imported("A", "const A = 1;\nexport { type A };", "<p>{{ A }}</p>")).toEqual(unavailable("A"));
-    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { "c.ts": 'export { A } from "./d";', "d.ts": "export const A = 1;" })).toEqual(unavailable("A"));
+    const d = { "d.ts": "export const A = 1;\nexport default 2;" };
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export type { A } from "./d";' })).toEqual(unavailable("A"));
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export * as A from "./d";' })).toEqual(unavailable("A"));
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export * from "./d";\nexport * from "./e";', "e.ts": "export const A = 1;" })).toEqual(unavailable("A"));
+    expect(refusals('import A from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export * from "./d";' })).toEqual([expect.stringMatching(/^FV0601 `A`/)]);
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { "c.ts": 'export { A } from "./d";', "d.ts": 'export { A } from "./c";' })).toEqual(unavailable("A"));
   });
 
   it("reads only the `const` declarations a file has, with a value", () => {

@@ -1,7 +1,7 @@
 import { type Component, type Fn, type N, type Scope, type Ty, type Val, fail, placeOf } from "./model.ts";
 import { GenError } from "./errors.ts";
 import type { Const } from "./constants.ts";
-import { constOfDecl, exportedConst } from "./constants.ts";
+import { constOfDecl, exportedConst, exportedFunction } from "./constants.ts";
 import { ctx } from "./context.ts";
 import { expr, typedBy } from "./expr.ts";
 import { bodyExpr, bound, destructured } from "./blocks.ts";
@@ -36,12 +36,6 @@ export function declareFunctions(home: Component, body: N[], file: string): Map<
   return found;
 }
 
-/** The function a `.ts` file exports as `name`. */
-export function exportedFunction(file: string, name: string): Fn | undefined {
-  const read = ctx.tsModules.get(file);
-  const local = read?.exports.get(name);
-  return local === undefined ? undefined : read!.functions.get(local);
-}
 
 interface Module {
   home: Component;

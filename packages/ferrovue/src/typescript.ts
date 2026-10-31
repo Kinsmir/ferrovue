@@ -331,7 +331,7 @@ export function readTypeFile(file: string): void {
   tagAst(body, "source");
   typesImports(home, body);
   ctx.constDecls.set(file, declareConsts(home, body));
-  ctx.tsModules.set(file, { home, body, functions: declareFunctions(home, body, file), exports: exportsOf(body) });
+  ctx.tsModules.set(file, { home, body, functions: declareFunctions(home, body, file), exports: exportsOf(rel, body) });
   for (const d of declareTypes(home, body, new Map(), ctx.typeAliases)) {
     const known = ctx.typeDecls.get(d.name);
     if (known === undefined && ctx.typeStructs.has(d.name)) fail(home, "FV0319", `\`${d.name}\` is declared by ${ctx.typeFiles.get(d.name)} too`, d.node);
@@ -346,7 +346,8 @@ export function readTypeFile(file: string): void {
     ctx.typeFiles.set(d.name, rel);
   }
   for (const st of body) {
-    if (st.type !== "ImportDeclaration" || st.source.value === TYPES_MODULE || st.source.value.endsWith(".vue")) continue;
+    const forwards = (st.type === "ExportNamedDeclaration" && st.source) || st.type === "ExportAllDeclaration";
+    if ((st.type !== "ImportDeclaration" && !forwards) || st.source.value === TYPES_MODULE || st.source.value.endsWith(".vue")) continue;
     const imported = resolveImport(rel, st.source.value);
     if (imported !== null) readTypeFile(imported);
   }

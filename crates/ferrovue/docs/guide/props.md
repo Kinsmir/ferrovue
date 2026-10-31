@@ -877,10 +877,12 @@ where the template reads it, with the code of what stops it, at the place it is 
 object constant read whole, and `new` of anything but `Date` and `Map`.
 
 A file exports a constant, an `enum` or a function on its declaration (`export const`), by name
-(`export { SIZES, SORTS as ORDERS }`) or as its default (`export default LABELS`), and a component
-imports it under the name it is exported as. A name exported as a type only, or from another module
-(`export { SIZES } from "./sizes"`), has no value on the server: import it from the file that
-declares it.
+(`export { SIZES, SORTS as ORDERS }`) or as its default (`export default LABELS`), and passes on
+what another `.ts` file of the project exports with `export { SIZES } from "./sizes"` and
+`export * from "./sizes"`, as an `index.ts` gathers a folder's modules. A component imports a name
+under the one it is exported as. As in JavaScript, `export *` passes on no default, and a name two
+`export *` give is exported by neither. A name exported as a type only (`export type { SIZES }`) or
+as a namespace (`export * as sizes from`) has no value on the server.
 
 ## Lookup tables
 

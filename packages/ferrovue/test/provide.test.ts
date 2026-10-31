@@ -13,6 +13,12 @@ afterEach(() => {
   for (const made of roots.splice(0)) rmSync(made, { recursive: true, force: true });
 });
 
+function freshRoot(): string {
+  const root = mkdtempSync(join(tmpdir(), "ferrovue-"));
+  roots.push(root);
+  return root;
+}
+
 const KEYS = `import type { InjectionKey, Ref } from "vue";
 export interface TabsState { active: string; count: number }
 export const ThemeKey: InjectionKey<string> = Symbol("theme");
@@ -24,9 +30,7 @@ export interface Day { at: Date }
 export const DaysKey: InjectionKey<Day[]> = Symbol("days");
 `.concat("export { ThemeKey as Theme };\n");
 
-function project(components: Record<string, string>, extra: Partial<Config> = {}): Map<string, string> {
-  const root = mkdtempSync(join(tmpdir(), "ferrovue-"));
-  roots.push(root);
+function project(components: Record<string, string>, extra: Partial<Config> = {}, root = freshRoot()): Map<string, string> {
   mkdirSync(join(root, "components"), { recursive: true });
   mkdirSync(join(root, "types"), { recursive: true });
   writeFileSync(join(root, "types", "keys.ts"), KEYS);
@@ -69,6 +73,17 @@ describe("provide and inject", () => {
     const scope = sfc('provide(ThemeKey, "dark");', '<Button label="in" />', 'import Button from "./Button.vue";');
     const out = project({ X: scope, Button: aliased });
     expect(out.get("x.rs")).toContain('let fv_provides = super::provides::Provides { theme_key: Some("dark") };');
+    expect(out.get("button.rs")).toContain('fv_provides.theme_key.unwrap_or("light")');
+    expect(out.get("provides.rs")).toContain("/// What is provided under `ThemeKey`, exported from `types/keys.ts`.\n    pub theme_key: Option<&'p str>,");
+  });
+
+  it("reads a key a file passes on with `export … from` as the key of the file that declares it", () => {
+    const aliased = sfc('import { ThemeKey as Key } from "../types/index";\nconst theme = inject(Key, "light");', '<button :class="theme">{{ label }}</button>');
+    const scope = sfc('provide(ThemeKey, "dark");', '<Button label="in" />', 'import Button from "./Button.vue";');
+    const root = freshRoot();
+    mkdirSync(join(root, "types"), { recursive: true });
+    writeFileSync(join(root, "types", "index.ts"), 'export * from "./keys";');
+    const out = project({ X: scope, Button: aliased }, {}, root);
     expect(out.get("button.rs")).toContain('fv_provides.theme_key.unwrap_or("light")');
     expect(out.get("provides.rs")).toContain("/// What is provided under `ThemeKey`, exported from `types/keys.ts`.\n    pub theme_key: Option<&'p str>,");
   });

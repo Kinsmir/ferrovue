@@ -8,7 +8,6 @@ import { slotFieldBorrows, slotFieldTy, slotFieldValue } from "../slots.ts";
 import { fieldInit, ownInto } from "../children.ts";
 import { setupSource } from "../script.ts";
 import { header } from "../rust.ts";
-import { relativePath } from "../paths.ts";
 import { heldStr, isTemporary } from "../strings.ts";
 import { type Plugin, runOf, scopeOf, slotFieldsOf } from "../plugin.ts";
 
@@ -140,7 +139,7 @@ function keyOf(comp: Component, n: N, script: N[]): Key {
     const file = imported ? resolveImport(comp.file, imported.from) : null;
     const decl = file !== null ? exportedConst(file, imported!.name) : undefined;
     if (decl?.node.type === "VariableDeclarator" && symbolInit(decl.node.init)) {
-      const rel = relativePath(ctx.rootDir, file!);
+      const rel = decl.home.file;
       const own: string = decl.node.id.name;
       return keyNamed(comp, n, `${rel}#${own}`, `\`${own}\``, rel, snake(own), () => declaredOf(decl));
     }
