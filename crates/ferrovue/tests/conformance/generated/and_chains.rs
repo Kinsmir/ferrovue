@@ -151,7 +151,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(134 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
+    out.reserve(152 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
     let s_in_range = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|fv_tone| match fv_tone { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
@@ -184,7 +184,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if if let Some(fv_x_2) = props.m { if (fv_x_2 as f64) < 0.0 { true } else { fv_x_2 as f64 > 99.0 } } else { true } { "true" } else { "false" });
     out.push('|');
-    fv::core::escape_into(out, &(if let Some(fv_m_2) = props.m { if fv_m_2 as f64 >= 0.0 { if fv_m_2 as f64 <= 99.0 { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(fv_m_2 as f64 + 1.0))) } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") } } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    if let Some(fv_m_2) = props.m {
+        if fv_m_2 as f64 >= 0.0 {
+            if fv_m_2 as f64 <= 99.0 {
+                fv::core::push_number(out, fv_m_2 as f64 + 1.0);
+            } else {
+                out.push_str("none");
+            }
+        } else {
+            out.push_str("none");
+        }
+    } else {
+        out.push_str("none");
+    }
     out.push_str("</p><p class=\"");
     fv::attrs::class_into(out, false, &[if let Some(fv_tone_4) = props.tone { match fv_tone_4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
     out.push_str("\">");

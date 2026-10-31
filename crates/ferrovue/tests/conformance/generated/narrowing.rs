@@ -78,7 +78,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(274 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2));
+    out.reserve(283 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2));
     out.push_str("<section>");
     if let Some(fv_label) = props.label.as_deref() {
         out.push_str("<p>");
@@ -112,7 +112,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_user) = props.user.as_ref() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_user.name);
-        fv::core::escape_into(out, &(if let Some(fv_avatar) = fv_user.avatar.as_deref() { std::borrow::Cow::<str>::Owned(format!(" ({})", fv::core::Js(fv::strings::js_length(fv_avatar)))) } else { std::borrow::Cow::<str>::Borrowed("") }));
+        if let Some(fv_avatar) = fv_user.avatar.as_deref() {
+            out.push_str(" (");
+            fv::core::push_int(out, fv::strings::js_length(fv_avatar));
+            out.push(')');
+        }
         out.push_str("</p>");
     } else {
         out.push_str("<p>no user</p>");

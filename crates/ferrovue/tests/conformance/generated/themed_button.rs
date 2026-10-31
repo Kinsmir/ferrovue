@@ -47,9 +47,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(92 + props.label.len());
-    out.push_str("<button type=\"button\" class=\"btn");
-    fv::attrs::class_into(out, true, &[&*format!("btn-{}", fv_provides.theme_key.unwrap_or("light"))]);
+    out.reserve(97 + props.label.len());
+    out.push_str("<button type=\"button\" class=\"btn btn-");
+    fv::core::escape_into(out, fv::strings::js_trim_end(fv_provides.theme_key.unwrap_or("light")));
     out.push('"');
     if let Some(v) = fv_provides.size {
         out.push_str(" data-size=\"");

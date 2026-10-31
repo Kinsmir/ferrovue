@@ -43,7 +43,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(101 + props.ordered.len());
+    out.reserve(130 + props.ordered.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "client/components/Delivery.vue");
     let s_arrives = std::cell::LazyCell::new(|| fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_parse(&props.ordered), 5, 41) + props.days as f64 * 86400000.0));
     out.push_str("<p class=\"delivery\"> Ordered on <time datetime=\"");
@@ -51,7 +51,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::escape_into(out, &fv::strings::js_slice(&fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.ordered), 10, 69)), 10, 69), 0.0f64, Some(10.0f64)));
     out.push_str("</time>, arrives ");
-    fv::core::escape_into(out, &(if props.days as f64 == 1.0 { std::borrow::Cow::<str>::Borrowed("the next day") } else { std::borrow::Cow::<str>::Owned(format!("{} days later", fv::core::Js(props.days))) }));
+    if props.days as f64 == 1.0 {
+        out.push_str("the next day");
+    } else {
+        fv::core::push_int(out, props.days);
+        out.push_str(" days later");
+    }
     out.push_str(", on <time datetime=\"");
     fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(*s_arrives), 11, 83));
     out.push_str("\">");

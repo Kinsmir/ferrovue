@@ -100,7 +100,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(205 + 258 * props.rows.len() + 21 * props.stamps.len() + props.rows.iter().map(|v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()).sum::<usize>() + props.stamps.iter().map(|(k, _)| k.len()).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()));
+    out.reserve(219 + 258 * props.rows.len() + 21 * props.stamps.len() + props.rows.iter().map(|v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()).sum::<usize>() + props.stamps.iter().map(|(k, _)| k.len()).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.title.len() + v.by_name.iter().map(|(k, _)| k.len()).sum::<usize>()));
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateRows.vue");
     let s_edits = props.rows.iter().filter(|fv_r| fv_r.edited.as_ref().map(fv::date::js_time_of).is_some()).count() as i64;
     let s_first = fv::strings::js_item_at(props.days.iter().map(fv::date::js_time_of), 0.0f64);
@@ -190,7 +190,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(" edited, ");
     fv::core::push_int(out, props.days.len() as i64);
     out.push_str(" days");
-    fv::core::escape_into(out, &(if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) { std::borrow::Cow::<str>::Owned(format!(", {} maybe", fv::core::Js(fv_maybe.len() as i64))) } else { std::borrow::Cow::<str>::Borrowed("") }));
+    if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) {
+        out.push_str(", ");
+        fv::core::push_int(out, fv_maybe.len() as i64);
+        out.push_str(" maybe");
+    }
     out.push_str("</p><!--[-->");
     for fv_day in props.days.iter().map(fv::date::js_time_of) {
         out.push_str("<i>");

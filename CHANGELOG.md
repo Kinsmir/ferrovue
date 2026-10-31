@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Changed
+
+- A class name joined with `+` in `:class`, and a join in a branch of `?:`, are written part by part, with no `String` built for them.
+  [Escaping](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
+
 ## [0.14.0] - 2026-10-31
 
 ### Added

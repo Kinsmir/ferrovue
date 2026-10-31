@@ -118,6 +118,7 @@ A fixture is a JSON object of props plus optional keys:
 | `Enumerated` | The enumerated attributes `contenteditable`, `spellcheck` and `draggable` bound to booleans (written as `"true"` and `"false"`), strings, `""`, `null`, an absent optional, literals and static values, with hostile strings |
 | `SvgXlink` | `xlink:href` and `xlink:title` in SVG, static and bound on `<use>`, `<a>` and `<image>`, with a URL holding `&`, empty values and hostile ones |
 | `AttrParts` | Attribute values joined with `+` and template literals, on the root and on an inner element: string, integer, `Float`, boolean, optional and list parts, a value that is one string, an empty one written bare on the root, a literal, `NaN`, the infinities, `-0`, integers beyond 2⁵³ and markup-breaking characters in every string |
+| `JoinBranches` | Class names joined with `+` in `:class`, trimmed at their ends as Vue trims them, after static names, after items that may write nothing and beside a join of two strings; `?:` whose branches join strings and numbers, in `{{ }}` and in an attribute, nested, with a test that narrows an optional prop and its negation; spaces JavaScript trims (U+00A0, U+FEFF, U+2028) and markup-breaking characters in every string |
 | `BoundObject` | `v-bind` of an object literal on elements, before and after their own attributes: strings, numbers, booleans, `undefined`, `data-` / `aria-`, a class array after a static class, a style object merged with a static `style`, a form control's `value` and `disabled` |
 | `Styles`, `Shown` | `:style` objects, arrays, strings and conditional objects merged with a static `style`; `v-show`, including on the root; a global `<style>` block |
 | `Markup` | Entities, void elements, SVG attributes, `<pre>` whitespace, whitespace condensing, a `<template lang="html">` |
@@ -273,7 +274,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Object literals | `ObjectLiterals`, `ObjectShapes`, `UnionObjects`, `LiteralEnumField` |
 | Loaders | `Loaded`, `LoadedComments`, `LoadedRanks`, `LoadedDates`, `LoadedStamps`, `LoadedAll` |
 | Provide and inject | `TabsPage`, `Tabs`, `Tab`, `ThemedButton`, `ThemeScope`, `Swatch`, `SwatchShelf`, `ThemedShelf`, `ThemedList`, `ThemedChoice` |
-| Text | `Text`, `MixedTernary`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
+| Text | `Text`, `MixedTernary`, `JoinBranches`, `Exprs`, `Numbers`, `Precision`, `WideProducts`, `WideChoices`, `SignedZeros`, `Meter`, `Parsing`, `NumberTests`, `Regressions`, `OptionalChains`, `StringOf`, `MathMore`, `UriParts`, `TypeofTests` |
 | Strings | `Strings`, `Exprs`, `Text`, `StringSearch`, `StringOf`, `DigitGroups`, `RegexText` |
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic`, `UnionOptionalRef`, `SelfCompare` |
@@ -281,7 +282,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
 | HTML comments | `Comments`, `CommentBox`, `TagContent` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary`, `Enumerated`, `SvgXlink` |
-| `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass` |
+| `class` | `Attrs`, `BoundObject`, `VnodeClass`, `AsyncClass`, `JoinBranches` |
 | `style` | `Styles`, `Shown`, `BoundObject` |
 | Scoped styles | `ScopedPage`, `ScopedLeaf`, `ScopedRoot`, `ScopedPair`, `ScopedCard`, `ScopedShelf`, `ScopedRack`, `ScopedFade`, `ScopedTree`, `KebabTree`, `ScopedNav`, `ScopedLink`, `ScopedQuirks` |
 | `v-bind()` in `<style>` | `CssVars`, `CssVarsPage`, `CssVarsRoot`, `CssVarsLeaf`, `CssVarsShow`, `CssVarsBound`, `CssVarsTag`, `CssVarsLink`, `CssVarsWait`, `CssVarsLater`, `CssVarsBranch`, `CssVarsShapes` |

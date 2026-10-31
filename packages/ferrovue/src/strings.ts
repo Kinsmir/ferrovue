@@ -177,6 +177,13 @@ function mayBeEmpty(v: Val): boolean {
   return v.ty.k === "str" && !nonEmptyLiteral(v);
 }
 
+/** The pieces of a string `format!` builds, while its code is that `format!`. */
+export function piecesOf(v: Val): Piece[] | undefined {
+  const f = v.format;
+  if (v.ty.k !== "str" || f === undefined || v.code !== `&*format!(${rustStr(f.text)}, ${f.args.join(", ")})`) return undefined;
+  return f.pieces;
+}
+
 export function formatted(comp: Component, given: (string | Val)[], n: N, what: string): Val {
   let fmt = "";
   const args: string[] = [];

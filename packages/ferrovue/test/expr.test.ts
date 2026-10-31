@@ -469,13 +469,16 @@ describe("optional chains", () => {
 describe("a `?:` shown as text whose branches differ in type", () => {
   it("writes each branch as JavaScript writes it, in text, attributes and template literals", () => {
     const out = render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", "<p>{{ on ? n : s }}|{{ on ? (n) : s }}|{{ (on ? s : n) }}|{{ on ? m : s }}</p>");
-    const n = "std::borrow::Cow::<str>::Owned(format!(\"{}\", fv::core::Js(props.n)))";
-    const s = "std::borrow::Cow::<str>::Borrowed(&*props.s)";
-    expect(out).toMatch(like(`fv::core::escape_into(out, &(if props.on { ${n} } else { ${s} }));\n    out.push('|');\n    fv::core::escape_into(out, &(if props.on { ${n} } else { ${s} }));`));
-    expect(out).toMatch(like(`fv::core::escape_into(out, &(if props.on { ${s} } else { ${n} }));`));
-    expect(out).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(${s}) }).as_deref() {`));
-    expect(render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ on ? (off ? n : s) : s }}</p>")).toMatch(like(`fv::core::escape_into(out, &(if props.on { if props.off { ${n} } else { ${s} } } else { ${s} }));`));
-    expect(render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", '<p :id="on ? m : s"></p>')).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(${s}) }).as_deref() {`));
+    const n = "fv::core::push_int(out, props.n);";
+    const s = "fv::core::escape_into(out, &props.s);";
+    const branches = (test: string, yes: string, no: string, at = 4): string => {
+      const pad = " ".repeat(at);
+      return `if ${test} {\n${pad}    ${yes}\n${pad}} else {\n${pad}    ${no}\n${pad}}`;
+    };
+    expect(out).toMatch(like(`${branches("props.on", n, s)}\n    out.push('|');\n    ${branches("props.on", n, s)}\n    out.push('|');\n    ${branches("props.on", s, n)}`));
+    expect(out).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(std::borrow::Cow::<str>::Borrowed(&*props.s)) }).as_deref() {`));
+    expect(render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ on ? (off ? n : s) : s }}</p>")).toMatch(like(branches("props.on", branches("props.off", n, s, 8), s)));
+    expect(render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", '<p :id="on ? m : s"></p>')).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(std::borrow::Cow::<str>::Borrowed(&*props.s)) }).as_deref() {`));
     expect(
       render(
         "defineProps<{ on: boolean; n: number; s: string; b: boolean; l: string[]; m?: number }>();",
@@ -483,17 +486,16 @@ describe("a `?:` shown as text whose branches differ in type", () => {
       ),
     ).toMatch(like(
       [
-        `fv::core::escape_into(out, &(if props.on { ${n} } else { ${s} }));`,
+        branches("props.on", n, s),
         `fv::core::escape_into(out, if props.on { if props.b { "true" } else { "false" } } else { &props.s });`,
-        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined"))) } else { ${s} }));`,
+        branches("props.on", `{ use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined")); }`, s),
         `fv::core::escape_into(out, (if props.on { None } else { Some(&*props.s) }).unwrap_or("null"));`,
         `fv::core::escape_into(out, (if props.on { None } else { Some(&*props.s) }).unwrap_or("undefined"));`,
-        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { ${s} }));`,
-        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(1.5f64))) } else { ${s} }));`,
+        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }));`,
+        branches("props.on", 'out.push_str("1.5");', s),
       ].join("\n    out.push('|');\n    "),
     ));
   });
-
   it("refuses a `?:` of a list and a string in text, and one that is no branch of what is shown", () => {
     expect(refusals("defineProps<{ on: boolean; l: string[]; s: string }>();", "<p>{{ on ? l : s }}</p>")).toEqual(["FV0623 the two branches of `?:` differ in type"]);
     expect(refusals("defineProps<{ on: boolean; n: number; s: string }>();", "<p>{{ [on ? n : s] }}</p>")).toEqual(["FV0623 the two branches of `?:` differ in type"]);
@@ -984,12 +986,10 @@ describe("values that may be absent, read and shown", () => {
 
   it("writes `null` and `undefined` in a template literal's `?:` whose branches differ in type", () => {
     const out = render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ `${on ? (off ? null : n) : s}|${on ? (off ? undefined : n) : s}` }}</p>");
-    const n = 'std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(props.n)))';
-    expect(out).toMatch(like(
-      `fv::core::escape_into(out, &(if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("null") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }));\n    out.push('|');\n    fv::core::escape_into(out, &(if props.on { if props.off { std::borrow::Cow::<str>::Borrowed("undefined") } else { ${n} } } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }));`,
-    ));
+    const branches = (word: string): string =>
+      `if props.on {\n        if props.off {\n            out.push_str("${word}");\n        } else {\n            fv::core::push_int(out, props.n);\n        }\n    } else {\n        fv::core::escape_into(out, &props.s);\n    }`;
+    expect(out).toMatch(like(`${branches("null")}\n    out.push('|');\n    ${branches("undefined")}`));
   });
-
   it("places the refusal of a list in a template literal's `?:` at the list", () => {
     const made = project({ "X.vue": sfc("defineProps<{ on: boolean; ds: Date[]; s: string }>();", "<p>{{ `${on ? ds : s}` }}</p>") });
     expect(() => generate(made, { components: "components", out: "out" })).toThrow(expect.objectContaining({ code: "FV0708", at: { file: "components/X.vue", line: 4, column: 25 } }));

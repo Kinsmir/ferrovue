@@ -6,8 +6,8 @@ import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
-import { asCow, isTemporary, unquote } from "./strings.ts";
-import { atom, bare, condition, ifElse, not, receiver, scrutinee, strArg } from "./parens.ts";
+import { asCow, isTemporary, piecesOf, unquote } from "./strings.ts";
+import { atom, bare, condition, ifElse, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
@@ -16,14 +16,17 @@ import { mergedStyle, renderStyle, styleAttr } from "./styles.ts";
 
 const NUMBER_BYTES = 6;
 
-function piecesOf(v: Val): Piece[] | undefined {
-  const f = v.format;
-  if (v.ty.k !== "str" || f === undefined || v.code !== `&*format!(${rustStr(f.text)}, ${f.args.join(", ")})`) return undefined;
-  return f.pieces;
-}
-
 function emptyTest(v: Val): string {
   if (neverEmpty(v.ty)) return "false";
+  const branches = v.branches;
+  if (branches !== undefined && branches.of === v.code) {
+    const [yes, no] = [emptyTest(branches.yes), emptyTest(branches.no)];
+    const binds = branches.test.startsWith("let ");
+    if (yes === no && !binds) return yes;
+    if (!binds && yes === "false") return logical(not(branches.test), "&&", no);
+    if (!binds && no === "false") return logical(branches.test, "&&", yes);
+    return `if ${branches.test} { ${yes} } else { ${no} }`;
+  }
   const pieces = piecesOf(v);
   if (pieces === undefined) return `${receiver(v.code)}.is_empty()`;
   const strs = pieces.filter((p): p is Val => typeof p !== "string" && !("shown" in p) && p.ty.k === "str");
@@ -31,14 +34,29 @@ function emptyTest(v: Val): string {
   return strs.map((p) => `${receiver(p.code)}.is_empty()`).join(" && ");
 }
 
+export function displayPieces(e: Emitter, pieces: Piece[]): void {
+  for (const p of pieces) {
+    if (typeof p === "string") e.lit(escapeHtml(p));
+    else if ("shown" in p) e.stmt(`{ use std::fmt::Write as _; let _ = write!(out, "{}", ${p.shown}); }`);
+    else display(e, p);
+  }
+}
+
 export function display(e: Emitter, v: Val): boolean {
   const pieces = piecesOf(v);
   if (pieces !== undefined) {
-    for (const p of pieces) {
-      if (typeof p === "string") e.lit(escapeHtml(p));
-      else if ("shown" in p) e.stmt(`{ use std::fmt::Write as _; let _ = write!(out, "{}", ${p.shown}); }`);
-      else display(e, p);
-    }
+    displayPieces(e, pieces);
+    return true;
+  }
+  const branches = v.branches;
+  if (branches !== undefined && branches.of === v.code) {
+    e.open(`if ${branches.test}`);
+    display(e, branches.yes);
+    e.close(" else {");
+    const at = e.lines.length;
+    display(e, branches.no);
+    e.close();
+    if (e.lines.length === at + 1) e.lines.splice(at - 1, 2, e.lines[at - 1]!.replace(/\} else \{$/, "}"));
     return true;
   }
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
