@@ -81,7 +81,8 @@ impl Value {
     }
 
     /// Whether serde_json reads the value's JSON back as the value: no float that is not finite,
-    /// and no `f32`, which serde_json reads back as the nearest `f64`.
+    /// no `f32`, which serde_json reads back as the nearest `f64`, and no map key serde_json
+    /// reserves for its own types, such as the one `raw_value` reads as a raw value.
     #[must_use]
     pub fn reads_back(&self) -> bool {
         match self {
@@ -92,7 +93,9 @@ impl Value {
             | Value::Tuple(items)
             | Value::TupleStruct(items)
             | Value::TupleVariant(_, items) => items.iter().all(Value::reads_back),
-            Value::Map(entries) => entries.iter().all(|(_, v)| v.reads_back()),
+            Value::Map(entries) => entries
+                .iter()
+                .all(|(k, v)| !k.starts_with("$serde_json::private::") && v.reads_back()),
             Value::Struct(fields) | Value::StructVariant(_, fields) => {
                 fields.iter().all(|(_, v)| v.reads_back())
             }
