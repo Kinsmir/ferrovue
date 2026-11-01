@@ -909,6 +909,10 @@ packages/ferrovue/src/members.ts: ConditionalExpression: vec !== undefined => tr
 # refuses, and `meet` has checked the pair just before, so its name is in no message.
 packages/ferrovue/src/operators.ts: StringLiteral: "`+`" => "" in const joined = formatted(comp, [a, b], n, "`+`");
 
+# operators.ts, `plus`: `annotatedStr` returns a value with no `variant` as it is, so calling it
+# whatever the test gives returns the same value.
+packages/ferrovue/src/operators.ts: ConditionalExpression: joined.variant !== undefined => true in return joined.variant !== undefined ? annotatedStr(joined, STR) : joined;
+
 # operators.ts, `arithmeticOrOrder`: only a literal has a `value`, and a literal that is not an
 # integer is a float, which makes `int` false.
 packages/ferrovue/src/operators.ts: LogicalOperator: n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) => n.right.type === "NumericLiteral" || Number.isInteger(n.right.value) in const intDivisor = n.right.type === "NumericLiteral" && Number.isInteger(n.right.value) && n.right.value !== 0;

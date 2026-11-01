@@ -411,6 +411,10 @@ describe("unary operators", () => {
 });
 
 describe("equality", () => {
+  it("compares a union joined with `+` to any string, as the string the join gives", () => {
+    expect(lines('<p>{{ (k + "") === "c" }}</p>')).toMatch(like('out.push_str(if fv::props::Union::as_str(props.k) == "c" { "true" } else { "false" });'));
+  });
+
   it("tests optional values against `null` and `undefined`, and knows the answer for values never absent", () => {
     expect(lines("<p>{{ os == null }}|{{ os != null }}|{{ nl == undefined }}|{{ s == null }}|{{ s != undefined }}|{{ s === undefined }}|{{ s !== undefined }}|{{ s === null }}|{{ null === s }}|{{ undefined !== s }}</p>")).toMatch(like([
       'out.push_str("<p>");',
@@ -912,6 +916,13 @@ describe("an operand beside itself", () => {
 });
 
 describe("integers held as `i64`", () => {
+  it("holds `-`, `*` and `%` of an integer and a `Float` as a `Float`", () => {
+    expect(lines("<p>{{ n - f }} {{ n * f }} {{ n % f }}</p>")).toMatch(like("fv::core::push_number(out, props.n as f64 - props.f);\nout.push(' ');\nfv::core::push_number(out, props.n as f64 * props.f);\nout.push(' ');\nfv::core::push_number(out, props.n as f64 % props.f);"));
+    const float = "FV0824 `[…]` reads a list's item by an integer index, a `number` that is present, and this index is a `Float`, which may hold a fraction or be `NaN`: `.at()` takes any number";
+    expect(refusals(PROPS, "<p>{{ xs[n - f] }}</p>")).toEqual([float]);
+    expect(refusals(PROPS, "<p>{{ xs[n * f] }}</p>")).toEqual([float]);
+  });
+
   it("holds the accumulator of a `.reduce()` of integers as an `i64`, refused where the sum leaves its range", () => {
     expect(lines("<p>{{ is.reduce((a, x) => a + x, 0) }}</p>")).toMatch(/fv::strings::js_reduce\(props\.is\.iter\(\)\.copied\(\), 0i64, \|fv_a, fv_x\| fv_refusals\.keep\(fv::render::try_int\(fv_a as f64 \+ fv_x as f64\), \d+, \d+\)\)/);
   });
