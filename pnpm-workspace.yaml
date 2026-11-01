@@ -20,6 +20,3 @@ catalog:
   typescript: "^7.0.2"
   vite: "^8.3.5"
   vitest: "^5.0.5"
-
-patchedDependencies:
-  "@stryker-mutator/vitest-runner@10.0.0": patches/@stryker-mutator__vitest-runner@10.0.0.patch
