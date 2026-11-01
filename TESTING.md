@@ -732,9 +732,6 @@ also sends its report to the [Stryker Dashboard](https://dashboard.stryker-mutat
 as a module named after its modules (`attrs-template`, `constants`, `dynamic`, `expr`), with the
 `STRYKER_DASHBOARD_API_KEY` of the `stryker-dashboard` environment; a local run sends nothing.
 
-The vitest runner is patched (`patches/`): Stryker 10 names a test by its describe blocks and
-title joined with spaces, and vitest 5 matches `--testNamePattern` against the names joined with
-` > `, so without the patch a mutant covered only by nested tests ran none of them and survived.
 TypeScript 7 has no JavaScript API, so `tsconfigFile` points Stryker's tsconfig rewriting at a
 file that does not exist, and the TypeScript checker is off: vitest strips the types anyway.
 
