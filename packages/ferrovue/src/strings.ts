@@ -281,7 +281,7 @@ export function regexShape(pattern: string, flags: string): { refused: string } 
   const number = (): number | null => {
     const start = at;
     while (/[0-9]/.test(peek() ?? "")) at++;
-    return at > start ? Number(pattern.slice(start, at)) : null;
+    return at > start ? Math.min(Number(pattern.slice(start, at)), 2 ** 31 - 1) : null;
   };
   const quantifier = (): [number, number] | null | string => {
     const c = peek();

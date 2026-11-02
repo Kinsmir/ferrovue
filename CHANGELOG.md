@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Fixed
+
+- A quantifier bound above 2147483647 in a regular expression (`/a{2,99999999999999999999999}/`) counts as 2147483647, as V8 counts it; 0.14.1 matched the quantifier as literal text.
+  [Regular expressions](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#regular-expressions).
+
 ## [0.14.1] - 2026-10-31
 
 ### Changed

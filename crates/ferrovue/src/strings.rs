@@ -1219,6 +1219,7 @@ const SPACES: [(u16, u16); 10] = [
 ];
 const DIGITS: [(u16, u16); 1] = [(0x30, 0x39)];
 const WORD: [(u16, u16); 4] = [(0x30, 0x39), (0x41, 0x5A), (0x5F, 0x5F), (0x61, 0x7A)];
+const QUANTIFIER_BOUND: usize = i32::MAX as usize;
 
 fn negated(ranges: &[(u16, u16)]) -> Vec<(u16, u16)> {
     let mut out = Vec::new();
@@ -1367,10 +1368,13 @@ impl Parser<'_> {
         while self.peek().is_some_and(|u| (0x30..=0x39).contains(&u)) {
             self.at += 1;
         }
-        String::from_utf16(&self.units[start..self.at])
-            .ok()?
-            .parse()
-            .ok()
+        (self.at > start).then(|| {
+            self.units[start..self.at].iter().fold(0, |n: usize, &u| {
+                n.saturating_mul(10)
+                    .saturating_add(usize::from(u - 0x30))
+                    .min(QUANTIFIER_BOUND)
+            })
+        })
     }
 
     fn quantifier(&mut self) -> Result<Option<(usize, usize)>, String> {
@@ -1391,17 +1395,17 @@ impl Parser<'_> {
                 let max = if self.peek() == Some(u16::from(b',')) {
                     self.at += 1;
                     if self.peek() == Some(u16::from(b'}')) {
-                        usize::MAX
+                        Some(usize::MAX)
                     } else {
-                        self.number().unwrap_or(usize::MAX - 1)
+                        self.number()
                     }
                 } else {
-                    min
+                    Some(min)
                 };
-                if self.peek() != Some(u16::from(b'}')) || max == usize::MAX - 1 {
+                let Some(max) = max.filter(|_| self.peek() == Some(u16::from(b'}'))) else {
                     self.at = start;
                     return Ok(None);
-                }
+                };
                 if max < min {
                     return Err(format!(
                         "`/{}/` has a quantifier out of order",
