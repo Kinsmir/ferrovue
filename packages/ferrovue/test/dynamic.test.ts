@@ -115,6 +115,17 @@ describe("the prop `<component :is>` reads", () => {
     expect(tagOf('withDefaults(defineProps<{ tag?: "b" | "i" }>(), { tag: "i" });')).toMatch(like(element("fv_tag1", 'XTag::B => "b", XTag::I => "i"').replace("match props.tag", "match props.tag.unwrap_or(XTag::I)")));
   });
 
+  it("reads a prop typed as one string literal, through parentheses, template literals, unions and aliases", () => {
+    const tagOf = (script: string) => render(script, '<component :is="tag" />');
+    for (const type of ['"b"', '("b")', "`b`", '"b" | "b"', "T", "(T) | T"]) {
+      expect(tagOf(`type T = "b";\ndefineProps<{ tag: ${type} }>();`)).toMatch(like('out.push_str("<b></b>");'));
+      expect(tagOf(`type T = "b";\nconst props = defineProps<{ tag: ${type} }>();`)).toMatch(like('out.push_str("<b></b>");'));
+    }
+    for (const props of ['interface P { tag: "b" }', 'export interface P { tag: "b" }', 'type P = { tag: "b" };', 'export type P = { tag: "b" };']) {
+      expect(tagOf(`${props}\ninterface Q { tag: string }\ntype R = { tag: string };\ndefineProps<P>();`)).toMatch(like('out.push_str("<b></b>");'));
+    }
+  });
+
   it("refuses a prop whose type is no union of string literals, or which may be absent", () => {
     expect(refusals("defineProps<{ tag: `b${string}` }>();", '<component :is="tag" />')).toEqual([`FV0418 ${OPEN}; \`tag\` is not typed as a union of string literals, as \`"h1" | "h2"\``]);
     expect(refusals('defineProps<{ tag?: "b" | "i" }>();', '<component :is="tag" />')).toEqual(["FV0420 `tag` may be absent, where Vue renders `<!---->` or fails: make it required, or give it a default"]);
@@ -134,6 +145,12 @@ describe("the elements `<component :is>` names", () => {
     expect(errors({ "Table.vue": sfc("", "<component :is=\"'table'\" />") }).map((e) => `${e.code} ${e.what}`)).toEqual([refusedTag("table")]);
     expect(errors({ "table.vue": sfc("", "<component :is=\"'table'\" />") }).map((e) => `${e.code} ${e.what}`)).toEqual([refusedTag("table")]);
     expect(refusals('defineProps<{ x: string }>();', '<component :is="`b${x}`" />')).toEqual([NOT_ONE]);
+  });
+
+  it("places a refusal at the element named, and a static `is` at its own attribute", () => {
+    const places = (template: string) => errors({ "X.vue": sfc("", template) }).map((e) => `${e.code} ${e.at?.line}:${e.at?.column}`);
+    expect(places('<component is="b" />\n<component is="my-x" />')).toEqual(["FV0419 5:12"]);
+    expect(places("<component :is=\"'my-x'\" />\n<component is=\"my-x\" />")).toEqual(["FV0419 4:27", "FV0419 5:12"]);
   });
 });
 
@@ -405,6 +422,11 @@ describe("the names `<component :is>` reads, against the setup's and the props'"
       for (const is of ["m", "modelValue"]) expect(render(script, `<component :is="${is}" />`)).toMatch(/match props\.model_value \{ XModelValue::B => "b", XModelValue::I => "i" \}/);
     }
     expect(render('const h = defineModel<"h1" | "h2">("h", { default: "h2" });', '<component :is="h" />')).toContain("props.h.unwrap_or(XH::H2)");
+  });
+
+  it("reads a model typed as a single string literal", () => {
+    expect(render('const m = defineModel<"b">({ required: true });', '<component :is="m" />')).toContain('out.push_str("<b></b>");');
+    expect(render('const h = defineModel<"h2">("h", { default: "h2" });', '<component :is="h" />')).toContain('out.push_str("<h2></h2>");');
   });
 
   it("refuses a model that may be absent", () => {

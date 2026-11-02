@@ -8528,6 +8528,11 @@ ${setup}
       expect(reading('export const T: Partial<Record<Tone, Tone>> = { calm: "loud" };')).toMatch(ENUM);
     });
 
+    it("takes no union for the values from a generic alias or an alias of itself", () => {
+      expect(reading('type Table<V> = Record<Tone, Tone>;\nexport const T: Table<1> = { calm: "loud", loud: "nope", quiet: "calm" };')).toMatch(STRING);
+      expect(reading('type Table = Table;\nexport const T: Table = { calm: "loud", loud: "nope", quiet: "calm" };')).toMatch(STRING);
+    });
+
     it("reads a table holding a value that is no string of the union by the strings it holds", () => {
       expect(reading('export const T: Record<Tone, Tone> = { calm: null as unknown as Tone, loud: "loud", quiet: "calm" };')).toMatch(STRING);
       expect(reading('export const T: Record<Tone, Tone> = { calm: 1 as unknown as Tone, loud: "loud", quiet: "calm" };', "<p>{{ T.calm }}</p>")).toContain('out.push_str("<p>1</p>");');

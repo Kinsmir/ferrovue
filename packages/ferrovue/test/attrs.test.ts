@@ -109,6 +109,47 @@ defineProps<{ x: string }>();
     expect(e.code).toBe("FV0409");
     expect(e.message).toContain("`className` renders by its own rule in Vue; bind `class`");
   });
+
+  it.each([
+    ["a literal or an optional string", "on ? 'a' : m", 'if let Some(v) = if props.on { Some("a") } else { props.m.as_deref() } {'],
+    ["an optional string or `undefined`", "on ? m : undefined", "if let Some(v) = if props.on { props.m.as_deref() } else { None } {"],
+    ["`undefined` or an optional string", "on ? undefined : m", "if let Some(v) = if props.on { None } else { props.m.as_deref() } {"],
+    ["an optional string or a literal", "on ? m : 'a'", 'if let Some(v) = if props.on { props.m.as_deref() } else { Some("a") } {'],
+  ])("writes a `?:` of %s as the optional value it gives", (_, bound, rust) => {
+    expect(compile(island(component("on: boolean; m?: string", `<div><p :title="${bound}">x</p></div>`))).get("x.rs")).toContain(`out.push_str("<div><p");\n    ${rust}\n        out.push_str(" title=\\"");`);
+  });
+});
+
+describe("attributes Vue renders from virtual nodes", () => {
+  const props = 'tag: "b" | "i"; on: boolean; up: boolean; a: string; b: string; c: string; d: string; who?: string; n: number; k?: number';
+  const rendered = (inner: string) => compile(island(component(props, `<component :is="tag">${inner}</component>`))).get("x.rs")!;
+
+  it.each([
+    ["a join or a literal", "on ? a + b : 'x'", "if props.on && (props.a.is_empty() && props.b.is_empty()) {"],
+    ["a literal or a join", "on ? 'x' : a + b", "if !props.on && (props.a.is_empty() && props.b.is_empty()) {"],
+    ["two `?:`s whose tests are the same", "on ? (up ? a + b : 'x') : (up ? a + b : 'y')", "if props.up && (props.a.is_empty() && props.b.is_empty()) {"],
+    ["two joins", "on ? a + b : c + d","if if props.on { props.a.is_empty() && props.b.is_empty() } else { props.c.is_empty() && props.d.is_empty() } {"],
+    ["a join that binds an optional string or a literal", "who ? 'hi ' + who : 'nobody'", "if if let Some(fv_who) = props.who.as_deref().filter(|v| !v.is_empty()) { false } else { false } {"],
+    ["a join of a string its test fills or a literal", "who ? who + a : 'x'", "if if let Some(fv_who) = props.who.as_deref().filter(|v| !v.is_empty()) { false } else { false } {"],
+  ])("tests a `?:` of %s for emptiness branch by branch", (_, bound, test) => {
+    expect(rendered(`<span :title="${bound}">x</span>`)).toContain(`out.push_str("><span");\n    ${test}\n        out.push_str(" title");`);
+  });
+
+  it("writes a `?:` of a join and a literal that are never empty with no test", () => {
+    expect(rendered(`<span :title="on ? 'hi ' + a : 'x'">x</span>`)).toContain(`out.push_str("><span title=\\"");\n    if props.on {`);
+  });
+
+  it.each([
+    ["a class", "class", "FV1004", "a class is a string, an array, or an object of conditions"],
+    ["a style", "style", "FV1007", "a style binding is a string, an object or an array"],
+  ])("refuses %s passed to a child bound to a number or an optional number", (_, name, code, what) => {
+    const child = component("label?: string", "<div>x</div>");
+    for (const bound of ["n", "k"]) {
+      const e = refusal(island(component(props, `<div><Child :${name}="${bound}" /></div>`, 'import Child from "./Child.vue";\n'), { Child: child }));
+      expect(e.code).toBe(code);
+      expect(e.message).toContain(what);
+    }
+  });
 });
 
 describe("attribute objects", () => {

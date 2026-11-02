@@ -10,6 +10,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
+- `<component :is>` of a `defineModel` typed as one string literal, as `defineModel<"b">()`, renders that element; 0.14.1 refused it with FV0418.
+  [`<component :is>`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is).
 - A `"key" in object` test in a component with a root `<textarea>` or `<input v-model>` is refused with FV0631, as elsewhere; 0.14.1 rendered its alternate, or refused it with FV0424 when a parent passed that key.
   [FV0631](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0631).
 
