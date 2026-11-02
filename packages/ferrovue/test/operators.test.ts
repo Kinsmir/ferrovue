@@ -130,6 +130,22 @@ describe("`&&` and `||`", () => {
     ].join("\n"), true));
   });
 
+  it("gives the right side of `||` where an optional `Float` or boolean on its left is absent or falsy", () => {
+    expect(lines("<p>{{ g || 1.5 }}|{{ r.c || b }}</p>", 'import type { Float } from "ferrovue/types";\ninterface R { c?: boolean }\ndefineProps<{ g?: Float; r: R; b: boolean }>();')).toMatch(like([
+      'out.push_str("<p>");',
+      "fv::core::push_number(out, props.g.filter(|v| *v != 0.0 && !v.is_nan()).unwrap_or(1.5f64));",
+      "out.push('|');",
+      'out.push_str(if props.r.c.filter(|v| *v).unwrap_or(props.b) { "true" } else { "false" });',
+      'out.push_str("</p>");',
+    ].join("\n"), true));
+  });
+
+  it("gives the right side of `&&` after `|| undefined` of an integer union, whose members left are all truthy", () => {
+    expect(lines("<p>{{ m && 'x' }}</p>", 'import { computed } from "vue";\nconst props = defineProps<{ n: 0 | 1 | 2 }>();\nconst m = computed(() => props.n || undefined);')).toMatch(like(
+      'if let Some(v) = s_m.filter(|v| *v != 0).map(|fv_m| "x") {',
+    ));
+  });
+
   const refused: [string, string, string][] = [
     ["`||` of a string and a number", "<p>{{ s || n }}</p>", "FV0617 `||` between these types"],
     ["`||` of a number and a string", "<p>{{ n || 'x' }}</p>", "FV0617 `||` between these types"],
@@ -147,6 +163,7 @@ describe("`&&` and `||`", () => {
     ["`||` of a computed string and a number", "<p>{{ `a${s}` || n }}</p>", "FV0617 `||` between these types"],
     ["`||` of a number and a computed string", "<p>{{ n || `a${s}` }}</p>", "FV0617 `||` between these types"],
     ["`||` of two optional objects", "<p>{{ (q || q)?.t }}</p>", "FV0617 `||` between these types"],
+    ["`||` of an optional string an optional chain computes and a string", "<p>{{ os?.trim() || 'x' }}</p>", "FV0617 `||` between these types"],
     ["`&&` of an optional date and a string", "<p>{{ (b ? on : on) && 'x' }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is an optional `Date`"],
     ["`&&` of an optional date and a boolean", "<p>{{ (c ? on : undefined) && b }}</p>", "FV0614 `&&` is supported between booleans only, and its left side is an optional `Date`"],
   ];
