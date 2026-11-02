@@ -176,10 +176,28 @@ describe("constants a `.ts` file declares", () => {
     expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { "c.ts": 'export { A } from "./d";', "d.ts": 'export { A } from "./c";' })).toEqual(unavailable("A"));
   });
 
+  it("has no value for a name a namespace export shadows, a package passes on, a default `export *` leaves out, or two `export *` give from one file", () => {
+    const unavailable = (name: string) => [`FV0601 \`${name}\` is imported from \`./c\`, a module the server does not run`];
+    const e = { "e.ts": "export const A = 1;", "d.ts": "export const Q = 1;" };
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { ...e, "c.ts": 'export * as A from "./d";\nexport * from "./e";' })).toEqual(unavailable("A"));
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", { "c.ts": 'export { A } from "vue";' })).toEqual(unavailable("A"));
+    expect(refusals('import A from "./c";', "<p>{{ A }}</p>", { "c.ts": 'export * from "./d";', "d.ts": "const Z = 3;\nexport default Z;" })).toEqual(unavailable("A"));
+    const twice = { "c.ts": 'export * from "./d";\nexport * from "./e";', "d.ts": "export const A = 7;\nexport const B = 8;", "e.ts": 'export { B as A } from "./d";' };
+    expect(refusals('import { A } from "./c";', "<p>{{ A }}</p>", twice)).toEqual(unavailable("A"));
+  });
+
+  it("reads a name one `export *` of several gives, or several give from the same declaration", () => {
+    const d = { "d.ts": "export const A = 7;" };
+    expect(render('import { A } from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export * from "vue";\nexport * from "./d";' })).toMatch(like('out.push_str("<p>7</p>");'));
+    expect(render('import { A } from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export * from "./d";\nexport * from "./e";', "e.ts": "export const B = 8;" })).toMatch(like('out.push_str("<p>7</p>");'));
+    expect(render('import { A } from "./c";', "<p>{{ A }}</p>", { ...d, "c.ts": 'export * from "./d";\nexport * from "./e";', "e.ts": 'export * from "./d";' })).toMatch(like('out.push_str("<p>7</p>");'));
+  });
+
   it("reads only the `const` declarations a file has, with a value", () => {
     const unavailable = ["FV0601 `A` is imported from `./c`, a module the server does not run"];
     expect(imported("A", "export let A = 1;", "<p>{{ A }}</p>")).toEqual(unavailable);
     expect(imported("A", "export declare const A: number;", "<p>{{ A }}</p>")).toEqual(unavailable);
+    expect(imported("A", "declare const A: number;\nexport { A };", "<p>{{ A }}</p>")).toEqual(unavailable);
   });
 
   it("reads an enum's members by a quoted name, and has no reverse mapping for a string member", () => {
@@ -680,6 +698,39 @@ describe("lookup keys built when rendering", () => {
     expect(render(script, "<p>{{ O[HALF] }}</p>")).toContain('out.push_str("<p>half</p>");');
   });
 
+  it("reads a key that is a number known when compiling by the string JavaScript writes for it", () => {
+    const keys = 'const O = { "1.5": "x", "-1.5": "neg", "1e+21": "big", Infinity: "inf" };';
+    expect(render(keys, "<p>{{ O[3 / 2] }} {{ O[-3 / 2] }} {{ O[1e21] }}</p>")).toContain('out.push_str("<p>x neg big</p>");');
+    expect(render(`${keys}\nconst INF = 1e400;`, "<p>{{ O[1e400] }} {{ O[INF] }}</p>")).toContain('out.push_str("<p>inf inf</p>");');
+    expect(refusals(keys, "<p>{{ O[1 / 0] }}</p>")).toEqual(["FV0222 `O` read by a key that is a number: type the key as a union of string literals, as `\"sm\" | \"md\" | \"lg\"`, or an `enum` of them"]);
+  });
+
+  it("passes a table read by two keys to a child's union prop through its variants, and parses it as it renders where a key may miss", () => {
+    const child = { "T.vue": sfc('defineProps<{ t?: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") };
+    const two = (table: string) => `import T from "./T.vue";\ndefineProps<{ k: "a" | "b"; j: "x" | "y" | "z" }>();\nconst O = ${table};`;
+    expect(render(two('{ a: { x: "calm", y: "loud" }, b: { x: "loud", y: "loud" } }'), '<T :t="O[k][j]" />', child)).toMatch(
+      like("t: match props.j { XJ::X => Some(match props.k { XK::A => super::t::TT::Calm, XK::B => super::t::TT::Loud }), XJ::Y => Some(super::t::TT::Loud), XJ::Z => None }"),
+    );
+    expect(render(two('{ a: { x: "calm", y: "loud", z: "loud" }, b: { x: "loud", y: "quiet" } }'), '<T :t="O[k][j]" />', child)).toContain(".map(|v| match v.parse::<super::t::TT>() {");
+    expect(refusals(two('{ a: { x: "calm", y: "loud" }, b: { x: "other", y: "loud" } }'), '<T :t="O[k][j]" />', child)).toEqual([expect.stringMatching(/^FV0515 the prop is one of "calm" \| "loud" \| "quiet"/)]);
+  });
+
+  it("reads a key that is a number constant beyond the integers in the template and in setup, and refuses a boolean one or a name that shadows it", () => {
+    const big = 'defineProps<{ items: string[] }>();\nconst BIG = 1e21;\nconst O = { "1e+21": "big", true: "yes" };';
+    expect(render(big, "<p>{{ O[BIG] }}</p>")).toContain('out.push_str("<p>big</p>");');
+    expect(render(`${big}\nconst label = O[BIG];`, "<p>{{ label }}</p>")).toContain('out.push_str("<p>big</p>");');
+    expect(refusals(big, '<p v-for="BIG in items">{{ O[BIG] }}</p>')).toEqual([expect.stringMatching(/^FV0222 `O` read by a key that is a `string`/)]);
+    expect(refusals(`import { B } from "./c";\n${big}\nconst label = O[B];`, "<p>{{ label }}</p>", { "c.ts": "export const B = true;" })).toEqual([expect.stringMatching(/^FV0222 `O` read by a key that is a boolean/)]);
+  });
+
+  it("reads a field of an object a mapped key chooses, and a key with an integer union or a one-literal union in a template literal", () => {
+    const keyed = 'defineProps<{ k: "a" | "b"; n: 1 | 2; z: "z" }>();\nconst O = { A: { n: 1 }, B: { n: 2 } };\nconst P = { az: "a z", bz: "b z", x1: "x one", x2: "x two" };';
+    const out = render(keyed, "<p>{{ O[k.toUpperCase()].n }}|{{ P[`${k}${z}`] }}|{{ P[`x${n}`] }}</p>");
+    expect(out).toContain("match props.k { XK::A => 1i64, XK::B => 2i64 }");
+    expect(out).toContain('match props.k { XK::A => "a z", XK::B => "b z" }');
+    expect(out).toContain('match props.n { 1 => "x one", _ => "x two" }');
+  });
+
   it("reads keys built from a union by `toUpperCase()`, `toLowerCase()` and template literals through a `match` over the union", () => {
     const out = render(script, "<p>{{ O[k.toUpperCase()] }}|{{ O[`x${k.toLowerCase()}`] }}|{{ O[`${k.toUpperCase()}!`] ?? '-' }}</p>");
     expect(out).toContain('match props.k { XK::A => "big a", XK::B => "big b" }');
@@ -691,6 +742,9 @@ describe("lookup keys built when rendering", () => {
     const string = "FV0222 `O` read by a key that is a `string`, which may name a field every object has, as `toString` or `constructor`: type the key as a union of string literals, as `\"sm\" | \"md\" | \"lg\"`, or an `enum` of them";
     expect(refusals(script, "<p>{{ O[s.toUpperCase()] }}</p>")).toEqual([string]);
     expect(refusals(script, "<p>{{ O[`${k}${k}`] }}</p>")).toEqual([string]);
+    expect(refusals(script, "<p>{{ O[`${k}${s}`] }}</p>")).toEqual([string]);
+    const called = 'const props = defineProps<{ s: string }>();\nfunction key(): string {\n  return props.s;\n}\nconst O = { a: "A" };\nconst label = O[key()];';
+    expect(refusals(called, "<p>{{ label }}</p>")).toEqual([`${string} (the template reads it as \`label\` at components/X.vue:9:17)`]);
   });
 });
 
