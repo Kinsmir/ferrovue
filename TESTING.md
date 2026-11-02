@@ -706,8 +706,9 @@ a component while it loads: what runs then is covered by no test, and Stryker ru
 against every mutant it reaches (a static mutant). At four test runners on twelve cores, `attrs.ts`
 and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about 40 and `expr.ts` with
 the expression modules about 45; two runners take about twice as long. The **Mutants** workflow runs
-the modules in five groups (`attrs.ts` with `template.ts`, `constants.ts`, `dynamic.ts`, the
-expression modules, and the modules of calls and methods), one job each and three at a time, within the job's two hours. The reports are
+the modules in six groups (`attrs.ts` with `template.ts`, `constants.ts`, `dynamic.ts`, the
+expression modules, `calls.ts` with `globals.ts`, `numbers.ts` and `strings.ts`, and `lists.ts`),
+one job each and three at a time, each within the job's 150 minutes. The reports are
 `target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
 an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.
 Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant whose code and
