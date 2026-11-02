@@ -424,6 +424,11 @@ describe("the names `<component :is>` reads, against the setup's and the props'"
     expect(render('const h = defineModel<"h1" | "h2">("h", { default: "h2" });', '<component :is="h" />')).toContain("props.h.unwrap_or(XH::H2)");
   });
 
+  it("reads a model typed as a single string literal", () => {
+    expect(render('const m = defineModel<"b">({ required: true });', '<component :is="m" />')).toContain('out.push_str("<b></b>");');
+    expect(render('const h = defineModel<"h2">("h", { default: "h2" });', '<component :is="h" />')).toContain('out.push_str("<h2></h2>");');
+  });
+
   it("refuses a model that may be absent", () => {
     expect(refusals('const m = defineModel<"b" | "i">();', '<component :is="m" />')[0]).toMatch(/^FV0420 /);
   });
