@@ -3,6 +3,30 @@
 # the file, the mutator, the text before and after, and the line the mutant starts on, without its
 # number. `pnpm mutants:ts` fails on a survivor not listed here. Every entry says why.
 
+# attrs.ts, `emptyTest` and `display`: only `choiceOf` gives a value `branches`, with `of` set to
+# its code, and no value of type string has its code changed afterwards: the copies that write a
+# new `code` over a value are of structs, numbers and integers, and the others build a value anew.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: branches.of === v.code => true in if (branches !== undefined && branches.of === v.code) {
+packages/ferrovue/src/attrs.ts: ConditionalExpression: branches.of === v.code => true in if (branches !== undefined && branches.of === v.code) {
+
+# attrs.ts, `display`: the line `close(" else {")` writes ends in its one `} else {`.
+packages/ferrovue/src/attrs.ts: Regex: /\} else \{$/ => /\} else \{/ in if (e.lines.length === at + 1) e.lines.splice(at - 1, 2, e.lines[at - 1]!.replace(/\} else \{$/, "}"));
+
+# attrs.ts, `someLiteral`: the first test gives no branches for a value that is not optional, and
+# the second returns null for one, so either alone keeps such a value out.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "opt" => true in const branches = v.ty.k === "opt" ? ifElse(v.code) : null;
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k !== "opt" => false in if (branches === null || v.ty.k !== "opt") return null;
+
+# attrs.ts, `someLiteral`: the compiler wraps an optional branch in `Some(…)` whole, so a branch
+# that starts with `Some("…")` ends there, and one that ends with it starts there.
+packages/ferrovue/src/attrs.ts: Regex: /^Some\(("(?:[^"\\]|\\.)*")\)$/ => /Some\(("(?:[^"\\]|\\.)*")\)$/ in const literal = (code: string) => /^Some\(("(?:[^"\\]|\\.)*")\)$/.exec(code)?.[1];
+packages/ferrovue/src/attrs.ts: Regex: /^Some\(("(?:[^"\\]|\\.)*")\)$/ => /^Some\(("(?:[^"\\]|\\.)*")\)/ in const literal = (code: string) => /^Some\(("(?:[^"\\]|\\.)*")\)$/.exec(code)?.[1];
+
+# attrs.ts, `someLiteral`: a test that binds (`if let`) is written by `chooser`, `classAttr` or
+# `narrowing.ts` only where the branch taken when the value is present reads the bound name, so
+# that branch is never `None`.
+packages/ferrovue/src/attrs.ts: MethodExpression: branches.test.startsWith("let ") => branches.test.endsWith("let ") in if (no !== undefined && branches.yes === "None" && !branch … t: not(branches.test), value: { code: no, ty: v.ty.of } };
+
 # attrs.ts, `display`: only number values carry `num` and only boolean values carry `konst`, so the
 # type test before each is implied by the other half of the condition.
 packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "int" || v.ty.k === "float" => true in else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
@@ -101,6 +125,66 @@ packages/ferrovue/src/attrs.ts: StringLiteral: "NullLiteral" => "" in if (n.type
 
 # attrs.ts, `valueAttr`: `default` is the last clause of the switch, so its `break` ends it either way.
 packages/ferrovue/src/attrs.ts: ConditionalExpression: default: break; => default: in default:
+
+# template.ts, `rootControlKnown`: its answer is read only for a `<textarea>` given the tag
+# argument of `_ssrRenderAttrs`, and `component.ts` refuses every such `<textarea>` but the root's,
+# for which it sets `rootControl`.
+packages/ferrovue/src/template.ts: BooleanLiteral: false => true in if (control === undefined) return false;
+
+# template.ts, `unpassedValue` and `slot`: `_ssrInterpolate` always has an argument, and among
+# expressions only a `?:` has a `test`, so another node gives no test and is returned as it is.
+packages/ferrovue/src/template.ts: ConditionalExpression: n?.type === "ConditionalExpression" => true in const test = n?.type === "ConditionalExpression" ? n.test : null;
+packages/ferrovue/src/template.ts: OptionalChaining: n?.type => n.type in const test = n?.type === "ConditionalExpression" ? n.test : null;
+
+# template.ts, `slot`: the temporary of a root `<textarea>` is read only by the `"value" in` test
+# Vue writes inside `_ssrInterpolate`, which `unpassedValue` also takes by `rootControl`, set for
+# that `<textarea>`.
+packages/ferrovue/src/template.ts: CallExpression: s.temps.add(a[0].left.name); => ; in if (a.length > 1) s.temps.add(a[0].left.name);
+
+# template.ts, `modelAttrs`: a sequence holds at least two expressions, so its first is present.
+packages/ferrovue/src/template.ts: OptionalChaining: set?.type => set.type in if (n.expressions.length !== 2 || set?.type !== "Assignmen … ", "this expression cannot be rendered on the server", n);
+
+# template.ts, `modelAttrs`: the objects Vue merges for a root `<input>` with `v-model` hold only
+# properties, and `component.ts` refuses a computed key there (FV0424, "an attribute named at run
+# time"), so the first two tests always hold.
+packages/ferrovue/src/template.ts: ConditionalExpression: p.type === "ObjectProperty" && !p.computed => true in const typed = props.find((p: N) => p.type === "ObjectPrope … && !p.computed && (p.key.name ?? p.key.value) === "type");
+packages/ferrovue/src/template.ts: LogicalOperator: p.type === "ObjectProperty" && !p.computed => p.type === "ObjectProperty" || !p.computed in const typed = props.find((p: N) => p.type === "ObjectPrope … && !p.computed && (p.key.name ?? p.key.value) === "type");
+packages/ferrovue/src/template.ts: ConditionalExpression: p.type === "ObjectProperty" => true in const typed = props.find((p: N) => p.type === "ObjectPrope … && !p.computed && (p.key.name ?? p.key.value) === "type");
+
+# template.ts, `modelAttrs`: `model` runs only for Vue's `_ssrGetDynamicModelProps`, which it
+# writes in a sequence only for the root `<input>`, where `rootControl` is set.
+packages/ferrovue/src/template.ts: OptionalChaining: s.comp.rootControl?.node => s.comp.rootControl.node in fail(s.comp, "FV0424", `an \`<input>\` with \`v-model\` at … it in another element`, s.comp.rootControl?.node ?? call);
+
+# template.ts, `modelAttrs`: Vue writes the merge of a root `<input>` with `v-model` as
+# `_mergeProps(_tempN, _ssrGetDynamicModelProps(_tempN, model))`. Its one name is the temporary,
+# which the first test takes, and a call has no `name`. The only other node that reaches `replace`
+# is the second expression of a sequence a template binds with `v-bind`, which is no `_mergeProps`
+# call, so the arguments built from it are never read: `renderAttrs` refuses it whole (FV0407).
+packages/ferrovue/src/template.ts: ConditionalExpression: x?.type === "Identifier" => true in if (x?.type === "Identifier" && x.name === temp) return mergedParts(set.right);
+packages/ferrovue/src/template.ts: LogicalOperator: x?.type === "Identifier" && x.name === temp => x?.type === "Identifier" || x.name === temp in if (x?.type === "Identifier" && x.name === temp) return mergedParts(set.right);
+packages/ferrovue/src/template.ts: OptionalChaining: x?.type => x.type in if (x?.type === "Identifier" && x.name === temp) return mergedParts(set.right);
+packages/ferrovue/src/template.ts: ConditionalExpression: x.name === temp => true in if (x?.type === "Identifier" && x.name === temp) return mergedParts(set.right);
+packages/ferrovue/src/template.ts: OptionalChaining: x?.type => x.type in if (x?.type === "CallExpression" && x.callee.type === "Ide … ee.name === "_ssrGetDynamicModelProps") return [model(x)];
+packages/ferrovue/src/template.ts: ConditionalExpression: x.callee.type === "Identifier" => true in if (x?.type === "CallExpression" && x.callee.type === "Ide … ee.name === "_ssrGetDynamicModelProps") return [model(x)];
+packages/ferrovue/src/template.ts: ConditionalExpression: x.callee.name === "_ssrGetDynamicModelProps" => true in if (x?.type === "CallExpression" && x.callee.type === "Ide … ee.name === "_ssrGetDynamicModelProps") return [model(x)];
+packages/ferrovue/src/template.ts: ArrayDeclaration: [x] => [] in return [x];
+
+# template.ts, `slot`: Vue writes the tag argument of `_ssrRenderAttrs` as a string literal.
+packages/ferrovue/src/template.ts: ConditionalExpression: a[1].type === "StringLiteral" => true in if (a.length > 1 && !(a[1].type === "StringLiteral" && a[1 … omp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
+
+# template.ts, `slot`: a call whose callee is not an identifier has no `name`, so it never equals
+# `_ssrRenderDynamicModel`.
+packages/ferrovue/src/template.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.type === "CallExpression" && n.callee.type === "Iden … me === "_ssrRenderDynamicModel") refuseDynamicModel(s, n);
+
+# template.ts, `refuseDynamicModel`: Vue writes `_ssrRenderDynamicModel` only for a bound `type`,
+# whose expression the template's source map places inside that directive, so `directiveOwner`
+# finds its element. Only a directive has an `arg`, and `component.ts` refuses a `v-bind` of an
+# object, the one `bind` with no `arg`, on an `<input>` with `v-model` (FV0424). `locate` reads a
+# node's `loc` and `__fv`, never its `type`.
+packages/ferrovue/src/template.ts: OptionalChaining: el?.props => el.props in const bound = el?.props.find((p: N) => p.type === 7 && p.name === "bind" && p.arg?.content === "type") ?? el;
+packages/ferrovue/src/template.ts: ConditionalExpression: p.type === 7 => true in const bound = el?.props.find((p: N) => p.type === 7 && p.name === "bind" && p.arg?.content === "type") ?? el;
+packages/ferrovue/src/template.ts: OptionalChaining: p.arg?.content => p.arg.content in const bound = el?.props.find((p: N) => p.type === 7 && p.name === "bind" && p.arg?.content === "type") ?? el;
+packages/ferrovue/src/template.ts: StringLiteral: "VueTemplate" => "" in const at = bound ? { type: "VueTemplate", loc: { start: {  … umn: bound.loc.start.column - 1 } }, __fv: "source" } : n;
 
 # template.ts, `selectsByModel` reads the test of a `?:` Vue writes for an attribute in content rendered from
 # virtual nodes. A callee that is not an identifier has no `name`, which the pattern reads as
