@@ -207,6 +207,7 @@ pub mod root_checkbox;
 pub mod root_controls;
 pub mod root_input;
 pub mod root_textarea;
+pub mod root_textarea_branch;
 pub mod root_textarea_text;
 pub mod route_info;
 pub mod row_chip;
@@ -1360,6 +1361,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "RootTextarea" => {
             let props: root_textarea::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             root_textarea::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "RootTextareaBranch" => {
+            let props: root_textarea_branch::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            root_textarea_branch::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "RootTextareaText" => {
             let props: root_textarea_text::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
