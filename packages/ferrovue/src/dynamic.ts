@@ -154,7 +154,7 @@ function propType(s: Scope, name: string): N {
 
 function fieldLiterals(ty: Ty): string[] | null {
   const literals = literalsOf(ty.k === "opt" ? ty.of : ty);
-  return (ty.k === "opt" ? ty.of : ty).k === "str" && literals !== undefined && literals.length > 1 && literals.every((l) => typeof l === "string") ? (literals as string[]) : null;
+  return (ty.k === "opt" ? ty.of : ty).k === "str" && literals !== undefined && literals.every((l) => typeof l === "string") ? (literals as string[]) : null;
 }
 
 function keysOf(s: Scope, n: N, at: N): { on: N; keys: string[] } {

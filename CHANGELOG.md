@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Fixed
+
+- `<component :is>` of a `defineModel` typed as one string literal, as `defineModel<"b">()`, renders that element; 0.14.1 refused it with FV0418.
+  [`<component :is>`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is).
+
 ## [0.14.1] - 2026-10-31
 
 ### Changed
