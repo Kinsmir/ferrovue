@@ -1174,6 +1174,12 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud | XTone::Empty => "p-2", XTone::Quiet => "p-3" });'));
   });
 
+  it("reads a table by a key built with `||` from an enum and a literal outside it, and refuses one built with a `string`", () => {
+    const tones = 'import { ref } from "vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ start?: Tone; s: string }>();\nconst tone = ref<Tone | "">(props.start ?? "");\nconst PAD = { calm: "p-1", loud: "p-2", quiet: "p-3", other: "p-4" } as const;';
+    expect(render(tones, "{{ PAD[tone || 'other'] }}")).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud => "p-2", XTone::Quiet => "p-3", XTone::Empty => "p-4" });'));
+    expect(refusals(tones, "{{ PAD[tone || s] }}")).toEqual([expect.stringMatching(/^FV0222 `PAD` read by a key that is a `string`/)]);
+  });
+
   it("reads the left side of `??` on its right with the type its declaration gives", () => {
     const out = render('defineProps<{ o?: "" | "a" }>();\nconst T = { "": "E" };', '<p>{{ o ?? (o !== undefined ? T[o] : "z") }}</p>');
     expect(out).toMatch(like('props.o.map(fv::props::Union::as_str).or(if let Some(fv_o) = props.o { match fv_o { XO::Empty => Some("E"), XO::A => None } } else { Some("z") })'));
