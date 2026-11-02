@@ -1480,7 +1480,6 @@ packages/ferrovue/src/dynamic.ts: StringLiteral: "_ssrRenderSlot" => "" in if (!
 # holds no `undefined`. Each function returns what the test returns.
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === null => false in return name === null ? null : (destructuredProp(s, name) ?? s.comp.models.get(name) ?? null);
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === null => false in if (name === null || s.locals.has(name)) return null;
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: file === null => false in const d = file === null ? undefined : ctx.constDecls.get(file)?.get(sp.imported.name ?? sp.imported.value);
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: child !== undefined => true in if (child !== undefined && s.components.has(child)) {
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: name !== null => true in if (name !== null) {
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === null => false in const file = name === null ? undefined : p.scope.children.get(name);
@@ -1551,10 +1550,24 @@ packages/ferrovue/src/dynamic.ts: ConditionalExpression: self === tag => false i
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: self === camelize(tag) => false in if (!isHTMLTag(tag) || RESERVED_TAGS.has(tag) || self ===  … === camelize(tag).replace(/^./, (c) => c.toUpperCase())) {
 packages/ferrovue/src/dynamic.ts: Regex: /^./ => /./ in if (!isHTMLTag(tag) || RESERVED_TAGS.has(tag) || self ===  … === camelize(tag).replace(/^./, (c) => c.toUpperCase())) {
 
-# dynamic.ts, `tableOf`: `ctx.constDecls` holds `const` declarators and `enum` declarations; an
-# `enum` has no `init`, so `objectEntries` finds no object and `tableOf` returns `null` as the test
+# dynamic.ts, `element`: every caller hands it a node: a string or template literal `pickOf` reads,
+# a table's value, or the prop a match reads. A node with no place in the component is the string
+# literal Vue writes for a static `is`, or a table's value in an imported file; the others are in
+# the component's script or a bound attribute, which `placeOf` locates.
+packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in const at = placeOf(s.comp, n).line === undefined && n?.typ …  (isAttribute(s.comp, (value) => value === tag) ?? n) : n;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "StringLiteral" => true in const at = placeOf(s.comp, n).line === undefined && n?.typ …  (isAttribute(s.comp, (value) => value === tag) ?? n) : n;
+
+# dynamic.ts, `fieldLiterals`: a prop's type holds the literals `typescript.ts` reads from a union,
+# strings for a string type and numbers for an integer type, and a union of both is no string type.
+# A type that is no string holds no string literal, and a string type's literals are all strings.
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: (ty.k === "opt" ? ty.of : ty).k === "str" => true in return (ty.k === "opt" ? ty.of : ty).k === "str" && litera … => typeof l === "string") ? (literals as string[]) : null;
+packages/ferrovue/src/dynamic.ts: MethodExpression: literals.every((l) => typeof l === "string") => literals.some(l => typeof l === "string") in return (ty.k === "opt" ? ty.of : ty).k === "str" && litera … => typeof l === "string") ? (literals as string[]) : null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: typeof l === "string" => true in return (ty.k === "opt" ? ty.of : ty).k === "str" && litera … => typeof l === "string") ? (literals as string[]) : null;
+
+# dynamic.ts, `tableOf`: `exportedConst` reads `ctx.constDecls`, which holds `const` declarators and
+# `enum` declarations; an `enum` has no `init`, so `objectEntries` finds no object and `tableOf` returns `null` as the test
 # does.
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.node.type !== "VariableDeclarator" => false in if (!d?.exported || d.node.type !== "VariableDeclarator") return null;
+packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.node.type !== "VariableDeclarator" => false in if (!d || d.node.type !== "VariableDeclarator") return null;
 
 # dynamic.ts, `tableOf`: `ctx.constDecls` is filled only by `readTypeFile`, which sets `home.source`
 # first.
