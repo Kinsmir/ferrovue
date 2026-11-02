@@ -153,7 +153,7 @@ and the vectors it is tested against are recorded from V8.
 | Characters | literals, `\t`, `\n`, `\v`, `\f`, `\r`, `\0`, `\xHH`, `\uHHHH`, and a `\` before a character of the syntax |
 | Classes | `.` (any unit but a line terminator), `[abc]`, `[a-z]`, `[^…]`, `\d`, `\w`, `\s` and `\D`, `\W`, `\S`, also inside a class |
 | Assertions | `^` and `$` (the start and end of the string), `\b` and `\B` |
-| Quantifiers | `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}`, greedy or lazy (`*?`) |
+| Quantifiers | `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}`, greedy or lazy (`*?`), a bound above 2147483647 counting as 2147483647 as in V8 |
 | Flags | `g` (every match, for `.replace()`; `.replaceAll()` needs it) and `i` (case folded as JavaScript folds it without `u`) |
 
 A replacement reads `$&`, `` $` ``, `$'` and `$$` as JavaScript reads them; `$1` is written as it is,

@@ -14,6 +14,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [`<component :is>`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is).
 - A `"key" in object` test in a component with a root `<textarea>` or `<input v-model>` is refused with FV0631, as elsewhere; 0.14.1 rendered its alternate, or refused it with FV0424 when a parent passed that key.
   [FV0631](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0631).
+- A quantifier bound above 2147483647 in a regular expression (`/a{2,99999999999999999999999}/`) counts as 2147483647, as V8 counts it; 0.14.1 matched the quantifier as literal text.
+  [Regular expressions](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#regular-expressions).
 
 ## [0.14.1] - 2026-10-31
 
