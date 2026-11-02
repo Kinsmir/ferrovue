@@ -97,6 +97,18 @@ crates/ferrovue/src/strings.rs: replace << with >> in power_of_two_value
 crates/ferrovue/src/strings.rs: delete match arm "Infinity" | "+Infinity" in decimal_value
 crates/ferrovue/src/strings.rs: delete match arm "-Infinity" in decimal_value
 
+# `negated` at `lo == next`: no range of `DIGITS`, `WORD` or `SPACES` starts at 0 or just after the one before it, so the two sides are never equal.
+crates/ferrovue/src/strings.rs: replace > with >= in negated
+
+# `\b` outside a class: `Parser::parse` reads `\b` and `\B` as boundaries before it calls `escape(false)`, which never sees a `b`.
+crates/ferrovue/src/strings.rs: replace match guard in_class with true in Parser<'_>::escape
+
+# `canonical` at an uppercase of U+0080: no character's uppercase is U+0080, so `< 128` and `<= 128` agree.
+crates/ferrovue/src/strings.rs: replace < with <= in canonical
+
+# `split` with an infinite or NaN limit: `trunc().rem_euclid(2³²)` of either is NaN, which casts to 0, the limit the other arm gives.
+crates/ferrovue/src/strings.rs: replace match guard l.is_finite() with true in JsRegex::split
+
 # A tag's position from entry `i` instead of `i + 1`: every position moves down by 1024, which keeps their order and which entry each one came from.
 crates/ferrovue/src/head.rs: replace + with * in Head::resolve
 
