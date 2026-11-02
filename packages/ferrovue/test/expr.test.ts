@@ -320,6 +320,12 @@ describe("types stated with `as` and `satisfies`", () => {
     });
   }
 
+  it("refuses `as` a tuple of a value that is no array literal", () => {
+    expect(refusals('import { computed } from "vue";\ntype Pair = [string, number];\nconst props = defineProps<{ t: [string, number] }>();\nconst c = computed(() => props.t as Pair);', "<p>{{ c[0] }}</p>")).toEqual([
+      "FV0628 `as` states an object of an object, which the server keeps as it is: write the value with the type it has (the template reads it as `c` at components/X.vue:7:17)",
+    ]);
+  });
+
   it("refuses a list of object literals where a list of other values is taken", () => {
     const unknown = (where: string) => `FV0634 an object literal in ${where} whose type is not known, which the server builds as the Rust struct of an interface`;
     expect(refusals('import { computed } from "vue";\nconst c = computed((): string[] => [{ label: "x" }]);', '<p v-for="x in c">{{ x }}</p>')[0]).toMatch(like(unknown("a `computed`")));
@@ -401,6 +407,8 @@ describe("items read by `[…]`", () => {
     ["s: string; t: string", "s[t]", "FV0612 `[…]` reads a string's character by an integer index, a `number` that is present, and this index is a string: `.at()` and `.charAt()` take any number"],
     ["b: boolean", "b[0]", "FV0612 computed member access of a boolean: `[…]` reads an item of a list, by an integer index"],
     ["r: Record<string, string>", "r['a']", "FV0612 computed member access of a record: `[…]` reads an item of a list, by an integer index"],
+    ['n: number; k: "a" | "b"', "n[k]", "FV0612 computed member access of a number: `[…]` reads an item of a list, by an integer index"],
+    ["t: [string, number]", "t[0.5]", "FV0612 `[…]` reads a part of a tuple of 2 by a literal index, from `0` to `1`"],
   ];
   for (const getter of ["getUTCDay", "getTime", "valueOf"]) {
     refused.push([
@@ -422,6 +430,21 @@ describe("items read by `[…]`", () => {
   it("reads a field of an object by a literal key, and refuses a key of another kind", () => {
     expect(render("interface C { a: string }\ndefineProps<{ c: C; k: string }>();", "<p>{{ c['a'] }}</p>")).toMatch(like("fv::core::escape_into(out, &props.c.a);"));
     expect(refusals("interface C { a: string }\ndefineProps<{ c: C; k: string }>();", "<p>{{ c[k] }}</p>")).toEqual(["FV0612 computed member access of an object: `[…]` reads an item of a list, by an integer index"]);
+  });
+
+  it("refuses a field read by a key that may be absent, or whose fields differ in type or are lists of a union", () => {
+    const script = 'type Tone = "calm" | "loud";\ninterface C { a: string; b: string; n: number; ts: Tone[]; vs: Tone[] }\ndefineProps<{ c: C; o?: "a" | "b"; an: "a" | "n"; tl: "ts" | "vs" }>();';
+    for (const key of ["o", "an", "tl"]) {
+      expect(refusals(script, `<p>{{ c[${key}] }}</p>`)).toEqual(["FV0612 computed member access of an object: `[…]` reads an item of a list, by an integer index"]);
+    }
+  });
+
+  it("reports each refused statement after a field read by a literal key", () => {
+    expect(refusals("interface C { a: string }\ndefineProps<{ c: C; n: number }>();", "<p>{{ c['a'] }}</p><p>{{ n.toFixed(200) }}</p><p>{{ n.toFixed(300) }}</p>")).toEqual([expect.stringMatching(/^FV0705 /), expect.stringMatching(/^FV0705 /)]);
+  });
+
+  it("reads a list's item by an index named `length`", () => {
+    expect(render("defineProps<{ l: string[]; is: number[] }>();", '<p v-for="length in is">{{ l[length] }}</p>')).toMatch(like("if let Some(v) = props.l.get(usize::try_from(fv_length).unwrap_or(usize::MAX)).map(|v| &**v) {"));
   });
 });
 
@@ -520,6 +543,17 @@ describe("`.length`", () => {
     expect(length("s: string", "[].length")).toMatch(like('out.push_str("<p>0</p>");'));
   });
 
+  it("adds to the length of a list it holds as an integer, and to a count of computed items as a number", () => {
+    expect(length("r: Record<string, number>", "Object.entries(r).map((e) => e[0]).length + 1")).toMatch(like("fv::core::push_int(out, props.r.len() as i64 + 1);"));
+    expect(length("l: string[]", "l.filter((x) => !!x).length + 1")).toMatch(like(
+      "fv::core::push_number(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).count() as i64 as f64 + 1.0);",
+    ));
+  });
+
+  it("reads a list's item by the length of a tuple, an integer", () => {
+    expect(length("l: string[]; t: [string, number]", "l[t.length]")).toMatch(like("if let Some(v) = props.l.get(2).map(|v| &**v) {"));
+  });
+
   it("counts an empty array literal, and one handed to a parameter whose items have no type, as 0", () => {
     expect(render("const props = defineProps<{ xs: string[] }>();", "<p>{{ [].length + xs.length }}</p>")).toMatch(like("fv::core::push_int(out, props.xs.len() as i64);"));
     const out = render("function f(xs: unknown[]) { return xs.length; }", "<p>{{ f([]) }}</p>");
@@ -609,6 +643,7 @@ describe("array literals", () => {
     ["s: string; b: boolean", "[b, s]", one],
     ["s?: string", "[s]", one],
     ["l: string[]", "[l]", one],
+    ["s: string; n: number", "[n / 2, s]", one],
     ["s: string", "[s, , s]", "FV0610 an array literal holds plain values, without holes"],
   ];
 
@@ -960,6 +995,17 @@ describe("array literals handed to a typed parameter", () => {
     expect(render(f("(string | null)[]"), '<p>{{ f([on ? "a" : "b"]) }}</p>')).toMatch(like('fv::core::push_int(out, { let fv_xs = &[if props.on { "a" } else { "b" }]; fv_xs.len() as i64 });'));
   });
 
+  it("keeps a list of strings, plain and chosen by `?:`, where the parameter's items have no type", () => {
+    expect(render(f("unknown[]"), '<p>{{ f(["a"]) }}</p>')).toMatch(like('fv::core::push_int(out, { let fv_xs = &["a"]; fv_xs.len() as i64 });'));
+    expect(render(f("unknown[]"), '<p>{{ f([on ? "a" : "b"]) }}</p>')).toMatch(like('fv::core::push_int(out, { let fv_xs = &[if props.on { "a" } else { "b" }]; fv_xs.len() as i64 });'));
+  });
+
+  it("refuses an array literal handed to a child's string or object prop", () => {
+    const files = { files: { "S.vue": sfc("defineProps<{ s: string }>();", "<b>{{ s }}</b>"), "C.vue": sfc("interface C { a: string }\ndefineProps<{ c: C }>();", "<b>{{ c.a }}</b>") } };
+    expect(refusals('import S from "./S.vue";', `<S :s="['a']" />`, files)).toEqual(["FV0509 a string prop needs a string"]);
+    expect(refusals('import C from "./C.vue";', '<C :c="[1]" />', files)).toEqual(["FV0511 the prop is an object, and the value given is a list"]);
+  });
+
   it("refuses a hole in an array literal handed to a typed parameter", () => {
     expect(refusals(f("string[]"), '<p>{{ f(["a", , "b"]) }}</p>')).toEqual(["FV0610 an array literal holds plain values, without holes"]);
   });
@@ -1106,6 +1152,24 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like('out.push_str(if fv::props::Union::as_str(props.t) == "x" { "true" } else { "false" });'));
   });
 
+  it("reads a `?:` whose test is known when compiling as the branch it takes, where that is a value of a union present or not and the other is a literal or a value of another union", () => {
+    const always = (members: string, enumName: string) => `FV0637 "zz" is not one of ${members}, the members of \`${enumName}\`, so the comparison is always false: compare with one of its members`;
+    const unions = 'defineProps<{ t: "a&b" | "md"; w: "zz" | "md"; o?: "a" | "b" }>();';
+    expect(refusals(unions, "<p>{{ (Number.isNaN(1) ? 'x' : o) === 'zz' }}</p>")).toEqual([always('"a" | "b"', "XO")]);
+    expect(refusals(unions, "<p>{{ (Number.isNaN(1) ? w : t) === 'zz' }}</p>")).toEqual([always('"a&b" | "md"', "XT")]);
+  });
+
+  it("hands a child's union prop a `?:` whose test is known when compiling, of a literal of the prop's union and a value of a union within it", () => {
+    const child = { files: { "G.vue": sfc('defineProps<{ g: "a&b" | "md" | "x" | "a" }>();', "<b>{{ g }}</b>"), "H.vue": sfc('defineProps<{ h?: "a&b" | "md" | "x" | "a" }>();', "<b>{{ h }}</b>") } };
+    const unions = 'import G from "./G.vue";\nimport H from "./H.vue";\ndefineProps<{ t: "a&b" | "md"; k: "a" | "b" | "c"; on: boolean }>();';
+    const parsed = (subject: string, into: string) => like(`match ${subject}.parse::<${into}>() { Ok(fv_u) => fv_u, Err(fv_e) => {`);
+    expect(render(unions, `<G :g="Number.isNaN(1) ? 'x' : t" />`, child)).toMatch(parsed("fv::props::Union::as_str(props.t)", "super::g::GG"));
+    expect(render(unions, `<G :g="k === 'a' ? (Number.isNaN(1) ? 'x' : k) : 'md'" />`, child)).toMatch(like(`g: match props.k { XK::A => match fv::props::Union::as_str(props.k).parse::<super::g::GG>() {`));
+    expect(render(unions, `<H :h="on ? (Number.isNaN(1) ? 'x' : t) : undefined" />`, child)).toMatch(like(
+      "h: (if props.on { Some(fv::props::Union::as_str(props.t)) } else { None }).map(|v| match v.parse::<super::h::HH>() { Ok(fv_u) => fv_u, Err(fv_e) => {",
+    ));
+  });
+
   it("holds a `computed` annotated as a union as its enum, so a child's union prop takes it with no `_` arm", () => {
     const child = { files: { "T.vue": sfc('defineProps<{ t: "calm" | "loud" | "quiet" }>();', "<b>{{ t }}</b>") } };
     const out = render(
@@ -1172,6 +1236,67 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).toMatch(like("t: match s_tone { XTone::Calm | XTone::Empty => super::t::TT::Loud, XTone::Loud => super::t::TT::Quiet, XTone::Quiet => super::t::TT::Calm }"));
     expect(out).toMatch(like("t: if props.on { super::t::TT::Quiet } else { super::t::TT::Calm }"));
     expect(out).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud | XTone::Empty => "p-2", XTone::Quiet => "p-3" });'));
+  });
+
+  it("reads a table by a key built with `||` from an enum and a literal outside it, and refuses one built with a `string`", () => {
+    const tones = 'import { ref } from "vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ start?: Tone; s: string }>();\nconst tone = ref<Tone | "">(props.start ?? "");\nconst PAD = { calm: "p-1", loud: "p-2", quiet: "p-3", other: "p-4" } as const;';
+    expect(render(tones, "{{ PAD[tone || 'other'] }}")).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud => "p-2", XTone::Quiet => "p-3", XTone::Empty => "p-4" });'));
+    expect(refusals(tones, "{{ PAD[tone || s] }}")).toEqual([expect.stringMatching(/^FV0222 `PAD` read by a key that is a `string`/)]);
+  });
+
+  describe("tables read by a key a `?:` chooses", () => {
+    const keys = 'type Tone = "calm" | "loud" | "quiet";\ninterface Pair { loud: "b"; quiet: "c" }\ndefineProps<{ k: "a" | "b" | "c"; j: "a" | "b" | "c"; o?: "a" | "b" | "c"; on: boolean; pick: Tone; pair: Pair; n: number }>();\nconst TB = { a: "A", b: "B", c: "C" } as const;';
+
+    it("matches over the variants of the union the key is tested by, converting a branch that is a value of another union", () => {
+      expect(render(keys, "<p>{{ TB[k === 'a' ? j : 'b'] }}</p>")).toMatch(like(
+        'fv::core::escape_into(out, match match props.k { XK::A => match props.j { XJ::A => XK::A, XJ::B => XK::B, XJ::C => XK::C }, XK::B | XK::C => XK::B } { XK::A => "A", XK::B => "B", XK::C => "C" });',
+      ));
+      expect(render(keys, "<p>{{ TB[o === 'a' ? j : 'b'] }}</p>")).toMatch(like(
+        'fv::core::escape_into(out, match match props.o { Some(XO::A) => match props.j { XJ::A => XO::A, XJ::B => XO::B, XJ::C => XO::C }, Some(XO::B) | Some(XO::C) | None => XO::B } { XO::A => "A", XO::B => "B", XO::C => "C" });',
+      ));
+    });
+
+    it("reads a branch that is itself a `?:` over a union through its own `match`, and a branch that is a value of the union by its string", () => {
+      expect(render(keys, "<p>{{ TB[on ? (k === 'a' ? 'b' : 'c') : 'a'] }}</p>")).toMatch(like('fv::core::escape_into(out, if props.on { match props.k { XK::A => "B", XK::B | XK::C => "C" } } else { "A" });'));
+      const out = render(keys, "<p>{{ TB[on ? k : 'a'] }}|{{ TB[on ? 'a' : k] }}</p>");
+      expect(out).toMatch(like('fv::core::escape_into(out, match if props.on { fv::props::Union::as_str(props.k) } else { "a" } { "a" => "A", "b" => "B", _ => "C" });'));
+      expect(out).toMatch(like('fv::core::escape_into(out, match if props.on { "a" } else { fv::props::Union::as_str(props.k) } { "a" => "A", "b" => "B", _ => "C" });'));
+      expect(render(`${keys}\nconst NEXT = { a: "b", b: "c", c: "a" } as const;`, "<p>{{ TB[on ? NEXT[k] : 'a'] }}</p>")).toMatch(like(
+        'fv::core::escape_into(out, match if props.on { match props.k { XK::A => "b", XK::B => "c", XK::C => "a" } } else { "a" } { "b" => "B", "c" => "C", _ => "A" });',
+      ));
+    });
+
+    it("reads the key by its string where a branch reads a field only the members the `?:` keeps have", () => {
+      expect(render(keys, "<p>{{ pick !== 'calm' ? TB[pick === 'loud' ? 'a' : pair[pick]] : '' }}</p>")).toMatch(like(
+        'fv::core::escape_into(out, if props.pick != Tone::Calm { match if props.pick == Tone::Loud { "a" } else { std::ops::Deref::deref(&props.pair.quiet) } { "a" => "A", _ => "C" } } else { "" });',
+      ));
+    });
+
+    it.each(["k", "o"])("reports each refused statement after a table read by a key `%s` narrows", (key) => {
+      expect(refusals(keys, `<p>{{ TB[${key} === 'a' ? 'b' : 'c'] }}</p><p>{{ n.toFixed(200) }}</p><p>{{ n.toFixed(300) }}</p>`)).toEqual([expect.stringMatching(/^FV0705 /), expect.stringMatching(/^FV0705 /)]);
+    });
+  });
+
+  describe("an optional `ref` of a union converted for a child's optional union prop", () => {
+    const child = { files: { "T.vue": sfc('defineProps<{ t?: "calm" | "loud" | "" }>();', "<b>{{ t }}</b>") } };
+    const refs = 'import { ref } from "vue";\nimport T from "./T.vue";\ntype Tone = "calm" | "loud";\nconst props = defineProps<{ start?: Tone; p?: "calm" | "loud" | ""; n: number }>();\nconst m = ref<Tone | "" | undefined>(props.start);\nconst present = ref<Tone | undefined>(props.start);';
+
+    it("converts a branch that may be absent as it is, and the right side of `&&` where the left is present", () => {
+      const out = render(refs, `<T :t="m ? m : p" /><T :t="present && 'loud'" />`, child);
+      expect(out).toMatch(like(
+        "t: match s_m { Some(XM::Calm) => Some(super::t::TT::Calm), Some(XM::Loud) => Some(super::t::TT::Loud), Some(XM::Empty) | None => props.p.map(|v| match v { XP::Calm => super::t::TT::Calm, XP::Loud => super::t::TT::Loud, XP::Empty => super::t::TT::Empty }) }",
+      ));
+      expect(out).toMatch(like("t: match s_present { Some(Tone::Calm) | Some(Tone::Loud) => Some(super::t::TT::Loud), None => None }"));
+    });
+
+    it("gives the members a `v-if` leaves out the arm of absence", () => {
+      expect(render(refs, `<template v-if="m !== 'calm'"><T :t="m || 'loud'" /></template>`, child)).toMatch(like("t: Some(match s_m { Some(XM::Loud) | Some(XM::Empty) | None | Some(XM::Calm) => super::t::TT::Loud })"));
+    });
+
+    it("refuses a branch outside the child's union, and reports each refused statement after a conversion", () => {
+      expect(refusals(refs, `<T :t="m ? 'zz' : undefined" />`, child)).toEqual([expect.stringMatching(/^FV0515 the prop is one of "calm" \| "loud" \| "", the members of `TT`, and the value given may be "zz"/)]);
+      expect(refusals(refs, `<T :t="m || 'loud'" /><p>{{ n.toFixed(200) }}</p><p>{{ n.toFixed(300) }}</p>`, child)).toEqual([expect.stringMatching(/^FV0705 /), expect.stringMatching(/^FV0705 /)]);
+    });
   });
 
   it("reads the left side of `??` on its right with the type its declaration gives", () => {
@@ -1270,6 +1395,7 @@ describe("names of the template read in `<script setup>`", () => {
     ["`.length` in a `computed`", "const c = computed(() => w.length);", "<p>{{ c }}</p>", "w.length"],
     ["a method in a `computed`", 'const c = computed(() => w.join("-"));', "<p>{{ c }}</p>", "w.join"],
     ["an item by `[…]` in a `computed`", "const c = computed(() => w[0]);", "<p>{{ c }}</p>", "w[…]"],
+    ["a field by `[…]` in a `computed`", 'const c = computed(() => r["a"]);', "<p>{{ c }}</p>", "r[…]"],
     ["a field in a setup function", "function label(): string { return r.a; }", "<p>{{ label() }}</p>", "r.a"],
     ["a field in an object literal", "const c = computed((): Wrap => ({ b: r.a }));", "<p>{{ c.b }}</p>", "r.a"],
     ["a field of a `computed`", "const k = computed(() => r.value);\nconst c = computed(() => k.a);", "<p>{{ c }}</p>", "k.a"],

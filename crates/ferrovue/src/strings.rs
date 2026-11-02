@@ -1365,7 +1365,11 @@ impl Parser<'_> {
 
     fn number(&mut self) -> Option<usize> {
         let start = self.at;
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while self.peek().is_some_and(|u| (0x30..=0x39).contains(&u)) {
+            #[cfg(test)]
+            turns.next();
             self.at += 1;
         }
         (self.at > start).then(|| {
@@ -1589,10 +1593,14 @@ impl JsRegex {
             };
         }
         let mut count = 0;
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while count < p.max
             && at + count < text.len()
             && self.matches_unit(&p.atom, text[at + count])
         {
+            #[cfg(test)]
+            turns.next();
             count += 1;
         }
         if count < p.min {
@@ -1664,7 +1672,11 @@ impl JsRegex {
         }
         let mut p = 0;
         let mut q = 0;
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while q < text.len() {
+            #[cfg(test)]
+            turns.next();
             match self.match_from(0, &text, q) {
                 Some(e) if e != p => {
                     out.push(String::from_utf16_lossy(&text[p..q]));

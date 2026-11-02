@@ -711,6 +711,7 @@ fn splice_replaces_only_empty_elements_whose_one_attribute_is_the_marker() {
         "<div data-part=\"a\"></span>",
         "a < b <",
         "<custom-el data-part=\"c\"></custom-el>",
+        "<1x data-part=\"d\"></1x>",
     ));
     let mut seen = Vec::new();
     let spliced = splice(&html, "data-part", |name, out| {
@@ -733,6 +734,7 @@ fn splice_replaces_only_empty_elements_whose_one_attribute_is_the_marker() {
             "<div data-part=\"a\"></span>",
             "a < b <",
             "<custom-el data-part=\"c\"></custom-el>",
+            "<1x data-part=\"d\"></1x>",
         )
     );
     assert_eq!(

@@ -158,6 +158,7 @@ pub mod mixed_ternary;
 pub mod modal;
 pub mod model;
 pub mod model_is;
+pub mod model_mark;
 pub mod model_parent;
 pub mod moduled;
 pub mod moduled_chip;
@@ -1146,6 +1147,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "ModelIs" => {
             let props: model_is::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             model_is::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "ModelMark" => {
+            let props: model_mark::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            model_mark::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "ModelParent" => {
             let props: model_parent::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

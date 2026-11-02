@@ -10,6 +10,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
+- `<component :is>` of a `defineModel` typed as one string literal, as `defineModel<"b">()`, renders that element; 0.14.1 refused it with FV0418.
+  [`<component :is>`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#component-is).
 - A quantifier bound above 2147483647 in a regular expression (`/a{2,99999999999999999999999}/`) counts as 2147483647, as V8 counts it; 0.14.1 matched the quantifier as literal text.
   [Regular expressions](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#regular-expressions).
 

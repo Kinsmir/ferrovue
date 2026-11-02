@@ -37,6 +37,17 @@ function refusals(source: string, others: Record<string, string> = {}, config: R
   throw new Error("compiled without an error");
 }
 
+function refusedAt(source: string): GenError {
+  try {
+    generate(project(source, {}), { components: "components", out: "out", comments: true });
+  } catch (e) {
+    if (e instanceof GenErrors) return e.errors[0] as GenError;
+    if (e instanceof GenError) return e;
+    throw e;
+  }
+  throw new Error("compiled without an error");
+}
+
 afterEach(() => {
   for (const made of roots.splice(0)) rmSync(made, { recursive: true, force: true });
 });
@@ -217,6 +228,10 @@ const on = ref(false);
     Ok(())
 }
 `);
+  });
+
+  it("writes an empty value after a comment as the bare name", () => {
+    expect(render(sfc(`tag: "b" | "i"`, `<component :is="tag"><i><!-- a --><b title="">y</b></i></component>`))).toContain(`out.push_str("><i><!-- a --><b title>y</b></i></");`);
   });
 
   it("writes a slot's content of comments and whitespace as filled", () => {
@@ -785,10 +800,91 @@ describe("v-if", () => {
   });
 });
 
+describe("form fields at the root", () => {
+  const models = 'const text = defineModel<string>({ required: true });\nconst on = defineModel<boolean>("on", { required: true });\nconst list = defineModel<string[]>("list", { required: true });\n';
+  const field = (template: string): string => sfc("xs: { k: string }[]; o: { k: string }", template, models);
+  const parent = (attrs: string): string => sfc("", `<F model-value="a" :on="true" :list="[]" :xs="[]" :o="{ k: 'a' }" ${attrs} />`, 'import F from "./F.vue";\n');
+  const passes = (name: string): string => `and a parent passes \`${name}\`: pass it as a prop, or wrap the element in another, such as a \`<div>\`, which then takes those attributes`;
+
+  it.each([
+    ["a `<textarea>` with content", "<textarea>hi</textarea>", 'value="v"', `FV0424 a \`<textarea>\` at the component's root renders as its content the \`value\` passed to the component, ${passes("value")}`],
+    ["a `<textarea>` with `v-model`", '<textarea v-model="text"></textarea>', 'value="v"', `FV0424 a \`<textarea>\` at the component's root renders as its content the \`value\` passed to the component, ${passes("value")}`],
+    ["an `<input>` with `v-model`", '<input v-model="text">', 'type="radio"', `FV0424 an \`<input>\` with \`v-model\` at the component's root reads its \`type\` and \`value\` from the attributes passed to the component, ${passes("type")}`],
+    ["a checkbox with `v-model`", '<input type="checkbox" v-model="on">', 'value="v"', `FV0424 an \`<input>\` with \`v-model\` at the component's root reads its \`type\` and \`value\` from the attributes passed to the component, ${passes("value")}`],
+  ])("names what %s reads where a parent passes it", (_, template, attrs, refusal) => {
+    expect(refusals(parent(attrs), { F: field(template) })).toEqual([refusal]);
+  });
+
+  it.each([
+    ["of a type that is not a string", '<input :type="true" v-model="text">', "FV0424 an `<input>` with `v-model` at the component's root reads its `type` from the attributes passed to the component: write a literal `type` other than `radio`, or wrap it in another element"],
+    ["of type radio", '<input type="radio" v-model="text">', "FV0424 an `<input>` with `v-model` at the component's root reads its `value` from the attributes passed to the component: write a literal `type` other than `radio`, or wrap it in another element"],
+    ["a checkbox bound to a list", '<input type="checkbox" v-model="list">', 'FV0424 an `<input type="checkbox">` with `v-model` at the component\'s root takes a boolean model: wrap it in another element to bind a list'],
+  ])("refuses a root `<input>` with `v-model` %s", (_, template, refusal) => {
+    expect(refusals(field(template))).toEqual([refusal]);
+  });
+
+  it("merges the model after an attribute whose value is not a literal", () => {
+    expect(render(field('<input :maxlength="text.length" v-model="text">'))).toContain(`out.push_str("<input maxlength=\\"");
+    fv::core::push_int(out, fv::strings::js_length(&props.model_value));
+    out.push('"');
+    if props.model_value.is_empty() {
+        out.push_str(" value");
+    } else {
+        out.push_str(" value=\\"");
+        fv::core::escape_into(out, &props.model_value);
+        out.push('"');
+    }
+    out.push('>');`);
+  });
+
+  it("translates a `?:` of text in a component with a root `<textarea>`", () => {
+    expect(render(field('<textarea v-if="on">hi</textarea><p v-else><i v-for="x in list">{{ "k" === x ? "y" : "n" }}</i></p>'))).toContain(`fv::core::escape_into(out, if "k" == fv_x { "y" } else { "n" });`);
+  });
+
+  it.each([
+    ["a key that is not a literal", '<textarea v-if="on">hi</textarea><p v-else><i v-for="x in xs">{{ x.k in x ? x.k : "n" }}</i></p>'],
+    ["a prop", '<textarea v-if="on">hi</textarea><p v-else>{{ "k" in o ? o.k : "n" }}</p>'],
+    ["a loop variable, in a component with no form field at its root", '<div><i v-for="x in xs">{{ "k" in x ? x.k : "n" }}</i></div>'],
+  ])("refuses `in` of %s in a `?:` of text", (_, template) => {
+    expect(refusals(field(template))).toEqual([
+      "FV0631 `in` tests whether an object has a key, which the server does not translate: for a record, write `Object.keys(r).includes(key)`",
+    ]);
+  });
+
+  it("refuses merged attributes on an SVG element whose tag holds a dash, in a component with a root `<textarea>`", () => {
+    expect(refusals(field('<textarea v-if="on">hi</textarea><p v-else><svg><color-profile v-bind="o">x</color-profile></svg></p>'))).toEqual([
+      "FV0006 `ssrRenderAttrs` with a tag argument",
+    ]);
+  });
+});
+
 describe("refusals", () => {
   it("refuses an input whose type and v-model are bound", () => {
     expect(refusals(sfc("t: string; x: string", `<div><input :type="t" v-model="x"></div>`))).toEqual([
       "FV0426 `v-model` on an `<input>` whose `type` is bound, where Vue's server chooses as it renders whether to write `checked` or `value`: write a literal `type`, or one `<input>` for each type under `v-if`",
+    ]);
+  });
+
+  it("locates a refusal of a bound type and v-model at the bound `type`", () => {
+    expect(refusedAt(sfc("t: string; x: string", `<div><input @type="go" :id="t" :type="t" v-model="x"></div>`, "function go() {}\n")).at).toMatchObject({ line: 5, column: 42 });
+  });
+
+  it.each([
+    ["a sequence", "(text, o)"],
+    ["a sequence whose assignment is to a member", "(o.k = text, o)"],
+    ["a sequence of three", "(Math = o, o, o)"],
+  ])("refuses %s bound with `v-bind`", (_, bound) => {
+    expect(refusals(sfc("o: { k: string }; text: string", `<div><p v-bind="${bound}">x</p></div>`))).toEqual(["FV0006 this expression cannot be rendered on the server"]);
+  });
+
+  it("refuses a sequence bound with `v-bind` that assigns a name, in a component a parent passes `value`", () => {
+    const child = sfc("o: { k: string }", '<div><p v-bind="(Math = o, o)">y</p></div>');
+    expect(refusals(sfc("", `<F :o="{ k: 'a' }" value="v" />`, 'import F from "./F.vue";\n'), { F: child })).toEqual(["FV0407 attributes must be an object literal"]);
+  });
+
+  it.each([["a prop", "t"], ["a call", "String(t)"]])("refuses a `<TransitionGroup>` whose tag is %s", (_, tag) => {
+    expect(refusals(sfc("t: string; xs: string[]", `<div><TransitionGroup :tag="${tag}"><i v-for="v in xs" :key="v">{{ v }}</i></TransitionGroup></div>`))).toEqual([
+      "FV0006 this expression cannot be rendered on the server",
     ]);
   });
 

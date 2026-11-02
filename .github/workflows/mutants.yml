@@ -187,7 +187,9 @@ jobs:
           - name: expressions
             modules: expr members operators logical conditional
           - name: calls and methods
-            modules: calls globals lists numbers strings
+            modules: calls globals numbers strings
+          - name: lists
+            modules: lists
     env:
       MODULES: ${{ matrix.modules }}
     steps:
