@@ -2760,6 +2760,15 @@ defineProps<{ cats: Cat[] }>();
       expect(e.code).toBe("FV0424");
       expect(e.message).toMatch(new RegExp(`^components/F\\.vue:5:11: .* at the component's root .* a parent passes \\\`${name}\\\``));
     });
+
+    it.each([
+      ["passes no attribute", 'class="c"'],
+      ["passes the key", 'k="v"'],
+    ])("refuses an `in` test of a loop item beside a root `<textarea>` whose parent %s", (_, attrs) => {
+      const child = field('<textarea v-if="on">hi</textarea><p v-else><i v-for="x in xs">{{ "k" in x ? x.k : "n" }}</i></p>', 'defineProps<{ on: boolean; xs: { k?: string }[] }>();');
+      const e = refusal(island(`<script setup lang="ts">\nimport F from "./F.vue";\n</script>\n<template><F :on="true" :xs="[]" ${attrs} /></template>`, { F: child }));
+      expect(e).toMatchObject({ code: "FV0631", message: expect.stringMatching(/^components\/F\.vue:4:76: `in` tests whether an object has a key/) });
+    });
   });
 
   const refused: [string, string, RegExp][] = [

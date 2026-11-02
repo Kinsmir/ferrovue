@@ -40,7 +40,6 @@ function heldContent(p: N): N {
 }
 
 function directedContent(s: Scope, n: N): void {
-  s.temps.add(n.left.name);
   const parts = mergedParts(n.right);
   const held = parts.map(heldContent).find((p) => p !== null);
   if (held === undefined) return;
@@ -65,9 +64,7 @@ function rootControlKnown(s: Scope, names: readonly string[]): boolean {
 
 function unpassedValue(s: Scope, n: N): N {
   const test = n?.type === "ConditionalExpression" ? n.test : null;
-  if (test?.type !== "BinaryExpression" || test.operator !== "in" || test.left.type !== "StringLiteral" || test.right.type !== "Identifier" || !(s.temps.has(test.right.name) || s.comp.rootControl !== undefined)) return n;
-  rootControlKnown(s, [test.left.value]);
-  return n.alternate;
+  return s.temps.has(test?.right?.name) ? n.alternate : n;
 }
 
 function modelAttrs(s: Scope, n: N): N {
@@ -121,14 +118,14 @@ export function slot(s: Scope, e: Emitter, n: N): void {
         renderDynamicAttr(s, e, a[0].value, attrShown(s, a[0].value, a[1]), n);
         return;
       case "_ssrRenderAttrs":
+        if (a[0].type === "AssignmentExpression") s.temps.add(a[0].left.name);
         if (a.length > 1 && !(a[1].type === "StringLiteral" && a[1].value === "textarea" && rootControlKnown(s, ["value"]))) fail(s.comp, "FV0006", "`ssrRenderAttrs` with a tag argument", n);
         if (a[0].type === "SequenceExpression") {
           renderAttrs(s, e, modelAttrs(s, a[0]));
           return;
         }
         if (a[0].type === "AssignmentExpression") {
-          if (a.length > 1) s.temps.add(a[0].left.name);
-          else directedContent(s, a[0]);
+          if (a.length === 1) directedContent(s, a[0]);
           renderAttrs(s, e, a[0].right);
           return;
         }

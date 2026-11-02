@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Fixed
+
+- A `"key" in object` test in a component with a root `<textarea>` or `<input v-model>` is refused with FV0631, as elsewhere; 0.14.1 rendered its alternate, or refused it with FV0424 when a parent passed that key.
+  [FV0631](https://docs.rs/ferrovue/latest/ferrovue/guide/error_codes/index.html#fv0631).
+
 ## [0.14.1] - 2026-10-31
 
 ### Changed
