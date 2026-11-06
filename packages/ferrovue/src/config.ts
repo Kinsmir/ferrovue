@@ -111,6 +111,11 @@ export interface Config {
    * `template.compilerOptions.comments`: by default as Vue decides it, kept when `isProduction` is
    * `false` and left out when it is `true`. */
   comments?: boolean;
+  /** How the text of templates is spaced: `"condense"` (the default) as Vue spaces it, or
+   * `"trim-edges"`, which also trims the whitespace where text meets its element's tags. The
+   * client compiles the same way with `trimEdges` from `ferrovue/whitespace` in
+   * `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`. */
+  whitespace?: WhitespaceMode;
   /** CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue
    * computes as postcss-modules does. Without it, `<style module>` is refused. */
   cssModules?: {
@@ -129,6 +134,11 @@ export interface Config {
 }
 
 export type ScopeIdMode = "filepath" | "filepath-source";
+
+/** How the text of templates is spaced: `"condense"`, Vue's own rule, or `"trim-edges"`, which
+ * also trims text where it meets its element's tags, as `trimEdges` from `ferrovue/whitespace`
+ * does for the client. */
+export type WhitespaceMode = "condense" | "trim-edges";
 
 /** Where the routes come from: a JSON file of routes, or a folder of pages. */
 export type RoutesSource =

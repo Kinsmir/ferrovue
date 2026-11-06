@@ -133,6 +133,7 @@ const FULL = {
   viteRoot: ".",
   isProduction: false,
   comments: true,
+  whitespace: "trim-edges",
   cssModules: { generateScopedName: "[local]_[hash:base64:5]", hashPrefix: "p", context: "." },
   builders: false,
 };
@@ -262,7 +263,7 @@ describe("the configuration's JSON Schema", () => {
 import { plural } from "./helpers";
 defineProps<{ n: number; note?: string; at?: Date }>();
 </script>
-<template><p class="c"><RouterLink to="/about" :class="$style.m">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}</p></template>
+<template><p class="c"><RouterLink to="/about" :class="$style.m">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}<b> n </b></p></template>
 <style scoped>.c { color: red }</style>
 <style module>.m { width: v-bind(n) }</style>
 `,
@@ -279,6 +280,7 @@ defineProps<{ n: number; note?: string; at?: Date }>();
       "helpers.functions.*.maxLen": 5,
       isProduction: false,
       "cssModules.hashPrefix": "p",
+      whitespace: "trim-edges",
     };
     const defaults = valuePaths(FULL, CONFIG_SCHEMA).filter((p) => p.node.default !== undefined);
     expect(defaults.map((p) => p.name).toSorted()).toEqual(Object.keys(other).toSorted());

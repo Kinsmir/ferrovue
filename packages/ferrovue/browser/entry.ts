@@ -6,9 +6,10 @@ import { fixtureApp, readFixture, type RouterOptions } from "../src/testing-brow
 import type { RouteEntry } from "../src/route-records.ts";
 import { headRendered, settled } from "../src/settle.ts";
 
-const modules = import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", {
-  eager: true,
-});
+const modules = {
+  ...import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/conformance/components/*.vue", { eager: true }),
+  ...import.meta.glob<{ default: Component }>("../../../crates/ferrovue/tests/trimmed/components/*.vue", { eager: true }),
+};
 const components = new Map(
   Object.entries(modules).map(([path, m]) => [path.replace(/^.*\/(\w+)\.vue$/, "$1"), m.default]),
 );

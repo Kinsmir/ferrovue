@@ -41,6 +41,7 @@ export interface Config {
     twins?: Record<string, TwinSpec>;
     unions?: Record<string, string>;
     viteRoot?: string;
+    whitespace?: WhitespaceMode;
 }
 
 // @public (undocumented)
@@ -77,6 +78,9 @@ export type TypeName = "string" | "string?" | "int" | "int?" | "float" | "float?
 
 // @public
 export const TYPES_MODULE = "ferrovue/types";
+
+// @public
+export type WhitespaceMode = "condense" | "trim-edges";
 
 // (No @packageDocumentation comment for this package)
 

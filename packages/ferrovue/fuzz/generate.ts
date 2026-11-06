@@ -390,6 +390,7 @@ export interface Component {
   propsFile?: "plain" | "joined";
   model?: string[];
   comments?: boolean;
+  whitespace?: "trim-edges";
 }
 
 export interface Case {
@@ -934,6 +935,7 @@ export function configOf(c: Component, viteRoot: string): Config {
     ...(c.stores.length ? { stores: "stores" } : {}),
     ...(c.i18n ? { i18n: { messages: "locales", locale: "en", fallbackLocale: "en" } } : {}),
     ...(c.comments ? { comments: true } : {}),
+    ...(c.whitespace ? { whitespace: c.whitespace } : {}),
   };
 }
 
@@ -2889,6 +2891,8 @@ class Gen {
 
 const TEXTS = [
   "hello",
+  "\n    padded text\n  ",
+  " edge&nbsp;",
   " ",
   "  ",
   "\n    ",
@@ -3755,9 +3759,11 @@ export function generateCase(seed: number, index: number, fixtures = 4): Case {
   const propsFile = props.every((p) => local(p.spec)) && r.chance(0.2) ? (r.chance(0.5) ? ("plain" as const) : ("joined" as const)) : undefined;
   const model = r.chance(0.12) ? r.pick([["b", "i"], ["em", "strong", "span"], ["h2", "h3", "p"]]) : undefined;
   const comments = r.chance(0.3);
+  const whitespace = r.chance(0.3);
   const component = prune({
     name,
     ...(comments ? { comments } : {}),
+    ...(whitespace ? { whitespace: "trim-edges" as const } : {}),
     ...(propsFile !== undefined ? { propsFile } : {}),
     ...(model !== undefined ? { model } : {}),
     ifaces,

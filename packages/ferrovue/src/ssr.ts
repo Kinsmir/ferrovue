@@ -4,6 +4,8 @@ import { getEscapedCssVarName } from "@vue/shared";
 import * as vue from "vue";
 import type { Component } from "vue";
 import * as serverRenderer from "vue/server-renderer";
+import type { WhitespaceMode } from "./config.ts";
+import { trimEdges } from "./whitespace.ts";
 
 const KEY = /(?:^|[{,])\s*"((?:[^"\\]|\\.)*)"\s*:/g;
 
@@ -30,6 +32,9 @@ export interface SsrRenderOptions {
   /** Whether the template's HTML comments render, as `comments` in `ferrovue.config.json`
    * decides it for the generated code: `false` by default. */
   comments?: boolean;
+  /** How the template's text is spaced, as `whitespace` in `ferrovue.config.json` decides it for
+   * the generated code: `"condense"` by default. */
+  whitespace?: WhitespaceMode;
 }
 
 /** Give a component compiled for the browser the `ssrRender` its SSR build would have. */
@@ -53,7 +58,7 @@ export function attachSsrRender(file: string, name: string, component: Component
     ssr: true,
     ssrCssVars: descriptor.cssVars,
     isProd: true,
-    compilerOptions: { ...(script?.bindings ? { bindingMetadata: script.bindings } : {}), comments },
+    compilerOptions: { ...(script?.bindings ? { bindingMetadata: script.bindings } : {}), comments, ...(options.whitespace === "trim-edges" ? { nodeTransforms: [trimEdges] } : {}) },
   }).code.replace(/^(\s*)":--[^"]*":/gm, (_, indent: string) => `${indent}":--${varNames[named++]!}":`);
   const body = code
     .replace(/import \{([^}]*)\} from "vue"/g, (_, names: string) => `const {${names.replace(/ as /g, ": ")}} = __vue;`)

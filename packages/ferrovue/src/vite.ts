@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { join, posix, resolve, sep } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 import { type Alias, write, type Written } from "./compiler.ts";
-import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
+import { type Config, CONFIG_FILE, loadConfig, type WhitespaceMode } from "./config.ts";
 import { templateComments } from "./context.ts";
 import { type GenError } from "./errors.ts";
 import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
@@ -51,6 +51,19 @@ function vueComments(config: Pick<ResolvedConfig, "plugins" | "isProduction">): 
   if (!vue) return null;
   const set = (vue.api as { options?: { template?: { compilerOptions?: { comments?: unknown } } } } | undefined)?.options?.template?.compilerOptions?.comments;
   return typeof set === "boolean" ? set : !config.isProduction;
+}
+
+const TRIM_EDGES = Symbol.for("ferrovue.whitespace");
+
+/** How `@vitejs/plugin-vue`, as this build configures it, spaces the text of templates:
+ * `"trim-edges"` when its `template.compilerOptions.nodeTransforms` holds `trimEdges`, from any
+ * copy of ferrovue. `null` without the plugin. */
+function vueWhitespace(config: Pick<ResolvedConfig, "plugins">): WhitespaceMode | null {
+  const vue = config.plugins.find((p) => p.name === "vite:vue");
+  if (!vue) return null;
+  const transforms = (vue.api as { options?: { template?: { compilerOptions?: { nodeTransforms?: unknown } } } } | undefined)?.options?.template?.compilerOptions?.nodeTransforms;
+  const trims = Array.isArray(transforms) && transforms.some((t) => typeof t === "function" && (t as unknown as Record<symbol, unknown>)[TRIM_EDGES] === "trim-edges");
+  return trims ? "trim-edges" : "condense";
 }
 
 function componentSources(root: string, config: Config): string[] {
@@ -111,6 +124,19 @@ function commentsMismatch(root: string, vue: boolean | null, configFile = CONFIG
   if (own === vue || !componentSources(root, config).some((s) => COMMENT.test(s))) return null;
   const kept = (on: boolean): string => (on ? "keeps them" : "leaves them out");
   return `the HTML comments of templates: @vitejs/plugin-vue ${kept(vue)}, where ${configFile} ${kept(own)}; set \`"comments": ${vue}\` in ${configFile}`;
+}
+
+/** Why the server would space the text of templates otherwise than the client, when plugin-vue
+ * trims it at the edges, `vue`, where the configuration, `configFile`, keeps it, or the other way
+ * round. */
+function whitespaceMismatch(root: string, vue: WhitespaceMode | null, configFile = CONFIG_FILE): string | null {
+  if (vue === null) return null;
+  const own = loadConfig(root, configFile, ignore).whitespace ?? "condense";
+  if (own === vue) return null;
+  if (own === "trim-edges") {
+    return `the whitespace at the edges of templates' text: ${configFile} trims it with \`"whitespace": "trim-edges"\`, where @vitejs/plugin-vue keeps it; add \`trimEdges\` from \`ferrovue/whitespace\` to plugin-vue's \`template.compilerOptions.nodeTransforms\``;
+  }
+  return `the whitespace at the edges of templates' text: @vitejs/plugin-vue trims it with \`trimEdges\`, where ${configFile} keeps it; set \`"whitespace": "trim-edges"\` in ${configFile}`;
 }
 
 /** Why the class names of the server's CSS modules would differ from those Vite gives the client,
@@ -240,6 +266,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   };
   let vue: ReturnType<typeof vueScopeIds> = null;
   let comments: boolean | null = null;
+  let whitespace: WhitespaceMode | null = null;
   let aliases: readonly Alias[] = [];
   let css: ResolvedConfig["css"] | undefined;
   let building = true;
@@ -263,6 +290,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       readsImportedTypes(config);
       vue = vueScopeIds(config);
       comments = vueComments(config);
+      whitespace = vueWhitespace(config);
       aliases = config.resolve.alias;
       css = config.css;
       building = config.command === "build";
@@ -270,7 +298,11 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     buildStart() {
       try {
         regenerate((w) => this.warn(formatWarning(w)));
-        const mismatch = scopeIdMismatch(root, vue, configFile) ?? cssModulesMismatch(root, css, process.cwd(), configFile) ?? (building ? commentsMismatch(root, comments, configFile) : null);
+        const mismatch =
+          scopeIdMismatch(root, vue, configFile) ??
+          cssModulesMismatch(root, css, process.cwd(), configFile) ??
+          whitespaceMismatch(root, whitespace, configFile) ??
+          (building ? commentsMismatch(root, comments, configFile) : null);
         if (mismatch && building) this.error(`ferrovue: ${mismatch}`);
         if (mismatch) this.warn(`ferrovue: ${mismatch}`);
       } catch (e) {

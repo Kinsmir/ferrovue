@@ -17,7 +17,7 @@ reference; this file is the short version.
   - `src/compiler.ts`: `ferrovue/compiler`, with `src/config.ts` and `src/errors.ts` as
     `ferrovue/compiler/config` and `ferrovue/compiler/errors`. `src/cli.ts` and `src/args.ts` are the `ferrovue`
     command, `src/vite.ts` the Vite plugin, `src/volar.ts` the editor plugin, `src/testing.ts`
-    `ferrovue/testing`.
+    `ferrovue/testing`, `src/whitespace.ts` `ferrovue/whitespace`.
   - `src/errors.ts`: every FV code with its title and detail.
   - `src/schema.ts`: the configuration's keys, from which `schema.json` is written.
   - `src/plugins/`: the integrations, as compiler plugins listed in `plugins/index.ts` (vue-router,

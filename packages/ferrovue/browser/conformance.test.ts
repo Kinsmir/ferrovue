@@ -4,9 +4,10 @@ import vue from "@vitejs/plugin-vue";
 import { chromium, firefox, webkit, type Browser, type ConsoleMessage, type Page } from "playwright";
 import { build, type Rolldown } from "vite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { cases, CLIENT_ONLY, COMMENTS, CSS_MODULES, datePlans, OPTIONS, ROUTES, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
+import { cases, CLIENT_ONLY, COMMENTS, CSS_MODULES, datePlans, OPTIONS, ROUTES, TRIMMED_CASES, TRIMMED_ROOT, UNHEAD_REWRITES, VUE_DISAGREES } from "../test/conformance-cases.ts";
 import { hydrationBody, recordedHead } from "../src/conformance.ts";
 import type { PageData } from "./entry.ts";
+import { trimEdges } from "../src/whitespace.ts";
 
 const ORIGIN = "http://conformance.test";
 const LAUNCHERS = { chromium, firefox, webkit };
@@ -73,7 +74,7 @@ beforeAll(async () => {
     configFile: false,
     root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
-    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: COMMENTS } } })],
+    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: COMMENTS, nodeTransforms: [(node, context) => (context.filename.startsWith(`${TRIMMED_ROOT}/`) ? trimEdges(node) : undefined)] } } })],
     css: { modules: { generateScopedName: CSS_MODULES.generateScopedName } },
     resolve: { alias: [{ find: /^ferrovue$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },
@@ -106,7 +107,8 @@ async function describeMessage(m: ConsoleMessage): Promise<string> {
 }
 
 const ROUTED = cases.filter((c) => "$route" in c.json && c.component !== "App");
-const pages = new Map<string, string>([...cases.map((c) => [`/${c.component}/${c.name}`, pageFor(c)] as const), ...ROUTED.map((c) => [`/light/${c.component}/${c.name}`, pageFor(c, true)] as const)]);
+const ALL = [...cases, ...TRIMMED_CASES];
+const pages = new Map<string, string>([...ALL.map((c) => [`/${c.component}/${c.name}`, pageFor(c)] as const), ...ROUTED.map((c) => [`/light/${c.component}/${c.name}`, pageFor(c, true)] as const)]);
 
 const ZONES = ["Pacific/Kiritimati", "America/St_Johns", "Asia/Kathmandu"];
 const DATED = cases.filter((c) => ["DatePost", "DateStamp", "DateRows", "DateDays", "DateReplies", "DateThread", "LoadedDates"].includes(c.component));
@@ -144,7 +146,7 @@ describe.each(BROWSERS)("%s", (name) => {
     await browser?.close();
   });
 
-  for (const c of cases) {
+  for (const c of ALL) {
     it(`${c.component}/${c.name}`, async ({ skip }) => {
       if (!browser) skip();
       messages = [];

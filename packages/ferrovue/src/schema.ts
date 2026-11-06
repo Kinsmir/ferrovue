@@ -88,6 +88,7 @@ export const CONFIG_SCHEMA: Schema = {
     viteRoot: { type: "string", default: "." },
     isProduction: { type: "boolean", default: true },
     comments: { type: "boolean" },
+    whitespace: { type: "string", enum: ["condense", "trim-edges"], default: "condense" },
     cssModules: {
       type: "object",
       properties: { generateScopedName: STRING, hashPrefix: { type: "string", default: "" }, context: STRING },

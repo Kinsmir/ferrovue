@@ -310,6 +310,16 @@
       "markdownDescription": "Whether the HTML comments of templates render, as `@vitejs/plugin-vue`'s `template.compilerOptions.comments`: by default as Vue decides it, kept when `isProduction` is `false` and left out when it is `true`.",
       "type": "boolean"
     },
+    "whitespace": {
+      "description": "How the text of templates is spaced: `\"condense\"` (the default) as Vue spaces it, or `\"trim-edges\"`, which also trims the whitespace where text meets its element's tags. The client compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`.",
+      "markdownDescription": "How the text of templates is spaced: `\"condense\"` (the default) as Vue spaces it, or `\"trim-edges\"`, which also trims the whitespace where text meets its element's tags. The client compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`.",
+      "type": "string",
+      "enum": [
+        "condense",
+        "trim-edges"
+      ],
+      "default": "condense"
+    },
     "cssModules": {
       "description": "CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue computes as postcss-modules does. Without it, `<style module>` is refused.",
       "markdownDescription": "CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue computes as postcss-modules does. Without it, `<style module>` is refused.",

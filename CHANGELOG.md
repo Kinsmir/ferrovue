@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Added
+
+- `"whitespace": "trim-edges"` trims the whitespace where a template's text meets its element's tags, and `trimEdges` from the new `ferrovue/whitespace` compiles the client the same way; the Vite plugin fails a build where the two differ.
+  [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
+
 ### Fixed
 
 - `<component :is>` of a `defineModel` typed as one string literal, as `defineModel<"b">()`, renders that element; 0.14.1 refused it with FV0418.

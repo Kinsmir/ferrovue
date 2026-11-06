@@ -401,6 +401,56 @@ committing modules the dev server wrote. `attachSsrRender` from `ferrovue/testin
 `{ comments }` for the same choice, and the conformance suite of `ferrovue/testing` passes the
 configuration's.
 
+# Whitespace
+
+Vue condenses each run of whitespace in a template's text to one space and keeps the space where
+text meets its element's tags, so `<button>\n  remove\n</button>` renders `<button> remove
+</button>`. A formatter that moves long text onto lines of its own adds those spaces to the page,
+in `textContent` and in what devtools shows. `"whitespace": "trim-edges"` in `ferrovue.config.json`
+trims them, and `trimEdges` from `ferrovue/whitespace` compiles the client the same way:
+
+```ts
+// vite.config.ts
+import vue from "@vitejs/plugin-vue";
+import ferrovue from "ferrovue/vite";
+import { trimEdges } from "ferrovue/whitespace";
+
+export default {
+  plugins: [vue({ template: { compilerOptions: { nodeTransforms: [trimEdges] } } }), ferrovue()],
+};
+```
+
+The mode trims the whitespace at the start of an element's first child and at the end of its last
+child, when those children are text written in the template. It applies to the content of
+elements, of components and of `<template v-slot>`:
+
+| Template | `"condense"` (the default) | `"trim-edges"` |
+|---|---|---|
+| `<button>\n  remove\n</button>` | `<button> remove </button>` | `<button>remove</button>` |
+| `<p>\n  Hello {{ name }}\n</p>` | `<p> Hello Ada</p>` | `<p>Hello Ada</p>` |
+| `<p>\n  <span>x</span>\n  tail\n</p>` | `<p><span>x</span> tail </p>` | `<p><span>x</span> tail</p>` |
+| `<MyButton>\n  remove\n</MyButton>` | ` remove ` in the slot | `remove` in the slot |
+| `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
+
+Everything else stays as Vue condenses it:
+
+- the space between two elements, and between text and an interpolation;
+- a value an interpolation renders, such as a prop that starts with a space;
+- the content of `<template v-if>`, `<template v-for>` and of a `<slot>`'s fallback, which render
+  among the text around them;
+- `<pre>`, `<textarea>`, an element with `v-pre`, and an element whose static `style` sets
+  `white-space` to `pre`, `pre-wrap`, `pre-line` or `break-spaces`, with everything inside them.
+  An element styled that way from a stylesheet takes the same `white-space` in its `style`
+  attribute to keep its text.
+
+A `&nbsp;` is text: it stays at an edge.
+
+The Vite plugin checks that plugin-vue and `ferrovue.config.json` agree, as it does for comments:
+a build fails when one trims and the other does not, and the dev server warns. It finds `trimEdges`
+in `template.compilerOptions.nodeTransforms` from any copy of the package. `attachSsrRender` from
+`ferrovue/testing/ssr` takes `{ whitespace }` for the same choice, and the conformance suite of
+`ferrovue/testing` passes the configuration's.
+
 # `<component :is>`
 
 `<component :is>` compiles when every value it can take is known when compiling. Each of these is

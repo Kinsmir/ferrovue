@@ -12,6 +12,7 @@ export function attachSsrRender(file: string, name: string, component: Component
 // @public
 export interface SsrRenderOptions {
     comments?: boolean;
+    whitespace?: WhitespaceMode;
 }
 
 // (No @packageDocumentation comment for this package)
