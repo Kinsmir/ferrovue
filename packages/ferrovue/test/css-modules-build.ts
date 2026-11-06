@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
-import { join, sep } from "node:path";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vue from "@vitejs/plugin-vue";
-import { build, type Rolldown } from "vite";
+import { build, normalizePath, type Rolldown } from "vite";
 
 const [dir, files, config] = process.argv.slice(2).map((a) => JSON.parse(a) as unknown) as [string, string[], { generateScopedName: string; hashPrefix?: string; scopeId?: string }];
 const entry = "virtual:css-modules";
@@ -16,7 +16,7 @@ const result = (await build({
     {
       name: "entry",
       resolveId: (id) => (id.endsWith(entry) ? `\0${entry}` : null),
-      load: (id) => (id === `\0${entry}` ? files.map((f, i) => `export { default as c${i} } from ${JSON.stringify(join(dir, f).split(sep).join("/"))};`).join("\n") : null),
+      load: (id) => (id === `\0${entry}` ? files.map((f, i) => `export { default as c${i} } from ${JSON.stringify(normalizePath(join(dir, f)))};`).join("\n") : null),
     },
   ],
   css: { modules: { generateScopedName: config.generateScopedName, ...(config.hashPrefix !== undefined ? { hashPrefix: config.hashPrefix } : {}) } },

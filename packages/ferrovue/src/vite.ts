@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
-import { join, posix, resolve, sep } from "node:path";
+import { join, posix, resolve } from "node:path";
 import type { Plugin, ResolvedConfig, ViteDevServer } from "vite";
 import { type Alias, write, type Written } from "./compiler.ts";
 import { type Config, CONFIG_FILE, loadConfig, type WhitespaceMode } from "./config.ts";
@@ -8,6 +8,7 @@ import { type GenError } from "./errors.ts";
 import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { allPages, fileRoutes, pagesFolder } from "./file-routes.ts";
 import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
+import { slashed } from "./paths.ts";
 
 /** A route as vue-router's file-based routing builds it from a folder of pages. */
 export interface FileRoute {
@@ -176,14 +177,14 @@ const ROUTES = "ferrovue/routes";
 const ROUTES_ID = `\0${ROUTES}`;
 
 function islandsModule(root: string, islands: Record<string, string>): string {
-  const entries = Object.entries(islands).map(([name, file]) => `  ${JSON.stringify(name)}: () => import(${JSON.stringify(resolve(root, file).split(sep).join("/"))}),`);
+  const entries = Object.entries(islands).map(([name, file]) => `  ${JSON.stringify(name)}: () => import(${JSON.stringify(slashed(resolve(root, file)))}),`);
   return `export default {\n${entries.join("\n")}\n};\n`;
 }
 
 function routesTree(root: string, routes: FileRoute[], indent: string, lazy: boolean): string {
   return routes
     .map((r) => {
-      const page = r.file ? `() => import(${JSON.stringify(resolve(root, r.file).split(sep).join("/"))})` : null;
+      const page = r.file ? `() => import(${JSON.stringify(slashed(resolve(root, r.file)))})` : null;
       const fields = [
         `path: ${JSON.stringify(r.path)}`,
         ...(r.name !== undefined ? [`name: ${JSON.stringify(r.name)}`] : []),

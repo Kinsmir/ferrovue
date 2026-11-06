@@ -1,4 +1,4 @@
-import { resolve as resolvePath, sep } from "node:path";
+import { resolve as resolvePath } from "node:path";
 import genericNames from "generic-names";
 import postcss, { type Root } from "postcss";
 import extractImports from "postcss-modules-extract-imports";
@@ -8,6 +8,7 @@ import modulesValues from "postcss-modules-values";
 import type { SFCDescriptor, SFCStyleBlock } from "@vue/compiler-sfc";
 import { type Component, type N, type Scope, type Val, fail, rustStr, sourceAt, STR, UNDEF } from "../model.ts";
 import { CONFIG_FILE } from "../config.ts";
+import { slashed } from "../paths.ts";
 import { type CssModulesConfig } from "../context.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { scopeHash } from "./scoped.ts";
@@ -39,7 +40,7 @@ export function styleRequest(file: string, index: number, style: SFCStyleBlock, 
   for (const [name, value] of Object.entries(style.attrs)) {
     if (!IGNORED_ATTRS.has(name)) query += `&${encodeURIComponent(name)}${value ? `=${encodeURIComponent(value)}` : ""}`;
   }
-  return `${resolvePath(file).split(sep).join("/")}?vue&type=style&index=${index}${style.scoped ? `&scoped=${id}` : ""}${query}&lang.module.css`;
+  return `${slashed(resolvePath(file))}?vue&type=style&index=${index}${style.scoped ? `&scoped=${id}` : ""}${query}&lang.module.css`;
 }
 
 /** The classes, keyframes and values a CSS module exports, by name, as postcss-modules names them
