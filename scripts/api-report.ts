@@ -16,7 +16,7 @@ const entries = Object.entries(pkg.exports).flatMap(([path, target]) =>
   typeof target === "object" && target.types ? [{ name: path === "." ? "ferrovue" : path.slice(2).replaceAll("/", "-"), types: join(PACKAGE, target.types) }] : [],
 );
 
-execFileSync("pnpm", ["--filter", "ferrovue", "run", "build"], { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] });
+execFileSync(process.env.npm_execpath ?? "pnpm", ["--filter", "ferrovue", "run", "build"], { cwd: ROOT, stdio: ["ignore", "ignore", "inherit"] });
 mkdirSync(REPORTS, { recursive: true });
 const temp = mkdtempSync(join(tmpdir(), "ferrovue-api-"));
 const problems: string[] = [];

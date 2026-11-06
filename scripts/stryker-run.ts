@@ -26,7 +26,7 @@ function main(): void {
   const { mutate } = JSON.parse(readFileSync(join(ROOT, "stryker.config.json"), "utf8")) as { mutate: string[] };
   const { files, options } = invocation(mutate, process.argv.slice(2));
   const steps: [string, string[]][] = [
-    ["pnpm", ["exec", "stryker", "run", "--force", "--mutate", files.join(","), ...options]],
+    [process.env.npm_execpath ?? "pnpm", ["exec", "stryker", "run", "--force", "--mutate", files.join(","), ...options]],
     [process.execPath, [join(ROOT, "scripts/stryker-survivors.ts"), ...files]],
   ];
   for (const [command, args] of steps) {
