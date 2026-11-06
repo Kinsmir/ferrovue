@@ -120,6 +120,7 @@ packages/ferrovue/           the compiler (npm package)
                              fixture's props hold
   src/client-render.ts       the DOM of a client render as it is compared with the server's markup
   src/types.ts               `ferrovue/types`: `TrustedHtml`, `InlineHtml`, `Float`
+  src/whitespace.ts          `ferrovue/whitespace`: `trimEdges`, the node transform behind `"whitespace": "trim-edges"`
   test/                      compiler, CLI, router, vector, island, Vite and conformance tests
   api/                       the package's API report, an `.api.md` per export and `cli.txt` (`pnpm api:report`)
   schema.json                the JSON Schema of `ferrovue.config.json` (`pnpm schema:generate`)

@@ -9,6 +9,8 @@ import type { RouteEntry } from "../src/route-records.ts";
 
 
 export const ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/conformance");
+/** The project of components compiled with `"whitespace": "trim-edges"`. */
+export const TRIMMED_ROOT = join(import.meta.dirname, "../../../crates/ferrovue/tests/trimmed");
 const FIXTURES = join(ROOT, "fixtures");
 export const ROUTES = JSON.parse(readFileSync(join(ROOT, "routes.json"), "utf8")) as RouteEntry[];
 const CONFIG = JSON.parse(readFileSync(join(ROOT, "ferrovue.config.json"), "utf8")) as {
@@ -55,19 +57,26 @@ export interface Case {
   html: string;
 }
 
-export const cases: Case[] = readdirSync(FIXTURES, { withFileTypes: true })
-  .filter((d) => d.isDirectory())
-  .flatMap((d) =>
-    readdirSync(join(FIXTURES, d.name))
-      .filter((f) => f.endsWith(".json"))
-      .toSorted()
-      .map((f) => {
-        const base = join(FIXTURES, d.name, f.slice(0, -".json".length));
-        let html = "";
-        try {
-          html = readFileSync(`${base}.html`, "utf8");
-        } catch {
-        }
-        return { component: d.name, name: f, base, json: JSON.parse(readFileSync(`${base}.json`, "utf8")) as Record<string, unknown>, html };
-      }),
-  );
+function casesIn(fixtures: string): Case[] {
+  return readdirSync(fixtures, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .flatMap((d) =>
+      readdirSync(join(fixtures, d.name))
+        .filter((f) => f.endsWith(".json"))
+        .toSorted()
+        .map((f) => {
+          const base = join(fixtures, d.name, f.slice(0, -".json".length));
+          let html = "";
+          try {
+            html = readFileSync(`${base}.html`, "utf8");
+          } catch {
+          }
+          return { component: d.name, name: f, base, json: JSON.parse(readFileSync(`${base}.json`, "utf8")) as Record<string, unknown>, html };
+        }),
+    );
+}
+
+export const cases: Case[] = casesIn(FIXTURES);
+
+/** The fixtures of the components compiled with `"whitespace": "trim-edges"`. */
+export const TRIMMED_CASES: Case[] = casesIn(join(TRIMMED_ROOT, "fixtures"));

@@ -9,6 +9,7 @@ import { loadConfig } from "../src/config.ts";
 import { write } from "../src/compiler.ts";
 import { affects, inputsOf } from "../src/inputs.ts";
 import ferrovue from "../src/vite.ts";
+import { trimEdges } from "../src/whitespace.ts";
 
 let root = "";
 const good = `<script setup lang="ts">
@@ -149,6 +150,26 @@ it("writes a template's comments as plugin-vue keeps them on the dev server, and
   expect(() => started(ferrovue({ root }), vite("build"))).toThrow(/plugin-vue leaves them out, where ferrovue\.config\.json keeps them; set `"comments": false`/);
   writeFileSync(join(root, "components", "Hello.vue"), good);
   expect(started(ferrovue({ root }), vite("build"))).toEqual([]);
+});
+
+it("fails a build in which plugin-vue trims the edges of templates' text otherwise than the configuration, and warns the dev server", () => {
+  const vite = (command: "build" | "serve", nodeTransforms?: unknown[]) => ({
+    plugins: [{ name: "vite:vue", api: { options: { template: { compilerOptions: nodeTransforms ? { nodeTransforms } : {} } } } }],
+    root,
+    isProduction: command === "build",
+    command,
+  });
+  const copy = Object.defineProperty(() => {}, Symbol.for("ferrovue.whitespace"), { value: "trim-edges" });
+  expect(started(ferrovue({ root }), vite("build"))).toEqual([]);
+  expect(started(ferrovue({ root }), vite("build", [() => {}]))).toEqual([]);
+  expect(() => started(ferrovue({ root }), vite("build", [trimEdges]))).toThrow(/the whitespace at the edges of templates' text: @vitejs\/plugin-vue trims it with `trimEdges`, where ferrovue\.config\.json keeps it; set `"whitespace": "trim-edges"` in ferrovue\.config\.json/);
+  expect(started(ferrovue({ root }), vite("serve", [trimEdges]))).toEqual([expect.stringMatching(/plugin-vue trims it with `trimEdges`/)]);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", whitespace: "trim-edges" }));
+  expect(started(ferrovue({ root }), vite("build", [trimEdges]))).toEqual([]);
+  expect(started(ferrovue({ root }), vite("build", [copy]))).toEqual([]);
+  expect(started(ferrovue({ root }), { ...vite("build"), plugins: [vuePlugin({ template: { compilerOptions: { nodeTransforms: [trimEdges] } } })] })).toEqual([]);
+  expect(() => started(ferrovue({ root }), vite("build"))).toThrow(/ferrovue\.config\.json trims it with `"whitespace": "trim-edges"`, where @vitejs\/plugin-vue keeps it; add `trimEdges` from `ferrovue\/whitespace` to plugin-vue's `template\.compilerOptions\.nodeTransforms`/);
+  expect(started(ferrovue({ root }), { plugins: [], root, isProduction: true, command: "build" })).toEqual([]);
 });
 
 it("fails a build whose CSS modules Vite names otherwise than the configuration", () => {

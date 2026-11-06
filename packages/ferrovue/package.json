@@ -85,6 +85,10 @@
       "types": "./dist/vite.d.ts",
       "default": "./dist/vite.js"
     },
+    "./whitespace": {
+      "types": "./dist/whitespace.d.ts",
+      "default": "./dist/whitespace.js"
+    },
     "./volar": {
       "types": "./dist/volar.d.ts",
       "default": "./dist/volar.js"

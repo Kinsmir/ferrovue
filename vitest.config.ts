@@ -1,15 +1,26 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import vue from "@vitejs/plugin-vue";
+import { normalizePath } from "vite";
 import { defineConfig } from "vitest/config";
+import { trimEdges } from "./packages/ferrovue/src/whitespace.ts";
 
 const conformance = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/conformance/ferrovue.config.json", import.meta.url), "utf8")) as {
   cssModules: { generateScopedName: string };
   comments: boolean;
 };
 
+const TRIMMED = normalizePath(fileURLToPath(new URL("crates/ferrovue/tests/trimmed/", import.meta.url)));
+
 export default defineConfig({
-  plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: conformance.comments } } })],
+  plugins: [
+    vue({
+      script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } },
+      template: {
+        compilerOptions: { comments: conformance.comments, nodeTransforms: [(node, context) => (context.filename.startsWith(TRIMMED) ? trimEdges(node) : undefined)] },
+      },
+    }),
+  ],
   css: { modules: { generateScopedName: conformance.cssModules.generateScopedName } },
   resolve: { alias: [{ find: /^ferrovue$/, replacement: fileURLToPath(new URL("packages/ferrovue/src/client.ts", import.meta.url)) }] },
   test: {

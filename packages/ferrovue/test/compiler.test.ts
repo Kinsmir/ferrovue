@@ -7273,6 +7273,7 @@ describe("the configuration", () => {
     ["a string of client directives", { ...CONFIG, clientDirectives: "focus" }, "FV1115", /^`clientDirectives` in ferrovue\.config\.json is a list of directive names/],
     ["`isProduction` that is not a boolean", { ...CONFIG, isProduction: "yes" }, "FV1115", /^`isProduction` in ferrovue\.config\.json is `true` or `false`/],
     ["`comments` that is not a boolean", { ...CONFIG, comments: "keep" }, "FV1115", /^`comments` in ferrovue\.config\.json is `true` or `false`/],
+    ["`whitespace` that is no mode", { ...CONFIG, whitespace: "trim" }, "FV1115", /^`whitespace` in ferrovue\.config\.json is `"condense"` or `"trim-edges"`/],
     ["`cssModules` without a pattern", { ...CONFIG, cssModules: {} }, "FV1115", /^`cssModules\.generateScopedName` in ferrovue\.config\.json is a string/],
     ["`cssModules` that is a string", { ...CONFIG, cssModules: "[local]" }, "FV1115", /^`cssModules` in ferrovue\.config\.json is an object/],
     ["a misspelt key in `cssModules`", { ...CONFIG, cssModules: { generateScopedName: "[local]", hashPrefx: "" } }, "FV1114", /did you mean `hashPrefix`\?/],

@@ -919,3 +919,37 @@ describe("refusals", () => {
     ]);
   });
 });
+
+describe("whitespace", () => {
+  const trimmed = (template: string, others: Record<string, string> = {}): string =>
+    render(sfc("", template, Object.keys(others).map((n) => `import ${n} from "./${n}.vue";\n`).join("")), others, { whitespace: "trim-edges" });
+  const pushed = (code: string): string => [...code.matchAll(/out\.push_str\("((?:[^"\\]|\\.)*)"\)/g)].map((m) => m[1]).join("");
+
+  it("trims text where it meets its element's tags with `trim-edges`, and keeps it by default", () => {
+    expect(pushed(render(sfc("", "<button>\n  remove\n</button>")))).toBe("<button> remove </button>");
+    expect(pushed(render(sfc("", "<button>\n  remove\n</button>"), {}, { whitespace: "condense" }))).toBe("<button> remove </button>");
+    expect(pushed(trimmed("<button>\n  remove\n</button>"))).toBe("<button>remove</button>");
+    expect(pushed(trimmed("<p>\n  <span>x</span>\n  tail\n</p>"))).toBe("<p><span>x</span> tail</p>");
+    expect(pushed(trimmed("<p><b> a </b> <i>b</i></p>"))).toBe("<p><b>a</b> <i>b</i></p>");
+  });
+
+  it("keeps `&nbsp;`, the content of `<template v-if>` and of a slot's fallback, and the text of `pre`, `textarea`, `v-pre` and a `white-space: pre` style", () => {
+    expect(pushed(trimmed("<p>&nbsp;x&nbsp;</p>"))).toBe("<p> x </p>");
+    expect(pushed(trimmed('<p><template v-if="true"> a </template></p>'))).toContain("<!--[--> a <!--]-->");
+    expect(pushed(trimmed("<div><slot> fallback </slot></div>"))).toContain(" fallback ");
+    expect(pushed(trimmed("<div><pre> a <b> b </b> </pre><textarea> c </textarea></div>"))).toBe("<div><pre> a <b> b </b> </pre><textarea> c </textarea></div>");
+    expect(pushed(trimmed('<div v-pre title="v-pre"><b> {{ a }} </b></div>'))).toBe("<div title=\\\"v-pre\\\"><b> {{ a }} </b></div>");
+    expect(pushed(trimmed('<div title="v-pre"><b> a </b></div>'))).toBe("<div title=\\\"v-pre\\\"><b>a</b></div>");
+    for (const style of ["white-space: pre", "color: red; white-space:pre-line !important", "WHITE-SPACE: break-spaces;"]) {
+      expect(pushed(trimmed(`<div style="${style}"><b> a </b></div>`)), style).toContain("<b> a </b>");
+    }
+    expect(pushed(trimmed('<div style="white-space: preserve"><b> a </b></div>'))).toContain("<b>a</b>");
+  });
+
+  it("trims the content a component and `<template v-slot>` hand a child", () => {
+    const child = `<template><i><slot /><slot name="n" /></i></template>`;
+    expect(pushed(trimmed("<Child>\n  remove\n</Child>", { Child: child }))).toContain("remove");
+    expect(pushed(trimmed("<Child>\n  remove\n</Child>", { Child: child }))).not.toContain(" remove");
+    expect(pushed(trimmed("<Child><template #n>\n  named\n</template></Child>", { Child: child }))).not.toContain(" named");
+  });
+});

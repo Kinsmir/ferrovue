@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Config, TypeName } from "./config.ts";
+import type { Config, TypeName, WhitespaceMode } from "./config.ts";
 import type { Plugin } from "./plugin.ts";
 import type { Declared, Exports } from "./constants.ts";
 import type { Alias } from "./compiler.ts";
@@ -110,6 +110,7 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
   }
   if (raw.isProduction !== undefined && typeof raw.isProduction !== "boolean") wrong("isProduction", "`true` or `false`: whether `@vitejs/plugin-vue` compiles for production");
   if (raw.comments !== undefined && typeof raw.comments !== "boolean") wrong("comments", "`true` or `false`: whether the HTML comments of templates render");
+  if (raw.whitespace !== undefined && raw.whitespace !== "condense" && raw.whitespace !== "trim-edges") wrong("whitespace", '`"condense"` or `"trim-edges"`: how the text of templates is spaced');
   if (raw.cssModules !== undefined) {
     const m = raw.cssModules;
     if (!isObject(m)) return wrong("cssModules", "an object: `{ generateScopedName, hashPrefix?, context? }`");
@@ -216,6 +217,7 @@ export const ctx = {
   mappedUnions: new Map<string, EnumDef>(),
   builders: true,
   comments: false,
+  whitespace: "condense" as WhitespaceMode,
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),

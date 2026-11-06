@@ -66,6 +66,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.mappedUnions = new Map();
   ctx.builders = config.builders ?? true;
   ctx.comments = templateComments(config);
+  ctx.whitespace = config.whitespace ?? "condense";
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
   ctx.vnodeTag = null;

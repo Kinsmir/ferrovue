@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = join(import.meta.dirname, "..");
-const CONFORMANCE = join(ROOT, "crates/ferrovue/tests/conformance");
+const SUITES = ["conformance", "trimmed"].map((s) => join(ROOT, "crates/ferrovue/tests", s));
 const README_SECTION = "## What a component may use";
 const TESTING_SECTION = "### The README's rows and the components that exercise them";
 
@@ -59,13 +59,15 @@ function traceProblems(rows: string[], table: [string, string[]][], components: 
 
 function componentsWithFixtures(): Set<string> {
   return new Set(
-    readdirSync(join(CONFORMANCE, "components"))
-      .filter((f) => f.endsWith(".vue"))
-      .map((f) => f.slice(0, -".vue".length))
-      .filter((name) => {
-        const dir = join(CONFORMANCE, "fixtures", name);
-        return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith(".json"));
-      }),
+    SUITES.flatMap((suite) =>
+      readdirSync(join(suite, "components"))
+        .filter((f) => f.endsWith(".vue"))
+        .map((f) => f.slice(0, -".vue".length))
+        .filter((name) => {
+          const dir = join(suite, "fixtures", name);
+          return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith(".json"));
+        }),
+    ),
   );
 }
 

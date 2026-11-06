@@ -14,6 +14,7 @@ import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
 import { declareConsts } from "./constants.ts";
 import { resolveImport } from "./resolve.ts";
+import { trimEdges } from "./whitespace.ts";
 
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
   const loc = (err as { loc?: { start: { line: number; column: number } } }).loc;
@@ -400,7 +401,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
     filename: file,
     ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false, ssrCssVars: [], isProd: true }),
     ssr: true,
-    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), comments: ctx.comments, sourceMap: true, nodeTransforms: [mergedControls(controls)] },
+    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), comments: ctx.comments, sourceMap: true, nodeTransforms: [...(ctx.whitespace === "trim-edges" ? [trimEdges] : []), mergedControls(controls)] },
   });
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
   const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];
