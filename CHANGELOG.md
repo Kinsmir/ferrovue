@@ -24,6 +24,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - A `playsinline` attribute given through `v-bind` or fallthrough is written as a boolean attribute, as Vue 3.5.44 writes it; 0.14.1 wrote `playsinline="true"`.
   [Attribute values](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#attribute-values).
 
+### Security
+
+- The `actix-web` feature requires actix-web 4.18.2, which fixes request smuggling and unbounded decompression in actix-http and actix-web.
+  [actix-web](https://docs.rs/ferrovue/latest/ferrovue/guide/web_frameworks/index.html#actix-web).
+
 ## [0.14.1] - 2026-10-31
 
 ### Changed
