@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import vue from "@vitejs/plugin-vue";
+import { normalizePath } from "vite";
 import { defineConfig } from "vitest/config";
 import { trimEdges } from "./packages/ferrovue/src/whitespace.ts";
 
@@ -9,7 +10,7 @@ const conformance = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/confo
   comments: boolean;
 };
 
-const TRIMMED = fileURLToPath(new URL("crates/ferrovue/tests/trimmed/", import.meta.url));
+const TRIMMED = normalizePath(fileURLToPath(new URL("crates/ferrovue/tests/trimmed/", import.meta.url)));
 
 export default defineConfig({
   plugins: [
