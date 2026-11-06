@@ -23,7 +23,7 @@ ferrovue = { path = "crates/ferrovue", version = "=0.14.1" }
 ferrovue-core = { path = "crates/ferrovue-core", version = "=0.14.1" }
 ferrovue-i18n = { path = "crates/ferrovue-i18n", version = "=0.14.1" }
 ferrovue-router = { path = "crates/ferrovue-router", version = "=0.14.1" }
-actix-web = { version = "4.17.0", default-features = false }
+actix-web = { version = "4.18.2", default-features = false }
 ammonia = "4.2.4"
 axum = { version = "0.8.9", default-features = false }
 axum-core = "0.5.6"
