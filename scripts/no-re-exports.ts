@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { relativePath } from "../packages/ferrovue/src/paths.ts";
 
 const ROOT = join(import.meta.dirname, "..");
 const SKIPPED = new Set(["node_modules", "target", "dist", ".git"]);
@@ -74,7 +75,7 @@ function files(dir: string, keep: (file: string) => boolean): string[] {
 
 /** Every re-export in the repository's Rust crates and TypeScript packages, scripts and site. */
 export function findings(root: string = ROOT): Finding[] {
-  const rel = (path: string) => relative(root, path).split(sep).join("/");
+  const rel = (path: string) => relativePath(root, path);
   const found: Finding[] = [];
   for (const path of files(join(root, "crates"), (name) => name.endsWith(".rs"))) {
     found.push(...rustReExports(rel(path), readFileSync(path, "utf8"), ALLOWED[rel(path)]));

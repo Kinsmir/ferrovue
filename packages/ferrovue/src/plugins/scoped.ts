@@ -1,10 +1,11 @@
 import { parse as parseJs } from "@babel/parser";
 import { createHash } from "node:crypto";
-import { relative, resolve as resolvePath, sep } from "node:path";
+import { resolve as resolvePath } from "node:path";
 import { type Component, type N, type Scope, fail, namesSelf, rustStr } from "../model.ts";
 import { type ScopeIdMode } from "../config.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 import { untilSettled } from "../fallthrough.ts";
+import { relativePath } from "../paths.ts";
 
 interface ScopedRun {
   mode: ScopeIdMode;
@@ -22,7 +23,7 @@ export function scopeIdOf(comp: Component): string | null {
 /** The id `@vitejs/plugin-vue` gives a component, `descriptor.id`: a hash of its path from Vite's
  * root, followed by its source unless `mode` hashes the path alone. */
 export function componentId(file: string, source: string, mode: ScopeIdMode, viteRoot: string): string {
-  const path = relative(viteRoot, resolvePath(file)).split(sep).join("/");
+  const path = relativePath(viteRoot, resolvePath(file));
   return createHash("sha256")
     .update(mode === "filepath" ? path : path + source)
     .digest("hex")

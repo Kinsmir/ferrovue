@@ -1,10 +1,10 @@
 import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, sep } from "node:path";
+import { join } from "node:path";
 import vuePlugin from "@vitejs/plugin-vue";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { build, createBuilder, type Rolldown, type ViteDevServer } from "vite";
+import { build, createBuilder, normalizePath, type Rolldown, type ViteDevServer } from "vite";
 import { loadConfig } from "../src/config.ts";
 import { write } from "../src/compiler.ts";
 import { affects, inputsOf } from "../src/inputs.ts";
@@ -262,7 +262,7 @@ it("writes `ferrovue/islands`: a loader for each component that has an `island()
   const id = resolveId("ferrovue/islands")!;
   expect(resolveId("ferrovue")).toBeNull();
   expect(load.call({}, "elsewhere")).toBeNull();
-  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(join(root, "components", "Hello.vue").split(sep).join("/"))}),\n};\n`);
+  expect(load.call({}, id)).toBe(`export default {\n  "Hello": () => import(${JSON.stringify(normalizePath(join(root, "components", "Hello.vue")))}),\n};\n`);
   expect(readFileSync(join(root, "gen", "hello.rs"), "utf8")).toContain("pub fn island");
 });
 
@@ -396,7 +396,7 @@ it("writes `ferrovue/routes`: the pages' routes, as vue-router's records and as 
   const resolveId = plugin.resolveId as (id: string) => string | null;
   const load = plugin.load as (this: unknown, id: string) => string | null;
   const code = load.call({}, resolveId("ferrovue/routes")!)!;
-  expect(code).toContain(`component: () => import(${JSON.stringify(join(root, "pages", "books", "[id].vue").split(sep).join("/"))}),`);
+  expect(code).toContain(`component: () => import(${JSON.stringify(normalizePath(join(root, "pages", "books", "[id].vue")))}),`);
   const module = (await import(`data:text/javascript,${encodeURIComponent(code)}`)) as { routes: Array<Record<string, unknown>>; default: unknown };
   expect(module.default).toEqual([
     { path: "/", name: "/" },
