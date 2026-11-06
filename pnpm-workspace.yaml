@@ -3,6 +3,8 @@ packages:
   - examples/fullstack
   - site
 
+shellEmulator: true
+
 catalog:
   vue: "3.5.44"
   "@vue/compiler-sfc": "3.5.44"
