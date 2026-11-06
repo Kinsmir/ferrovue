@@ -84,7 +84,7 @@ describe("vectors shared with the Rust crate", () => {
       ["length.json", 12],
       ["comment.json", 28],
       ["class.json", 14],
-      ["attrs.json", 61],
+      ["attrs.json", 155],
       ["strings.json", 12863],
       ["regex.json", 4725],
       ["compare.json", 400],

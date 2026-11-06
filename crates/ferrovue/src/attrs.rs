@@ -392,13 +392,14 @@ fn is_on(key: &str) -> bool {
     b.len() > 2 && b[0] == b'o' && b[1] == b'n' && !b[2].is_ascii_lowercase()
 }
 
-const BOOLEAN_ATTRS: [&str; 25] = [
+const BOOLEAN_ATTRS: [&str; 26] = [
     "itemscope",
     "allowfullscreen",
     "formnovalidate",
     "ismap",
     "nomodule",
     "novalidate",
+    "playsinline",
     "readonly",
     "async",
     "autofocus",
