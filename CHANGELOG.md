@@ -8,6 +8,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-06
+
 ### Added
 
 - `"whitespace": "trim-edges"` trims the whitespace where a template's text meets its element's tags, and `trimEdges` from the new `ferrovue/whitespace` compiles the client the same way; the Vite plugin fails a build where the two differ.
@@ -765,7 +767,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - `.length` of a string counts UTF-16 code units (`ferrovue::js_length`), where it counted bytes.
 - Slot content made only of comments is dropped when the slot has no fallback, as Vue drops it.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.14.1...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/Kinsmir/ferrovue/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/Kinsmir/ferrovue/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/Kinsmir/ferrovue/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/Kinsmir/ferrovue/compare/v0.12.0...v0.13.0
