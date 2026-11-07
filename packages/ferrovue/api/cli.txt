@@ -4,10 +4,13 @@ Compile Vue components to Rust render functions, run from the project root.
 
 Commands:
   init                     scaffold starter ferrovue.config.json and components
+  diff                     render the conformance fixtures at a git ref and now, and show whose text changed
 
 Options:
       --check              check that generated files match committed files without writing
   -d, --diff               show unified diff of changes when checking (use with --check)
+      --against <ref>      the git branch, tag or commit `diff` renders the fixtures at (use with diff)
+      --test <file>        a test file that registers the conformance suite (use with diff; default: each one found)
       --format <format>    how to write errors and results: human (default) or json
       --watch              watch components, stores, routes and config for changes and regenerate
   -c, --config <path>      path to configuration file (default: ferrovue.config.json)

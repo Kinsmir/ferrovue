@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
 import type { App, Component } from "vue";
@@ -295,6 +295,21 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
     const json = JSON.parse(readFileSync(`${c.base}.json`, "utf8")) as Record<string, unknown>;
     return fixtureApp(component, withDatePlans(readFixture(json), c.component, plans), routes, { ...appOptions, ...mode });
   };
+
+  const rendered = process.env.FERROVUE_FIXTURES_OUT;
+  if (rendered) {
+    const into = join(rendered, relativePath(process.cwd(), configFile));
+    api.describe("conformance: rendering each fixture for `ferrovue diff`", () => {
+      for (const c of cases) {
+        api.it(`${c.component}/${c.name}`, async () => {
+          const html = await renderFixture(await app(c));
+          mkdirSync(join(into, c.component), { recursive: true });
+          writeFileSync(join(into, c.component, `${basename(c.name, ".json")}.html`), html);
+        });
+      }
+    });
+    return;
+  }
 
   api.describe("conformance", () => {
     api.it("has fixtures for every component, and a component for every fixture", () => {

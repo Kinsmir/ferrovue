@@ -1,3 +1,5 @@
+import { SPACELESS_TAGS } from "./tags.ts";
+
 interface Position {
   offset: number;
   line: number;
@@ -30,15 +32,6 @@ const TRAILING = /[ \t\n\f\r]+$/;
 const LINE_BREAK = /[\n\r]/;
 const BLANK = /^[ \t\n\f\r]+$/;
 export const HTML = 0;
-const SPACELESS_TAGS = new Set(
-  [
-    "address article aside blockquote body br caption center col colgroup dd details dialog dir div dl dt fieldset figcaption figure footer form",
-    "h1 h2 h3 h4 h5 h6 head header hgroup hr html legend li link listing main menu meta nav noscript ol optgroup option p param plaintext pre",
-    "script search section source style summary table tbody td template tfoot th thead title tr track ul xmp area base basefont datalist noembed noframes rp",
-  ]
-    .join(" ")
-    .split(" "),
-);
 const INLINE_BLOCK_TAGS = new Set(["audio", "button", "meter", "object", "progress", "select", "video"]);
 const COMMENTS = /<!--[\s\S]*?(?:-->|$)/g;
 const KEPT_TAGS = new Set(["pre", "textarea"]);

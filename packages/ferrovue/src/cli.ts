@@ -9,6 +9,7 @@ import { helpText, parseArgs } from "./args.ts";
 import { unifiedDiff } from "./diff.ts";
 import { type Diagnostic, diagnose, diagnoseAll, formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { affects, type Inputs, inputsOf } from "./inputs.ts";
+import { renderDiff } from "./render-diff.ts";
 
 const root = process.cwd();
 
@@ -131,6 +132,31 @@ function once(config: Config): void {
   console.log(`${config.out}: ${files.length} files, ${what}`);
 }
 
+function diffRendered(against: string, test: string | undefined, configPath?: string): number {
+  const project = dirname(resolve(root, configPath ?? CONFIG_FILE));
+  let result: ReturnType<typeof renderDiff>;
+  try {
+    result = renderDiff(project, against, test === undefined ? undefined : [test]);
+  } catch (e) {
+    console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
+    return 2;
+  }
+  const { changes, same } = result;
+  const text = changes.filter((c) => c.change === "text").length;
+  if (json) {
+    emit({ against, changes, same });
+    return text ? 1 : 0;
+  }
+  for (const c of changes) {
+    if (c.change === "text") console.log(c.diff);
+    else console.log(`${c.fixture}: ${c.change === "markup" ? "the markup changed, and the text shows the same" : c.change === "added" ? "added" : "removed"}`);
+  }
+  const markup = changes.filter((c) => c.change === "markup").length;
+  const others = changes.length - text - markup;
+  console.log(`against ${against}: ${text} with other text, ${markup} with other markup and the same text, ${same} the same${others ? `, ${others} added or removed` : ""}`);
+  return text ? 1 : 0;
+}
+
 function watchProject(configPath?: string): void {
   let inputs: Inputs;
   const run = (): void => {
@@ -183,6 +209,20 @@ try {
     if (other !== undefined) conflict("init", spelt.get(other)!);
     if (json) conflict("init", "--format json");
   }
+  if (command === "diff") {
+    const other = ["--check", "--watch", "--diff"].find((o) => options.has(o));
+    if (other !== undefined) conflict("diff", spelt.get(other)!);
+    if (typeof options.get("--against") !== "string") {
+      console.error("error: 'diff' requires '--against <ref>': the git branch, tag or commit to render the fixtures at");
+      process.exit(1);
+    }
+  }
+  for (const flag of ["--against", "--test"]) {
+    if (options.has(flag) && command !== "diff") {
+      console.error(`error: '${spelt.get(flag)!}' requires the 'diff' command`);
+      process.exit(1);
+    }
+  }
   if (options.has("--check") && options.has("--watch")) conflict("--check", "--watch");
   if (options.has("--diff") && !options.has("--check")) {
     console.error("error: '--diff' requires '--check'");
@@ -198,6 +238,8 @@ try {
     console.log(helpText());
   } else if (command === "init") {
     process.exitCode = initProject(root, configPath);
+  } else if (command === "diff") {
+    process.exitCode = diffRendered(options.get("--against") as string, options.get("--test") as string | undefined, configPath);
   } else if (options.has("--watch")) {
     watchProject(configPath);
   } else if (options.has("--check")) {
