@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>) -> Self {
         Props { title: title.into() }
     }
-
 }
-
 
 /// A parent's content for `<slot>`, given what its ancestors provide: returns whether it wrote anything but comments.
 pub type DefaultSlot<'s> = dyn Fn(&mut String, super::provides::Provides<'_>) -> bool + 's;
@@ -59,7 +57,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
     out.push_str("<div class=\"shell\"><nav>");
     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push_str(">Home</a></nav>");
-    super::cart_badge::try_render(out, &super::cart_badge::Props {  }, fv_stores)?;
+    super::cart_badge::try_render(out, &super::cart_badge::Props {}, fv_stores)?;
     super::translated::try_render(out, &super::translated::Props { name: std::borrow::Cow::Borrowed(&*props.title) }, fv_i18n)?;
     super::modal::try_render(out, &super::modal::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_teleports)?;
     super::themed_button::try_render(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.title) }, fv_provides)?;

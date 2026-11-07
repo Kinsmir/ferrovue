@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(books: Vec<super::types::Book<'a>>) -> Self {
         Props { books }
     }
-
 }
-
 
 /// The props `<slot name="actions">` passes the content a parent gives it, borrowed for the render.
 pub struct ActionsSlotProps<'v> {

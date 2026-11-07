@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(active: impl Into<Cow<'a, str>>, count: i64, title: impl Into<Cow<'a, str>>) -> Self {
         Props { active: active.into(), count, title: title.into() }
     }
-
 }
-
 
 /// A parent's content for `<slot>`, given what its ancestors provide: returns whether it wrote anything but comments.
 pub type DefaultSlot<'s> = dyn Fn(&mut String, super::provides::Provides<'_>) -> bool + 's;

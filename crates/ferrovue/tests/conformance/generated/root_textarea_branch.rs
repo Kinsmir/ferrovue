@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(editing: bool, hint: impl Into<Cow<'a, str>>, lines: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Props { editing, hint: hint.into(), lines: lines.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -21,9 +21,7 @@ impl Place {
     pub fn new(align: super::types::Align, shade: super::types::Shade) -> Self {
         Place { align, shade }
     }
-
 }
-
 
 /// `Slot` in `UnionPlacing.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -47,7 +45,6 @@ impl Slot {
         self
     }
 }
-
 
 /// The props `UnionPlacing.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -77,7 +74,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

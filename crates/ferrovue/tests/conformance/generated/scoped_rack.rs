@@ -9,18 +9,14 @@ pub const NAME: &str = "ScopedRack";
 /// The props `ScopedRack.vue` declares.
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
-pub struct Props {
-
-}
+pub struct Props {}
 
 impl Props {
     /// Props with nothing set.
     pub fn new() -> Self {
-        Props {  }
+        Props {}
     }
-
 }
-
 
 /// What a parent puts in the slots `ScopedRack.vue` renders.
 #[derive(Clone, Copy, Default)]
@@ -55,7 +51,7 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, 
     out.push_str("<div class=\"rack\"");
     out.push_str(fv_attrs);
     out.push_str(" data-v-e28de60f>");
-    super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+    super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {}, super::plain_forward::Slots {
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             let mut filled = false;
             if fv::render::slot_into_slotted(out, fv_slots.default, &["data-v-e28de60f-s", fv_slot_id].concat(), None) { filled = true; }

@@ -83,9 +83,7 @@ impl<'a> Props<'a> {
     pub fn new(article: bool, kind: HeadChoiceKind, title: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Props { article, kind, title: title.into(), tags: tags.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

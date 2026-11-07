@@ -85,9 +85,7 @@ impl<'a> Props<'a> {
     pub fn new(tone: FoldedWideTone, label: impl Into<Cow<'a, str>>, n: i64, f: f64, parts: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Props { tone, label: label.into(), n, f, parts: parts.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

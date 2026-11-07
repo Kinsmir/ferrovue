@@ -91,9 +91,7 @@ impl<'a> Props<'a> {
     pub fn new(tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, counts: ferrovue::props::Record<'a, i64>, n: i64, f: f64, text: impl Into<Cow<'a, str>>, mode: LoopEdgesMode) -> Self {
         Props { tags: tags.into_iter().map(Into::into).collect(), counts, n, f, text: text.into(), mode }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

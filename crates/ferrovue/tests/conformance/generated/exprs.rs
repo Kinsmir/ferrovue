@@ -31,7 +31,6 @@ impl<'a> Author<'a> {
     }
 }
 
-
 /// `Row` in `Exprs.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -47,9 +46,7 @@ impl<'a> Row<'a> {
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>) -> Self {
         Row { id, label: label.into() }
     }
-
 }
-
 
 /// The props `Exprs.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -91,7 +88,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

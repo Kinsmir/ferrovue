@@ -27,9 +27,7 @@ impl<'a> Props<'a> {
     pub fn new(mood: super::types::Mood, on: bool, count: i64, label: impl Into<Cow<'a, str>>) -> Self {
         Props { mood, on, count, label: label.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

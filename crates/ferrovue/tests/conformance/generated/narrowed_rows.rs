@@ -21,9 +21,7 @@ impl<'a> Shelf<'a> {
     pub fn new(tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Shelf { tags: tags.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// The props `NarrowedRows.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -47,7 +45,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

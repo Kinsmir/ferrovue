@@ -23,9 +23,7 @@ impl<'a> Score<'a> {
     pub fn new(points: i64, by: impl Into<Cow<'a, str>>) -> Self {
         Score { points, by: by.into() }
     }
-
 }
-
 
 /// The props `Records.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -55,7 +53,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

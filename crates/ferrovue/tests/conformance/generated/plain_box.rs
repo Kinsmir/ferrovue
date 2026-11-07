@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(text: impl Into<Cow<'a, str>>) -> Self {
         Props { text: text.into() }
     }
-
 }
-
 
 /// What a parent puts in the slots `PlainBox.vue` renders.
 #[derive(Clone, Copy, Default)]

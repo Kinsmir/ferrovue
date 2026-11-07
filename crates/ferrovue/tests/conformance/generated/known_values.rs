@@ -135,9 +135,7 @@ impl<'a> Part<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Part { label: label.into(), tags: tags.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// The props `KnownValues.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -181,7 +179,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

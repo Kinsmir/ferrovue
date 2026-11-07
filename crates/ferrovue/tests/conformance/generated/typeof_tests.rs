@@ -21,9 +21,7 @@ impl<'a> Owner<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>) -> Self {
         Owner { name: name.into() }
     }
-
 }
-
 
 /// The props `TypeofTests.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -77,7 +75,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

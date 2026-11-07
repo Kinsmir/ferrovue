@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>, on: bool, items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Props { label: label.into(), on, items: items.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -23,9 +23,7 @@ impl<'a> Swatch<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>, hue: super::types::Hue) -> Self {
         Swatch { name: name.into(), hue }
     }
-
 }
-
 
 /// The props `UnionListBuilt.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -46,9 +44,7 @@ impl<'a> Props<'a> {
     pub fn new(swatches: Vec<Swatch<'a>>, hues: impl IntoIterator<Item = super::types::Hue>, hue: super::types::Hue, label: impl Into<Cow<'a, str>>) -> Self {
         Props { swatches, hues: hues.into_iter().collect(), hue, label: label.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

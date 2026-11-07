@@ -23,9 +23,7 @@ impl<'a> Item<'a> {
     pub fn new(id: i64, name: impl Into<Cow<'a, str>>) -> Self {
         Item { id, name: name.into() }
     }
-
 }
-
 
 /// `Panel` in `Lifecycle.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -40,9 +38,7 @@ impl<'a> Panel<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>) -> Self {
         Panel { title: title.into() }
     }
-
 }
-
 
 /// The props `Lifecycle.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -59,9 +55,7 @@ impl<'a> Props<'a> {
     pub fn new(items: Vec<Item<'a>>, query: impl Into<Cow<'a, str>>) -> Self {
         Props { items, query: query.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

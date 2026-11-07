@@ -27,9 +27,7 @@ impl<'a> Props<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, event: impl Into<Cow<'a, str>>, leaves: Vec<super::listen_leaf::Props<'a>>, tree: super::listened::Props<'a>) -> Self {
         Props { title: title.into(), event: event.into(), leaves, tree }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

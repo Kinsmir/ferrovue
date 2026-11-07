@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(reviews: Vec<super::types::Review<'a>>) -> Self {
         Props { reviews }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -125,7 +125,7 @@ export function renderChild(s: Scope, e: Emitter, n: N, twin?: TwinCall): void {
     const code = ownInto(s.comp, { ...v, ty: markHome(v.ty, s.comp.name) }, want, node);
     return fieldInit(f.rust, heard.has(f.js) ? mergedListener(s, child, f, want, v, code, node) : code);
   });
-  callChild(s, e, child, `&super::${child.module}::Props { ${inits.join(", ")} }`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
+  callChild(s, e, child, `&super::${child.module}::Props ${inits.length ? `{ ${inits.join(", ")} }` : "{}"}`, slots, childAttrsArg(s, child, parts, merges, fallthrough, ids, n), later);
 }
 
 /** Whether Vue's boolean casting turns `value`, given to the prop `f`, into `true`: the prop's

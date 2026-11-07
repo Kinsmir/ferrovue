@@ -55,7 +55,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// Write the component's server render into `out`.
 ///
 /// # Panics
@@ -87,7 +86,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     out.push('>');
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("mark"))], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("mark"))], ""))?;
     out.push_str("<h3>");
     fv::core::escape_into(out, &props.label);
     out.push_str(" (");
@@ -95,7 +94,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(") ");
     fv::core::escape_into(out, &s_loud);
     out.push_str("</h3>");
-    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::NONE)?;
+    super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::NONE)?;
     if !props.tags.as_deref().unwrap_or(&[]).is_empty() {
         out.push_str("<ul><!--[-->");
         for fv_t_ref in props.tags.as_deref().unwrap_or(&[]).iter() {

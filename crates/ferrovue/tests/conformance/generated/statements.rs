@@ -93,7 +93,6 @@ impl<'a> Author<'a> {
     }
 }
 
-
 /// The props `Statements.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -140,7 +139,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

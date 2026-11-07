@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(step: super::types::Step<'a>) -> Self {
         Props { step }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

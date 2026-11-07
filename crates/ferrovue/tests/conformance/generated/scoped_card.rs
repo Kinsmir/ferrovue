@@ -29,7 +29,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// The props `<slot name="footer">` passes the content a parent gives it, borrowed for the render.
 pub struct FooterSlotProps {
     pub count: i64,

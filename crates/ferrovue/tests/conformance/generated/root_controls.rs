@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>, on: bool) -> Self {
         Props { label: label.into(), on }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -52,7 +50,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("\">");
     }
     super::root_textarea::try_render_scoped(out, &super::root_textarea::Props { model_value: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("big")), ("placeholder", fv::attrs::Attr::str(&props.label))], ""))?;
-    super::root_textarea_text::try_render_scoped(out, &super::root_textarea_text::Props {  }, &fv::attrs::Attrs::new(&[("id", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("t-{}", props.label))))], ""))?;
+    super::root_textarea_text::try_render_scoped(out, &super::root_textarea_text::Props {}, &fv::attrs::Attrs::new(&[("id", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("t-{}", props.label))))], ""))?;
     super::root_input::try_render_scoped(out, &super::root_input::Props { model_value: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("name", fv::attrs::Attr::str(&props.label)), ("disabled", fv::attrs::Attr::Bool(!props.on))], ""))?;
     super::root_checkbox::try_render_scoped(out, &super::root_checkbox::Props { model_value: props.on }, &fv::attrs::Attrs::new(&[("name", fv::attrs::Attr::str("agree")), ("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if props.on { "on" } else { "" }])))], ""))?;
     super::root_input::try_render_scoped(out, &super::root_input::Props { model_value: std::borrow::Cow::Borrowed("") }, &fv::attrs::Attrs::NONE)?;

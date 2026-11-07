@@ -1355,7 +1355,7 @@ import Middle from "./Middle.vue";
       expect(out.get("leaf.rs")).toContain("pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused>");
       expect(out.get("leaf.rs")).toContain('try_render_scoped(out, props, "")');
       expect(out.get("leaf.rs")).toContain("out.push_str(fv_attrs);");
-      expect(out.get("x.rs")).toContain(`super::middle::try_render_scoped(out, &super::middle::Props {  }, " data-v-${hash("components/X.vue")}")?;`);
+      expect(out.get("x.rs")).toContain(`super::middle::try_render_scoped(out, &super::middle::Props {}, " data-v-${hash("components/X.vue")}")?;`);
       expect(out.get("middle.rs")).toContain(`super::leaf::try_render_scoped(out, &super::leaf::Props { label: std::borrow::Cow::Borrowed("x") }, &fv::attrs::scope_attrs(fv_attrs, "data-v-${hash("components/Middle.vue")}", ""))?;`);
     });
 

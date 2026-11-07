@@ -25,9 +25,7 @@ impl<'a> Meta<'a> {
     pub fn new(tag_2: impl Into<Cow<'a, str>>, tag: impl Into<Cow<'a, str>>, count: i64) -> Self {
         Meta { tag_2: tag_2.into(), tag: tag.into(), count }
     }
-
 }
-
 
 /// `Entry` in `DollarNames.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -44,9 +42,7 @@ impl<'a> Entry<'a> {
     pub fn new(meta: Meta<'a>, label: impl Into<Cow<'a, str>>) -> Self {
         Entry { meta, label: label.into() }
     }
-
 }
-
 
 /// The props `DollarNames.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -67,9 +63,7 @@ impl<'a> Props<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, price: i64, entry: Entry<'a>, rows: Vec<Entry<'a>>) -> Self {
         Props { title: title.into(), price, entry, rows }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

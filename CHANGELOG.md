@@ -14,6 +14,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 - Text the compiler proves needs no escaping is written without `escape_into`: a `?:` of plain string literals, `String(n)` with no string built, and the digits of `.toFixed()` and its kin.
   [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
+- A generated module has no blank line before a closing brace and no two blank lines in a row, and a struct or struct literal with no fields is written `{}`.
+  [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 
 ## [0.15.2] - 2026-11-07
 

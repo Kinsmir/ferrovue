@@ -18,9 +18,7 @@ impl<'a> TupleBadgePair<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: i64) -> Self {
         TupleBadgePair(part0.into(), part1)
     }
-
 }
-
 
 /// `TupleBadgeRest` in `TupleBadge.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -32,9 +30,7 @@ impl<'a> TupleBadgeRest<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: i64) -> Self {
         TupleBadgeRest(part0.into(), part1)
     }
-
 }
-
 
 /// The props `TupleBadge.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -58,7 +54,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

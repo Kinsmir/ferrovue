@@ -29,7 +29,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// Write the component's server render into `out`.
 ///
 /// # Panics
@@ -54,10 +53,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         default: None,
         footer: None,
     }, " data-v-a3eec79a")?;
-    super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
+    super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {}, super::scoped_shelf::Slots {
         default: None,
     }, " data-v-a3eec79a")?;
-    super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+    super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {}, super::plain_forward::Slots {
         default: None,
     }, " data-v-a3eec79a")?;
     out.push_str("</div>");

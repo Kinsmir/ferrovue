@@ -21,9 +21,7 @@ impl Props {
     pub fn new(value: f64, max: f64) -> Self {
         Props { value, max }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

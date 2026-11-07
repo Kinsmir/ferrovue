@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(shape: super::types::Shape, label: impl Into<Cow<'a, str>>) -> Self {
         Props { shape, label: label.into() }
     }
-
 }
-
 
 /// What a parent puts in the slots `ShapeRoot.vue` renders.
 #[derive(Clone, Copy, Default)]

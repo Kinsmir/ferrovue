@@ -77,9 +77,7 @@ impl<'a> Badge<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>) -> Self {
         Badge { label: label.into() }
     }
-
 }
-
 
 /// The props `AndChains.vue` declares.
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -133,7 +131,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

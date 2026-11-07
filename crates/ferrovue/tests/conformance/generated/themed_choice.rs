@@ -139,9 +139,7 @@ impl<'a> Props<'a> {
     pub fn new(kind: ThemedChoiceKind, tag: ThemedChoiceTag, label: impl Into<Cow<'a, str>>, theme: impl Into<Cow<'a, str>>) -> Self {
         Props { kind, tag, label: label.into(), theme: theme.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

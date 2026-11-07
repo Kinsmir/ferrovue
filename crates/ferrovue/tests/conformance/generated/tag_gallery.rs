@@ -153,7 +153,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// What a parent puts in the slots `TagGallery.vue` renders.
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {

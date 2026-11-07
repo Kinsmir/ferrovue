@@ -27,9 +27,7 @@ impl<'a> Book<'a> {
     pub fn new(id: impl Into<Cow<'a, str>>, title: impl Into<Cow<'a, str>>, author: impl Into<Cow<'a, str>>, year: i64) -> Self {
         Book { id: id.into(), title: title.into(), author: author.into(), year }
     }
-
 }
-
 
 /// `Review` in `client/components/types.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -58,7 +56,6 @@ impl<'a> Review<'a> {
     }
 }
 
-
 /// `Stock` in `client/components/types.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -84,7 +81,6 @@ impl<'a> Stock<'a> {
     }
 }
 
-
 /// `Warehouse` in `client/components/types.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -100,6 +96,4 @@ impl<'a> Warehouse<'a> {
     pub fn new(city: impl Into<Cow<'a, str>>, days: i64) -> Self {
         Warehouse { city: city.into(), days }
     }
-
 }
-

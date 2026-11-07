@@ -31,7 +31,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// What a parent puts in the slots `Panel.vue` renders.
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {

@@ -19,9 +19,7 @@ impl Props {
     pub fn new(model_value: bool) -> Self {
         Props { model_value }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

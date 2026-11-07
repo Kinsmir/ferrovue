@@ -19,9 +19,7 @@ impl Props {
     pub fn new(open: bool) -> Self {
         Props { open }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

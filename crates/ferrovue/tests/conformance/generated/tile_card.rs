@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(tile: super::types::Tile<'a>) -> Self {
         Props { tile }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -23,9 +23,7 @@ impl Props {
     pub fn new(cell: crate::Sanitised, label: crate::Sanitised, formula: crate::Sanitised) -> Self {
         Props { cell, label, formula }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

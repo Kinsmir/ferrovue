@@ -27,9 +27,7 @@ impl<'a> Props<'a> {
     pub fn new(role: impl Into<Cow<'a, str>>, size: impl Into<Cow<'a, str>>, code: i64, scores: ferrovue::props::Record<'a, i64>) -> Self {
         Props { role: role.into(), size: size.into(), code, scores }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

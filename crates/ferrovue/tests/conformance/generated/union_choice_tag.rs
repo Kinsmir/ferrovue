@@ -87,9 +87,7 @@ impl<'a> Props<'a> {
     pub fn new(choice: UnionChoiceTagChoice, label: impl Into<Cow<'a, str>>) -> Self {
         Props { choice, label: label.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

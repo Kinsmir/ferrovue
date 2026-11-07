@@ -39,7 +39,6 @@ impl<'a> Person<'a> {
     }
 }
 
-
 /// The props `Truthy.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -69,9 +68,7 @@ impl<'a> Props<'a> {
     pub fn new(person: Person<'a>, tags: Vec<Option<Cow<'a, str>>>, counts: Vec<Option<i64>>, ratios: Vec<f64>, people: Vec<Option<Person<'a>>>, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, flags: Vec<bool>, urgent: bool) -> Self {
         Props { person, tags, counts, ratios, people, words: words.into_iter().map(Into::into).collect(), flags, urgent }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

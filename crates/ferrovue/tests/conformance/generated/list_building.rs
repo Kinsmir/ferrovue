@@ -33,7 +33,6 @@ impl<'a> Row<'a> {
     }
 }
 
-
 /// The props `ListBuilding.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -57,9 +56,7 @@ impl<'a> Props<'a> {
     pub fn new(words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, nums: Vec<i64>, prices: Vec<f64>, rows: Vec<Row<'a>>, flags: Vec<bool>, word: impl Into<Cow<'a, str>>) -> Self {
         Props { words: words.into_iter().map(Into::into).collect(), nums, prices, rows, flags, word: word.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

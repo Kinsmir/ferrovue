@@ -89,7 +89,6 @@ impl<'a> InlineTypesBox<'a> {
     }
 }
 
-
 /// `InlineTypesBoxInner` in `InlineTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -103,9 +102,7 @@ impl InlineTypesBoxInner {
     pub fn new(on: bool) -> Self {
         InlineTypesBoxInner { on }
     }
-
 }
-
 
 /// `InlineTypesRows` in `InlineTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -122,9 +119,7 @@ impl<'a> InlineTypesRows<'a> {
     pub fn new(key: impl Into<Cow<'a, str>>, side: Side) -> Self {
         InlineTypesRows { key: key.into(), side }
     }
-
 }
-
 
 /// `InlineTypesSides` in `InlineTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -141,9 +136,7 @@ impl<'a> InlineTypesSides<'a> {
     pub fn new(left: impl Into<Cow<'a, str>>, right: impl Into<Cow<'a, str>>) -> Self {
         InlineTypesSides { left: left.into(), right: right.into() }
     }
-
 }
-
 
 /// `InlineTypesLimits` in `InlineTypes.vue`.
 #[derive(Debug, Clone, Default, serde::Serialize)]
@@ -173,7 +166,6 @@ impl InlineTypesLimits {
         self
     }
 }
-
 
 /// The props `InlineTypes.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -207,7 +199,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

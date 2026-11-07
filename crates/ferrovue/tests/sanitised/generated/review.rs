@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(reader: impl Into<Cow<'a, str>>, body: ferrovue::html::Sanitised) -> Self {
         Props { reader: reader.into(), body }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

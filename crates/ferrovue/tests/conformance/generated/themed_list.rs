@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(items: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, theme: impl Into<Cow<'a, str>>, wide: bool) -> Self {
         Props { items: items.into_iter().map(Into::into).collect(), theme: theme.into(), wide }
     }
-
 }
-
 
 /// The props `<slot name="row">` passes the content a parent gives it, borrowed for the render.
 pub struct RowSlotProps<'v> {

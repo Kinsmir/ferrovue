@@ -27,9 +27,7 @@ impl<'a> Props<'a> {
     pub fn new(query: impl Into<Cow<'a, str>>, agreed: bool, size: impl Into<Cow<'a, str>>, body: impl Into<Cow<'a, str>>) -> Self {
         Props { query: query.into(), agreed, size: size.into(), body: body.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

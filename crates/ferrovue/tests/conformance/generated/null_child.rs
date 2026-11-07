@@ -37,7 +37,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// The props `<slot>` passes the content a parent gives it, borrowed for the render.
 pub struct DefaultSlotProps<'v> {
     pub v: Option<&'v str>,

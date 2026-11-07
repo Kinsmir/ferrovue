@@ -23,9 +23,7 @@ impl<'a> Badge<'a> {
     pub fn new(tone: super::types::Tone, text: impl Into<Cow<'a, str>>) -> Self {
         Badge { tone, text: text.into() }
     }
-
 }
-
 
 /// The props `Lookups.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -57,7 +55,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

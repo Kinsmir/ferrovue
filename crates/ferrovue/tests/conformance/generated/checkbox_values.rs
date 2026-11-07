@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(state: impl Into<Cow<'a, str>>, on: impl Into<Cow<'a, str>>, off: impl Into<Cow<'a, str>>) -> Self {
         Props { state: state.into(), on: on.into(), off: off.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

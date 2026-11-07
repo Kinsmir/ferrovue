@@ -19,9 +19,7 @@ impl Props {
     pub fn new(year: i64) -> Self {
         Props { year }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

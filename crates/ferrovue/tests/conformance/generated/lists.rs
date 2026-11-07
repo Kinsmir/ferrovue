@@ -33,7 +33,6 @@ impl<'a> Group<'a> {
     }
 }
 
-
 /// The props `Lists.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -51,9 +50,7 @@ impl<'a> Props<'a> {
     pub fn new(words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, numbers: Vec<i64>, groups: Vec<Group<'a>>) -> Self {
         Props { words: words.into_iter().map(Into::into).collect(), numbers, groups }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

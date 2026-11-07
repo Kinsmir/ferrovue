@@ -41,7 +41,6 @@ impl<'a> Line<'a> {
     }
 }
 
-
 /// `Sheet` in `ObjectShapes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -59,9 +58,7 @@ impl<'a> Sheet<'a> {
     pub fn new(head: Line<'a>, lines: Vec<Line<'a>>, names: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Sheet { head, lines, names: names.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// The props `ObjectShapes.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -89,7 +86,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

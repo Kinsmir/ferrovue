@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(nav: super::nav::Props<'a>) -> Self {
         Props { nav }
     }
-
 }
-
 
 /// What a parent puts in the slots `App.vue` renders.
 #[derive(Clone, Copy)]

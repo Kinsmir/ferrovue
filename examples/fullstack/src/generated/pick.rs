@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(book: super::types::Book<'a>, note: impl Into<Cow<'a, str>>) -> Self {
         Props { book, note: note.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
