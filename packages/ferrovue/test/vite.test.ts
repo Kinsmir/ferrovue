@@ -174,7 +174,7 @@ it("fails a build in which plugin-vue trims the edges of templates' text otherwi
   expect(realTransforms?.map((t) => (t as Record<symbol, unknown>)[Symbol.for("ferrovue.whitespace")])).toEqual(["trim-edges"]);
   const bare = vite("build");
   expect(started(ferrovue({ root }), bare)).toEqual([]);
-  expect((bare.plugins[0]!.api.options.template.compilerOptions as { nodeTransforms?: unknown[] }).nodeTransforms).toHaveLength(1);
+  expect(bare.plugins[0]!.api.options.template.compilerOptions.nodeTransforms).toHaveLength(1);
   expect(started(ferrovue({ root }), { plugins: [], root, isProduction: true, command: "build" })).toEqual([]);
   writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", whitespace: "trim-edges", preserveWhitespace: { classes: ["pre-line", "pre"] } }));
   const added = vite("build", [() => {}]);
