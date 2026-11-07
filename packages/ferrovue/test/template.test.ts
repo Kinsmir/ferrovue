@@ -362,7 +362,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("on: boolean", `<C><!-- c --><input :checked="on"></C>`, `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(25);
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -384,7 +384,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("on: boolean", `<C><!-- c --><input :checked="on">x</C>`, `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(26);
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<!-- c --><input");
             if props.on {
@@ -402,7 +402,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("on: boolean", `<C>x<input :checked="on"></C>`, `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(16);
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("x<input");
             if props.on {
@@ -420,7 +420,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("a: string", "<C>-{{ a }}<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(11 + props.a.len());
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push('-');
             fv::core::escape_into(out, &props.a);
@@ -436,7 +436,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("a: string", "<C><!-- c -->-{{ a }}<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(21 + props.a.len());
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -456,7 +456,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("a: string", "<C><!-- c -->{{ a }}-<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(21 + props.a.len());
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -476,7 +476,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("a: string", "<C><!-- c --> {{ a }} <!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(22 + props.a.len());
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -496,7 +496,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("on: boolean; a: string", `<C><!-- c --><input :checked="on">{{ a }}<!-- e --></C>`, `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(35 + props.a.len());
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -520,7 +520,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("a: string", "<C><!-- c -->x{{ a }}<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(21 + props.a.len());
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<!-- c -->x");
             fv::core::escape_into(out, &props.a);
@@ -536,7 +536,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("", "<C><!-- c -->x<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, _props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(21);
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<!-- c -->x<!-- e -->");
         })),
@@ -550,7 +550,7 @@ describe("slot content whose emptiness is decided at run time", () => {
     expect(render(sfc("on: boolean", `<C><template v-if="on">x</template><!-- c --><!-- e --></C>`, `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(44);
-    super::c::try_render(out, &super::c::Props {  }, super::c::Slots {
+    super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if props.on {
@@ -635,7 +635,7 @@ describe("components and directives resolved by name", () => {
     expect(render(sfc("n: string", `<div><Box><b v-foo :title="n" /></Box></div>`, `import Box from "./Box.vue";\n`), { Box: box }, { clientDirectives: ["foo"] })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(33 + props.n.len());
     out.push_str("<div>");
-    super::r#box::try_render(out, &super::r#box::Props {  }, super::r#box::Slots {
+    super::r#box::try_render(out, &super::r#box::Props {}, super::r#box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             if props.n.is_empty() {
                 out.push_str("<b title></b>");
@@ -935,7 +935,7 @@ describe("whitespace", () => {
   it("counts a component as inline, and keeps Vue's spacing around built-ins, comments and `v-if` branches with `trim-edges`", () => {
     const child = `<template><i>c</i></template>`;
     expect(pushed(trimmed("<p>\n  <Child />\n  <span>b</span>\n</p>", { Child: child }))).toBe("<p> <span>b</span></p>");
-    expect(trimmed("<p>\n  <Child />\n  <Child />\n</p>", { Child: child })).toMatch(/Props \{  \}\)\?;\n\s*out\.push\(' '\);\n\s*super::child::try_render/);
+    expect(trimmed("<p>\n  <Child />\n  <Child />\n</p>", { Child: child })).toMatch(/Props \{\}\)\?;\n\s*out\.push\(' '\);\n\s*super::child::try_render/);
     for (const tag of ["Teleport to=\"body\"", "teleport to=\"body\"", "KeepAlive", "keep-alive", "Suspense", "Transition", "TransitionGroup", "transition-group", "ClientOnly", "client-only"]) {
       const { code } = compileTemplate({ source: `<p>\n  <span>a</span>\n  <${tag}><b>b</b></${tag.split(" ")[0]}>\n  <span>c</span>\n</p>`, filename: "a.vue", id: "a", ssr: true, compilerOptions: { nodeTransforms: [trimEdges] } });
       expect(code, tag).not.toContain("</span> ");

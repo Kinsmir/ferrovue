@@ -25,9 +25,7 @@ impl<'a> Post<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, scores: Vec<i64>) -> Self {
         Post { title: title.into(), tags: tags.into_iter().map(Into::into).collect(), scores }
     }
-
 }
-
 
 /// The props `Flattened.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -54,9 +52,7 @@ impl<'a> Props<'a> {
     pub fn new(posts: Vec<Post<'a>>, matrix: Vec<Vec<i64>>, deep: Vec<Vec<Vec<i64>>>, prices: Vec<Vec<f64>>, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, groups: ferrovue::props::Record<'a, Vec<Cow<'a, str>>>, sep: impl Into<Cow<'a, str>>) -> Self {
         Props { posts, matrix, deep, prices, words: words.into_iter().map(Into::into).collect(), groups, sep: sep.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

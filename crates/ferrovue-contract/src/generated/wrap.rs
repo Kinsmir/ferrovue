@@ -9,18 +9,14 @@ pub const NAME: &str = "Wrap";
 /// The props `Wrap.vue` declares.
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
-pub struct Props {
-
-}
+pub struct Props {}
 
 impl Props {
     /// Props with nothing set.
     pub fn new() -> Self {
-        Props {  }
+        Props {}
     }
-
 }
-
 
 /// What a parent puts in the slots `Wrap.vue` renders.
 #[derive(Clone, Copy, Default)]

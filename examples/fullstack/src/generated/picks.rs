@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(shop: impl Into<Cow<'a, str>>, featured: super::types::Book<'a>, books: Vec<super::types::Book<'a>>) -> Self {
         Props { shop: shop.into(), featured, books }
     }
-
 }
-
 
 /// What a parent puts in the slots `picks.vue` renders.
 #[derive(Clone, Copy, Default)]

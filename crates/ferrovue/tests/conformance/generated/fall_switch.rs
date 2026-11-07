@@ -79,9 +79,7 @@ impl Props {
     pub fn new(mode: FallSwitchMode) -> Self {
         Props { mode }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

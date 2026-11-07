@@ -91,7 +91,6 @@ impl<'a> Owner<'a> {
     }
 }
 
-
 /// `Choice` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -107,9 +106,7 @@ impl<'a> Choice<'a> {
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>) -> Self {
         Choice { id, label: label.into() }
     }
-
 }
-
 
 /// `Moment` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -128,9 +125,7 @@ impl<'a> Moment<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>, at: ferrovue::date::JsDate, seen: Vec<Option<ferrovue::date::JsDate>>) -> Self {
         Moment { label: label.into(), at, seen }
     }
-
 }
-
 
 /// `Search` in `components/loaders.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -162,7 +157,6 @@ impl<'a> Search<'a> {
         self
     }
 }
-
 /// `CHOICES` in `types/models.ts`.
 pub const CHOICES: &[Choice<'static>] = &[
     Choice { id: 1, label: Cow::Borrowed("One") },

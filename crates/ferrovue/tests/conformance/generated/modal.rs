@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, open: bool, inline: bool) -> Self {
         Props { title: title.into(), open, inline }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

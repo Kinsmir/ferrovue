@@ -79,9 +79,7 @@ impl<'a> Props<'a> {
     pub fn new(tone: impl Into<Cow<'a, str>>, tag: CssVarsTagTag) -> Self {
         Props { tone: tone.into(), tag }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

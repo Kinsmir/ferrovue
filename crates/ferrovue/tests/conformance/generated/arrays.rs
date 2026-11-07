@@ -37,7 +37,6 @@ impl<'a> Item<'a> {
     }
 }
 
-
 /// The props `Arrays.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -59,9 +58,7 @@ impl<'a> Props<'a> {
     pub fn new(items: Vec<Item<'a>>, words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, nums: Vec<i64>, min: i64, query: impl Into<Cow<'a, str>>) -> Self {
         Props { items, words: words.into_iter().map(Into::into).collect(), nums, min, query: query.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

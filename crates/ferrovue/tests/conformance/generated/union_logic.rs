@@ -145,9 +145,7 @@ impl Mix {
     pub fn new(tones: impl IntoIterator<Item = Tone>) -> Self {
         Mix { tones: tones.into_iter().collect() }
     }
-
 }
-
 
 /// The props `UnionLogic.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -177,7 +175,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

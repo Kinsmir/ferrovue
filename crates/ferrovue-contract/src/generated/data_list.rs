@@ -31,7 +31,6 @@ impl<'a> Row<'a> {
     }
 }
 
-
 /// The props `DataList.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -49,9 +48,7 @@ impl<'a> Props<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, rows: Vec<Row<'a>>, owner: super::types::Owner<'a>) -> Self {
         Props { title: title.into(), rows, owner }
     }
-
 }
-
 
 /// The props `<slot name="row">` passes the content a parent gives it, borrowed for the render.
 pub struct RowSlotProps<'v> {

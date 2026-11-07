@@ -19,9 +19,7 @@ impl Props {
     pub fn new(picked: i64) -> Self {
         Props { picked }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

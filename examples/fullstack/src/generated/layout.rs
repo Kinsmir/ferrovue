@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(shop: impl Into<Cow<'a, str>>) -> Self {
         Props { shop: shop.into() }
     }
-
 }
-
 
 /// What a parent puts in the slots `Layout.vue` renders.
 #[derive(Clone, Copy)]

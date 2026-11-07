@@ -91,9 +91,7 @@ impl<'a> Props<'a> {
     pub fn new(n: i64, text: impl Into<Cow<'a, str>>, flag: bool, r: f64, tone: OnPropsTone, bare: super::on_props_bare::Props<'a>) -> Self {
         Props { n, text: text.into(), flag, r, tone, bare }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

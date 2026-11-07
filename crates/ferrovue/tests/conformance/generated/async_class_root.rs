@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(tone: impl Into<Cow<'a, str>>) -> Self {
         Props { tone: tone.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -42,7 +40,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.tone.len());
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str(&props.tone))]], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str(&props.tone))]], ""))?;
     Ok(())
 }
 

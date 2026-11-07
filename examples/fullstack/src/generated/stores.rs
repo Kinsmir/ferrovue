@@ -21,9 +21,7 @@ impl<'a> BasketState<'a> {
     pub fn new(owner: impl Into<Cow<'a, str>>, ids: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         BasketState { owner: owner.into(), ids: ids.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -39,6 +37,4 @@ impl<'a> Stores<'a> {
     pub fn new(basket: BasketState<'a>) -> Self {
         Stores { basket }
     }
-
 }
-

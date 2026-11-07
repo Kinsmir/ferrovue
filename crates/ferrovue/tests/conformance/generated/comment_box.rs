@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>) -> Self {
         Props { label: label.into() }
     }
-
 }
-
 
 /// What a parent puts in the slots `CommentBox.vue` renders.
 #[derive(Clone, Copy, Default)]

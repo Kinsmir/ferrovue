@@ -141,9 +141,7 @@ impl Props {
     pub fn new(k: K, tag: PickedTag) -> Self {
         Props { k, tag }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -165,10 +163,10 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push_str("<div>");
     match props.k {
         K::B => {
-            super::strong::try_render(out, &super::strong::Props {  })?;
+            super::strong::try_render(out, &super::strong::Props {})?;
         }
         K::A | K::C => {
-            super::plain::try_render(out, &super::plain::Props {  })?;
+            super::plain::try_render(out, &super::plain::Props {})?;
         }
     }
     let fv_tag = match props.k { K::B => "strong", K::A | K::C => "em" };

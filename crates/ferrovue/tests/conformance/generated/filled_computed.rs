@@ -23,9 +23,7 @@ impl<'a> Tally<'a> {
     pub fn new(n: i64, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Tally { n, tags: tags.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// The props `FilledComputed.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -51,7 +49,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -27,9 +27,7 @@ impl<'a> Props<'a> {
     pub fn new(on: impl Into<Cow<'a, str>>, year: i64, count: i64, fill: impl Into<Cow<'a, str>>) -> Self {
         Props { on: on.into(), year, count, fill: fill.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -61,7 +59,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat(&props.fill, props.count as f64), 10, 123));
     out.push_str("</p>");
     fv_refusals.check(super::posted::try_render(out, &super::posted::Props { at: fv_refusals.date(fv_refusals.keep(fv::date::try_date_parse(&props.on), 11, 14), 11, 14), edited: None, deleted: None }))?;
-    fv_refusals.check(super::wrap::try_render_scoped(out, &super::wrap::Props {  }, super::wrap::Slots {
+    fv_refusals.check(super::wrap::try_render_scoped(out, &super::wrap::Props {}, super::wrap::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             fv_refusals.join(super::rated::try_render(out, &super::rated::Props { stars: fv_refusals.keep(fv::render::try_int(props.year as f64 * 2.0), 12, 39) }));
         })),

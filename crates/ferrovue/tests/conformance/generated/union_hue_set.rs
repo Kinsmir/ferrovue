@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(set: super::types::HueSet<'a>, label: impl Into<Cow<'a, str>>) -> Self {
         Props { set, label: label.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

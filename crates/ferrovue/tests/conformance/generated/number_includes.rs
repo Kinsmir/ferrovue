@@ -25,9 +25,7 @@ impl Props {
     pub fn new(nums: Vec<i64>, prices: Vec<f64>, qty: i64, ratio: f64) -> Self {
         Props { nums, prices, qty, ratio }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

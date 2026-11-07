@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(tint: impl Into<Cow<'a, str>>, shade: impl Into<Cow<'a, str>>) -> Self {
         Props { tint: tint.into(), shade: shade.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

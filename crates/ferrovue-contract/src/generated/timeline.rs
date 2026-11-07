@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(moments: Vec<super::types::Moment<'a>>, days: Vec<ferrovue::date::JsDate>, by: ferrovue::props::Record<'a, ferrovue::date::JsDate>) -> Self {
         Props { moments, days, by }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

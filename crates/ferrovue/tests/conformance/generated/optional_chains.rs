@@ -31,7 +31,6 @@ impl<'a> Profile<'a> {
     }
 }
 
-
 /// `User` in `OptionalChains.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -64,7 +63,6 @@ impl<'a> User<'a> {
         self
     }
 }
-
 
 /// The props `OptionalChains.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -136,7 +134,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

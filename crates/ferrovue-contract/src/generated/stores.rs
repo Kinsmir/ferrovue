@@ -31,7 +31,6 @@ impl<'a> CartState<'a> {
     }
 }
 
-
 /// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -46,6 +45,4 @@ impl<'a> Stores<'a> {
     pub fn new(cart: CartState<'a>) -> Self {
         Stores { cart }
     }
-
 }
-

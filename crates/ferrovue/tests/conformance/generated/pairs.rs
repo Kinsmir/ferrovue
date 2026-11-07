@@ -23,9 +23,7 @@ impl<'a> Seat<'a> {
     pub fn new(row: impl Into<Cow<'a, str>>, n: i64) -> Self {
         Seat { row: row.into(), n }
     }
-
 }
-
 
 /// The props `Pairs.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -48,9 +46,7 @@ impl<'a> Props<'a> {
     pub fn new(scores: ferrovue::props::Record<'a, i64>, labels: ferrovue::props::Record<'a, Cow<'a, str>>, seats: ferrovue::props::Record<'a, Seat<'a>>, tags: ferrovue::props::Record<'a, Vec<Cow<'a, str>>>, word: impl Into<Cow<'a, str>>) -> Self {
         Props { scores, labels, seats, tags, word: word.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

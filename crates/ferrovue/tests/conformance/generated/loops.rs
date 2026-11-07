@@ -23,9 +23,7 @@ impl<'a> Row<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>, score: i64) -> Self {
         Row { name: name.into(), score }
     }
-
 }
-
 
 /// The props `Loops.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -52,9 +50,7 @@ impl<'a> Props<'a> {
     pub fn new(words: impl IntoIterator<Item = impl Into<Cow<'a, str>>>, n: i64, s: impl Into<Cow<'a, str>>, rows: Vec<Row<'a>>, nums: Vec<i64>, ratio: f64, target: impl Into<Cow<'a, str>>) -> Self {
         Props { words: words.into_iter().map(Into::into).collect(), n, s: s.into(), rows, nums, ratio, target: target.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

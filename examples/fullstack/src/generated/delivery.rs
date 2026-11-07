@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(ordered: impl Into<Cow<'a, str>>, days: i64) -> Self {
         Props { ordered: ordered.into(), days }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

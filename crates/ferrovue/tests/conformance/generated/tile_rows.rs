@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(rows: Vec<super::types::TileRow<'a>>) -> Self {
         Props { rows }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

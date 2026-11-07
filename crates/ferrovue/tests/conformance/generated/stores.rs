@@ -21,9 +21,7 @@ impl<'a> Line<'a> {
     pub fn new(sku: impl Into<Cow<'a, str>>, qty: i64) -> Self {
         Line { sku: sku.into(), qty }
     }
-
 }
-
 
 /// `CartState` in `stores/cart.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -50,7 +48,6 @@ impl<'a> CartState<'a> {
         self
     }
 }
-
 
 /// `CounterState` in `stores/counter.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -82,7 +79,6 @@ impl<'a> CounterState<'a> {
     }
 }
 
-
 /// `Tag` in `stores/prefs.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -106,7 +102,6 @@ impl<'a> Tag<'a> {
         self
     }
 }
-
 
 /// `PrefsState` in `stores/prefs.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -138,7 +133,6 @@ impl<'a> PrefsState<'a> {
     }
 }
 
-
 /// `SessionState` in `stores/session.ts`.
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -169,7 +163,6 @@ impl<'a> SessionState<'a> {
     }
 }
 
-
 /// Every store's state, keyed by id as `pinia.state.value` is: what the page sends the client.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
@@ -190,6 +183,4 @@ impl<'a> Stores<'a> {
     pub fn new(cart: CartState<'a>, counter: CounterState<'a>, prefs: PrefsState<'a>, session: SessionState<'a>) -> Self {
         Stores { cart, counter, prefs, session }
     }
-
 }
-

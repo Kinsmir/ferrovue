@@ -18,9 +18,7 @@ impl<'a> Score<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: i64) -> Self {
         Score(part0.into(), part1)
     }
-
 }
-
 
 /// `ScoredExtra` in `Scored.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -32,9 +30,7 @@ impl<'a> ScoredExtra<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: Option<bool>) -> Self {
         ScoredExtra(part0.into(), part1)
     }
-
 }
-
 
 /// The props `Scored.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -58,7 +54,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

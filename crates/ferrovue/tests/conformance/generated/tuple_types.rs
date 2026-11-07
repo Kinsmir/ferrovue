@@ -18,9 +18,7 @@ impl<'a> TupleTypesScore<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: i64) -> Self {
         TupleTypesScore(part0.into(), part1)
     }
-
 }
-
 
 /// `TupleTypesScores` in `TupleTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -32,9 +30,7 @@ impl<'a> TupleTypesScores<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: i64) -> Self {
         TupleTypesScores(part0.into(), part1)
     }
-
 }
-
 
 /// `TupleTypesWhen` in `TupleTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -46,9 +42,7 @@ impl<'a> TupleTypesWhen<'a> {
     pub fn new(part0: ferrovue::date::JsDate, part1: impl Into<Cow<'a, str>>) -> Self {
         TupleTypesWhen(part0, part1.into())
     }
-
 }
-
 
 /// `TupleTypesNested` in `TupleTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -60,9 +54,7 @@ impl<'a> TupleTypesNested<'a> {
     pub fn new(part0: TupleTypesNested0<'a>, part1: bool) -> Self {
         TupleTypesNested(part0, part1)
     }
-
 }
-
 
 /// `TupleTypesNested0` in `TupleTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -79,9 +71,7 @@ impl<'a> TupleTypesNested0<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         TupleTypesNested0 { name: name.into(), tags: tags.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// `TupleTypesExtra` in `TupleTypes.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -93,9 +83,7 @@ impl<'a> TupleTypesExtra<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: i64) -> Self {
         TupleTypesExtra(part0.into(), part1)
     }
-
 }
-
 
 /// The props `TupleTypes.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -129,7 +117,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

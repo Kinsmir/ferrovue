@@ -83,9 +83,7 @@ impl<'a> UnionFieldByKeyLabels<'a> {
     pub fn new(left: impl Into<Cow<'a, str>>, right: impl Into<Cow<'a, str>>) -> Self {
         UnionFieldByKeyLabels { left: left.into(), right: right.into() }
     }
-
 }
-
 
 /// The props `UnionFieldByKey.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -102,9 +100,7 @@ impl<'a> Props<'a> {
     pub fn new(side: Side, labels: UnionFieldByKeyLabels<'a>) -> Self {
         Props { side, labels }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -235,7 +235,7 @@ describe("rendering the choices", () => {
             })?;
         }
         XK::B => {
-            super::z::try_render(out, &super::z::Props {  }, super::z::Slots {
+            super::z::try_render(out, &super::z::Props {}, super::z::Slots {
                 x: None,
             })?;
         }
@@ -265,7 +265,7 @@ describe("rendering the choices", () => {
 
   it("gives a chosen component the slots it takes", () => {
     expect(render('import Z from "./Z.vue";\nimport Y from "./Y.vue";\ndefineProps<{ on: boolean }>();', '<component :is="on ? Z : Y"><template #x>xx</template><template #default>dd</template></component>')).toMatch(like(`    if props.on {
-        super::z::try_render(out, &super::z::Props {  }, super::z::Slots {
+        super::z::try_render(out, &super::z::Props {}, super::z::Slots {
             x: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push_str("xx");
             })),
@@ -278,7 +278,7 @@ describe("rendering the choices", () => {
         })?;
     }`));
     expect(render('import V from "./V.vue";\ndefineProps<{ on: boolean }>();', "<component :is=\"on ? V : 'i'\">c</component>", { "V.vue": sfc("", "<b>v</b>") })).toMatch(like(
-      '    if props.on {\n        super::v::try_render(out, &super::v::Props {  })?;\n    } else {\n        out.push_str("<i>c</i>");\n    }',
+      '    if props.on {\n        super::v::try_render(out, &super::v::Props {})?;\n    } else {\n        out.push_str("<i>c</i>");\n    }',
     ));
   });
 });
@@ -343,7 +343,7 @@ describe("choices the analyses read", () => {
     };
     const out = compiled(files);
     expect(out.get("c.rs")).toMatch(like('pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {\n    try_render_scoped(out, props, "")\n}'));
-    expect(out.get("x.rs")).toMatch(/super::c::try_render_scoped\(out, &super::c::Props \{ {2}\}, " data-v-\w+"\)\?;/);
+    expect(out.get("x.rs")).toMatch(/super::c::try_render_scoped\(out, &super::c::Props \{\}, " data-v-\w+"\)\?;/);
   });
 
   it("passes the route to a child a table of a `.ts` file chooses", () => {
@@ -356,7 +356,7 @@ describe("choices the analyses read", () => {
     writeFileSync(join(made, "routes.json"), JSON.stringify([{ path: "/", name: "home" }]));
     const out = generate(made, { components: "components", out: "out", routes: "routes.json" }).get("x.rs")!;
     expect(out).toMatch(like("pub fn render(out: &mut String, props: &Props, fv_route: &fv::router::Route<'_>) {"));
-    expect(out).toMatch(like("super::c::try_render(out, &super::c::Props {  }, fv_route)?;"));
+    expect(out).toMatch(like("super::c::try_render(out, &super::c::Props {}, fv_route)?;"));
   });
 
   it("reads a slot with fallback content in a twin's slot as rendered outside the element chosen", () => {
@@ -371,7 +371,7 @@ describe("choices the analyses read", () => {
 describe("the props and tables `<component :is>` reads, checked a second time", () => {
   const C = sfc("", "<span>c</span>");
   const rendered = (script: string, template: string) => render(script, template, { "C.vue": C });
-  const choice = "if props.on {\n        super::c::try_render(out, &super::c::Props {  })?;\n    } else {\n        out.push_str(\"<b></b>\");\n    }";
+  const choice = "if props.on {\n        super::c::try_render(out, &super::c::Props {})?;\n    } else {\n        out.push_str(\"<b></b>\");\n    }";
 
   it("reads a `computed` of choices through `satisfies` and `!`", () => {
     const pick = (body: string) => `import C from "./C.vue";\nimport { computed } from "vue";\nconst props = defineProps<{ on: boolean }>();\nconst pick = computed(() => ${body});`;
@@ -381,7 +381,7 @@ describe("the props and tables `<component :is>` reads, checked a second time", 
 
   it("reads a field of a setup object named like a prop as the object's", () => {
     expect(rendered('import { computed } from "vue";\ndefineProps<{ tag: "b" | "i" }>();\nconst cfg = { tag: "u" };\nconst pick = computed(() => cfg.tag);', '<component :is="pick" />')).toMatch(like('out.push_str("<u></u>");'));
-    expect(rendered('import C from "./C.vue";\nconst props = defineProps<{ c: "b" | "i" }>();\nconst VIEWS = { c: C };', '<component :is="VIEWS.c" />')).toMatch(like("super::c::try_render(out, &super::c::Props {  })?;"));
+    expect(rendered('import C from "./C.vue";\nconst props = defineProps<{ c: "b" | "i" }>();\nconst VIEWS = { c: C };', '<component :is="VIEWS.c" />')).toMatch(like("super::c::try_render(out, &super::c::Props {})?;"));
   });
 
   it("reads the prop's type from the interface or alias `defineProps` names, and its field by name", () => {

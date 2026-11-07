@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(replies: Vec<super::types::Reply<'a>>, depth: i64) -> Self {
         Props { replies, depth }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

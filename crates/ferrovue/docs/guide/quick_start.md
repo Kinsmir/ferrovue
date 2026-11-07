@@ -127,7 +127,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
@@ -229,7 +228,6 @@ Then build the props and render:
 #         self
 #     }
 # }
-#
 #
 # /// Write the component's server render into `out`.
 # pub fn render(out: &mut String, props: &Props<'_>) {

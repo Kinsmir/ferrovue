@@ -810,7 +810,6 @@ impl<'a> Choice<'a> {
     }
 }
 
-
 /// `Reply` in `types/dated.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -846,7 +845,6 @@ impl<'a> Reply<'a> {
     }
 }
 
-
 /// `Thread` in `types/dated.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -868,9 +866,7 @@ impl<'a> Thread<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, opened: ferrovue::date::JsDate, replies: Vec<Reply<'a>>, pinned: ferrovue::props::Record<'a, ferrovue::date::JsDate>, seen: Vec<Option<ferrovue::date::JsDate>>) -> Self {
         Thread { title: title.into(), opened, replies, pinned, seen }
     }
-
 }
-
 
 /// `TabsState` in `types/keys.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -887,9 +883,7 @@ impl<'a> TabsState<'a> {
     pub fn new(active: impl Into<Cow<'a, str>>, count: i64) -> Self {
         TabsState { active: active.into(), count }
     }
-
 }
-
 
 /// `Look` in `types/keys.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -917,7 +911,6 @@ impl<'a> Look<'a> {
         self
     }
 }
-
 
 /// `ImportedCardProps` in `types/imported.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -954,7 +947,6 @@ impl<'a> ImportedCardProps<'a> {
     }
 }
 
-
 /// `ImportedBase` in `types/imported.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -977,7 +969,6 @@ impl<'a> ImportedBase<'a> {
         self
     }
 }
-
 
 /// `MoodCard` in `types/tables.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1004,7 +995,6 @@ impl<'a> MoodCard<'a> {
     }
 }
 
-
 /// `Placed` in `types/placed.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1024,9 +1014,7 @@ impl<'a> Placed<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, mood: Mood, author: PlacedAuthor<'a>, counts: PlacedCounts) -> Self {
         Placed { title: title.into(), mood, author, counts }
     }
-
 }
-
 
 /// `PlacedAuthor` in `types/placed.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1043,9 +1031,7 @@ impl<'a> PlacedAuthor<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>, links: Vec<PlacedAuthorLinks<'a>>) -> Self {
         PlacedAuthor { name: name.into(), links }
     }
-
 }
-
 
 /// `PlacedAuthorLinks` in `types/placed.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1070,7 +1056,6 @@ impl<'a> PlacedAuthorLinks<'a> {
     }
 }
 
-
 /// `PlacedCounts` in `types/placed.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1086,9 +1071,7 @@ impl PlacedCounts {
     pub fn new(seen: i64, liked: i64) -> Self {
         PlacedCounts { seen, liked }
     }
-
 }
-
 
 /// `Author` in `components/loaders.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1112,7 +1095,6 @@ impl<'a> Author<'a> {
         self
     }
 }
-
 
 /// `Article` in `components/loaders.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1138,7 +1120,6 @@ impl<'a> Article<'a> {
         self
     }
 }
-
 
 /// `Ranking` in `components/loaders.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1179,7 +1160,6 @@ impl<'a> Ranking<'a> {
     }
 }
 
-
 /// `Query` in `components/loaders.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1213,7 +1193,6 @@ impl<'a> Query<'a> {
     }
 }
 
-
 /// `Role` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1229,9 +1208,7 @@ impl<'a> Role<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>, admin: bool) -> Self {
         Role { name: name.into(), admin }
     }
-
 }
-
 
 /// `User` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1268,7 +1245,6 @@ impl<'a> User<'a> {
     }
 }
 
-
 /// `Badge` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1291,7 +1267,6 @@ impl<'a> Badge<'a> {
         self
     }
 }
-
 
 /// `Entry` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1332,7 +1307,6 @@ impl<'a> Entry<'a> {
     }
 }
 
-
 /// `TileBadge` in `types/tiles.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1348,9 +1322,7 @@ impl<'a> TileBadge<'a> {
     pub fn new(label: impl Into<Cow<'a, str>>, tone: impl Into<Cow<'a, str>>) -> Self {
         TileBadge { label: label.into(), tone: tone.into() }
     }
-
 }
-
 
 /// `Tile` in `types/tiles.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1395,7 +1367,6 @@ impl<'a> Tile<'a> {
     }
 }
 
-
 /// `TileRow` in `types/tiles.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1415,9 +1386,7 @@ impl<'a> TileRow<'a> {
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>, href: impl Into<Cow<'a, str>>, first: bool) -> Self {
         TileRow { id, label: label.into(), href: href.into(), first }
     }
-
 }
-
 
 /// `Span` in `types/tuples.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1429,9 +1398,7 @@ impl<'a> Span<'a> {
     pub fn new(part0: impl Into<Cow<'a, str>>, part1: impl Into<Cow<'a, str>>) -> Self {
         Span(part0.into(), part1.into())
     }
-
 }
-
 
 /// `Booking` in `types/tuples.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1450,9 +1417,7 @@ impl<'a> Booking<'a> {
     pub fn new(span: Span<'a>, seats: BookingSeats, tagged: BookingTagged<'a>) -> Self {
         Booking { span, seats, tagged }
     }
-
 }
-
 
 /// `BookingSeats` in `types/tuples.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1464,9 +1429,7 @@ impl BookingSeats {
     pub fn new(part0: i64, part1: i64) -> Self {
         BookingSeats(part0, part1)
     }
-
 }
-
 
 /// `BookingTagged` in `types/tuples.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1478,9 +1441,7 @@ impl<'a> BookingTagged<'a> {
     pub fn new(part0: Mood, part1: Option<Cow<'a, str>>) -> Self {
         BookingTagged(part0, part1)
     }
-
 }
-
 
 /// `Step` in `types/unions.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1507,7 +1468,6 @@ impl<'a> Step<'a> {
     }
 }
 
-
 /// `HueSet` in `types/unions.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1523,9 +1483,7 @@ impl<'a> HueSet<'a> {
     pub fn new(hues: impl IntoIterator<Item = Hue>, note: impl Into<Cow<'a, str>>) -> Self {
         HueSet { hues: hues.into_iter().collect(), note: note.into() }
     }
-
 }
-
 
 /// `SortsItem` in `types/catalog.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -1553,7 +1511,6 @@ impl<'a> SortsItem<'a> {
         self
     }
 }
-
 /// `CHOICES` in `types/catalog.ts`.
 pub const CHOICES: &[Choice<'static>] = &[
     Choice { id: 1, label: Cow::Borrowed("One"), hint: None },

@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(row: super::data_list::Row<'a>, first: bool) -> Self {
         Props { row, first }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

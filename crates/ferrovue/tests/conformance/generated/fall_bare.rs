@@ -9,18 +9,14 @@ pub const NAME: &str = "FallBare";
 /// The props `FallBare.vue` declares.
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
-pub struct Props {
-
-}
+pub struct Props {}
 
 impl Props {
     /// Props with nothing set.
     pub fn new() -> Self {
-        Props {  }
+        Props {}
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -45,7 +41,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, _props: &Props, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(0);
-    super::fall_use::try_render_scoped(out, &super::fall_use::Props {  }, &fv::attrs::Attrs::new(fv_attrs.list(), ""))?;
+    super::fall_use::try_render_scoped(out, &super::fall_use::Props {}, &fv::attrs::Attrs::new(fv_attrs.list(), ""))?;
     Ok(())
 }
 

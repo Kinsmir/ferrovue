@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(kind: impl Into<Cow<'a, str>>) -> Self {
         Props { kind: kind.into() }
     }
-
 }
-
 
 /// The props `<slot name="after">` passes the content a parent gives it, borrowed for the render.
 pub struct AfterSlotProps<'v> {

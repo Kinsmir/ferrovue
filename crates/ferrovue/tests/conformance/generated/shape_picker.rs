@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(shape: super::types::Shape, label: impl Into<Cow<'a, str>>, boxed: bool) -> Self {
         Props { shape, label: label.into(), boxed }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

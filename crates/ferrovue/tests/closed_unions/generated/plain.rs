@@ -9,18 +9,14 @@ pub const NAME: &str = "Plain";
 /// The props `Plain.vue` declares.
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
-pub struct Props {
-
-}
+pub struct Props {}
 
 impl Props {
     /// Props with nothing set.
     pub fn new() -> Self {
-        Props {  }
+        Props {}
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

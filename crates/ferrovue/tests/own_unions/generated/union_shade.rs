@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(tone: crate::domain::Shade, text: impl Into<Cow<'a, str>>) -> Self {
         Props { tone, text: text.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

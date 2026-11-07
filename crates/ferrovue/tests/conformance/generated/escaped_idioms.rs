@@ -23,9 +23,7 @@ impl<'a> Props<'a> {
     pub fn new(title: impl Into<Cow<'a, str>>, stars: i64) -> Self {
         Props { title: title.into(), stars }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -45,11 +43,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(67 + props.title.len());
     out.push_str("<section class=\"escaped-idioms\"><!--[-->");
-    super::glyph::try_render_scoped(out, &super::glyph::Props {  }, &fv::attrs::Attrs::NONE)?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::NONE)?;
     out.push_str("<em>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</em><!--]-->");
-    super::divider::try_render_scoped(out, &super::divider::Props {  }, &fv::attrs::Attrs::NONE)?;
+    super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::NONE)?;
     crate::vendor::star_rating(out, &super::twins::StarRatingProps { value: props.stars, max: None, label: Some(&*props.title), readonly: false }, super::twins::StarRatingSlots {
         default: None,
     }, &fv::attrs::Attrs::NONE);

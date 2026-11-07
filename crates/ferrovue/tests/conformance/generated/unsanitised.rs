@@ -29,9 +29,7 @@ impl<'a> Props<'a> {
     pub fn new(url: impl Into<Cow<'a, str>>, doc: impl Into<Cow<'a, str>>, handler: impl Into<Cow<'a, str>>, color: impl Into<Cow<'a, str>>, css: impl Into<Cow<'a, str>>) -> Self {
         Props { url: url.into(), doc: doc.into(), handler: handler.into(), color: color.into(), css: css.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
@@ -65,7 +63,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(";\">a</p><p style=\"");
     fv::core::escape_into(out, &props.css);
     out.push_str("\">b</p>");
-    super::unsanitised_leaf::try_render_scoped(out, &super::unsanitised_leaf::Props {  }, &fv::attrs::Attrs::new(&[("onclick", fv::attrs::Attr::str(&props.handler)), ("style", fv::attrs::Attr::str(&props.css)), ("srcdoc", fv::attrs::Attr::str(&props.doc))], ""))?;
+    super::unsanitised_leaf::try_render_scoped(out, &super::unsanitised_leaf::Props {}, &fv::attrs::Attrs::new(&[("onclick", fv::attrs::Attr::str(&props.handler)), ("style", fv::attrs::Attr::str(&props.css)), ("srcdoc", fv::attrs::Attr::str(&props.doc))], ""))?;
     out.push_str("</section>");
     Ok(())
 }

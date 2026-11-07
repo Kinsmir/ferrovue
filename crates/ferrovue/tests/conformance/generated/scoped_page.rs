@@ -41,7 +41,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// What a parent puts in the slots `ScopedPage.vue` renders.
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {
@@ -140,13 +139,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
             true
         }),
     }, " data-v-56da6d99"))?;
-    fv_refusals.check(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+    fv_refusals.check(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {}, super::plain_forward::Slots {
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id_4: &str| -> bool {
             out.push_str("<em data-v-56da6d99");
             out.push_str(fv_slot_id_4);
             out.push_str(">forwarded</em>");
             fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("forwarded")) }, &fv::attrs::scope_attrs("", "data-v-56da6d99", fv_slot_id_4)));
-            fv_refusals.join(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {  }, super::plain_forward::Slots {
+            fv_refusals.join(super::plain_forward::try_render_scoped(out, &super::plain_forward::Props {}, super::plain_forward::Slots {
                 default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id_5: &str| -> bool {
                     out.push_str("<s data-v-56da6d99");
                     out.push_str(fv_slot_id_5);
@@ -158,7 +157,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
             true
         })),
     }, " data-v-56da6d99"))?;
-    fv_refusals.check(super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {  }, super::scoped_shelf::Slots {
+    fv_refusals.check(super::scoped_shelf::try_render_scoped(out, &super::scoped_shelf::Props {}, super::scoped_shelf::Slots {
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id_6: &str| -> bool {
             out.push_str("<mark data-v-56da6d99");
             out.push_str(fv_slot_id_6);
@@ -167,7 +166,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
             true
         })),
     }, " data-v-56da6d99"))?;
-    fv_refusals.check(super::scoped_rack::try_render_scoped(out, &super::scoped_rack::Props {  }, super::scoped_rack::Slots {
+    fv_refusals.check(super::scoped_rack::try_render_scoped(out, &super::scoped_rack::Props {}, super::scoped_rack::Slots {
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id_7: &str| -> bool {
             out.push_str("<b data-v-56da6d99");
             out.push_str(fv_slot_id_7);

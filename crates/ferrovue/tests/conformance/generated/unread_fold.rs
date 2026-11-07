@@ -37,7 +37,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// What a parent puts in the slots `UnreadFold.vue` renders.
 #[derive(Clone, Copy, Default)]
 pub struct Slots<'s> {

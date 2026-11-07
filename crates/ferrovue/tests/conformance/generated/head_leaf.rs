@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>) -> Self {
         Props { name: name.into() }
     }
-
 }
-
 
 /// What a parent puts in the slots `HeadLeaf.vue` renders.
 #[derive(Clone, Copy, Default)]

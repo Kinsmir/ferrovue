@@ -25,9 +25,7 @@ impl<'a> Props<'a> {
     pub fn new(rows: Vec<super::data_list::Row<'a>>, heading: impl Into<Cow<'a, str>>, compact: bool) -> Self {
         Props { rows, heading: heading.into(), compact }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -85,9 +85,7 @@ impl<'a> Props<'a> {
     pub fn new(size: LookupKeysSize, mood: super::types::Mood, label: impl Into<Cow<'a, str>>) -> Self {
         Props { size, mood, label: label.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -39,7 +39,6 @@ impl Props {
     }
 }
 
-
 /// Write the component's server render into `out`.
 ///
 /// # Panics

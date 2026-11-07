@@ -157,9 +157,8 @@ function builderSource(st: Struct, comp: Component, life: string): string {
   return `${impl} ${st.name}${life} {
     /// ${st.name} with ${isTuple(st) ? "its parts" : required.length ? "its required fields" : "nothing set"}${absentNote(optional)}.
 ${required.length > 7 ? "    // One argument per required field, however many the type declares.\n    #[allow(clippy::too_many_arguments)]\n" : ""}    pub fn new(${params}) -> Self {
-        ${isTuple(st) ? `${st.name}(${st.fields.map((f) => bare(param(f.ty, comp, arg(f)).value)).join(", ")})` : `${st.name} { ${inits} }`}
-    }
-${setters}
+        ${isTuple(st) ? `${st.name}(${st.fields.map((f) => bare(param(f.ty, comp, arg(f)).value)).join(", ")})` : inits ? `${st.name} { ${inits} }` : `${st.name} {}`}
+    }${setters ? `\n${setters}` : ""}
 }
 `;
 }
@@ -171,7 +170,7 @@ export function structSource(st: Struct, comp: Component, doc: string): string {
     return `${doc}#[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct ${st.name}${life}(${parts});
-${ctx.builders ? `\n${builderSource(st, comp, life)}\n` : ""}`;
+${ctx.builders ? `\n${builderSource(st, comp, life)}` : ""}`;
   }
   const fields = st.fields
     .map((f) => {
@@ -181,10 +180,8 @@ ${ctx.builders ? `\n${builderSource(st, comp, life)}\n` : ""}`;
   const derives = st.fields.some((f) => f.ty.k !== "opt") ? "Debug, Clone" : "Debug, Clone, Default";
   return `${doc}#[derive(${derives}, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
-pub struct ${st.name}${life} {
-${fields}
-}
-${ctx.builders ? `\n${builderSource(st, comp, life)}\n` : ""}`;
+pub struct ${st.name}${life} ${fields ? `{\n${fields}\n}` : "{}"}
+${ctx.builders ? `\n${builderSource(st, comp, life)}` : ""}`;
 }
 
 /** The version of generated code this compiler writes, which `mod.rs` hands `ferrovue::__compat!`:

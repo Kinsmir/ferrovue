@@ -19,9 +19,7 @@ impl<'a> Props<'a> {
     pub fn new(book: super::types::Book<'a>) -> Self {
         Props { book }
     }
-
 }
-
 
 /// What a parent puts in the slots `[id].vue` renders.
 #[derive(Clone, Copy, Default)]

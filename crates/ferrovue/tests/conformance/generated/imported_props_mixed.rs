@@ -21,9 +21,7 @@ impl Extra {
     pub fn new(mood: super::types::Mood) -> Self {
         Extra { mood }
     }
-
 }
-
 
 /// The props `ImportedPropsMixed.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -51,7 +49,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// Write the component's server render into `out`.
 ///

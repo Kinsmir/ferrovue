@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(order: impl Into<Cow<'a, str>>) -> Self {
         Props { order: order.into() }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

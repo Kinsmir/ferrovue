@@ -79,9 +79,7 @@ impl<'a> Props<'a> {
     pub fn new(name: impl Into<Cow<'a, str>>, tone: ExportedNamesTone) -> Self {
         Props { name: name.into(), tone }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

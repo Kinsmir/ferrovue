@@ -25,9 +25,7 @@ impl<'a> Row<'a> {
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>, tags: impl IntoIterator<Item = impl Into<Cow<'a, str>>>) -> Self {
         Row { id, label: label.into(), tags: tags.into_iter().map(Into::into).collect() }
     }
-
 }
-
 
 /// The props `DataList.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -53,7 +51,6 @@ impl<'a> Props<'a> {
         self
     }
 }
-
 
 /// The props `<slot name="header">` passes the content a parent gives it, borrowed for the render.
 pub struct HeaderSlotProps<'v> {

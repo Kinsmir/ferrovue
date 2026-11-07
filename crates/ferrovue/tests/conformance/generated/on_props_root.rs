@@ -115,7 +115,6 @@ impl<'a> Props<'a> {
     }
 }
 
-
 /// Write the component's server render into `out`.
 ///
 /// # Panics

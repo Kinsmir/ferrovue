@@ -81,9 +81,7 @@ impl<'a> Props<'a> {
     pub fn new(tag: TagCasingTag, label: impl Into<Cow<'a, str>>, on: bool) -> Self {
         Props { tag, label: label.into(), on }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///

@@ -21,9 +21,7 @@ impl<'a> Props<'a> {
     pub fn new(thread: super::types::Thread<'a>, shift: f64) -> Self {
         Props { thread, shift }
     }
-
 }
-
 
 /// Write the component's server render into `out`.
 ///
