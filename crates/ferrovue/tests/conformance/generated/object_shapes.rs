@@ -150,7 +150,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &{ let fv_l_4 = if props.size as f64 > 0.0 { Some(Line { text: Cow::<str>::Owned(props.title.to_uppercase()), size: fv::strings::js_length(&props.title), tag: (if props.title.is_empty() { None } else { Some(&*props.title) }).map(Cow::<str>::Borrowed), mark: (if fv::strings::js_length(&props.title) > 3 { Some("long") } else { None }).map(Cow::<str>::Borrowed) }) } else { None }; Cow::<str>::Owned((if let Some(fv_l_5) = fv_l_4.as_ref() { fv_l_5.mark.as_deref().unwrap_or(&*fv_l_5.text) } else { "none" }).to_owned()) });
     out.push_str("</p>");
-    super::tile_card::try_render(out, &super::tile_card::Props { tile: s_kept.to_owned() })?;
+    super::tile_card::try_render(out, &super::tile_card::Props { tile: s_kept.borrowed() })?;
     out.push_str("</section>");
     Ok(())
 }

@@ -56,7 +56,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<section>");
     if let Some(fv_featured) = props.featured.as_ref() {
         super::user_card::try_render(out, &super::user_card::Props {
-            user: fv_featured.to_owned(),
+            user: fv_featured.borrowed(),
             size: Some(super::types::Size::Lg),
             badges: Some(Vec::new()),
             note: Some(Cow::Borrowed("featured")),
@@ -67,7 +67,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--[-->");
     for fv_u in props.users.iter() {
         super::user_card::try_render(out, &super::user_card::Props {
-            user: fv_u.to_owned(),
+            user: fv_u.borrowed(),
             size: fv_u.size,
             badges: None,
             note: None,
@@ -75,7 +75,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push_str("<!--]-->");
     super::lifecycle::try_render(out, &super::lifecycle::Props {
-        items: props.items.to_owned(),
+        items: props.items.iter().map(|v| v.borrowed()).collect(),
         query: Cow::Borrowed("all"),
     })?;
     out.push_str("</section>");

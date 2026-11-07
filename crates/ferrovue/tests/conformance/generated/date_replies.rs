@@ -74,7 +74,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         if (props.depth as f64) < 2.0 && !fv_reply.replies.is_empty() {
             fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
-                replies: fv_reply.replies.to_owned(),
+                replies: fv_reply.replies.iter().map(|v| v.borrowed()).collect(),
                 depth: fv_refusals.keep(fv::render::try_int(props.depth as f64 + 1.0), 15, 94),
             }))?;
         } else {

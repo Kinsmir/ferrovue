@@ -841,6 +841,19 @@ impl<'a> Reply<'a> {
     }
 }
 
+impl<'a> Reply<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Reply<'_> {
+        Reply {
+            author: Cow::Borrowed(&*self.author),
+            at: self.at,
+            edited: self.edited,
+            removed: self.removed,
+            replies: self.replies.iter().map(|v| v.borrowed()).collect(),
+        }
+    }
+}
+
 /// `Thread` in `types/dated.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1172,6 +1185,16 @@ impl<'a> Role<'a> {
     }
 }
 
+impl<'a> Role<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Role<'_> {
+        Role {
+            name: Cow::Borrowed(&*self.name),
+            admin: self.admin,
+        }
+    }
+}
+
 /// `User` in `types/models.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1201,6 +1224,19 @@ impl<'a> User<'a> {
     pub fn size(mut self, size: Size) -> Self {
         self.size = Some(size);
         self
+    }
+}
+
+impl<'a> User<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> User<'_> {
+        User {
+            id: self.id,
+            name: Cow::Borrowed(&*self.name),
+            avatar: self.avatar.as_deref().map(Cow::Borrowed),
+            roles: self.roles.iter().map(|v| v.borrowed()).collect(),
+            size: self.size,
+        }
     }
 }
 
@@ -1263,6 +1299,18 @@ impl<'a> Entry<'a> {
     }
 }
 
+impl<'a> Entry<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Entry<'_> {
+        Entry {
+            title: Cow::Borrowed(&*self.title),
+            deleted_at: self.deleted_at.as_deref().map(Cow::Borrowed),
+            score: self.score,
+            note: self.note.as_deref().map(Cow::Borrowed),
+        }
+    }
+}
+
 /// `TileBadge` in `types/tiles.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1275,6 +1323,16 @@ impl<'a> TileBadge<'a> {
     /// TileBadge with its required fields.
     pub fn new(label: impl Into<Cow<'a, str>>, tone: impl Into<Cow<'a, str>>) -> Self {
         TileBadge { label: label.into(), tone: tone.into() }
+    }
+}
+
+impl<'a> TileBadge<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> TileBadge<'_> {
+        TileBadge {
+            label: Cow::Borrowed(&*self.label),
+            tone: Cow::Borrowed(&*self.tone),
+        }
     }
 }
 
@@ -1317,6 +1375,20 @@ impl<'a> Tile<'a> {
     }
 }
 
+impl<'a> Tile<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Tile<'_> {
+        Tile {
+            title: Cow::Borrowed(&*self.title),
+            count: self.count,
+            note: self.note.as_deref().map(Cow::Borrowed),
+            owner: self.owner.as_deref().map(Cow::Borrowed),
+            tags: self.tags.iter().map(|v| Cow::Borrowed(&**v)).collect(),
+            badge: self.badge.as_ref().map(|v| v.borrowed()),
+        }
+    }
+}
+
 /// `TileRow` in `types/tiles.ts`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
@@ -1331,6 +1403,18 @@ impl<'a> TileRow<'a> {
     /// TileRow with its required fields.
     pub fn new(id: i64, label: impl Into<Cow<'a, str>>, href: impl Into<Cow<'a, str>>, first: bool) -> Self {
         TileRow { id, label: label.into(), href: href.into(), first }
+    }
+}
+
+impl<'a> TileRow<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> TileRow<'_> {
+        TileRow {
+            id: self.id,
+            label: Cow::Borrowed(&*self.label),
+            href: Cow::Borrowed(&*self.href),
+            first: self.first,
+        }
     }
 }
 
@@ -1406,6 +1490,17 @@ impl<'a> Step<'a> {
     pub fn align(mut self, align: Align) -> Self {
         self.align = Some(align);
         self
+    }
+}
+
+impl<'a> Step<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Step<'_> {
+        Step {
+            label: Cow::Borrowed(&*self.label),
+            state: self.state,
+            align: self.align,
+        }
     }
 }
 

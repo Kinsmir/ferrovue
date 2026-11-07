@@ -47,7 +47,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DataTable.vue");
     fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props {
-        rows: props.rows.to_owned(),
+        rows: props.rows.iter().map(|v| v.borrowed()).collect(),
         title: Cow::Borrowed(&*props.heading),
         note: None,
     }, super::data_list::Slots {
@@ -68,7 +68,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             if !props.compact {
                 filled = true;
                 fv_refusals.join(super::row_chip::try_render(out, &super::row_chip::Props {
-                    row: fv_slot_props_2.row.to_owned(),
+                    row: fv_slot_props_2.row.borrowed(),
                     first: fv_slot_props_2.first,
                 }));
             } else {

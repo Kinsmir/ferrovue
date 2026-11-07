@@ -10,6 +10,7 @@ import { tyNode } from "./objects.ts";
 import { asF64 } from "./numbers.ts";
 import { atom, bare } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
+import { viewOf } from "./rust.ts";
 import { attrOf, dollarAttrs, isAttrs, mergedParts } from "./attrs.ts";
 import { isDollarAttrs, isListener, passedKey } from "./fallthrough.ts";
 import { claim, paramsOf, slotContextOf, slotFieldsOf } from "./plugin.ts";
@@ -504,11 +505,19 @@ export function ownInto(comp: Component, v: Val, want: Ty, node: N): string {
     return `${atom(v.code)}.as_ref().map(|v| v.iter().copied()${datesInto(want.of.of, refusalAt(comp, node))}.collect())`;
   }
   if (v.iter !== undefined && v.ty.k === "list" && want.k === "list" && sameTy(v.ty.of, want.of)) {
-    return want.of.k === "struct" || want.of.k === "child" ? `${v.iter}.cloned().collect()` : `${v.iter}.collect()`;
+    if (want.of.k !== "struct" && want.of.k !== "child") return `${v.iter}.collect()`;
+    const each = viewOf(want.of, "*v", comp);
+    return each === undefined || each === "v.clone()" ? `${v.iter}.cloned().collect()` : `${v.iter}.map(|v| ${each}).collect()`;
   }
   const objecty = (t: Ty): boolean => t.k === "struct" || t.k === "child" || t.k === "record" || ((t.k === "list" || t.k === "opt") && objecty(t.of));
-  if (objecty(want) && sameTy(v.ty, want)) return `${atom(v.code)}.${v.ty.k === "opt" ? "cloned" : "to_owned"}()`;
-  if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some(${atom(v.code)}.to_owned())`;
+  if (objecty(want) && sameTy(v.ty, want)) {
+    if (want.k === "opt") {
+      const each = viewOf(want.of, "*v", comp);
+      return each === undefined || each === "v.clone()" ? `${atom(v.code)}.cloned()` : `${atom(v.code)}.map(|v| ${each})`;
+    }
+    return viewOf(want, atom(v.code), comp) ?? `${atom(v.code)}.to_owned()`;
+  }
+  if (want.k === "opt" && objecty(want.of) && sameTy(v.ty, want.of)) return `Some(${viewOf(want.of, atom(v.code), comp) ?? `${atom(v.code)}.to_owned()`})`;
   const tuple = tupleInto(comp, v, want, node);
   if (tuple !== null) return tuple;
   if (objecty(want) && v.ty.k === want.k && JSON.stringify(v.ty).includes('"struct"')) {

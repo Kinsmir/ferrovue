@@ -127,13 +127,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     out.push_str("><ol>");
-    super::union_step::try_render(out, &super::union_step::Props { step: s_first.to_owned() })?;
-    super::union_step::try_render(out, &super::union_step::Props { step: s_chosen.to_owned() })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: s_first.borrowed() })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: s_chosen.borrowed() })?;
     super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } })?;
     super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } })?;
     out.push_str("<!--[-->");
     for fv_s in s_steps.iter() {
-        super::union_step::try_render(out, &super::union_step::Props { step: fv_s.to_owned() })?;
+        super::union_step::try_render(out, &super::union_step::Props { step: fv_s.borrowed() })?;
     }
     out.push_str("<!--]--></ol><p>");
     fv::core::push_int(out, (match props.align { super::types::Align::Left => Some(10i64), super::types::Align::Center => Some(20i64), super::types::Align::Right => None }).unwrap_or(0i64));
