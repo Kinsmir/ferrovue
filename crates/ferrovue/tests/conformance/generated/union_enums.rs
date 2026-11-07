@@ -626,7 +626,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("\">");
         fv::core::escape_into(out, match fv_s.state { super::types::StepState::Todo => "To do", super::types::StepState::Done => "Done & <dusted>", super::types::StepState::Skipped => "Skipped" });
         out.push(' ');
-        fv::core::escape_into(out, if fv_s.state == super::types::StepState::Done { "yes" } else { "no" });
+        out.push_str(if fv_s.state == super::types::StepState::Done { "yes" } else { "no" });
         out.push(' ');
         fv::core::escape_into(out, fv::props::Union::as_str(fv_s.align.unwrap_or(super::types::Align::Left)));
         out.push(' ');

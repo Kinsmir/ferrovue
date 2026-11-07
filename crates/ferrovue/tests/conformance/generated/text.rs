@@ -92,11 +92,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, { let a = &*props.title; if !a.is_empty() { a } else { "untitled" } });
     out.push('|');
-    fv::core::escape_into(out, if props.on { "yes" } else { "no" });
+    out.push_str(if props.on { "yes" } else { "no" });
     out.push('|');
     fv::core::push_int(out, props.score.unwrap_or(props.count));
     out.push('|');
-    fv::core::escape_into(out, if props.count != 0 { "some" } else { "zero" });
+    out.push_str(if props.count != 0 { "some" } else { "zero" });
     out.push_str("</p>");
     Ok(())
 }

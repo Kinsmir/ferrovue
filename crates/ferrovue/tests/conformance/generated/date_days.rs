@@ -72,7 +72,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, v);
     }
     out.push_str(", ");
-    fv::core::escape_into(out, if props.days.iter().map(fv::date::js_time_of).any(|fv_d_3| fv::date::js_utc_day(fv_d_3) == 0.0) { "a Sunday" } else { "no Sunday" });
+    out.push_str(if props.days.iter().map(fv::date::js_time_of).any(|fv_d_3| fv::date::js_utc_day(fv_d_3) == 0.0) { "a Sunday" } else { "no Sunday" });
     out.push_str(", ");
     fv::core::push_int(out, props.days.iter().map(fv::date::js_time_of).position(|fv_d_4| fv::date::js_utc_month(fv_d_4) == 1.0).map_or(-1, |i| i as i64));
     if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) {

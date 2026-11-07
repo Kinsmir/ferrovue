@@ -102,7 +102,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, fv_i);
         out.push(' ');
         fv::core::escape_into(out, &fv_s_2.label);
-        fv::core::escape_into(out, if fv_s_2.desc { " (desc)" } else { "" });
+        out.push_str(if fv_s_2.desc { " (desc)" } else { "" });
         out.push(' ');
         fv::core::escape_into(out, fv_s_2.badge.as_deref().unwrap_or("-"));
         out.push_str(if fv_s_2.badge.as_deref().is_some() { "<!----></li>" } else { "<b>plain</b></li>" });

@@ -94,7 +94,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::escape_into(out, s_padding);
     out.push(' ');
-    fv::core::escape_into(out, if props.loud { "p-4" } else { "p-2" });
+    out.push_str(if props.loud { "p-4" } else { "p-2" });
     out.push_str("</h2><p>");
     fv::core::push_number(out, match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 });
     out.push(' ');

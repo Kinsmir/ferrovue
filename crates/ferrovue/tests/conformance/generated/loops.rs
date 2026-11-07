@@ -121,14 +121,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     if props.n as f64 > 100.0 {
         out.push_str("large");
-        fv::core::escape_into(out, if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
+        out.push_str(if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
     } else {
         if props.n as f64 > 10.0 {
             out.push_str("medium");
-            fv::core::escape_into(out, if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
+            out.push_str(if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
         } else {
             out.push_str("small");
-            fv::core::escape_into(out, if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
+            out.push_str(if props.n as f64 % 2.0 == 0.0 { " even" } else { " odd" });
         }
     }
     out.push_str("</p><p>");

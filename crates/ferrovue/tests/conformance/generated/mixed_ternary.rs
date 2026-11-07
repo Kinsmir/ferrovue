@@ -88,7 +88,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("none");
     }
     out.push(' ');
-    fv::core::escape_into(out, if props.on { if true { "true" } else { "false" } } else { "off" });
+    out.push_str(if props.on { if true { "true" } else { "false" } } else { "off" });
     out.push(' ');
     if let Some(fv_spare) = props.spare.filter(|v| *v != 0) {
         fv::core::push_int(out, fv_spare);
@@ -100,7 +100,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if props.count as f64 > 1.0 {
             fv::core::push_number(out, props.price);
         } else {
-            fv::core::escape_into(out, if false { "true" } else { "false" });
+            out.push_str(if false { "true" } else { "false" });
         }
     } else {
         fv::core::escape_into(out, &props.label);
@@ -137,7 +137,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if props.on {
         { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.ratio.map(fv::core::Js), "null")); }
     } else {
-        fv::core::escape_into(out, if false { "true" } else { "false" });
+        out.push_str(if false { "true" } else { "false" });
     }
     out.push_str("</p><b aria-label=\"");
     if let Some(fv_spare_4) = props.spare {
@@ -149,13 +149,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if props.on {
         out.push('1');
     } else {
-        fv::core::escape_into(out, if props.on { "true" } else { "false" });
+        out.push_str(if props.on { "true" } else { "false" });
     }
     out.push_str("\">");
     if (props.count as f64) < 0.0 {
         fv::core::push_int(out, props.count);
     } else {
-        fv::core::escape_into(out, if props.on { "true" } else { "false" });
+        out.push_str(if props.on { "true" } else { "false" });
     }
     out.push_str("</b></section>");
     Ok(())

@@ -153,7 +153,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<b>");
         fv::core::escape_into(out, match fv_h_3 { crate::domain::Hue::Red => "Red", crate::domain::Hue::Green => "Green & <go>", crate::domain::Hue::BHue => "Odd \"one\"" });
         out.push(' ');
-        fv::core::escape_into(out, if fv_h_3 == crate::domain::Hue::Red { "warm" } else { "cool" });
+        out.push_str(if fv_h_3 == crate::domain::Hue::Red { "warm" } else { "cool" });
         out.push_str("</b>");
     }
     out.push_str("<!--]--><!--[-->");

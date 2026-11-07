@@ -47,7 +47,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push_str("\" max=\"");
     fv::core::push_number(out, props.max);
     out.push_str("\">");
-    fv::core::escape_into(out, &fv::core::js_to_fixed(props.value / props.max * 100.0, 1));
+    out.push_str(&fv::core::js_to_fixed(props.value / props.max * 100.0, 1));
     out.push_str("%</meter>");
     Ok(())
 }

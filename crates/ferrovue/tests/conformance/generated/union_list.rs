@@ -152,7 +152,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<b>");
         fv::core::escape_into(out, match fv_h_3 { super::types::Hue::Red => "Red", super::types::Hue::Green => "Green & <go>", super::types::Hue::BHue => "Odd \"one\"" });
         out.push(' ');
-        fv::core::escape_into(out, if fv_h_3 == super::types::Hue::Red { "warm" } else { "cool" });
+        out.push_str(if fv_h_3 == super::types::Hue::Red { "warm" } else { "cool" });
         out.push_str("</b>");
     }
     out.push_str("<!--]--><!--[-->");

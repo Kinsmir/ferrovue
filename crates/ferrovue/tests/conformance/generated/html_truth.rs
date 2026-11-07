@@ -73,13 +73,13 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     }
     out.push_str(if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "<!---->" } else { "<b>not content</b>" });
     out.push_str(if fv::html::TrustedHtml::trusted_html(&props.body).is_empty() { "<b>not body</b><span>" } else { "<!----><span>" });
-    fv::core::escape_into(out, if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "content" } else { "none" });
+    out.push_str(if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "content" } else { "none" });
     out.push(' ');
-    fv::core::escape_into(out, if !fv::html::TrustedHtml::trusted_html(&props.body).is_empty() { "body" } else { "none" });
+    out.push_str(if !fv::html::TrustedHtml::trusted_html(&props.body).is_empty() { "body" } else { "none" });
     out.push(' ');
-    fv::core::escape_into(out, if props.note.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "note" } else { "none" });
+    out.push_str(if props.note.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "note" } else { "none" });
     out.push(' ');
-    fv::core::escape_into(out, if !fv::html::TrustedHtml::trusted_html(&props.lead).is_empty() { "lead" } else { "none" });
+    out.push_str(if !fv::html::TrustedHtml::trusted_html(&props.lead).is_empty() { "lead" } else { "none" });
     out.push_str("</span>");
     if let Some(fv_note) = props.note.as_ref().filter(|v| !fv::html::TrustedHtml::trusted_html(*v).is_empty()) {
         out.push_str("<p class=\"note\">");

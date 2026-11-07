@@ -230,6 +230,14 @@ export function ifElse(code: string): { test: string; yes: string; no: string } 
   return { test: code.slice(3, open - 1), yes: code.slice(open + 2, close - 1), no: code.slice(close + 9, -2) };
 }
 
+/** Whether the string `code` gives is one of string literals that hold no character HTML escapes,
+ * as `if on { "yes" } else { "no" }` is. */
+export function escapeFree(code: string): boolean {
+  const branches = ifElse(code);
+  if (branches) return escapeFree(branches.yes) && escapeFree(branches.no);
+  return /^"(?:[^"\\&<>']|\\[\\nrt])*"$/.test(code);
+}
+
 export function strArg(code: string): string {
   const branches = ifElse(code);
   if (branches) return `if ${branches.test} { ${strArg(branches.yes)} } else { ${strArg(branches.no)} }`;
