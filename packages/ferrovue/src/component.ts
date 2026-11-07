@@ -401,7 +401,7 @@ export function readComponent(file: string, root: string, name = basename(file, 
     filename: file,
     ...(claim((p) => p.templateOptions?.(comp)) ?? { id: name, scoped: false, slotted: false, ssrCssVars: [], isProd: true }),
     ssr: true,
-    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), comments: ctx.comments, sourceMap: true, nodeTransforms: [...(ctx.whitespace === "trim-edges" ? [trimEdges] : []), mergedControls(controls)] },
+    compilerOptions: { ...(script ? { bindingMetadata: script.bindings } : {}), comments: ctx.comments, sourceMap: true, nodeTransforms: [...(ctx.whitespace === "trim-edges" ? [trimEdges({ classes: ctx.preservedClasses })] : []), mergedControls(controls)] },
   });
   const kids = (n: N): N[] => n.children.filter((c: N) => c.type !== 3 && !(c.type === 2 && !c.content.trim()));
   const roots = descriptor.template.ast ? kids(descriptor.template.ast) : [];

@@ -484,8 +484,30 @@ Everything else stays as Vue condenses it:
   among the text around them;
 - `<pre>`, `<textarea>`, an element with `v-pre`, and an element whose static `style` sets
   `white-space` to `pre`, `pre-wrap`, `pre-line` or `break-spaces`, with everything inside them.
-  An element styled that way from a stylesheet takes the same `white-space` in its `style`
-  attribute to keep its text.
+  An element styled that way from a stylesheet is named by its class in `preserveWhitespace`;
+- an element whose static `class`, or whose `:class` expression, names a class listed in
+  `"preserveWhitespace": { "classes": [...] }`, with everything inside it.
+
+A stylesheet that gives a class a `white-space` of `pre`, `pre-wrap`, `pre-line` or `break-spaces`,
+such as Tailwind's `whitespace-pre-line`, shows the line breaks the mode would trim. List those
+classes in `ferrovue.config.json`, and give plugin-vue `trimEdges` with the same list:
+
+```jsonc
+// ferrovue.config.json
+{ "whitespace": "trim-edges", "preserveWhitespace": { "classes": ["whitespace-pre-line", "whitespace-pre-wrap"] } }
+```
+
+```ts
+// vite.config.ts
+vue({ template: { compilerOptions: { nodeTransforms: [trimEdges({ classes: ["whitespace-pre-line", "whitespace-pre-wrap"] })] } } });
+```
+
+A class counts by its exact name, variants included, so `md:whitespace-pre` is a class of its own.
+A `:class` expression counts when a string or object key in it names a listed class, whether or not
+it applies at render, so `:class="{ 'whitespace-pre-line': open }"` keeps the text in both states.
+A class the element gets from a prop, or from a parent through its attributes, is not seen: write
+the class in the template, or the `white-space` in the `style` attribute. The Vite plugin fails a
+build where the two lists differ.
 
 The mode reads tag names and sees no stylesheet, for `white-space` as for `display`. An element a
 class makes block, flex or grid, such as `<span class="block">`, still counts as inline, and a line

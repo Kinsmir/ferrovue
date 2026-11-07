@@ -320,6 +320,25 @@
       ],
       "default": "condense"
     },
+    "preserveWhitespace": {
+      "description": "The elements `\"whitespace\": \"trim-edges\"` leaves as Vue spaces them, besides `<pre>`, `<textarea>`, `v-pre` and a static `style` that sets a preserving `white-space`.",
+      "markdownDescription": "The elements `\"whitespace\": \"trim-edges\"` leaves as Vue spaces them, besides `<pre>`, `<textarea>`, `v-pre` and a static `style` that sets a preserving `white-space`.",
+      "type": "object",
+      "properties": {
+        "classes": {
+          "description": "The classes a stylesheet gives a `white-space` of `pre`, `pre-wrap`, `pre-line` or `break-spaces`, such as `\"whitespace-pre-line\"`: an element whose static `class`, or whose `:class` expression, names one keeps its text and everything inside it.",
+          "markdownDescription": "The classes a stylesheet gives a `white-space` of `pre`, `pre-wrap`, `pre-line` or `break-spaces`, such as `\"whitespace-pre-line\"`: an element whose static `class`, or whose `:class` expression, names one keeps its text and everything inside it.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "classes"
+      ],
+      "additionalProperties": false
+    },
     "cssModules": {
       "description": "CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue computes as postcss-modules does. Without it, `<style module>` is refused.",
       "markdownDescription": "CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue computes as postcss-modules does. Without it, `<style module>` is refused.",

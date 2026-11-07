@@ -111,6 +111,12 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
   if (raw.isProduction !== undefined && typeof raw.isProduction !== "boolean") wrong("isProduction", "`true` or `false`: whether `@vitejs/plugin-vue` compiles for production");
   if (raw.comments !== undefined && typeof raw.comments !== "boolean") wrong("comments", "`true` or `false`: whether the HTML comments of templates render");
   if (raw.whitespace !== undefined && raw.whitespace !== "condense" && raw.whitespace !== "trim-edges") wrong("whitespace", '`"condense"` or `"trim-edges"`: how the text of templates is spaced');
+  if (raw.preserveWhitespace !== undefined) {
+    const p = raw.preserveWhitespace;
+    if (!isObject(p)) return wrong("preserveWhitespace", 'an object: `{ "classes": ["whitespace-pre-line"] }`');
+    keys(p, "preserveWhitespace", shape.preserveWhitespace);
+    if (!Array.isArray(p.classes) || !p.classes.every((c) => typeof c === "string" && c !== "" && !/\s/.test(c))) wrong("preserveWhitespace.classes", "an array of class names, each without whitespace");
+  }
   if (raw.cssModules !== undefined) {
     const m = raw.cssModules;
     if (!isObject(m)) return wrong("cssModules", "an object: `{ generateScopedName, hashPrefix?, context? }`");
@@ -218,6 +224,7 @@ export const ctx = {
   builders: true,
   comments: false,
   whitespace: "condense" as WhitespaceMode,
+  preservedClasses: [] as readonly string[],
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),
