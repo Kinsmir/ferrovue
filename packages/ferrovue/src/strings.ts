@@ -1,4 +1,4 @@
-import { type Component, type N, type Piece, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
+import { type Component, type N, type Piece, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, joinedVal, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
 import type { ErrorCode } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, pure, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
@@ -149,11 +149,11 @@ export function stringOf(comp: Component, v: Val, n: N, what: string, code: Erro
   }
   if (v.ty.k === "list") {
     const of = v.ty.of;
-    const joined = (each: string): Val => ({ code: `&*${each}.collect::<Vec<_>>().join(",")`, ty: STR, ...lone });
+    const joined = (each: string): Val => joinedVal(each, "str", '","', STR, Boolean(lone.lone));
     if (of.k === "undef") return { code: '""', ty: STR };
     if (of.k === "str") return joined(items(v));
     if (of.k === "bool") return joined(`${items(v)}.map(|v| if v { "true" } else { "false" })`);
-    if (of.k === "int" || of.k === "float") return joined(`${items(v)}.map(|v| fv::core::Js(v).to_string())`);
+    if (of.k === "int" || of.k === "float") return joinedVal(items(v), of.k, '","', STR, Boolean(lone.lone));
     if (of.k === "opt" && of.of.k === "str" && v.iter !== undefined) return joined(`${v.iter}.map(|v| v.unwrap_or(""))`);
     if (of.k === "opt" && v.iter === undefined && SCALAR.has(of.of.k)) {
       const each = `${atom(v.code)}.iter()`;

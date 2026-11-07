@@ -79,6 +79,23 @@ describe("text", () => {
   });
 });
 
+describe("joined lists", () => {
+  it("writes a list's `.join()` into the page escaped, with no string built", () => {
+    const out = compile(island(component("tags: string[]; n: number[]; x: Float[]; sep: string; on: boolean[]", `<p :title="tags.join(sep)">{{ tags.join(sep) }}|{{ n.join(" & ") }}|{{ x.join() }}|{{ on.join("") }}|{{ String(tags) }}</p>`, 'import type { Float } from "ferrovue/types";\n'))).get("x.rs")!;
+    expect(out).not.toContain("escape_into");
+    expect(out).toContain("fv::core::escape_join(out, props.tags.iter().map(|v| &**v), &props.sep);");
+    expect(out).toContain('fv::core::escape_join_ints(out, props.n.iter().copied(), " & ");');
+    expect(out).toContain('fv::core::escape_join_numbers(out, props.x.iter().copied(), ",");');
+    expect(out).toContain('fv::core::escape_join(out, props.on.iter().copied().map(|v| if v { "true" } else { "false" }), "");');
+  });
+
+  it("keeps the joined string where the page does not write it as it is", () => {
+    const out = compile(island(component("tags: string[]", "<p>{{ tags.join('-').length }}|{{ tags.join('-').toUpperCase() }}</p>"))).get("x.rs")!;
+    expect(out).not.toContain("escape_join");
+    expect(out).toContain('.collect::<Vec<_>>().join("-")');
+  });
+});
+
 describe("attribute values", () => {
   it("writes a joined value piece by piece, and tests it for emptiness without building it", () => {
     const out = compile(

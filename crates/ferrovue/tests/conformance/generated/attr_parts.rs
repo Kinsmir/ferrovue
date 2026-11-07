@@ -125,7 +125,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\" data-opt=\"");
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.maybe.map(fv::core::Js), "undefined")); }
     out.push('|');
-    fv::core::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");
     out.push_str("\" data-str=\"n");
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::core::Js(props.rank)); }
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::core::Js(props.score)); }

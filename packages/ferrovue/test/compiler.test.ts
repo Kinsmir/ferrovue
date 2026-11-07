@@ -6772,7 +6772,7 @@ describe("a `?:` whose branches differ in type, where it is shown as text", () =
   it("writes each branch in a template literal as `String()` does, `null` and `undefined` too", () => {
     const out = render("n: number; on: boolean; tags: string[]; o?: number", "<i>{{ `${on ? n : 'none'}|${on ? tags : n}|${on ? o : false}` }}</i>");
     expect(out).toContain('fv::strings::JsOr(props.o.map(fv::core::Js), "undefined")');
-    expect(out).toContain('.collect::<Vec<_>>().join(",")');
+    expect(out).toContain('fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");');
   });
 });
 

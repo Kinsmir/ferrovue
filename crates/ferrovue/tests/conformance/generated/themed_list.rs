@@ -79,7 +79,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
     }
     if let Some(fv_tags) = fv_inherited.tags {
         out.push_str("<!--]--></ul><p data-v-c4d7ae83>");
-        fv::core::escape_into(out, &fv_tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::core::escape_join(out, fv_tags.iter().map(|v| &**v), ", ");
         out.push_str("</p>");
     } else {
         out.push_str("<!--]--></ul><!---->");

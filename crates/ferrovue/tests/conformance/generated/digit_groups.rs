@@ -60,13 +60,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &s_total);
     out.push('|');
-    fv::core::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv::strings::js_char_at(&fv_w, 0.0f64).to_uppercase().to_owned()).into_owned())).collect::<Vec<_>>().join("."));
+    fv::core::escape_join(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv::strings::js_char_at(&fv_w, 0.0f64).to_uppercase().to_owned()).into_owned())), ".");
     out.push_str("</p><p>");
     fv::core::escape_into(out, &{ let fv_sep = if props.words.len() as i64 > 2 { "; " } else { ", " }; std::borrow::Cow::<str>::Owned(format!("{}|/feed/new?days=24|{}|{}", props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("#1.5/0.3333333333333333{}{}{}", fv_sep, fv_w_2.to_uppercase(), Some(fv::strings::js_char_at(&fv_w_2, 0.0f64)).filter(|c| !c.is_empty()).unwrap_or("?"))).into_owned())).collect::<Vec<_>>().join(" "), fv::core::Js(1099511627775i64), fv::core::Js(-0.5f64))) });
     out.push_str("</p><p>");
     fv::core::push_number(out, if props.big { 16.5f64 } else { 8.0f64 });
     out.push('|');
-    fv::core::escape_into(out, &fv::strings::js_split(&fv::core::Js(props.n).to_string(), "").into_iter().collect::<Vec<_>>().into_iter().rev().collect::<Vec<_>>().join(""));
+    fv::core::escape_join(out, fv::strings::js_split(&fv::core::Js(props.n).to_string(), "").into_iter().collect::<Vec<_>>().into_iter().rev(), "");
     out.push('|');
     fv::core::escape_into(out, &fv::strings::js_slice(&fv::core::js_to_fixed(props.n as f64, 2), -3.0f64, None));
     out.push_str("</p></section>");

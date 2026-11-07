@@ -275,7 +275,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain(props.maybe.as_ref().map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v))).collect::<Vec<_>>().join("/"));
+    fv::core::escape_join(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain(props.maybe.as_ref().map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v))), "/");
     out.push('|');
     fv::core::push_int(out, props.nums.iter().copied().chain([7i64, 8i64].iter().copied()).chain(props.nums.iter().copied()).count() as i64);
     out.push('|');
@@ -287,7 +287,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.prices.iter().copied().position(|fv_item_17| fv_item_17 == props.f).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::core::escape_into(out, &props.prices.iter().copied().chain(props.nums.iter().copied().map(|v| v as f64)).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_numbers(out, props.prices.iter().copied().chain(props.nums.iter().copied().map(|v| v as f64)), ",");
     out.push('|');
     if let Some(v) = fv::strings::js_item_at(props.nums.iter().copied().map(|v| v as f64).chain(props.prices.iter().copied()).chain([2i64].iter().copied().map(|v| v as f64)), -2.0f64) {
         fv::core::push_number(out, v);

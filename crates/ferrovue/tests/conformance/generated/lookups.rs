@@ -97,7 +97,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::push_number(out, match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 });
     out.push_str(" &lt;b&gt;&quot;&amp;amp;&#39; ");
-    fv::core::escape_into(out, &(match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::core::escape_join(out, (match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).iter().map(|v| &**v), "+");
     out.push(' ');
     fv::core::push_int(out, (match props.size { super::types::Size::Sm => &["a"][..], super::types::Size::Md => &[][..], super::types::Size::Lg => &["x", "<y>"][..] }).len() as i64);
     out.push_str("</p><p>");

@@ -146,7 +146,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</p>");
     }
     out.push_str("<!--]--><p>");
-    fv::core::escape_into(out, &s_labels.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join("/"));
+    fv::core::escape_join(out, s_labels.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), "/");
     out.push(' ');
     fv::core::push_int(out, s_seeded.len() as i64);
     out.push(' ');
@@ -179,7 +179,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--><s>");
     fv::core::push_int(out, (if let Some(fv_item_10) = props.item.as_ref() { &fv_item_10.children[..] } else { &[] }).len() as i64);
     out.push(' ');
-    fv::core::escape_into(out, &props.item.as_ref().and_then(|fv_item_11| fv_item_11.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.item.as_ref().and_then(|fv_item_11| fv_item_11.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]).iter().map(|v| &**v), ",");
     out.push(' ');
     fv::core::push_int(out, props.item.as_ref().map(|fv_item_12| &fv_item_12.children).map(|v| &v[..]).unwrap_or(&props.others[..]).len() as i64);
     out.push_str("</s></section>");

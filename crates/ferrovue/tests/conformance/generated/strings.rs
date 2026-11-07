@@ -110,9 +110,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--></ul><p>");
     fv::core::push_int(out, s_words.len() as i64);
     out.push('|');
-    fv::core::escape_into(out, &fv::strings::js_split(&props.text, ",").into_iter().collect::<Vec<_>>().join(" / "));
+    fv::core::escape_join(out, fv::strings::js_split(&props.text, ","), " / ");
     out.push('|');
-    fv::core::escape_into(out, &s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 2).collect::<Vec<_>>().join("+"));
+    fv::core::escape_join(out, s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 2), "+");
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split(&props.text, &props.sep).len() as i64);
     out.push_str("</p><p>");

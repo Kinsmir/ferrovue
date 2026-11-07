@@ -65,7 +65,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     if let Some(fv_counts) = props.counts.as_ref() {
         out.push_str("<!--]--><i>");
-        fv::core::escape_into(out, &fv_counts.iter().map(|v| fv::core::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
+        fv::core::escape_join_ints(out, fv_counts.iter().copied(), "+");
         out.push_str("</i>");
     } else {
         out.push_str("<!--]--><!---->");

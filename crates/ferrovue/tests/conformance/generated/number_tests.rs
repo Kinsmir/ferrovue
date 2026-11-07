@@ -141,7 +141,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::core::escape_into(out, &s_kept.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(", "));
+    fv::core::escape_join_numbers(out, s_kept.iter().copied(), ", ");
     out.push('|');
     out.push_str(if s_parsed.iter().copied().any(|fv_v_2| fv_v_2.is_nan()) { "true" } else { "false" });
     out.push('|');

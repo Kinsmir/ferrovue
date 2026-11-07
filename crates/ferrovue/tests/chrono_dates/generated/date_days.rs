@@ -78,14 +78,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</p><p>");
         fv::core::push_int(out, fv_maybe.len() as i64);
         out.push_str(" maybe: ");
-        fv::core::escape_into(out, &fv_maybe.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+        fv::core::escape_join_numbers(out, fv_maybe.iter().copied(), ",");
         out.push_str("</p><p>");
     } else {
         out.push_str("</p><!----><p>");
     }
-    fv::core::escape_into(out, &props.by.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.by.keys().map(std::borrow::Cow::<str>::Borrowed), ",");
     out.push(' ');
-    fv::core::escape_into(out, &props.by.values().map(fv::date::js_time_of).map(fv::date::js_utc_hours).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_numbers(out, props.by.values().map(fv::date::js_time_of).map(fv::date::js_utc_hours), ",");
     out.push(' ');
     fv::core::escape_into(out, &format!("[{}]", s_valid.iter().copied().map(fv::date::js_json_date).collect::<Vec<_>>().join(",")));
     out.push_str("</p><!--[-->");

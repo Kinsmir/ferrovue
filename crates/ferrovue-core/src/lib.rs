@@ -776,5 +776,51 @@ pub fn percent_encode_into(out: &mut String, c: char) {
     }
 }
 
+/// `items.join(sep)`, escaped as [`escape_into`] escapes it, with no string built.
+#[doc(hidden)]
+pub fn escape_join<I>(out: &mut String, items: I, sep: &str)
+where
+    I: IntoIterator,
+    I::Item: std::borrow::Borrow<str>,
+{
+    let mut items = items.into_iter();
+    let Some(first) = items.next() else {
+        return;
+    };
+    escape_into(out, std::borrow::Borrow::borrow(&first));
+    for item in items {
+        escape_into(out, sep);
+        escape_into(out, std::borrow::Borrow::borrow(&item));
+    }
+}
+
+/// `items.join(sep)` of integers, each written as [`push_int`] writes it and `sep` escaped.
+#[doc(hidden)]
+pub fn escape_join_ints<I: IntoIterator<Item = i64>>(out: &mut String, items: I, sep: &str) {
+    let mut items = items.into_iter();
+    let Some(first) = items.next() else {
+        return;
+    };
+    push_int(out, first);
+    for n in items {
+        escape_into(out, sep);
+        push_int(out, n);
+    }
+}
+
+/// `items.join(sep)` of numbers, each written as [`push_number`] writes it and `sep` escaped.
+#[doc(hidden)]
+pub fn escape_join_numbers<I: IntoIterator<Item = f64>>(out: &mut String, items: I, sep: &str) {
+    let mut items = items.into_iter();
+    let Some(first) = items.next() else {
+        return;
+    };
+    push_number(out, first);
+    for x in items {
+        escape_into(out, sep);
+        push_number(out, x);
+    }
+}
+
 #[cfg(test)]
 mod tests;

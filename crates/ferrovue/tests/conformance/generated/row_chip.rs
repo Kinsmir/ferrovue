@@ -47,7 +47,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(':');
     fv::core::escape_into(out, &props.row.label);
     out.push_str(" (");
-    fv::core::escape_into(out, &props.row.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("/"));
+    fv::core::escape_join(out, props.row.tags.iter().map(|v| &**v), "/");
     out.push_str(")</span>");
     Ok(())
 }

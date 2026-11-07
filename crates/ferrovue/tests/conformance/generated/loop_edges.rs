@@ -135,7 +135,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &{ let mut fv_wide: f64 = 0.0f64; let mut fv_ascii: bool = true; for fv_ch_3 in props.text.split_inclusive(|_: char| true) { if fv::strings::js_length(fv_ch_3) > 1 { fv_wide += 1.0; } else { if fv::strings::js_cmp(fv_ch_3, "~").is_gt() { fv_ascii = false; } } } std::borrow::Cow::<str>::Owned(format!("{}/{}", if fv_ascii { "true" } else { "false" }, fv::core::Js(fv_wide))) });
     out.push('|');
-    fv::core::escape_into(out, &(*s_lengths).iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join("-"));
+    fv::core::escape_join_ints(out, (*s_lengths).iter().copied(), "-");
     out.push_str("</p><p>");
     fv::core::escape_into(out, &{ let mut fv_found: Option<String> = None; for fv_t_7 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) { if let Some(fv_found_2) = fv_found.as_deref() { if fv::strings::js_length(fv_found_2) as f64 >= fv::strings::js_length(&fv_t_7) as f64 {} else { fv_found = Some(format!("{}>{}", fv_t_7, fv_found_2)); } } else { fv_found = Some(String::from(&*(if let Some(fv_found_3) = fv_found.as_deref() { std::borrow::Cow::<str>::Owned(format!("{}>{}", fv_t_7, fv_found_3)) } else { std::borrow::Cow::<str>::Borrowed(&*fv_t_7) }))); } } std::borrow::Cow::<str>::Owned(fv_found.as_deref().unwrap_or("-").to_owned()) });
     out.push('|');

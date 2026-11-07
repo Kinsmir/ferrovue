@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(8);
+ferrovue::__compat!(9);
 
 pub mod blank;
 pub mod cart_badge;
@@ -18,6 +18,7 @@ pub mod data_list;
 pub mod found;
 pub mod greeting;
 pub mod head_note;
+pub mod joined;
 pub mod modal;
 pub mod picker;
 pub mod posted;
@@ -164,6 +165,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let head = ferrovue::head::Head::without_defaults();
             head_note::try_render(&mut out, &props, &head).map_err(|e| e.to_string())?;
             head_into(&mut out, &head);
+        }
+        "Joined" => {
+            let props: joined::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            joined::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Modal" => {
             let props: modal::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

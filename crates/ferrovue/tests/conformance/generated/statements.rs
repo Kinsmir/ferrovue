@@ -201,7 +201,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><p>");
     fv::core::escape_into(out, &s_joined);
     out.push('|');
-    fv::core::escape_into(out, &s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");
     out.push('|');
     fv::core::escape_into(out, s_first_long.as_deref().unwrap_or("none"));
     out.push('|');
@@ -216,7 +216,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--></ul><p>");
     fv::core::push_int(out, s_kept.len() as i64);
     out.push('|');
-    fv::core::escape_into(out, &s_by_length.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(" "));
+    fv::core::escape_join(out, s_by_length.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), " ");
     out.push_str("</p><p>");
     fv::core::escape_into(out, s_busiest.map(|fv_busiest| &*fv_busiest.name).unwrap_or("-"));
     out.push('|');

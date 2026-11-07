@@ -821,7 +821,7 @@ describe("values built from object literals in place", () => {
   it("builds a list of a union's members as a list of its enum, and reads it", () => {
     const script = 'type Tone = "calm" | "loud";\ninterface Mix { tones: Tone[] }\nconst props = defineProps<{ t: Tone }>();\nfunction mix(): Mix { return { tones: [props.t, "loud"] }; }';
     expect(render(script, '<p>{{ mix().tones.join(",") }}</p>')).toMatch(like(
-      'fv::core::escape_into(out, &((Mix { tones: vec![props.t, Tone::Loud] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));',
+      'fv::core::escape_join(out, ((Mix { tones: vec![props.t, Tone::Loud] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");',
     ));
   });
 

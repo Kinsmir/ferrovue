@@ -151,11 +151,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if props.name.ends_with("!") { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+    fv::core::escape_join(out, props.tags.iter().map(|v| &**v), ", ");
     out.push('|');
-    fv::core::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.tags.iter().map(|v| &**v), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.nums.iter().map(|v| fv::core::Js(*v).to_string()).collect::<Vec<_>>().join("-"));
+    fv::core::escape_join_ints(out, props.nums.iter().copied(), "-");
     out.push('|');
     out.push_str(if props.tags.iter().any(|v| &**v == "x") { "true" } else { "false" });
     out.push('|');

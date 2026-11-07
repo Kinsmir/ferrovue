@@ -416,3 +416,79 @@ mod uri {
         assert_eq!(out, "x%F4%8F%BF%BF");
     }
 }
+
+mod join {
+    use super::*;
+
+    fn escaped(s: &str) -> String {
+        let mut out = String::new();
+        escape_into(&mut out, s);
+        out
+    }
+
+    #[test]
+    fn escape_join_writes_the_escaped_join() {
+        for items in [vec![], vec!["a"], vec!["<a>", "", "b&c"], vec!["", ""]] {
+            for sep in [",", "", " & ", "'"] {
+                let mut out = String::from("x");
+                escape_join(&mut out, items.iter().copied(), sep);
+                assert_eq!(
+                    out,
+                    format!("x{}", escaped(&items.join(sep))),
+                    "{items:?} {sep:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn escape_join_takes_owned_and_borrowed_strings() {
+        let mut out = String::new();
+        escape_join(
+            &mut out,
+            [
+                std::borrow::Cow::Borrowed("a"),
+                std::borrow::Cow::Owned("<b>".to_owned()),
+            ],
+            ",",
+        );
+        escape_join(&mut out, vec![String::from("&")], ",");
+        assert_eq!(out, "a,&lt;b&gt;&amp;");
+    }
+
+    #[test]
+    fn escape_join_ints_writes_each_as_javascript_does() {
+        let ints = [0, -7, 42, 9_007_199_254_740_993, i64::MIN];
+        for sep in [",", "<>", ""] {
+            let mut out = String::new();
+            escape_join_ints(&mut out, ints, sep);
+            let want = ints
+                .iter()
+                .map(|n| Js(*n).to_string())
+                .collect::<Vec<_>>()
+                .join(sep);
+            assert_eq!(out, escaped(&want), "{sep:?}");
+        }
+        let mut out = String::from("x");
+        escape_join_ints(&mut out, [], ",");
+        assert_eq!(out, "x");
+    }
+
+    #[test]
+    fn escape_join_numbers_writes_each_as_javascript_does() {
+        let numbers = [0.0, -0.0, 1.5, f64::NAN, f64::NEG_INFINITY, 1e21, 1.5e-7];
+        for sep in [",", " & ", ""] {
+            let mut out = String::new();
+            escape_join_numbers(&mut out, numbers, sep);
+            let want = numbers
+                .iter()
+                .map(|x| Js(*x).to_string())
+                .collect::<Vec<_>>()
+                .join(sep);
+            assert_eq!(out, escaped(&want), "{sep:?}");
+        }
+        let mut out = String::from("x");
+        escape_join_numbers(&mut out, [], ",");
+        assert_eq!(out, "x");
+    }
+}

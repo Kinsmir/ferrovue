@@ -9,7 +9,7 @@
 // it needs.
 #![allow(dead_code)]
 
-ferrovue::__compat!(8);
+ferrovue::__compat!(9);
 
 pub mod trim_button;
 pub mod trim_inline;
