@@ -41,6 +41,8 @@ const OPEN_TAG = /^<[^\s/>]+(?:[^"'>]|"[^"]*"|'[^']*')*/;
 const QUOTED = /"[^"]*"|'[^']*'/g;
 const V_PRE = /\sv-pre(?=[\s/=]|$)/;
 
+const PLACELESS_COMPONENTS = new Set(["teleport", "keepalive", "suspense", "transition", "transitiongroup", "clientonly"]);
+
 const MARK = Symbol.for("ferrovue.whitespace");
 
 function keeps(el: TemplateNode): boolean {
@@ -69,7 +71,9 @@ function trimChildren(el: TemplateNode): void {
 }
 
 function inline(node: TemplateNode): boolean {
-  if (node.type !== ELEMENT || node.tagType !== PLAIN) return false;
+  if (node.type !== ELEMENT) return false;
+  if (node.tagType === COMPONENT) return !PLACELESS_COMPONENTS.has(node.tag!.replaceAll("-", "").toLowerCase());
+  if (node.tagType !== PLAIN) return false;
   const tag = node.tag!.toLowerCase();
   return (node.ns === HTML || tag === "svg" || tag === "math") && !SPACELESS_TAGS.has(tag);
 }
@@ -103,7 +107,8 @@ function walk(node: TemplateNode): void {
  * trims the whitespace at the start and end of an element's text, where it meets the element's
  * tags, when that whitespace holds a line break, as `"whitespace": "trim-edges"` makes ferrovue's
  * Rust render it. A space typed on the same line as the tag stays. A line break between two
- * inline HTML elements, such as `<span>` and `<a>`, renders as one space, as a formatter reads it.
+ * inline elements or components, such as `<span>` and `<a>`, renders as one space, as a formatter
+ * reads it.
  * It trims the content of elements, components and `<template v-slot>`, and leaves `<pre>`, `<textarea>`, `v-pre` and an
  * element whose `style` sets `white-space: pre`, `pre-wrap`, `pre-line` or `break-spaces` as they
  * are, with everything inside them. */

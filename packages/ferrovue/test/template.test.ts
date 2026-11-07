@@ -1,9 +1,11 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { compileTemplate } from "@vue/compiler-sfc";
 import { afterEach, describe, expect, it } from "vitest";
 import { GenError, GenErrors } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
+import { trimEdges } from "../src/whitespace.ts";
 
 const roots: string[] = [];
 
@@ -955,9 +957,15 @@ describe("whitespace", () => {
     expect(pushed(trimmed("<span>a</span>\n<span>b</span>"))).toBe("<!--[--><span>a</span><span>b</span><!--]-->");
   });
 
-  it("keeps Vue's spacing around components, comments and `v-if` branches with `trim-edges`", () => {
+  it("counts a component as inline, and keeps Vue's spacing around built-ins, comments and `v-if` branches with `trim-edges`", () => {
     const child = `<template><i>c</i></template>`;
-    expect(pushed(trimmed("<p>\n  <Child />\n  <span>b</span>\n</p>", { Child: child }))).not.toContain(" <span>");
+    expect(pushed(trimmed("<p>\n  <Child />\n  <span>b</span>\n</p>", { Child: child }))).toBe("<p> <span>b</span></p>");
+    expect(trimmed("<p>\n  <Child />\n  <Child />\n</p>", { Child: child })).toMatch(/Props \{  \}\)\?;\n\s*out\.push\(' '\);\n\s*super::child::try_render/);
+    for (const tag of ["Teleport to=\"body\"", "teleport to=\"body\"", "KeepAlive", "keep-alive", "Suspense", "Transition", "TransitionGroup", "transition-group", "ClientOnly", "client-only"]) {
+      const { code } = compileTemplate({ source: `<p>\n  <span>a</span>\n  <${tag}><b>b</b></${tag.split(" ")[0]}>\n  <span>c</span>\n</p>`, filename: "a.vue", id: "a", ssr: true, compilerOptions: { nodeTransforms: [trimEdges] } });
+      expect(code, tag).not.toContain("</span> ");
+      expect(code, tag).not.toMatch(/> <span>c/);
+    }
     expect(pushed(trimmed("<p>\n  <span>a</span><!-- c -->\n  <span>b</span>\n</p>"))).toBe("<p><span>a</span><!-- c --><span>b</span></p>");
     const branches = pushed(trimmed('<p>\n  <b v-if="true">x</b>\n  <i v-else>y</i>\n  <a>z</a>\n</p>'));
     expect(branches).toContain(" <a>z</a>");

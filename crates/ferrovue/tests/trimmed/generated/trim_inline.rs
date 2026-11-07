@@ -43,7 +43,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(319 + props.label.len() + props.name.len());
+    out.reserve(322 + props.label.len() + props.name.len());
     out.push_str("<div><p><span> by </span><a>");
     fv::core::escape_into(out, &props.name);
     out.push_str("</a> <span>signed in through </span>");
@@ -54,7 +54,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.name);
     out.push_str("</i> <em> to ");
     fv::core::escape_into(out, &props.label);
-    out.push_str(" by </em>");
+    out.push_str(" by </em> ");
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("inline") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str(" to ");
@@ -74,12 +74,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<i>none</i>");
     }
-    out.push_str(" <img alt=\"\">");
+    out.push_str(" <img alt=\"\"> ");
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("next") }, super::trim_button::Slots {
         default: None,
         after: None,
     })?;
-    out.push_str("<span>after</span></p><ul><li>");
+    out.push_str(" <span>after</span></p><ul><li>");
     fv::core::escape_into(out, &props.label);
     out.push_str("</li><li>");
     fv::core::escape_into(out, &props.name);

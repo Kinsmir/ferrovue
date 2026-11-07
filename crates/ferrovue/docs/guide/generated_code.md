@@ -438,10 +438,12 @@ It applies to the content of elements, of components and of `<template v-slot>`:
 Vue drops the whitespace between two elements when it holds a line break. A formatter such as
 Prettier reads a line break between two inline elements as a space, as HTML does, and moves
 `<span>by</span> <a>` onto two lines when the line grows long. So the mode renders a line break
-between two inline HTML elements as one space: elements other than the block, list and table
-elements, `<br>` and the elements of the page's head. The space stays out between a component and
-its neighbour, after a comment, inside `<svg>` and `<math>`, between `v-if` branches and at the
-template's root, where Vue's spacing holds.
+between two inline elements as one space. Inline are the HTML elements other than the block, list
+and table elements, `<br>` and the elements of the page's head, and components other than
+`<Teleport>`, `<KeepAlive>`, `<Suspense>`, `<Transition>`, `<TransitionGroup>` and `<ClientOnly>`,
+which render no element of their own in place. Vue's spacing holds after a comment, inside `<svg>`
+and `<math>`, between `v-if` branches and at the template's root. Between elements a stylesheet
+makes block, flex or grid items, the space does not show.
 | `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
 
 Everything else stays as Vue condenses it:

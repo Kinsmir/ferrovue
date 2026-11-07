@@ -43,7 +43,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(49 + props.label.len());
+    out.reserve(52 + props.label.len());
     out.push_str("<div>");
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("a") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
@@ -52,10 +52,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         })),
         after: None,
     })?;
+    out.push(' ');
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("b") }, super::trim_button::Slots {
         default: None,
         after: None,
     })?;
+    out.push(' ');
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("c") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("named ");
@@ -67,6 +69,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             true
         }),
     })?;
+    out.push(' ');
     if props.on {
         super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("d") }, super::trim_button::Slots {
             default: Some(fv::render::Slot::new(&|out: &mut String| {
