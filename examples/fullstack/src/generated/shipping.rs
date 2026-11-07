@@ -49,7 +49,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str(" in ");
         fv::core::push_int(out, fv_from.days);
         out.push(' ');
-        fv::core::escape_into(out, if fv_from.days as f64 == 1.0 { "day" } else { "days" });
+        out.push_str(if fv_from.days as f64 == 1.0 { "day" } else { "days" });
         out.push_str("</p>");
     } else {
         out.push_str("<p class=\"shipping\">Ships once it reaches us</p>");

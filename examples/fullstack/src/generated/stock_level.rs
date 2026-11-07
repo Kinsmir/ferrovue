@@ -50,7 +50,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("\"><p>");
         fv::core::push_int(out, l_0.copies);
         out.push(' ');
-        fv::core::escape_into(out, if l_0.copies as f64 == 1.0 { "copy" } else { "copies" });
+        out.push_str(if l_0.copies as f64 == 1.0 { "copy" } else { "copies" });
         out.push_str(" in stock</p>");
     } else {
         out.push_str("\"><p>Out of stock</p>");

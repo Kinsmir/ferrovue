@@ -87,9 +87,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::push_number(out, props.n as f64 % props.n as f64);
     out.push(' ');
-    fv::core::escape_into(out, if (props.n as f64).abs() / (props.n as f64).abs() != 0.0 && !((props.n as f64).abs() / (props.n as f64).abs()).is_nan() { "one" } else { "none" });
+    out.push_str(if (props.n as f64).abs() / (props.n as f64).abs() != 0.0 && !((props.n as f64).abs() / (props.n as f64).abs()).is_nan() { "one" } else { "none" });
     out.push(' ');
-    fv::core::escape_into(out, if props.x.abs() - props.x.abs() != 0.0 && !(props.x.abs() - props.x.abs()).is_nan() { "some" } else { "zero" });
+    out.push_str(if props.x.abs() - props.x.abs() != 0.0 && !(props.x.abs() - props.x.abs()).is_nan() { "some" } else { "zero" });
     out.push_str("</p><p>");
     fv::core::push_number(out, s_wide.abs() - s_wide.abs());
     out.push(' ');
@@ -130,9 +130,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(if s_gap < props.x { "true" } else { "false" });
     if props.on {
         out.push_str("</p><p title=\"");
-        fv::core::escape_into(out, if true { "true" } else { "false" });
+        out.push_str(if true { "true" } else { "false" });
         out.push_str("\">");
-        fv::core::escape_into(out, if props.on { if !props.x.is_nan() { "same" } else { "nan" } } else { "off" });
+        out.push_str(if props.on { if !props.x.is_nan() { "same" } else { "nan" } } else { "off" });
         out.push_str("</p></div>");
     } else {
         out.push_str("</p><p>0</p></div>");

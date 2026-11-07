@@ -12,6 +12,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 - A render writes the text next to a `v-if` or `?:` inside each branch, and branches that only write text as one write of the text their test picks; the bench renders run up to 5% fewer instructions.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
+- Text the compiler proves needs no escaping is written without `escape_into`: a `?:` of plain string literals, `String(n)` with no string built, and the digits of `.toFixed()` and its kin.
+  [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 
 ## [0.15.2] - 2026-11-07
 

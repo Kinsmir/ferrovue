@@ -51,7 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     out.push_str(": <b data-v-0a3b973f>");
     fv::core::push_int(out, fv_stores.basket.ids.len() as i64);
     out.push_str("</b> ");
-    fv::core::escape_into(out, if fv_stores.basket.ids.len() as i64 == 1 { "book" } else { "books" });
+    out.push_str(if fv_stores.basket.ids.len() as i64 == 1 { "book" } else { "books" });
     out.push_str("</p>");
     Ok(())
 }

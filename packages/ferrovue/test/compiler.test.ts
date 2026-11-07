@@ -1871,8 +1871,8 @@ defineProps<{ price: Float; qty: number; rate?: Float }>();
       expect(out).toContain("fv::core::js_to_fixed(props.price, 1)");
       expect(out).toContain("fv::core::js_to_fixed(props.qty as f64, 0)");
       expect(out).toContain("fv::core::js_to_precision(props.qty as f64, 100)");
-      expect(out).toContain("fv::core::Js(props.price).to_string()");
-      expect(out).toContain("fv::core::Js(props.qty).to_string()");
+      expect(out).toContain("fv::core::push_number(out, props.price);");
+      expect(out).toContain("fv::core::push_int(out, props.qty);");
       expect(out).toContain("fv::core::js_to_exponential(props.price, Some(0))");
       expect(out).toContain("fv::core::js_to_exponential(props.qty as f64, Some(2))");
       expect(out.match(/fv::core::js_to_exponential\(props\.price, None\)/g)).toHaveLength(2);
@@ -7088,7 +7088,7 @@ describe("constant lookups", () => {
       "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
     );
     expect(out).toContain('fv::core::escape_into(out, match props.level { 1 => "one", _ => "two" });');
-    expect(out).toContain('fv::core::escape_into(out, if props.on { "p-2" } else { "p-1" });');
+    expect(out).toContain('out.push_str(if props.on { "p-2" } else { "p-1" });');
     expect(out).toContain('fv::core::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
   });
 

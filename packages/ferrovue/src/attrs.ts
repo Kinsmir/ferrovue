@@ -7,7 +7,7 @@ import { ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, piecesOf, unquote } from "./strings.ts";
-import { atom, bare, condition, ifElse, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
+import { atom, bare, condition, escapeFree, ifElse, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
@@ -62,6 +62,8 @@ export function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
+  else if (v.ty.k === "str" && v.numeral?.of === v.code && (v.numeral.number.ty.k === "int" || v.numeral.number.ty.k === "float")) return display(e, v.numeral.number);
+  else if (v.ty.k === "str" && (v.plain === v.code || escapeFree(v.code))) e.stmt(`out.push_str(${strArg(v.code)});`);
   else if (v.ty.k === "str") e.stmt(`fv::core::escape_into(out, ${strArg(v.code)});`);
   else if (v.ty.k === "int" || v.ty.k === "float") {
     const w = asWritten(v);

@@ -67,7 +67,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::push_number(out, fv::strings::js_number(&props.input) + 1.0);
     out.push('|');
-    fv::core::escape_into(out, &fv::core::js_to_fixed(fv::strings::js_parse_float(&props.input), 2));
+    out.push_str(&fv::core::js_to_fixed(fv::strings::js_parse_float(&props.input), 2));
     out.push('|');
     out.push_str(if fv::strings::js_number(&props.input) > 10.0 { "true" } else { "false" });
     out.push('|');
@@ -85,7 +85,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &fv::strings::js_json_number(fv::strings::js_number(&props.input)));
     out.push('|');
-    fv::core::escape_into(out, if props.flag { "true" } else { "false" });
+    out.push_str(if props.flag { "true" } else { "false" });
     out.push('|');
     fv::core::escape_into(out, &fv::core::Js(props.n).to_string());
     out.push_str("</p></section>");

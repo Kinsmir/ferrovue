@@ -799,7 +799,7 @@ describe("form fields at the root", () => {
   });
 
   it("translates a `?:` of text in a component with a root `<textarea>`", () => {
-    expect(render(field('<textarea v-if="on">hi</textarea><p v-else><i v-for="x in list">{{ "k" === x ? "y" : "n" }}</i></p>'))).toContain(`fv::core::escape_into(out, if "k" == fv_x { "y" } else { "n" });`);
+    expect(render(field('<textarea v-if="on">hi</textarea><p v-else><i v-for="x in list">{{ "k" === x ? "y" : "n" }}</i></p>'))).toContain(`out.push_str(if "k" == fv_x { "y" } else { "n" });`);
   });
 
   it.each([

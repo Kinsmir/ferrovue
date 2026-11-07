@@ -29,7 +29,10 @@ function stringCall(s: Scope, args: N[], n: N): Val {
   if (args.length !== 1) return fail(s.comp, "FV0723", "`String()` takes one value", n);
   const a = expr(s, args[0]);
   if (a.ty.k === "str") return a;
-  if (isNumber(a.ty)) return { code: `&*fv::core::Js(${bare(asWritten(a).code)}).to_string()`, ty: asciiTy() };
+  if (isNumber(a.ty)) {
+    const code = `&*fv::core::Js(${bare(asWritten(a).code)}).to_string()`;
+    return { code, ty: asciiTy(), numeral: { of: code, number: a } };
+  }
   if (a.ty.k === "bool") return { code: `if ${condition(a.code)} { "true" } else { "false" }`, ty: asciiTy() };
   return formatted(s.comp, [stringOf(s.comp, a, args[0], "`String()`", "FV0723")], n, "`String()`");
 }

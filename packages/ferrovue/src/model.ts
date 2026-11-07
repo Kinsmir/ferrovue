@@ -98,6 +98,11 @@ export interface Val {
   /** For an integer computed as an `f64`, where the template computes it, as `fv::render::Refusals::keep`
    * takes it. */
   at?: string;
+  /** For the string of a number, as `String(n)` writes it, the number, while `code` is `of`. */
+  numeral?: { of: string; number: Val };
+  /** For a string known to hold no character HTML escapes, as the digits `.toFixed()` writes, the
+   * Rust expression it holds while `code` is it. */
+  plain?: string;
   /** For an integer computed as an `i64`, a bound on its magnitude, at most 2⁵³, within which
    * `i64` and `f64` arithmetic give the same value. */
   upTo?: number;

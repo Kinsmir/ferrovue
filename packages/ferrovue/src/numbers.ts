@@ -199,12 +199,17 @@ function withDigits(s: Scope, target: Val, method: string, a: N | undefined, [co
   const given = literalDigits(a);
   if (given !== undefined && !(given >= low && given <= 100)) fail(s.comp, code, `\`.${method}()\` takes a literal ${what}, from ${low} to 100`, n);
   const x = bare(asF64(target));
-  if (method === "toFixed") return { code: `&*fv::core::js_to_fixed(${x}, ${given ?? 0})`, ty: asciiTy() };
-  if (method === "toExponential") return { code: `&*fv::core::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`, ty: asciiTy() };
+  if (method === "toFixed") return digitsVal(`&*fv::core::js_to_fixed(${x}, ${given ?? 0})`);
+  if (method === "toExponential") return digitsVal(`&*fv::core::js_to_exponential(${x}, ${given === undefined ? "None" : `Some(${given})`})`);
   if (given === undefined) return jsString(target);
-  return { code: `&*fv::core::js_to_precision(${x}, ${given})`, ty: asciiTy() };
+  return digitsVal(`&*fv::core::js_to_precision(${x}, ${given})`);
+}
+
+function digitsVal(code: string): Val {
+  return { code, ty: asciiTy(), plain: code };
 }
 
 function jsString(target: Val): Val {
-  return { code: `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`, ty: asciiTy() };
+  const code = `&*fv::core::Js(${bare(asWritten(target).code)}).to_string()`;
+  return { code, ty: asciiTy(), numeral: { of: code, number: target } };
 }

@@ -52,7 +52,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push('|');
     fv::core::push_number(out, (props.n as f64).sqrt());
     out.push('|');
-    fv::core::escape_into(out, &fv::core::js_to_fixed(s_root, 3));
+    out.push_str(&fv::core::js_to_fixed(s_root, 3));
     out.push('|');
     fv::core::push_number(out, (props.x * props.x).sqrt());
     out.push_str("|1.4142135623730951|");
@@ -70,7 +70,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push('|');
     fv::core::push_number(out, fv::core::js_sign(props.x - 1.0));
     out.push_str("|-1</p><p>3.141592653589793|2.718281828459045|0.6931471805599453|2.302585092994046|1.4426950408889634|0.4342944819032518|1.4142135623730951|0.7071067811865476|");
-    fv::core::escape_into(out, &fv::core::js_to_fixed(props.x * std::f64::consts::PI, 2));
+    out.push_str(&fv::core::js_to_fixed(props.x * std::f64::consts::PI, 2));
     out.push_str("</p><p>1024|9007199254740992|-27|1000000000000000|1|1|");
     fv::core::push_number(out, props.n as f64 * 256.0);
     out.push_str("|-9007199254740992</p><p>9007199254740991|-9007199254740991|2.220446049250313e-16|1.7976931348623157e+308|5e-324|Infinity|-Infinity|NaN</p>");

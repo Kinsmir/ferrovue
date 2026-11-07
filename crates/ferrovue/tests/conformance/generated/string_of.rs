@@ -118,7 +118,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.ratio.map(fv::core::Js), "undefined")); }
     out.push('|');
-    fv::core::escape_into(out, if props.on.unwrap_or(false) { "true" } else { "false" });
+    out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     fv::core::escape_into(out, props.nick.as_deref().unwrap_or("null"));
     out.push('|');
@@ -164,7 +164,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, props.nick.as_deref().unwrap_or("-"));
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.score.map(fv::core::Js), "null")); }
-    fv::core::escape_into(out, if props.on.unwrap_or(false) { "true" } else { "false" });
+    out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push('|');
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("none"));
     out.push('|');

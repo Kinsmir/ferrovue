@@ -52,6 +52,20 @@ describe("text", () => {
   it("writes nothing for `null` and `undefined`", () => {
     expect(compile(island(component("label: string", "<div><p>{{ null }}|{{ undefined }}</p></div>"))).get("x.rs")).toContain(`out.push_str("<div><p>|</p></div>");`);
   });
+
+  it("writes a choice of literals that need no escaping, and the string of a number, with no escaping", () => {
+    const out = compile(island(component("on: boolean; n: number; x: Float", `<p :title="on ? 'yes' : 'no'">{{ on ? "a" : "b" }}|{{ String(n) }}|{{ x.toFixed(2) }}</p>`, 'import type { Float } from "ferrovue/types";\n'))).get("x.rs")!;
+    expect(out).not.toContain("escape_into");
+    expect(out).toContain(`out.push_str(if props.on { "yes" } else { "no" });`);
+    expect(out).toContain(`out.push_str(if props.on { "a" } else { "b" });`);
+    expect(out).toContain("fv::core::push_int(out, props.n);");
+    expect(out).toContain("out.push_str(&fv::core::js_to_fixed(props.x, 2));");
+  });
+
+  it.each([`"a&b"`, `"it's"`, `'say "hi"'`, `"<b>"`, `"a>"`])("escapes a choice of literals where one is %s", (literal) => {
+    const out = compile(island(component("on: boolean", `<p>{{ on ? ${literal} : "b" }}</p>`))).get("x.rs")!;
+    expect(out).toContain("fv::core::escape_into(out, if props.on {");
+  });
 });
 
 describe("attribute values", () => {

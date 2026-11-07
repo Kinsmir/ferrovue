@@ -66,19 +66,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(600 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(603 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div><p>1e+21|100000000000000000000|9007199254740992</p><i alt=\"100000000000000000000\" id=\"1e+21\"></i><b placeholder=\"");
     fv::core::escape_into(out, &(if props.s1.starts_with("Σ") { std::borrow::Cow::<str>::Borrowed(&*props.s1) } else { std::borrow::Cow::<str>::Owned(fv::core::js_to_fixed(1.0f64, 0)) }));
     out.push_str("\"></b><p>");
-    fv::core::escape_into(out, if props.b0 { "a" } else { "ß" });
+    out.push_str(if props.b0 { "a" } else { "ß" });
     out.push('|');
     fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Borrowed(&*props.s1); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Owned(format!("{}{}", props.s1, props.s1)) } });
     out.push_str("|é</p><a tabindex=\"a\"></a><a data-n=\"");
     fv::core::escape_into(out, &"a".to_lowercase());
-    out.push_str("\"></a><header data-x=\"");
-    fv::core::escape_into(out, &fv::core::Js(0.5f64).to_string());
-    out.push_str("\"></header><i title=\"");
-    fv::core::escape_into(out, &fv::core::js_to_fixed(0.5f64, 1));
+    out.push_str("\"></a><header data-x=\"0.5\"></header><i title=\"");
+    out.push_str(&fv::core::js_to_fixed(0.5f64, 1));
     if let Some(fv_os1) = props.os1.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("\"></i><ul><li lang=\"");
         if props.ob2.unwrap_or(false) {

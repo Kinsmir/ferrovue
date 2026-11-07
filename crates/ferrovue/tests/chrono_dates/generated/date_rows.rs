@@ -138,8 +138,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if let Some(fv_edited) = fv_row.edited.as_ref().map(fv::date::js_time_of) {
             out.push_str("<p>edited ");
             fv::core::push_number(out, fv_edited);
-            fv::core::escape_into(out, if fv_edited > fv::date::js_time_of(&fv_row.at) { " after" } else { "" });
-            fv::core::escape_into(out, if fv_edited <= fv::date::js_time_of(&fv_row.at) { " not after" } else { "" });
+            out.push_str(if fv_edited > fv::date::js_time_of(&fv_row.at) { " after" } else { "" });
+            out.push_str(if fv_edited <= fv::date::js_time_of(&fv_row.at) { " not after" } else { "" });
             out.push_str("</p>");
         } else {
             out.push_str("<!---->");
@@ -158,7 +158,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str(": ");
             fv::core::push_number(out, fv_mark);
             out.push(' ');
-            fv::core::escape_into(out, if fv_mark >= fv::date::js_time_of(&fv_row.at) { "on or after" } else { "before or invalid" });
+            out.push_str(if fv_mark >= fv::date::js_time_of(&fv_row.at) { "on or after" } else { "before or invalid" });
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul><ol><!--[-->");

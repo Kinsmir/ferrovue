@@ -413,10 +413,8 @@ describe("unary operators", () => {
   it("negates a float constant as a float", () => {
     expect(lines("<p>{{ (-Math.PI).toFixed(1) }}|{{ String(-Math.PI) }}</p>")).toMatch(like([
       'out.push_str("<p>");',
-      "fv::core::escape_into(out, &fv::core::js_to_fixed(-std::f64::consts::PI, 1));",
-      "out.push('|');",
-      "fv::core::escape_into(out, &fv::core::Js(-std::f64::consts::PI).to_string());",
-      'out.push_str("</p>");',
+      "out.push_str(&fv::core::js_to_fixed(-std::f64::consts::PI, 1));",
+      'out.push_str("|-3.141592653589793</p>");',
     ].join("\n"), true));
   });
 
@@ -518,7 +516,7 @@ describe("equality", () => {
   }
 
   it("writes `== null` of a value never absent as a constant wherever it is read", () => {
-    expect(lines("<p>{{ String(xs == null) }}</p>")).toMatch(like(['out.push_str("<p>");', 'fv::core::escape_into(out, if false { "true" } else { "false" });', 'out.push_str("</p>");'].join("\n"), true));
+    expect(lines("<p>{{ String(xs == null) }}</p>")).toMatch(like(['out.push_str("<p>");', 'out.push_str(if false { "true" } else { "false" });', 'out.push_str("</p>");'].join("\n"), true));
     const flag = { "F.vue": sfc("defineProps<{ flag: boolean }>();", "<b>{{ flag }}</b>") };
     expect(render('import F from "./F.vue";\ndefineProps<{ xs: string[] }>();', '<F :flag="xs == null" />', flag)).toMatch(like("super::f::try_render(out, &super::f::Props { flag: false })?;"));
   });

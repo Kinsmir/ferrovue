@@ -68,7 +68,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     if let Some(fv_closed) = l_4.as_ref().map(fv::date::js_time_of) {
         out.push_str("<p>closed ");
         fv::core::push_number(out, fv_closed);
-        fv::core::escape_into(out, if fv_closed > fv::date::js_time_of(l_0) { " later" } else { "" });
+        out.push_str(if fv_closed > fv::date::js_time_of(l_0) { " later" } else { "" });
         out.push_str("</p><!--[-->");
     } else {
         out.push_str("<p>open</p><!--[-->");

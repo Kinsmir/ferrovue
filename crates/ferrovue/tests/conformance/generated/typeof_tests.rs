@@ -102,16 +102,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<section data-kind class=\"");
     } else {
         out.push_str("<section data-kind=\"");
-        fv::core::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
+        out.push_str(if props.label.as_deref().is_some() { "string" } else { "undefined" });
         out.push_str("\" class=\"");
     }
     fv::attrs::class_into(out, false, &[if props.label.as_deref().is_some() { "named" } else { "" }]);
     out.push_str("\"><p>");
-    fv::core::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
+    out.push_str(if props.label.as_deref().is_some() { "string" } else { "undefined" });
     out.push('|');
-    fv::core::escape_into(out, if props.nick.as_deref().is_some() { "string" } else { "object" });
+    out.push_str(if props.nick.as_deref().is_some() { "string" } else { "object" });
     out.push_str("|number|number|boolean|object|");
-    fv::core::escape_into(out, if props.owner.as_ref().is_some() { "object" } else { "undefined" });
+    out.push_str(if props.owner.as_ref().is_some() { "object" } else { "undefined" });
     out.push('|');
     fv::core::escape_into(out, s_kind);
     out.push('|');

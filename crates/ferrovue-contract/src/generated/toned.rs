@@ -64,7 +64,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push_str("<i class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
     out.push_str("\">");
-    fv::core::escape_into(out, if props.tone == crate::domain::Tone::Warm { "w" } else { "c" });
+    out.push_str(if props.tone == crate::domain::Tone::Warm { "w" } else { "c" });
     out.push_str("</i>");
     Ok(())
 }

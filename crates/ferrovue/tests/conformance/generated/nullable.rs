@@ -247,7 +247,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push('>');
         fv::core::escape_into(out, &fv_e.title);
-        fv::core::escape_into(out, if fv_e.deleted_at.as_deref().is_some() { "!" } else { "" });
+        out.push_str(if fv_e.deleted_at.as_deref().is_some() { "!" } else { "" });
         if let Some(v) = fv_e.score {
             fv::core::push_int(out, v);
         }
@@ -264,7 +264,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push('>');
         fv::core::escape_into(out, fv_t.unwrap_or("-"));
-        fv::core::escape_into(out, if fv_t.is_some() { "" } else { "?" });
+        out.push_str(if fv_t.is_some() { "" } else { "?" });
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
