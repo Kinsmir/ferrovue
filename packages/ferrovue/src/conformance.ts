@@ -283,7 +283,7 @@ export function registerConformance(api: TestApi, options: ConformanceOptions): 
   const given = componentsByName(options.components, pages);
   for (const [name, component] of given) {
     const source = sources.get(name);
-    if (source) attachSsrRender(source, name, component, { comments: templateComments(config), whitespace: config.whitespace ?? "condense" });
+    if (source) attachSsrRender(source, name, component, { comments: templateComments(config), whitespace: config.whitespace ?? "condense", preserveClasses: config.preserveWhitespace?.classes ?? [] });
   }
   const cases = casesIn(fixtures);
   const { routes, options: configured } = fixtureOptions(root, config);

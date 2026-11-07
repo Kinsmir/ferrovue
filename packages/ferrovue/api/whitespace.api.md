@@ -5,7 +5,15 @@
 ```ts
 
 // @public
+export function trimEdges(options: TrimEdgesOptions): (node: object) => void;
+
+// @public (undocumented)
 export function trimEdges(node: object): void;
+
+// @public
+export interface TrimEdgesOptions {
+    classes?: readonly string[];
+}
 
 // (No @packageDocumentation comment for this package)
 

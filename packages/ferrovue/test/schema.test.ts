@@ -134,6 +134,7 @@ const FULL = {
   isProduction: false,
   comments: true,
   whitespace: "trim-edges",
+  preserveWhitespace: { classes: ["whitespace-pre-line"] },
   cssModules: { generateScopedName: "[local]_[hash:base64:5]", hashPrefix: "p", context: "." },
   builders: false,
 };

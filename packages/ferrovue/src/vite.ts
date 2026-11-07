@@ -55,16 +55,25 @@ function vueComments(config: Pick<ResolvedConfig, "plugins" | "isProduction">): 
 }
 
 const TRIM_EDGES = Symbol.for("ferrovue.whitespace");
+const TRIM_CLASSES = Symbol.for("ferrovue.whitespace.classes");
+
+/** How plugin-vue spaces the text of templates, and the classes its `trimEdges` leaves. */
+interface VueWhitespace {
+  mode: WhitespaceMode;
+  classes: readonly string[];
+}
 
 /** How `@vitejs/plugin-vue`, as this build configures it, spaces the text of templates:
  * `"trim-edges"` when its `template.compilerOptions.nodeTransforms` holds `trimEdges`, from any
  * copy of ferrovue. `null` without the plugin. */
-function vueWhitespace(config: Pick<ResolvedConfig, "plugins">): WhitespaceMode | null {
+function vueWhitespace(config: Pick<ResolvedConfig, "plugins">): VueWhitespace | null {
   const vue = config.plugins.find((p) => p.name === "vite:vue");
   if (!vue) return null;
   const transforms = (vue.api as { options?: { template?: { compilerOptions?: { nodeTransforms?: unknown } } } } | undefined)?.options?.template?.compilerOptions?.nodeTransforms;
-  const trims = Array.isArray(transforms) && transforms.some((t) => typeof t === "function" && (t as unknown as Record<symbol, unknown>)[TRIM_EDGES] === "trim-edges");
-  return trims ? "trim-edges" : "condense";
+  const trim = Array.isArray(transforms) ? (transforms as unknown[]).find((t) => typeof t === "function" && (t as unknown as Record<symbol, unknown>)[TRIM_EDGES] === "trim-edges") : undefined;
+  if (trim === undefined) return { mode: "condense", classes: [] };
+  const classes = (trim as unknown as Record<symbol, unknown>)[TRIM_CLASSES];
+  return { mode: "trim-edges", classes: Array.isArray(classes) ? (classes as string[]) : [] };
 }
 
 function componentSources(root: string, config: Config): string[] {
@@ -130,10 +139,17 @@ function commentsMismatch(root: string, vue: boolean | null, configFile = CONFIG
 /** Why the server would space the text of templates otherwise than the client, when plugin-vue
  * trims it at the edges, `vue`, where the configuration, `configFile`, keeps it, or the other way
  * round. */
-function whitespaceMismatch(root: string, vue: WhitespaceMode | null, configFile = CONFIG_FILE): string | null {
-  if (vue === null) return null;
-  const own = loadConfig(root, configFile, ignore).whitespace ?? "condense";
-  if (own === vue) return null;
+function whitespaceMismatch(root: string, plugin: VueWhitespace | null, configFile = CONFIG_FILE): string | null {
+  if (plugin === null) return null;
+  const vue = plugin.mode;
+  const config = loadConfig(root, configFile, ignore);
+  const own = config.whitespace ?? "condense";
+  if (own === vue) {
+    const ownClasses = [...new Set(config.preserveWhitespace?.classes ?? [])].toSorted();
+    if (own === "condense" || ownClasses.join(" ") === plugin.classes.join(" ")) return null;
+    const list = (cs: readonly string[]): string => (cs.length ? cs.map((c) => `\`${c}\``).join(", ") : "none");
+    return `the classes \`trim-edges\` leaves: ${configFile} names ${list(ownClasses)} in \`preserveWhitespace.classes\`, where plugin-vue's \`trimEdges\` leaves ${list(plugin.classes)}; give plugin-vue \`trimEdges({ classes })\` with the classes of ${configFile}`;
+  }
   if (own === "trim-edges") {
     return `the whitespace at the edges of templates' text: ${configFile} trims it with \`"whitespace": "trim-edges"\`, where @vitejs/plugin-vue keeps it; add \`trimEdges\` from \`ferrovue/whitespace\` to plugin-vue's \`template.compilerOptions.nodeTransforms\``;
   }
@@ -267,7 +283,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
   };
   let vue: ReturnType<typeof vueScopeIds> = null;
   let comments: boolean | null = null;
-  let whitespace: WhitespaceMode | null = null;
+  let whitespace: VueWhitespace | null = null;
   let aliases: readonly Alias[] = [];
   let css: ResolvedConfig["css"] | undefined;
   let building = true;

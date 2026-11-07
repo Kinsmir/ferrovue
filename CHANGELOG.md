@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Added
+
+- `"preserveWhitespace": { "classes": [...] }` names the classes a stylesheet gives a preserving `white-space`, which `"trim-edges"` leaves as Vue spaces them, and `trimEdges({ classes })` does the same for the client.
+  [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
+
 ### Changed
 
 - A render writes the text next to a `v-if` or `?:` inside each branch, and branches that only write text as one write of the text their test picks; the bench renders run up to 5% fewer instructions.

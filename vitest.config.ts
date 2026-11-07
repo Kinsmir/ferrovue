@@ -10,6 +10,11 @@ const conformance = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/confo
   comments: boolean;
 };
 
+const trimmed = JSON.parse(readFileSync(new URL("crates/ferrovue/tests/trimmed/ferrovue.config.json", import.meta.url), "utf8")) as {
+  preserveWhitespace: { classes: string[] };
+};
+const trimTrimmed = trimEdges({ classes: trimmed.preserveWhitespace.classes });
+
 const TRIMMED = normalizePath(fileURLToPath(new URL("crates/ferrovue/tests/trimmed/", import.meta.url)));
 
 export default defineConfig({
@@ -17,7 +22,7 @@ export default defineConfig({
     vue({
       script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } },
       template: {
-        compilerOptions: { comments: conformance.comments, nodeTransforms: [(node, context) => (context.filename.startsWith(TRIMMED) ? trimEdges(node) : undefined)] },
+        compilerOptions: { comments: conformance.comments, nodeTransforms: [(node, context) => (context.filename.startsWith(TRIMMED) ? trimTrimmed(node) : undefined)] },
       },
     }),
   ],

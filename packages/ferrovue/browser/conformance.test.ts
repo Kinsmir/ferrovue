@@ -9,6 +9,8 @@ import { hydrationBody, recordedHead } from "../src/conformance.ts";
 import type { PageData } from "./entry.ts";
 import { trimEdges } from "../src/whitespace.ts";
 
+const trimTrimmed = trimEdges({ classes: (JSON.parse(readFileSync(join(TRIMMED_ROOT, "ferrovue.config.json"), "utf8")) as { preserveWhitespace: { classes: string[] } }).preserveWhitespace.classes });
+
 const ORIGIN = "http://conformance.test";
 const LAUNCHERS = { chromium, firefox, webkit };
 const BROWSERS = (process.env.FERROVUE_BROWSERS ?? "chromium,firefox,webkit").split(",") as (keyof typeof LAUNCHERS)[];
@@ -74,7 +76,7 @@ beforeAll(async () => {
     configFile: false,
     root: join(import.meta.dirname, "../../.."),
     logLevel: "warn",
-    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: COMMENTS, nodeTransforms: [(node, context) => (context.filename.startsWith(`${normalizePath(TRIMMED_ROOT)}/`) ? trimEdges(node) : undefined)] } } })],
+    plugins: [vue({ script: { fs: { fileExists: existsSync, readFile: (file) => readFileSync(file, "utf8"), realpath: realpathSync } }, template: { compilerOptions: { comments: COMMENTS, nodeTransforms: [(node, context) => (context.filename.startsWith(`${normalizePath(TRIMMED_ROOT)}/`) ? trimTrimmed(node) : undefined)] } } })],
     css: { modules: { generateScopedName: CSS_MODULES.generateScopedName } },
     resolve: { alias: [{ find: /^ferrovue$/, replacement: join(import.meta.dirname, "../src/client.ts") }] },
     define: { __VUE_I18N_FULL_INSTALL__: "true", __VUE_I18N_LEGACY_API__: "false", __INTLIFY_PROD_DEVTOOLS__: "false" },

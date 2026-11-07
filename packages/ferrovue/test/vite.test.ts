@@ -170,6 +170,10 @@ it("fails a build in which plugin-vue trims the edges of templates' text otherwi
   expect(started(ferrovue({ root }), { ...vite("build"), plugins: [vuePlugin({ template: { compilerOptions: { nodeTransforms: [trimEdges] } } })] })).toEqual([]);
   expect(() => started(ferrovue({ root }), vite("build"))).toThrow(/ferrovue\.config\.json trims it with `"whitespace": "trim-edges"`, where @vitejs\/plugin-vue keeps it; add `trimEdges` from `ferrovue\/whitespace` to plugin-vue's `template\.compilerOptions\.nodeTransforms`/);
   expect(started(ferrovue({ root }), { plugins: [], root, isProduction: true, command: "build" })).toEqual([]);
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "gen", whitespace: "trim-edges", preserveWhitespace: { classes: ["pre-line", "pre"] } }));
+  expect(() => started(ferrovue({ root }), vite("build", [trimEdges]))).toThrow(/the classes `trim-edges` leaves: ferrovue\.config\.json names `pre`, `pre-line` in `preserveWhitespace\.classes`, where plugin-vue's `trimEdges` leaves none; give plugin-vue `trimEdges\(\{ classes \}\)` with the classes of ferrovue\.config\.json/);
+  expect(started(ferrovue({ root }), vite("serve", [trimEdges({ classes: ["pre"] })]))).toEqual([expect.stringMatching(/names `pre`, `pre-line` in `preserveWhitespace\.classes`, where plugin-vue's `trimEdges` leaves `pre`;/)]);
+  expect(started(ferrovue({ root }), vite("build", [trimEdges({ classes: ["pre", "pre-line", "pre"] })]))).toEqual([]);
 });
 
 it("fails a build whose CSS modules Vite names otherwise than the configuration", () => {

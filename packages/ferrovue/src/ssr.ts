@@ -35,6 +35,9 @@ export interface SsrRenderOptions {
   /** How the template's text is spaced, as `whitespace` in `ferrovue.config.json` decides it for
    * the generated code: `"condense"` by default. */
   whitespace?: WhitespaceMode;
+  /** The classes `"trim-edges"` leaves, as `preserveWhitespace.classes` in
+   * `ferrovue.config.json` names them. */
+  preserveClasses?: readonly string[];
 }
 
 /** Give a component compiled for the browser the `ssrRender` its SSR build would have. */
@@ -58,7 +61,7 @@ export function attachSsrRender(file: string, name: string, component: Component
     ssr: true,
     ssrCssVars: descriptor.cssVars,
     isProd: true,
-    compilerOptions: { ...(script?.bindings ? { bindingMetadata: script.bindings } : {}), comments, ...(options.whitespace === "trim-edges" ? { nodeTransforms: [trimEdges] } : {}) },
+    compilerOptions: { ...(script?.bindings ? { bindingMetadata: script.bindings } : {}), comments, ...(options.whitespace === "trim-edges" ? { nodeTransforms: [trimEdges({ classes: options.preserveClasses ?? [] })] } : {}) },
   }).code.replace(/^(\s*)":--[^"]*":/gm, (_, indent: string) => `${indent}":--${varNames[named++]!}":`);
   const body = code
     .replace(/import \{([^}]*)\} from "vue"/g, (_, names: string) => `const {${names.replace(/ as /g, ": ")}} = __vue;`)

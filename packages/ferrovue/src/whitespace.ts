@@ -10,7 +10,7 @@ interface TemplateNode {
   tag?: string;
   tagType?: number;
   content?: unknown;
-  props?: { type: number; name: string; value?: { content: string } }[];
+  props?: { type: number; name: string; value?: { content: string }; arg?: { content?: string }; exp?: { content?: string; loc?: { source: string } } }[];
   children?: TemplateNode[];
   source?: string;
   loc: { source: string; start: Position; end: Position };
@@ -49,9 +49,30 @@ const V_PRE = /\sv-pre(?=[\s/=]|$)/;
 const PLACELESS_COMPONENTS = new Set(["teleport", "keepalive", "suspense", "transition", "transitiongroup", "clientonly"]);
 
 const MARK = Symbol.for("ferrovue.whitespace");
+const CLASSES = Symbol.for("ferrovue.whitespace.classes");
+const CLASS_TOKENS = /[^\s"'`,{}()[\]?+!&|=<>;]+/g;
 
-function keeps(el: TemplateNode): boolean {
+/** What `trimEdges` takes besides a template's nodes. */
+export interface TrimEdgesOptions {
+  /** The classes a stylesheet gives a preserving `white-space`, as `preserveWhitespace.classes`
+   * in `ferrovue.config.json`: an element whose static `class`, or whose `:class` expression,
+   * names one keeps its text and everything inside it. */
+  classes?: readonly string[];
+}
+
+function names(el: TemplateNode, classes: ReadonlySet<string>): boolean {
+  if (classes.size === 0) return false;
+  return el.props!.some((p) => {
+    if (p.type === 6) return p.name === "class" && p.value !== undefined && p.value.content.split(/\s+/).some((c) => classes.has(c));
+    if (p.type !== 7 || p.name !== "bind" || p.arg?.content !== "class") return false;
+    const source = p.exp?.loc?.source ?? p.exp?.content ?? "";
+    return (source.match(CLASS_TOKENS) ?? []).some((t) => classes.has(t) || classes.has(t.replace(/:$/, "")));
+  });
+}
+
+function keeps(el: TemplateNode, classes: ReadonlySet<string>): boolean {
   if (KEPT_TAGS.has(el.tag!.toLowerCase())) return true;
+  if (names(el, classes)) return true;
   if (el.props!.some((p) => p.type === 6 && p.name === "style" && p.value !== undefined && PRE_STYLE.test(p.value.content))) return true;
   const open = OPEN_TAG.exec(el.loc.source)?.[0] ?? "";
   return V_PRE.test(open.replace(QUOTED, '""'));
@@ -110,14 +131,28 @@ function spaceInline(node: TemplateNode, source: string, start: number): void {
   node.children = spaced;
 }
 
-function walk(node: TemplateNode): void {
+function walk(node: TemplateNode, classes: ReadonlySet<string>): void {
   for (const child of node.children ?? []) {
-    if (child.type !== ELEMENT || keeps(child)) continue;
+    if (child.type !== ELEMENT || keeps(child, classes)) continue;
     if (trims(child)) trimChildren(child);
     if (child.ns === HTML) spaceInline(child, child.loc.source, child.loc.start.offset);
-    walk(child);
+    walk(child, classes);
   }
 }
+
+function transform(classes: ReadonlySet<string>): (node: object) => void {
+  const run = (node: object): void => {
+    const n = node as TemplateNode;
+    if (n.type !== ROOT) return;
+    spaceInline(n, n.source ?? n.loc.source, n.source === undefined ? n.loc.start.offset : 0);
+    walk(n, classes);
+  };
+  Object.defineProperty(run, MARK, { value: "trim-edges" });
+  Object.defineProperty(run, CLASSES, { value: [...classes].toSorted() });
+  return run;
+}
+
+const plain = transform(new Set());
 
 /** A node transform for `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms` that
  * trims the whitespace at the start and end of a block or inline-block element's text, where it
@@ -128,12 +163,18 @@ function walk(node: TemplateNode): void {
  * reads it, also at the template's root and across a comment.
  * It trims the content of block and inline-block elements, components and `<template v-slot>`, and
  * leaves `<pre>`, `<textarea>`, `v-pre` and an element whose `style` sets `white-space: pre`,
- * `pre-wrap`, `pre-line` or `break-spaces` as they are, with everything inside them. */
-export function trimEdges(node: object): void {
-  const n = node as TemplateNode;
-  if (n.type !== ROOT) return;
-  spaceInline(n, n.source ?? n.loc.source, n.source === undefined ? n.loc.start.offset : 0);
-  walk(n);
+ * `pre-wrap`, `pre-line` or `break-spaces` as they are, with everything inside them.
+ * Called with `{ classes }`, as `preserveWhitespace` in `ferrovue.config.json` names them, it
+ * returns the transform that also leaves an element whose `class` or `:class` names one. */
+export function trimEdges(options: TrimEdgesOptions): (node: object) => void;
+export function trimEdges(node: object): void;
+export function trimEdges(arg: object): ((node: object) => void) | undefined {
+  if (typeof (arg as { type?: unknown }).type === "number") {
+    plain(arg);
+    return undefined;
+  }
+  return transform(new Set((arg as TrimEdgesOptions).classes ?? []));
 }
 
 Object.defineProperty(trimEdges, MARK, { value: "trim-edges" });
+Object.defineProperty(trimEdges, CLASSES, { value: [] });

@@ -118,6 +118,14 @@ export interface Config {
    * compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s
    * `template.compilerOptions.nodeTransforms`. */
   whitespace?: WhitespaceMode;
+  /** The elements `"whitespace": "trim-edges"` leaves as Vue spaces them, besides `<pre>`,
+   * `<textarea>`, `v-pre` and a static `style` that sets a preserving `white-space`. */
+  preserveWhitespace?: {
+    /** The classes a stylesheet gives a `white-space` of `pre`, `pre-wrap`, `pre-line` or
+     * `break-spaces`, such as `"whitespace-pre-line"`: an element whose static `class`, or whose
+     * `:class` expression, names one keeps its text and everything inside it. */
+    classes: string[];
+  };
   /** CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue
    * computes as postcss-modules does. Without it, `<style module>` is refused. */
   cssModules?: {

@@ -28,6 +28,9 @@ export interface Config {
     };
     isProduction?: boolean;
     out: string;
+    preserveWhitespace?: {
+        classes: string[];
+    };
     router?: {
         routes: RoutesSource;
         base?: string;

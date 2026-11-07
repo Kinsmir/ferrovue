@@ -1025,6 +1025,28 @@ describe("whitespace", () => {
     expect(pushed(trimmed('<div style="white-space: preserve"><p>\n a\n</p></div>'))).toContain("<p>a</p>");
   });
 
+  it("keeps the text of an element whose `class` or `:class` names a class of `preserveWhitespace`", () => {
+    const kept = (template: string, classes: string[] = ["whitespace-pre-line", "md:whitespace-pre"]): string =>
+      pushed(render(sfc("on: boolean", template), {}, { whitespace: "trim-edges", preserveWhitespace: { classes } }));
+    expect(kept('<div><p class="note whitespace-pre-line">\n  First\n  <b>\n    x\n  </b>\n</p></div>')).toContain('<p class=\\"note whitespace-pre-line\\"> First <b> x </b></p>');
+    expect(kept('<div><p class="md:whitespace-pre">\n  a\n</p></div>')).toContain("> a </p>");
+    expect(kept('<div><p class="whitespace-pre">\n  a\n</p></div>')).toContain(">a</p>");
+    expect(kept('<div><p class="whitespace-pre-line-x">\n  a\n</p></div>')).toContain(">a</p>");
+    expect(kept('<div><p class="whitespace-pre-line">\n  a\n</p></div>', [])).toContain(">a</p>");
+    for (const bound of ["{ 'whitespace-pre-line': on }", "on ? 'whitespace-pre-line' : 'x'", "['a', on && 'whitespace-pre-line']", "[`whitespace-pre-line`]"]) {
+      expect(kept(`<div><p :class="${bound}">\n  a\n</p></div>`), bound).toMatch(/> a <\/p>/);
+    }
+    expect(kept(`<div><p :class="{ pre: on }">\n  a\n</p></div>`)).toMatch(/>a<\/p>/);
+  });
+
+  it("returns a transform from `trimEdges({ classes })` that leaves an element naming one", () => {
+    const compiled = (transform: (node: object) => void): string =>
+      compileTemplate({ source: '<div><p class="keep">\n  a\n</p><p>\n  b\n</p></div>', filename: "a.vue", id: "a", ssr: true, compilerOptions: { nodeTransforms: [transform] } }).code;
+    expect(compiled(trimEdges({ classes: ["keep"] }))).toContain('<p class="keep"> a </p><p>b</p>');
+    expect(compiled(trimEdges({}))).toContain('<p class="keep">a</p><p>b</p>');
+    expect(compiled(trimEdges)).toContain('<p class="keep">a</p><p>b</p>');
+  });
+
   it("trims the content a component and `<template v-slot>` hand a child", () => {
     const child = `<template><i><slot /><slot name="n" /></i></template>`;
     expect(pushed(trimmed("<Child>\n  remove\n</Child>", { Child: child }))).toContain("remove");

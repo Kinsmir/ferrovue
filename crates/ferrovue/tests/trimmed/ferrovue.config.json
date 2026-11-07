@@ -1,5 +1,10 @@
 {
   "components": "components",
   "out": "generated",
-  "whitespace": "trim-edges"
+  "whitespace": "trim-edges",
+  "preserveWhitespace": {
+    "classes": [
+      "whitespace-pre-line"
+    ]
+  }
 }

@@ -13,12 +13,20 @@ pub const NAME: &str = "TrimKept";
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
     pub label: Cow<'a, str>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on: Option<bool>,
 }
 
 impl<'a> Props<'a> {
-    /// Props with its required fields.
+    /// Props with its required fields, every optional one absent.
     pub fn new(label: impl Into<Cow<'a, str>>) -> Self {
-        Props { label: label.into() }
+        Props { label: label.into(), on: None }
+    }
+
+    /// Set `on`, which is absent otherwise.
+    pub fn on(mut self, on: bool) -> Self {
+        self.on = Some(on);
+        self
     }
 }
 
@@ -39,14 +47,22 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(
-        183
+        308
         + props.label.len()
     );
     out.push_str("<div><pre>  ");
     fv::core::escape_into(out, &props.label);
     out.push_str("\n    <b> kept </b>\n</pre><textarea>  typed\n</textarea><div><b> {{ raw }} </b></div><div style=\"white-space:pre-wrap;\"><b>");
     fv::core::escape_into(out, &props.label);
-    out.push_str("</b></div><p style=\"color:red;\">");
+    out.push_str("</b></div><p class=\"note whitespace-pre-line\">");
+    fv::core::escape_into(out, &props.label);
+    out.push_str(" <button> kept </button></p><p class=\"");
+    fv::attrs::class_into(out, false, &[if props.on.unwrap_or(false) { "whitespace-pre-line" } else { "" }]);
+    out.push_str("\">");
+    fv::core::escape_into(out, &props.label);
+    out.push_str(" bound </p><p class=\"whitespace-pre\">");
+    fv::core::escape_into(out, &props.label);
+    out.push_str(" trimmed</p><p style=\"color:red;\">");
     fv::core::escape_into(out, &props.label);
     out.push_str(" trimmed</p></div>");
     Ok(())
