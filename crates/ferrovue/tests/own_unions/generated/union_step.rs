@@ -36,9 +36,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(18 + props.step.label.len() + 7 + 6);
+    out.reserve(
+        31
+        + props.step.label.len()
+    );
     out.push_str("<li class=\"");
-    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.step.state), props.step.align.map(fv::props::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[
+        fv::props::Union::as_str(props.step.state),
+        props.step.align.map(fv::props::Union::as_str).unwrap_or(""),
+    ]);
     out.push_str("\">");
     fv::core::escape_into(out, &props.step.label);
     out.push_str("</li>");

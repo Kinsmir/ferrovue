@@ -85,7 +85,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(70 + 7 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        70
+        + 7 * props.tags.as_deref().unwrap_or(&[]).len()
+        + props.label.as_deref().map_or(0, str::len)
+        + props.note.as_deref().map_or(0, str::len)
+    );
     let s_summary = format!("{}:{}", props.label.as_deref().unwrap_or("untitled"), fv::core::Js(props.size.unwrap_or(-1i64)));
     out.push_str("<p class=\"d");
     fv::attrs::class_into(out, true, &[if props.on.unwrap_or(true) { "on" } else { "off" }]);

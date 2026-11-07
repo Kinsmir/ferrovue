@@ -55,7 +55,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(37 + props.kind.len());
+    out.reserve(
+        37
+        + props.kind.len()
+    );
     out.push_str("<button class=\"");
     fv::attrs::class_into(out, false, &[&*props.kind]);
     out.push_str("\">");

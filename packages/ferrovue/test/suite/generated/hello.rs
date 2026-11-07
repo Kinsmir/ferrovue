@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(48 + props.name.len());
+    out.reserve(
+        48
+        + props.name.len()
+    );
     out.push_str("<p class=\"hello\">Hello, ");
     fv::core::escape_into(out, &props.name);
     if props.count != 0 {

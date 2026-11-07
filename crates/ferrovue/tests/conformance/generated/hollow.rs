@@ -55,7 +55,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(231 + 7 * props.tags.len() + 39 * props.tags.len() + props.note.as_deref().map_or(0, str::len) + props.pad.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        231
+        + 7 * props.tags.len()
+        + 39 * props.tags.len()
+        + props.note.as_deref().map_or(0, str::len)
+        + props.pad.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Hollow.vue");
     out.push_str("<div>");
     fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("lead") }, super::frame::Slots {
@@ -218,7 +225,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: Cow::Borrowed("scoped"), note: props.note.as_deref().map(Cow::Borrowed) }, super::data_list::Slots {
+    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props {
+        rows: Vec::new(),
+        title: Cow::Borrowed("scoped"),
+        note: props.note.as_deref().map(Cow::Borrowed),
+    }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             let mut filled = false;
             if props.on {

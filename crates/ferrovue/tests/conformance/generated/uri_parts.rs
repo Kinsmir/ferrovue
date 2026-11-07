@@ -49,7 +49,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(105 + 36 * props.tags.len() + props.q.len() + props.path.len() + props.tag.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        105
+        + 36 * props.tags.len()
+        + props.q.len()
+        + props.path.len()
+        + props.tag.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_search = format!("/search?q={}&page={}", fv::core::js_encode_uri_component(&props.q), fv::core::js_encode_uri_component(&format!("{}", fv::core::Js(props.page))));
     let s_kept = fv::core::js_encode_uri(fv::strings::js_trim(&props.path));
     if fv::core::js_encode_uri_component(&props.q).is_empty() {

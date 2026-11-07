@@ -53,7 +53,13 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(313 + props.content.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + fv::html::TrustedHtml::trusted_html(&props.body).len() + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + fv::html::TrustedHtml::trusted_html(&props.lead).len());
+    out.reserve(
+        313
+        + props.content.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())
+        + fv::html::TrustedHtml::trusted_html(&props.body).len()
+        + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())
+        + fv::html::TrustedHtml::trusted_html(&props.lead).len()
+    );
     if let Some(fv_content) = props.content.as_ref().filter(|v| !fv::html::TrustedHtml::trusted_html(*v).is_empty()) {
         out.push_str("<section><div class=\"content\">");
         fv::html::trusted_into(out, fv_content);

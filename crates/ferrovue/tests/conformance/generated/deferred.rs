@@ -46,7 +46,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(84 + props.title.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        84
+        + props.title.len()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<section class=\"deferred\" data-v-d4eff95c>");
     super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: Cow::Borrowed(&*props.title) }, super::plain_box::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {

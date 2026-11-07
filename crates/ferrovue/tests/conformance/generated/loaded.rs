@@ -46,7 +46,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(92 + props.slug.len() + props.lang.as_deref().map_or(0, str::len));
+    out.reserve(
+        92
+        + props.slug.len()
+        + props.lang.as_deref().map_or(0, str::len)
+    );
     let Some(l_0) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadArticle { slug: String::from(&*props.slug), lang: props.lang.as_deref().map(String::from) }) else { return Ok(()); };
     let Some(l_2) = fv_loads.get(super::loaders::LoadViews) else { return Ok(()); };
@@ -73,8 +77,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: Cow::Borrowed(&*props.slug), page: 1i64, drafts: None }, fv_loads)?;
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 > 1) }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props {
+        article: Cow::Borrowed(&*props.slug),
+        page: 1i64,
+        drafts: None,
+    }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props {
+        article: Cow::Borrowed(&*props.slug),
+        page: 2i64,
+        drafts: Some(l_0.tags.len() as i64 > 1),
+    }, fv_loads)?;
     out.push_str("</article>");
     Ok(())
 }

@@ -76,7 +76,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(106 + 29 * props.rows.len() + props.title.len() + props.entry.meta.tag_2.len() + props.entry.meta.tag.len() + props.entry.label.len() + props.rows.iter().map(|v| v.meta.tag_2.len() + v.meta.tag.len() + v.label.len()).sum::<usize>());
+    out.reserve(
+        106
+        + 29 * props.rows.len()
+        + props.title.len()
+        + props.entry.meta.tag_2.len()
+        + props.entry.meta.tag.len()
+        + props.entry.label.len()
+        + props.rows.iter().map(|v| v.meta.tag_2.len() + v.meta.tag.len() + v.label.len()).sum::<usize>()
+    );
     let s_label_2 = format!("{}!", props.title);
     let s_label = fv::strings::js_trim(&props.entry.label);
     if s_label_2.is_empty() {

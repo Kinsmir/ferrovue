@@ -46,7 +46,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(94 + props.label.len() + props.size.as_deref().map_or(0, str::len));
+    out.reserve(
+        94
+        + props.label.len()
+        + props.size.as_deref().map_or(0, str::len)
+    );
     let fv_default_look = super::types::Look { size: Cow::Borrowed(props.size.as_deref().unwrap_or("md")), tone: Cow::Borrowed("plain"), note: None, count: 0i64 };
     let fv_default_made = super::types::Look { size: Cow::Borrowed("lg"), tone: Cow::Borrowed(&*props.label), note: Some(Cow::Borrowed("made")), count: 1i64 };
     let fv_default_named = super::types::Look { size: Cow::Borrowed("sm"), tone: Cow::Borrowed(&*format!("{}!", props.label)), note: None, count: 2i64 };

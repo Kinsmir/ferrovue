@@ -98,7 +98,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(87 + 3 + props.label.len() + props.parts.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        90
+        + props.label.len()
+        + props.parts.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<!--[--><p title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\" data-wide=\"");

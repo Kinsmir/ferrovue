@@ -55,7 +55,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(109 + props.model_value.len());
+    out.reserve(
+        109
+        + props.model_value.len()
+    );
     out.push_str("<div><input value=\"");
     fv::core::escape_into(out, &props.model_value);
     out.push_str("\"><input type=\"checkbox\"");

@@ -39,9 +39,19 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(27 + props.site.len() + props.names.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        27
+        + props.site.len()
+        + props.names.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadLater.vue");
-    fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str(&format!("%s | {}", props.site))), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("root")), ("content", fv::head::HeadValue::str(&props.site))])]))]));
+    fv_head.push(fv::head::HeadValue::object([
+        ("titleTemplate", fv::head::HeadValue::str(&format!("%s | {}", props.site))),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("root")),
+            ("content", fv::head::HeadValue::str(&props.site)),
+        ])])),
+    ]));
     out.push_str("<div>");
     {
         let _fv_later = fv_head.deferred();

@@ -41,7 +41,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(77 + props.words.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        77
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_total = { let fv_d = fv::core::Js(props.n).to_string(); Cow::<str>::Owned(({ let fv_s = format!("{}:{}{}", fv::core::Js(fv::strings::js_length(&fv_d)), Some(fv::strings::js_char_at(&fv_d, 0.0f64)).filter(|c| !c.is_empty()).unwrap_or("undefined"), fv::strings::js_at(&fv_d, -1.0f64).unwrap_or("undefined")); Cow::<str>::Owned(format!("{}.", fv_s)) }).into_owned()) };
     out.push_str("<section style=\"gap:8px;\"><p>");
     fv::core::escape_into(out, &{ let fv_d_2 = fv::core::Js(props.n).to_string(); Cow::<str>::Owned(fv::strings::js_reduce(fv::strings::js_split(&fv_d_2, "").into_iter().enumerate(), String::new(), |fv_acc, (fv_i, fv_ch)| { let fv_i = fv_i as i64; String::from(&*(if fv_i as f64 > 0.0 && &*fv_ch != "-" && Some(fv::strings::js_char_at(&fv_d_2, fv_i as f64 - 1.0)).filter(|c| !c.is_empty()) != Some("-") && (fv::strings::js_length(&fv_d_2) as f64 - fv_i as f64) % 3.0 == 0.0 { Cow::<str>::Owned(format!("{},{}", fv_acc, fv_ch)) } else { Cow::<str>::Owned(format!("{}{}", fv_acc, fv_ch)) })) })) });

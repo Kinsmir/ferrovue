@@ -45,10 +45,25 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(211 + props.book.id.len() + props.book.title.len() + props.book.author.len());
+    out.reserve(
+        211
+        + props.book.id.len()
+        + props.book.title.len()
+        + props.book.author.len()
+    );
     let s_permalink = format!("/books/{}", fv_route.param("id").unwrap_or(""));
     let s_summary = format!("{}, by {} ({})", props.book.title, props.book.author, fv::core::Js(props.book.year));
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.book.title)), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&s_summary))])])), ("link", fv::head::HeadValue::array([fv::head::HeadValue::object([("rel", fv::head::HeadValue::str("canonical")), ("href", fv::head::HeadValue::str(&s_permalink))])]))]));
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str(&props.book.title)),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("description")),
+            ("content", fv::head::HeadValue::str(&s_summary)),
+        ])])),
+        ("link", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("rel", fv::head::HeadValue::str("canonical")),
+            ("href", fv::head::HeadValue::str(&s_permalink)),
+        ])])),
+    ]));
     fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::head::HeadValue::str(&props.book.title)), ("property", "og:description", fv::head::HeadValue::str(&s_summary)), ("property", "og:type", fv::head::HeadValue::str("book")), ("property", "book:release_date", fv::head::HeadValue::str(&fv::core::Js(props.book.year).to_string()))]);
     out.push_str("<article class=\"book\"");
     if let Some(v) = fv_route.param("id") {

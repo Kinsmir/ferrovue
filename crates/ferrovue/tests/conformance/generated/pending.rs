@@ -53,7 +53,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(102 + props.title.len());
+    out.reserve(
+        102
+        + props.title.len()
+    );
     let s_rows = &Vec::<Row<'_>>::new();
     let s_users = &Vec::<super::types::User<'_>>::new();
     let s_names = &Vec::<Cow<str>>::new();

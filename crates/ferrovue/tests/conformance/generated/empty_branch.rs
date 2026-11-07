@@ -71,7 +71,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(289 + props.label.len() + props.item.as_ref().map_or(0, |v| v.id.len()));
+    out.reserve(
+        289
+        + props.label.len()
+        + props.item.as_ref().map_or(0, |v| v.id.len())
+    );
     let s_seeded = if let Some(fv_item) = props.item.as_ref() { &fv_item.children[..] } else { &[] };
     let s_none = <&[Props<'_>]>::default();
     let s_from_const = if let Some(fv_item_2) = props.item.as_ref() { &fv_item_2.children[..] } else { s_none };

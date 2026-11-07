@@ -56,7 +56,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(69 + 7 * props.tags.len() + props.title.len() + 7 + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        76
+        + 7 * props.tags.len()
+        + props.title.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<article class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.mood)]);
     if props.title.is_empty() {

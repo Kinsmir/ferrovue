@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { oneLine } from "./code.ts";
 import { GenError } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
 
@@ -261,7 +262,7 @@ describe("attributes that fall through", () => {
     );
     const out = compile(island(passing, { Child: child })).get("child.rs")!;
     expect(out).toContain(`out.push_str(" a.=\\"x\\" a^=\\"y\\" b=\\"z\\" onx=\\"o\\" data-icon-name=\\"i\\"");`);
-    expect(out).toContain(
+    expect(oneLine(out)).toContain(
       `fv::attrs::attrs_into(out, &[&[("title", fv::attrs::Attr::str(props.label.as_deref().unwrap_or("")))], &[("a.", fv::attrs::Attr::str("x")), ("a^", fv::attrs::Attr::str("y")), ("^b", fv::attrs::Attr::str("z")), ("onx", fv::attrs::Attr::str("o")), ("data-icon-name", fv::attrs::Attr::str("i"))], fv_attrs.list()], 2, "");`,
     );
   });
@@ -273,7 +274,7 @@ describe("attributes that fall through", () => {
       `import type { Float } from "ferrovue/types";\nconst NONE = null;\n`,
     );
     const parent = passing.replace(`<Child data-x="1" />`, `<Child data-x="1" :b="null" />`);
-    expect(compile(island(parent, { Child: child })).get("child.rs")).toContain(
+    expect(oneLine(compile(island(parent, { Child: child })).get("child.rs")!)).toContain(
       `fv::attrs::attrs_into(out, &[&[("a", fv::attrs::Attr::Undefined), ("u", fv::attrs::Attr::Undefined), ("n", fv::attrs::Attr::Undefined), ("i", props.i.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Int)), ("f", props.f.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Float)), ("b", props.b.map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::Bool))], fv_attrs.list()], 1, "");`,
     );
   });
@@ -290,7 +291,7 @@ describe("attributes that fall through", () => {
     expect(first).toContain("out.push_str(fv_attrs.ids());");
     expect(first).toContain("fv::attrs::attrs_into(out, &[fv_attrs.list()], 0, fv_attrs.ids());");
     const after = compile(island(scopedPassing, { Child: component("label?: string", `<div v-focus :title="label ?? ''">x</div>`, focus) }), config).get("child.rs")!;
-    expect(after).toContain(`fv::attrs::attrs_into(out, &[&[("title", fv::attrs::Attr::str(props.label.as_deref().unwrap_or("")))], fv_attrs.list()], 1, fv_attrs.ids());`);
+    expect(oneLine(after)).toContain(`fv::attrs::attrs_into(out, &[&[("title", fv::attrs::Attr::str(props.label.as_deref().unwrap_or("")))], fv_attrs.list()], 1, fv_attrs.ids());`);
   });
 
   const handedIds = (inner: string): GenError => {

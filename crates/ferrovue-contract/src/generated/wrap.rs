@@ -52,7 +52,10 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_slots: Slots<'_>, 
     if fv_attrs.is_empty() {
         out.push_str(" class=\"wrap\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("wrap"))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[("class", fv::attrs::Attr::str("wrap"))],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push('>');
     fv::render::slot_into(out, fv_slots.default, None);

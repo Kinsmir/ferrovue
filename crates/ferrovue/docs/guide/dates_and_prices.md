@@ -279,7 +279,10 @@ pub struct Props<'a> {
 
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(76 + props.title.len());
+    out.reserve(
+        76
+        + props.title.len()
+    );
     out.push_str("<article><h2>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h2><p>");
@@ -574,7 +577,11 @@ The generated `render` computes the amount and the date with the runtime's twins
 # }
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
-    out.reserve(98 + props.total.len() + props.posted.len());
+    out.reserve(
+        98
+        + props.total.len()
+        + props.posted.len()
+    );
     let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
     let s_amount = if fv_i18n.locale() == "nl" { Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { Cow::<str>::Borrowed(&*s_fixed) };
     out.push_str("<section");

@@ -73,7 +73,11 @@ useSeoMeta({ ogTitle: props.title });
 #
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
-    out.reserve(28 + props.title.len() + props.summary.as_deref().map_or(0, str::len));
+    out.reserve(
+        28
+        + props.title.len()
+        + props.summary.as_deref().map_or(0, str::len)
+    );
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.title)), ("titleTemplate", fv::head::HeadValue::str("%s · Books")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", if let Some(v) = props.summary.as_deref() { fv::head::HeadValue::str(v) } else { fv::head::HeadValue::Undefined })])])), ("htmlAttrs", fv::head::HeadValue::object([("lang", fv::head::HeadValue::str("en"))]))]));
     fv_head.push_seo_meta(fv::head::HeadValue::Object(Vec::new()), vec![("property", "og:title", fv::head::HeadValue::str(&props.title))]);
     out.push_str("<article><h1>");

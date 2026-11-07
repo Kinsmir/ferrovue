@@ -70,7 +70,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(44 + props.name.len() + props.r#type.as_deref().map_or(0, str::len) + props.model_value.as_deref().map_or(0, str::len));
+    out.reserve(
+        44
+        + props.name.len()
+        + props.r#type.as_deref().map_or(0, str::len)
+        + props.model_value.as_deref().map_or(0, str::len)
+    );
     out.push_str("<p");
     if props.r#type.as_deref().is_some() {
         out.push_str(" class=\"");

@@ -96,7 +96,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(422 + 7 + props.label.len());
+    out.reserve(
+        429
+        + props.label.len()
+    );
     let fv_tag = match props.tag { TagCasingTag::Div => "div", TagCasingTag::Section => "section" };
     out.push('<');
     out.push_str(fv_tag);

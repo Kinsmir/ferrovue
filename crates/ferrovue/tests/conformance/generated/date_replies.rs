@@ -37,7 +37,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(25 + 134 * props.replies.len() + props.replies.iter().map(|v| v.author.len()).sum::<usize>());
+    out.reserve(
+        25
+        + 134 * props.replies.len()
+        + props.replies.iter().map(|v| v.author.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateReplies.vue");
     out.push_str("<ul><!--[-->");
     for fv_reply in props.replies.iter() {
@@ -69,7 +73,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str("<!---->");
         }
         if (props.depth as f64) < 2.0 && !fv_reply.replies.is_empty() {
-            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: fv_reply.replies.to_owned(), depth: fv_refusals.keep(fv::render::try_int(props.depth as f64 + 1.0), 15, 94) }))?;
+            fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
+                replies: fv_reply.replies.to_owned(),
+                depth: fv_refusals.keep(fv::render::try_int(props.depth as f64 + 1.0), 15, 94),
+            }))?;
         } else {
             out.push_str("<!---->");
         }

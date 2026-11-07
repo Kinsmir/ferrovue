@@ -40,7 +40,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(181 + 9 * props.items.len() + 7 * props.items.len() + props.text.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        181
+        + 9 * props.items.len()
+        + 7 * props.items.len()
+        + props.text.len()
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str(if props.on { "<div><p>shown</p><ul name=\"list\">" } else { "<div><!----><ul name=\"list\">" });
     for fv_i_ref in props.items.iter() {
         let fv_i: &str = fv_i_ref;

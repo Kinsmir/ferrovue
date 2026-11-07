@@ -47,7 +47,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(67 + props.title.len());
+    out.reserve(
+        67
+        + props.title.len()
+    );
     out.push_str("<div class=\"frame\"><header>");
     fv::render::slot_into(out, fv_slots.head, Some(&mut |out: &mut String| {
         fv::core::escape_into(out, &props.title);

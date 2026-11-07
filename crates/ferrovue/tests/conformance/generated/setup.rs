@@ -54,7 +54,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(108 + props.name.as_deref().map_or(0, str::len));
+    out.reserve(
+        108
+        + props.name.as_deref().map_or(0, str::len)
+    );
     let s_none = props.count as f64 == 0.0;
     let s_label = std::cell::LazyCell::new(|| format!("{} item{}", fv::core::Js(props.count), crate::helpers::plural(props.count)));
     out.push_str("<div class=\"setup");

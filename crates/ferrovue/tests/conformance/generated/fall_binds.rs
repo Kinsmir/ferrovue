@@ -52,7 +52,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(36 + props.cls.as_deref().map_or(0, str::len) + props.css.len());
+    out.reserve(
+        36
+        + props.cls.as_deref().map_or(0, str::len)
+        + props.css.len()
+    );
     out.push_str("<span");
     if fv_attrs.is_empty() {
         if props.cls.as_deref().is_some() {
@@ -64,7 +68,13 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         fv::attrs::style_text_into(out, &props.css);
         out.push('"');
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", props.cls.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::str(&props.css))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("class", props.cls.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)),
+                ("style", fv::attrs::Attr::str(&props.css)),
+            ],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push_str(">binds</span>");
     Ok(())

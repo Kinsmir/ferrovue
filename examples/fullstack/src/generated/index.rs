@@ -54,8 +54,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(105 + 89 * props.books.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("All books")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("{} books, from {}", fv::core::Js(props.books.len() as i64), props.books.iter().map(|fv_b| Cow::<str>::Borrowed(&fv_b.title)).collect::<Vec<_>>().join(", "))))])]))]));
+    out.reserve(
+        105
+        + 89 * props.books.len()
+        + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>()
+    );
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str("All books")),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("description")),
+            ("content", fv::head::HeadValue::str(&format!("{} books, from {}", fv::core::Js(props.books.len() as i64), props.books.iter().map(|fv_b| Cow::<str>::Borrowed(&fv_b.title)).collect::<Vec<_>>().join(", ")))),
+        ])])),
+    ]));
     if !props.books.is_empty() {
         out.push_str("<section class=\"books\"><h1>All books</h1><ul><!--[-->");
         for fv_book in props.books.iter() {

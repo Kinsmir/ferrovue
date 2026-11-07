@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(65 + props.color.len());
+    out.reserve(
+        65
+        + props.color.len()
+    );
     out.push_str("<p class=\"shown");
     fv::attrs::class_into(out, true, &[if props.on { "on" } else { "" }]);
     out.push_str(if !props.on { "\" style=\"display:none;color:" } else { "\" style=\"display:block;color:" });

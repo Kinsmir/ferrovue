@@ -70,7 +70,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(204 + props.tone.as_deref().map_or(0, str::len));
+    out.reserve(
+        204
+        + props.tone.as_deref().map_or(0, str::len)
+    );
     out.push_str("<article class=\"card");
     fv::attrs::class_into(out, true, &[props.tone.as_deref().unwrap_or("")]);
     out.push('"');

@@ -89,7 +89,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(143 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(
+        143
+        + props.label.as_deref().map_or(0, str::len)
+        + props.nick.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+        + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>()
+    );
     let s_line = format!("{}/{}/{}/{}", props.label.as_deref().unwrap_or("undefined"), fv::strings::JsOr(props.count.map(fv::core::Js), "undefined"), props.nick.as_deref().unwrap_or("null"), props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
     let s_kept = props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).collect::<Vec<_>>().join(",");
     if props.label.as_deref().unwrap_or("undefined").is_empty() {

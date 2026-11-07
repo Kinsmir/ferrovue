@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(41 + props.label.len());
+    out.reserve(
+        41
+        + props.label.len()
+    );
     out.push_str("<li>");
     fv::core::escape_into(out, &props.label);
     if !props.children.is_empty() {

@@ -50,7 +50,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(274 + props.s.len() + props.o.as_deref().map_or(0, str::len));
+    out.reserve(
+        274
+        + props.s.len()
+        + props.o.as_deref().map_or(0, str::len)
+    );
     let s_wide = props.x * 1e308;
     let s_half = s_wide / 2.0;
     let s_gap = s_wide.abs() - s_wide.abs();

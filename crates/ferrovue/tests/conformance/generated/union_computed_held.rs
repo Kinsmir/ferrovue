@@ -41,7 +41,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(60 + 7 + props.label.len());
+    out.reserve(
+        67
+        + props.label.len()
+    );
     let s_picked = if props.on { super::types::Mood::Loud } else { super::types::Mood::Calm };
     let s_stepped = if props.count as f64 > 2.0 { super::types::Mood::QX } else { if props.on { super::types::Mood::Calm } else { super::types::Mood::Loud } };
     let s_next = match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm };
@@ -53,10 +56,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_picked, card: None, label: Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_stepped, card: Some(super::types::MoodCard { mood: s_stepped, spare: Some(s_next), note: Cow::<str>::Borrowed(&*props.label) }), label: Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_next), label: Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_kept), label: Cow::Borrowed(fv::props::Union::as_str(s_kept)) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props {
+        mood: s_picked,
+        card: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props {
+        mood: s_stepped,
+        card: Some(super::types::MoodCard { mood: s_stepped, spare: Some(s_next), note: Cow::<str>::Borrowed(&*props.label) }),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: Some(s_next),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: Some(s_kept),
+        label: Cow::Borrowed(fv::props::Union::as_str(s_kept)),
+    })?;
     out.push_str("<p data-picked=\"");
     fv::core::escape_into(out, fv::props::Union::as_str(s_picked));
     out.push_str("\">");

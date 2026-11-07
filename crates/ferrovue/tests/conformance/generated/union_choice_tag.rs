@@ -103,7 +103,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(35 + 7 + props.label.len());
+    out.reserve(
+        42
+        + props.label.len()
+    );
     if fv::props::Union::as_str(props.choice).is_empty() {
         out.push_str("<s data-choice>");
     } else {

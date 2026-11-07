@@ -41,7 +41,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(132 + props.input.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        132
+        + props.input.len()
+        + props.inputs.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<section><p>");
     fv::core::push_number(out, fv::strings::js_number(&props.input));
     out.push('|');

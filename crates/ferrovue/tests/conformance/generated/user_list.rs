@@ -47,19 +47,37 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(42 + props.users.iter().map(|v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2).sum::<usize>() + props.featured.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2) + props.items.iter().map(|v| v.name.len()).sum::<usize>());
+    out.reserve(
+        42
+        + props.users.iter().map(|v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2).sum::<usize>()
+        + props.featured.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2)
+        + props.items.iter().map(|v| v.name.len()).sum::<usize>()
+    );
     out.push_str("<section>");
     if let Some(fv_featured) = props.featured.as_ref() {
-        super::user_card::try_render(out, &super::user_card::Props { user: fv_featured.to_owned(), size: Some(super::types::Size::Lg), badges: Some(Vec::new()), note: Some(Cow::Borrowed("featured")) })?;
+        super::user_card::try_render(out, &super::user_card::Props {
+            user: fv_featured.to_owned(),
+            size: Some(super::types::Size::Lg),
+            badges: Some(Vec::new()),
+            note: Some(Cow::Borrowed("featured")),
+        })?;
     } else {
         out.push_str("<!---->");
     }
     out.push_str("<!--[-->");
     for fv_u in props.users.iter() {
-        super::user_card::try_render(out, &super::user_card::Props { user: fv_u.to_owned(), size: fv_u.size, badges: None, note: None })?;
+        super::user_card::try_render(out, &super::user_card::Props {
+            user: fv_u.to_owned(),
+            size: fv_u.size,
+            badges: None,
+            note: None,
+        })?;
     }
     out.push_str("<!--]-->");
-    super::lifecycle::try_render(out, &super::lifecycle::Props { items: props.items.to_owned(), query: Cow::Borrowed("all") })?;
+    super::lifecycle::try_render(out, &super::lifecycle::Props {
+        items: props.items.to_owned(),
+        query: Cow::Borrowed("all"),
+    })?;
     out.push_str("</section>");
     Ok(())
 }

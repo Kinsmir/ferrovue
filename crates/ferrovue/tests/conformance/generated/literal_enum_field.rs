@@ -238,7 +238,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(64 + props.text.len() + 4);
+    out.reserve(
+        68
+        + props.text.len()
+    );
     out.push_str("<!--[--><p data-kind=\"");
     fv::core::escape_into(out, fv::props::Union::as_str((Row { text: Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind));
     out.push_str("\" title=\"");

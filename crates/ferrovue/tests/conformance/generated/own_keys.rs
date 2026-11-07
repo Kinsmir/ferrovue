@@ -41,7 +41,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(93 + props.role.len() + props.size.len() + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>());
+    out.reserve(
+        93
+        + props.role.len()
+        + props.size.len()
+        + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>()
+    );
     let s_role_class = if let Some(fv_role) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) { match fv_role { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" } } else { "is-member" };
     out.push_str("<section class=\"");
     fv::attrs::class_into(out, false, &[if let Some(fv_role_2) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) { match fv_role_2 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" } } else { "" }]);

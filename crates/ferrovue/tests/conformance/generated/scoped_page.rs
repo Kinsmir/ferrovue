@@ -62,7 +62,13 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_telep
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_teleports: &fv::page::Teleports) -> Result<(), fv::render::Refused> {
-    out.reserve(581 + 25 * props.items.len() + props.title.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>() + props.tone.as_deref().map_or(0, str::len));
+    out.reserve(
+        581
+        + 25 * props.items.len()
+        + props.title.as_deref().map_or(0, str::len)
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+        + props.tone.as_deref().map_or(0, str::len)
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ScopedPage.vue");
     out.push_str("<main class=\"page\"");
     if let Some(v) = props.tone.as_deref() {
@@ -96,7 +102,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
     fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: props.title.as_deref().map(Cow::Borrowed) }, " data-v-56da6d99"))?;
     fv_refusals.check(super::scoped_root::try_render_scoped(out, &super::scoped_root::Props { label: Some(Cow::Borrowed(props.title.as_deref().unwrap_or("untitled"))) }, " data-v-56da6d99"))?;
     out.push_str("<dl data-v-56da6d99>");
-    fv_refusals.check(super::scoped_pair::try_render_scoped(out, &super::scoped_pair::Props { term: Cow::Borrowed("tone"), text: Cow::Borrowed(props.tone.as_deref().unwrap_or("plain")) }, " data-v-56da6d99"))?;
+    fv_refusals.check(super::scoped_pair::try_render_scoped(out, &super::scoped_pair::Props {
+        term: Cow::Borrowed("tone"),
+        text: Cow::Borrowed(props.tone.as_deref().unwrap_or("plain")),
+    }, " data-v-56da6d99"))?;
     out.push_str("</dl>");
     fv_refusals.check(super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: Cow::Borrowed(props.title.as_deref().unwrap_or("untitled")) }, super::plain_box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {

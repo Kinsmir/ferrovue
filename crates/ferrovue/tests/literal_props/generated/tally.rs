@@ -31,7 +31,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores) -> Result<(), fv::render::Refused> {
-    out.reserve(54 + props.label.len());
+    out.reserve(
+        54
+        + props.label.len()
+    );
     out.push_str("<p class=\"");
     fv::attrs::class_into(out, false, &[if fv_stores.tally.open { "open" } else { "" }]);
     out.push_str("\">");

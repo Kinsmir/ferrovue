@@ -49,7 +49,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(277 + props.text.len() + props.part.len());
+    out.reserve(
+        277
+        + props.text.len()
+        + props.part.len()
+    );
     let s_first_two = fv::strings::js_split_limit(&props.text, " ", 2.0f64).into_iter().map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_tail = fv::strings::js_substr(&props.text, -(props.at as f64), None).into_owned();
     let s_codes = &[fv::strings::js_char_code_at(&props.text, 0.0f64), fv::strings::js_char_code_at(&props.text, props.at as f64)];

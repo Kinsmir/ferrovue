@@ -63,7 +63,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(107 + 9 * props.words.len() + 64 * props.numbers.len() + 37 * props.groups.iter().map(|fv_g| fv_g.members.len()).sum::<usize>() + 73 * props.groups.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(
+        107
+        + 9 * props.words.len()
+        + 64 * props.numbers.len()
+        + 37 * props.groups.iter().map(|fv_g| fv_g.members.len()).sum::<usize>()
+        + 73 * props.groups.len()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.groups.iter().map(|v| v.name.len() + v.members.iter().map(|v| v.len()).sum::<usize>() + v.lead.as_deref().map_or(0, str::len)).sum::<usize>()
+    );
     out.push_str("<section><ul><!--[-->");
     for fv_w_ref in props.words.iter() {
         let fv_w: &str = fv_w_ref;

@@ -45,7 +45,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.text.len());
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed(&*props.text), shown: None, note: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("faded"))], fv_attrs.list()], ""))?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props {
+        label: Cow::Borrowed(&*props.text),
+        shown: None,
+        note: None,
+    }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("faded"))], fv_attrs.list()], ""))?;
     Ok(())
 }
 

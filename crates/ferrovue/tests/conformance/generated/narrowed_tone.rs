@@ -106,7 +106,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(31 + 6 + props.label.len());
+    out.reserve(
+        37
+        + props.label.len()
+    );
     out.push_str("<b");
     if props.tone.map(fv::props::Union::as_str).is_some() {
         out.push_str(" class=\"");

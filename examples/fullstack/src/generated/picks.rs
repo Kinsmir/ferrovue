@@ -49,8 +49,23 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(393 + 44 * props.books.len() + props.shop.len() + props.featured.id.len() + props.featured.title.len() + props.featured.author.len() + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>());
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&format!("Staff picks · {}", props.shop))), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured.title)))])])), ("htmlAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str("picks-page"))]))]));
+    out.reserve(
+        393
+        + 44 * props.books.len()
+        + props.shop.len()
+        + props.featured.id.len()
+        + props.featured.title.len()
+        + props.featured.author.len()
+        + props.books.iter().map(|v| v.id.len() + v.title.len() + v.author.len()).sum::<usize>()
+    );
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str(&format!("Staff picks · {}", props.shop))),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("description")),
+            ("content", fv::head::HeadValue::str(&format!("{} and the rest of this week's staff picks", props.featured.title))),
+        ])])),
+        ("htmlAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str("picks-page"))])),
+    ]));
     out.push_str("<div class=\"layout picks\"><header>");
     {
         let fv_link = {

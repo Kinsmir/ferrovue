@@ -144,7 +144,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(313 + 9 * props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).len() + 9 * props.user.as_ref().map(|fv_user| &fv_user.langs).map(|v| &v[..]).unwrap_or(&[]).len() + props.user.as_ref().map_or(0, |v| v.name.len() + v.nick.as_deref().map_or(0, str::len) + v.langs.iter().map(|v| v.len()).sum::<usize>() + v.profile.as_ref().map_or(0, |v| v.bio.len() + v.site.as_deref().map_or(0, str::len))) + props.title.as_deref().map_or(0, str::len) + props.users.iter().map(|v| v.name.len() + v.nick.as_deref().map_or(0, str::len) + v.langs.iter().map(|v| v.len()).sum::<usize>() + v.profile.as_ref().map_or(0, |v| v.bio.len() + v.site.as_deref().map_or(0, str::len))).sum::<usize>());
+    out.reserve(
+        313
+        + 9 * props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).len()
+        + 9 * props.user.as_ref().map(|fv_user| &fv_user.langs).map(|v| &v[..]).unwrap_or(&[]).len()
+        + props.user.as_ref().map_or(0, |v| v.name.len() + v.nick.as_deref().map_or(0, str::len) + v.langs.iter().map(|v| v.len()).sum::<usize>() + v.profile.as_ref().map_or(0, |v| v.bio.len() + v.site.as_deref().map_or(0, str::len)))
+        + props.title.as_deref().map_or(0, str::len)
+        + props.users.iter().map(|v| v.name.len() + v.nick.as_deref().map_or(0, str::len) + v.langs.iter().map(|v| v.len()).sum::<usize>() + v.profile.as_ref().map_or(0, |v| v.bio.len() + v.site.as_deref().map_or(0, str::len))).sum::<usize>()
+    );
     let s_loud = props.title.as_deref().map(|fv_title| Cow::<str>::Owned(fv_title.to_uppercase()));
     let s_kept = props.tags.as_ref().map(|fv_tags_2| fv_tags_2.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t_2| !fv::strings::js_trim(fv_t_2).is_empty()).count() as i64).unwrap_or(0i64);
     let s_bio = props.user.as_ref().and_then(|fv_user_2| fv_user_2.profile.as_ref()).map(|fv_profile| fv::strings::js_trim(&fv_profile.bio)).unwrap_or("no bio");

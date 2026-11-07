@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
-    out.reserve(7 + props.name.len());
+    out.reserve(
+        7
+        + props.name.len()
+    );
     out.push_str("<p>");
     fv::core::escape_into(out, &fv_i18n.t("hello", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
     out.push_str("</p>");

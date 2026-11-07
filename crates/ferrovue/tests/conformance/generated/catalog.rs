@@ -54,7 +54,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(219 + 4 + props.size.as_deref().map_or(0, str::len));
+    out.reserve(
+        223
+        + props.size.as_deref().map_or(0, str::len)
+    );
     let s_heading = format!("Catalogue <b> ({})", fv::core::Js(3i64));
     out.push_str("<section class=\"round");
     fv::attrs::class_into(out, true, &[fv::props::Union::as_str(props.tone)]);

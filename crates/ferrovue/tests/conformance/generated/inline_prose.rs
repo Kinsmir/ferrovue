@@ -47,7 +47,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(68 + fv::html::TrustedHtml::trusted_html(&props.lead).len() + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + props.caption.len());
+    out.reserve(
+        68
+        + fv::html::TrustedHtml::trusted_html(&props.lead).len()
+        + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())
+        + props.caption.len()
+    );
     out.push_str("<section><p class=\"lead\">");
     fv::html::trusted_into(out, &props.lead);
     out.push_str("</p><p>Note: <span>");

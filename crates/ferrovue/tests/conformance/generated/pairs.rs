@@ -57,7 +57,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(158 + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.seats.iter().map(|(k, v)| k.len() + v.row.len()).sum::<usize>() + props.tags.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.word.len());
+    out.reserve(
+        158
+        + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>()
+        + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>()
+        + props.seats.iter().map(|(k, v)| k.len() + v.row.len()).sum::<usize>()
+        + props.tags.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.word.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Pairs.vue");
     let s_ranked = fv::strings::js_sorted(props.scores.iter(), |fv_a, fv_b| fv::strings::js_order(*fv_b.1 as f64, *fv_a.1 as f64)).collect::<Vec<_>>();
     let s_named = props.labels.iter().filter(|fv_item| fv_item.0 != &*props.word && !fv_item.1.is_empty()).collect::<Vec<_>>();

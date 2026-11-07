@@ -49,7 +49,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(86 + props.title.len());
+    out.reserve(
+        86
+        + props.title.len()
+    );
     let s_closing = fv_slots.footer.is_some();
     if fv_slots.header.is_some() {
         out.push_str("<section><header>");

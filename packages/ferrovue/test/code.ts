@@ -16,3 +16,22 @@ export function like(rust: string, whole = false): RegExp {
   out += rust.slice(at).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(whole ? `^${out}$` : out);
 }
+
+/** `rust` with each list the compiler writes one item per line put back on one line. */
+export function oneLine(rust: string): string {
+  const lines = rust.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const open = lines[i]!.at(-1);
+    if (open !== "{" && open !== "[") continue;
+    const indent = /^ */.exec(lines[i]!)![0];
+    const items: string[] = [];
+    let j = i + 1;
+    while (j < lines.length && lines[j]!.startsWith(`${indent}    `) && lines[j]![indent.length + 4] !== " ") items.push(lines[j++]!.trim());
+    const close = lines[j];
+    if (!items.length || close === undefined || !close.startsWith(`${indent}${open === "{" ? "}" : "]"}`)) continue;
+    if (!items.every((item, k) => item.endsWith(",") || (k === items.length - 1 && item.startsWith("..")))) continue;
+    const joined = items.map((item) => item.replace(/,$/, "")).join(", ");
+    lines.splice(i, j - i + 1, `${lines[i]}${open === "{" ? ` ${joined} ` : joined}${close.trimStart()}`);
+  }
+  return lines.join("\n");
+}

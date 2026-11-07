@@ -41,7 +41,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(39 + props.on.len() + props.fill.len());
+    out.reserve(
+        39
+        + props.on.len()
+        + props.fill.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Stamped.vue");
     out.push_str("<!--[--><p>");
     fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_parse(&props.on), 10, 9));
@@ -54,7 +58,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat(&props.fill, props.count as f64), 10, 123));
     out.push_str("</p>");
-    fv_refusals.check(super::posted::try_render(out, &super::posted::Props { at: fv_refusals.date(fv_refusals.keep(fv::date::try_date_parse(&props.on), 11, 14), 11, 14), edited: None, deleted: None }))?;
+    fv_refusals.check(super::posted::try_render(out, &super::posted::Props {
+        at: fv_refusals.date(fv_refusals.keep(fv::date::try_date_parse(&props.on), 11, 14), 11, 14),
+        edited: None,
+        deleted: None,
+    }))?;
     fv_refusals.check(super::wrap::try_render_scoped(out, &super::wrap::Props {}, super::wrap::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             fv_refusals.join(super::rated::try_render(out, &super::rated::Props { stars: fv_refusals.keep(fv::render::try_int(props.year as f64 * 2.0), 12, 39) }));

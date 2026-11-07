@@ -48,7 +48,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, _fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(25 + props.theme.len());
+    out.reserve(
+        25
+        + props.theme.len()
+    );
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme) };
     out.push_str("<div class=\"scope\">");
     fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);

@@ -56,7 +56,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(254 + 37 * props.inputs.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        254
+        + 37 * props.inputs.len()
+        + props.inputs.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_parsed = props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).collect::<Vec<_>>();
     let s_finite = (props.x / props.n as f64).is_finite();
     let s_kept = s_parsed.iter().copied().filter(|fv_v| !fv_v.is_nan() && fv_v.is_finite()).collect::<Vec<_>>();
@@ -114,7 +118,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_s_ref in props.inputs.iter() {
         let fv_s_2: &str = fv_s_ref;
         out.push_str("<li class=\"");
-        fv::attrs::class_into(out, false, &[if fv::strings::js_number(fv_s_2).is_nan() { "nan" } else { "" }, if fv::strings::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" }]);
+        fv::attrs::class_into(out, false, &[
+            if fv::strings::js_number(fv_s_2).is_nan() { "nan" } else { "" },
+            if fv::strings::js_number(fv_s_2).fract() == 0.0 { "whole" } else { "" },
+        ]);
         out.push_str("\">");
         fv::core::escape_into(out, fv_s_2);
         out.push_str(" is ");

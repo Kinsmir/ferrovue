@@ -40,7 +40,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(92 + props.title.len() + props.tags.len() + props.code.len());
+    out.reserve(
+        92
+        + props.title.len()
+        + props.tags.len()
+        + props.code.len()
+    );
     let s_slug = ({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("-+$", "")); &RE }).replace(&({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("^-+", "")); &RE }).replace(&({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("[^a-z0-9]+", "g")); &RE }).replace(&props.title.to_lowercase(), "-"), ""), "");
     if s_slug.is_empty() {
         out.push_str("<article data-slug class=\"");

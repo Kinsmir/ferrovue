@@ -61,7 +61,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(131 + 25 * props.items.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.theme.len());
+    out.reserve(
+        131
+        + 25 * props.items.len()
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+        + props.theme.len()
+    );
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), wide: Some(props.wide), ..fv_inherited };
     out.push_str("<div class=\"list\" data-ratio=\"");

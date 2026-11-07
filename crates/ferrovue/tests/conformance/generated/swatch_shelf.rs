@@ -57,13 +57,24 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(25 + props.size.len() + props.tone.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        25
+        + props.size.len()
+        + props.tone.len()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     let fv_inherited = fv_provides;
     let fv_provided_look_key = super::types::Look { size: Cow::Borrowed(&*props.size), tone: Cow::Borrowed(&*props.tone), note: props.note.as_deref().map(Cow::Borrowed), count: 5i64 };
     let fv_provides = super::provides::Provides { look_key: Some(&fv_provided_look_key), ..fv_inherited };
     out.push_str("<div class=\"shelf\">");
-    super::swatch::try_render(out, &super::swatch::Props { label: Cow::Borrowed(&*props.tone), size: None }, fv_provides)?;
-    super::swatch::try_render(out, &super::swatch::Props { label: Cow::Borrowed("fixed"), size: Some(Cow::Borrowed("xs")) }, fv_provides)?;
+    super::swatch::try_render(out, &super::swatch::Props {
+        label: Cow::Borrowed(&*props.tone),
+        size: None,
+    }, fv_provides)?;
+    super::swatch::try_render(out, &super::swatch::Props {
+        label: Cow::Borrowed("fixed"),
+        size: Some(Cow::Borrowed("xs")),
+    }, fv_provides)?;
     fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</div>");
     Ok(())

@@ -38,9 +38,15 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Tele
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports, fv_head: &fv::head::Head, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(62 + props.board.len());
+    out.reserve(
+        62
+        + props.board.len()
+    );
     let Some(l_0) = fv_loads.get(super::loaders::LoadRanking { board: String::from(&*props.board) }) else { return Ok(()); };
-    fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("ranks of {}", props.board)))])]))]));
+    fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+        ("name", fv::head::HeadValue::str("description")),
+        ("content", fv::head::HeadValue::str(&format!("ranks of {}", props.board))),
+    ])]))]));
     out.push_str("<!--[--><ol><!--[-->");
     for (fv_name, fv_score_ref) in l_0.scores.iter() {
         let fv_score = *fv_score_ref;
@@ -51,13 +57,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::rank_line::try_render(out, &super::rank_line::Props { best: l_0.best, worst: l_0.worst, open: l_0.open })?;
+    super::rank_line::try_render(out, &super::rank_line::Props {
+        best: l_0.best,
+        worst: l_0.worst,
+        open: l_0.open,
+    })?;
     fv::page::teleport_into(out, fv_teleports, "#ranks", false, &|out: &mut String| {
         out.push_str("<p class=\"board\">");
         fv::core::escape_into(out, &props.board);
         out.push_str("</p>");
     });
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: Cow::Borrowed(&*props.board), page: 1i64, drafts: None }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props {
+        article: Cow::Borrowed(&*props.board),
+        page: 1i64,
+        drafts: None,
+    }, fv_loads)?;
     out.push_str("<!--]-->");
     Ok(())
 }

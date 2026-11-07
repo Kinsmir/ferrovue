@@ -39,7 +39,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(252 + props.href.len() + props.label.len());
+    out.reserve(
+        252
+        + props.href.len()
+        + props.label.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ScopedNav.vue");
     out.push_str("<nav class=\"nav\" data-v-f60bf031>");
     fv::attrs::link_open(out, &fv_route.link("/blog/intro"), "page", "router-link-active", "router-link-active router-link-exact-active", &["tab"], true);

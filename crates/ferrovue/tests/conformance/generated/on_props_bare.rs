@@ -62,7 +62,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(16 + props.on_label.as_deref().map_or(0, str::len) + props.label.len());
+    out.reserve(
+        16
+        + props.on_label.as_deref().map_or(0, str::len)
+        + props.label.len()
+    );
     out.push_str("<b>");
     fv::core::escape_into(out, &props.label);
     out.push(':');

@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(74 + props.label.len());
+    out.reserve(
+        74
+        + props.label.len()
+    );
     out.push_str("<p class=\"basket");
     fv::attrs::class_into(out, true, &[if fv_stores.basket.ids.len() as i64 == 0 { "empty" } else { "" }]);
     out.push_str("\" data-v-0a3b973f>");

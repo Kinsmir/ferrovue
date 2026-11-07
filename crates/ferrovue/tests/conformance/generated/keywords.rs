@@ -75,7 +75,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(139 + props.r#type.len() + props.crate_.len() + props.r#match.as_deref().map_or(0, str::len) + props.r#async.as_deref().map_or(0, str::len));
+    out.reserve(
+        139
+        + props.r#type.len()
+        + props.crate_.len()
+        + props.r#match.as_deref().map_or(0, str::len)
+        + props.r#async.as_deref().map_or(0, str::len)
+    );
     if props.r#type.is_empty() {
         out.push_str("<section data-type><video");
     } else {

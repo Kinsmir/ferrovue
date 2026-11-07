@@ -123,6 +123,74 @@ function shortCow(code: string): string {
   return out + code.slice(last);
 }
 
+const WIDTH = 100;
+
+function wrapped(code: string): string {
+  return code.split("\n").flatMap(wrapLine).join("\n");
+}
+
+function wrapLine(line: string): string[] {
+  if (line.length <= WIDTH || line.trimStart().startsWith("//")) return [line];
+  const indent = /^ */.exec(line)![0];
+  for (let open = listOpen(line, 0); open >= 0; open = listOpen(line, open + 1)) {
+    const end = closing(line, open);
+    const fields = end < 0 ? [] : splitFields(line.slice(open + 1, end));
+    if (fields.length < 2) continue;
+    const body = fields.flatMap((f) => wrapLine(`${indent}    ${f}${f.startsWith("..") ? "" : ","}`));
+    return [line.slice(0, open + 1), ...body, ...wrapLine(`${indent}${line.slice(end)}`)];
+  }
+  return [line];
+}
+
+const OPENERS: RegExp = /(?<=::(?:Props|Slots) )\{ |(?<=fv::attrs::attrs_into\(out, &)\[|(?<=fv::head::HeadValue::object\()\[|(?<=^ *&)\[(?=\()|(?<=fv::attrs::Attr::styles?\()\[|(?<=fv::attrs::class_into\(out, (?:true|false), &)\[/y;
+
+function listOpen(line: string, from: number): number {
+  for (let i = from; i < line.length; i++) {
+    const ch = line[i]!;
+    if (ch === '"' || ch === "'") {
+      i = literalEnd(line, i);
+      continue;
+    }
+    OPENERS.lastIndex = i;
+    if (OPENERS.test(line)) return i;
+  }
+  return -1;
+}
+
+function splitFields(body: string): string[] {
+  const fields: string[] = [];
+  let last = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]!;
+    if (ch === '"' || ch === "'") i = literalEnd(body, i);
+    else if (ch === "(" || ch === "[" || ch === "{") i = closing(body, i);
+    else if (ch === "<" && body.startsWith("::", i - 2)) i = angleEnd(body, i);
+    else if (ch === "|") {
+      const end = body.indexOf("|", i + 1);
+      if (end > i) i = end;
+    } else if (ch === ",") {
+      fields.push(body.slice(last, i).trim());
+      last = i + 1;
+    }
+  }
+  fields.push(body.slice(last).trim());
+  return fields.filter((f) => f !== "");
+}
+
+function angleEnd(code: string, i: number): number {
+  let depth = 0;
+  for (let j = i; j < code.length; j++) {
+    const ch = code[j]!;
+    if (ch === "(" || ch === "[") j = closing(code, j);
+    else if (ch === "<") depth++;
+    else if (ch === ">" && code[j - 1] !== "-" && code[j - 1] !== "=") {
+      depth--;
+      if (depth === 0) return j;
+    }
+  }
+  return code.length;
+}
+
 /** How serde reads and writes a field's dates and unions mapped to an application's enums. */
 function serdeWith(f: Field): string {
   const absent = f.ty.k === "opt" && f.ty.none === undefined;
@@ -359,10 +427,12 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   if (!refuses) e.lines = unchecked(e.lines.join("\n")).split("\n");
   e.lines.push(refuses ? `    ${REFUSALS}.check(Ok(()))` : "    Ok(())");
   const text = textLen(comp, "props", { k: "struct", name: "Props" });
-  const fixed = e.literalBytes + scope.helperBytes.n;
-  const reserve = [...(fixed || !(e.perItem.length + text.length) ? [String(fixed)] : []), ...e.perItem, ...text];
+  const terms = [...e.perItem, ...text];
+  const fixed = terms.filter((t) => /^\d+$/.test(t)).reduce((n, t) => n + Number(t), e.literalBytes + scope.helperBytes.n);
+  const sized = terms.filter((t) => !/^\d+$/.test(t));
+  const reserve = [...(fixed || !sized.length ? [String(fixed)] : []), ...sized];
   if (refuses) e.lines.unshift(`    let ${REFUSALS} = fv::render::Refusals::new(NAME, ${rustStr(comp.file)});`);
-  e.lines.unshift(`    out.reserve(${reserve.join(" + ")});`);
+  e.lines.unshift(reserve.length > 1 ? `    out.reserve(\n${reserve.map((t, i) => `        ${i ? "+ " : ""}${t}`).join("\n")}\n    );` : `    out.reserve(${reserve[0]});`);
 
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";
   const gen = life ? "<'p, 'a>" : "<'p>";
@@ -450,7 +520,7 @@ ${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named
     fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props${named}| try_render(out, props${args})))${plan === null ? "" : `.dates(${rustStr(plan)})`}
 }
 `;
-  const render = shortCow(renderSource(comp, life, args, e));
+  const render = wrapped(shortCow(renderSource(comp, life, args, e)));
   return () => {
     const written = [...comp.structs.values()].filter((st) => st.name !== "Props" && !st.slot && (!comp.typeDecls.has(st.name) || comp.reached.has(st.name)));
     const structs = written.map((st) => structSource(st, comp, `/// \`${st.name}\` in \`${basename(comp.file)}\`.\n`)).join("\n");

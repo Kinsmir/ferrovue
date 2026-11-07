@@ -47,7 +47,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(141 + props.article.len());
+    out.reserve(
+        141
+        + props.article.len()
+    );
     let Some(l_0) = fv_loads.get(super::loaders::LoadComments { article: String::from(&*props.article), page: props.page, drafts: if props.drafts.unwrap_or(false) { Some(true) } else { None } }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadNote { page: l_0.len() as i64 }) else { return Ok(()); };
     if let Some(fv_note) = l_1.as_deref() {

@@ -44,7 +44,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(52 + props.tone.len());
+    out.reserve(
+        52
+        + props.tone.len()
+    );
     out.push_str("<div");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"bound\" style=\"--81358b73-tone:");
@@ -55,7 +58,12 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         }
         out.push_str(";\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("bound"))], fv_attrs.list(), &[], &[("style", fv::attrs::Attr::style([("--81358b73-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]], 2, "");
+        fv::attrs::attrs_into(out, &[
+            &[("class", fv::attrs::Attr::str("bound"))],
+            fv_attrs.list(),
+            &[],
+            &[("style", fv::attrs::Attr::style([("--81358b73-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))],
+        ], 2, "");
     }
     out.push('>');
     fv::core::escape_into(out, &props.tone);

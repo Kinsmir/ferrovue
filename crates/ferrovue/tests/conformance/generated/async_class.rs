@@ -47,7 +47,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(35 + props.tone.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        35
+        + props.tone.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<section>");
     super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tone)) == fv::strings::js_length(&props.tone) { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) })], ""))?;
     super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&format!(" {} ", props.tone))) == fv::strings::js_length(&format!(" {} ", props.tone)) { fv::attrs::Attr::Str(Cow::<str>::Owned(format!(" {} ", props.tone))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&format!(" {} ", props.tone)), &*format!(" {} ", props.tone)])) }), ("title", fv::attrs::Attr::str("g"))], ""))?;

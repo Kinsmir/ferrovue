@@ -49,7 +49,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(285 + 23 * props.days.len() + props.published.len() + props.updated.as_deref().map_or(0, str::len) + props.days.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        285
+        + 23 * props.days.len()
+        + props.published.len()
+        + props.updated.as_deref().map_or(0, str::len)
+        + props.days.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Dates.vue");
     let s_date = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_date_parse(&props.published), 6, 29));
     let s_moment = fv::date::js_time_clip(props.at as f64 + props.offset);

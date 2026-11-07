@@ -95,7 +95,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(67 + props.name.len() + 4);
+    out.reserve(
+        71
+        + props.name.len()
+    );
     out.push_str("<!--[--><p class=\"");
     fv::attrs::class_into(out, false, &[if props.tone == ExportedNamesTone::Loud { "loud" } else { "calm" }]);
     out.push_str("\" title=\"");

@@ -54,7 +54,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(506 + props.mode.len() + props.maybe.as_deref().map_or(0, str::len) + props.spell.as_deref().map_or(0, str::len));
+    out.reserve(
+        506
+        + props.mode.len()
+        + props.maybe.as_deref().map_or(0, str::len)
+        + props.spell.as_deref().map_or(0, str::len)
+    );
     out.push_str("<section><div contenteditable=\"");
     out.push_str(if props.on { "true" } else { "false" });
     out.push_str("\" spellcheck=\"");

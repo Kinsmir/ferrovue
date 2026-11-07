@@ -54,7 +54,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(76 + 41 * props.items.len() + props.items.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.heading.len() + props.selected.as_deref().map_or(0, str::len) + props.mark.as_deref().map_or(0, str::len));
+    out.reserve(
+        76
+        + 41 * props.items.len()
+        + props.items.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.heading.len()
+        + props.selected.as_deref().map_or(0, str::len)
+        + props.mark.as_deref().map_or(0, str::len)
+    );
     out.push_str("<fieldset><legend>");
     fv::core::escape_into(out, &props.heading);
     if let Some(fv_mark) = props.mark.as_deref() {

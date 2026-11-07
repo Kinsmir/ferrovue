@@ -40,7 +40,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(121 + 39 * props.items.len() + props.id.len() + props.label.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        121
+        + 39 * props.items.len()
+        + props.id.len()
+        + props.label.len()
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<div class=\"directed\"><p>");
     fv::core::escape_into(out, &props.label);
     if props.id.is_empty() {

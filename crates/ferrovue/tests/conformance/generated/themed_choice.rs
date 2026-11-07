@@ -153,7 +153,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(68 + 6 + 5 + props.label.len() + props.theme.len());
+    out.reserve(
+        79
+        + props.label.len()
+        + props.theme.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ThemedChoice.vue");
     let fv_inherited = fv_provides;
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), ..fv_inherited };
@@ -194,7 +198,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     out.push_str("</");
     out.push_str(fv_tag);
     out.push('>');
-    fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
+    fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props {
+        r#as: Some(super::tag_heading::TagHeadingAs::H3),
+        text: Cow::Borrowed(&*props.label),
+    }, super::tag_heading::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("heading") }, fv_provides, ""));
         })),

@@ -50,7 +50,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(33 + props.active.len() + props.title.len());
+    out.reserve(
+        33
+        + props.active.len()
+        + props.title.len()
+    );
     let fv_inherited = fv_provides;
     let s_active = &*props.active;
     let fv_provided_tabs_key = super::types::TabsState { active: Cow::Borrowed(s_active), count: props.count };

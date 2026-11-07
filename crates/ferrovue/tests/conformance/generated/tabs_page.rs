@@ -42,25 +42,45 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(29 + props.theme.len() + props.active.len() + props.inner.len() + props.names.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        29
+        + props.theme.len()
+        + props.active.len()
+        + props.inner.len()
+        + props.names.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/TabsPage.vue");
     let fv_inherited = fv_provides;
     let fv_provided_accent_key = props.theme.to_uppercase();
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme), size: Some(props.size), accent_key: Some(&*fv_provided_accent_key), ..fv_inherited };
     out.push_str("<main>");
     fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("direct") }, fv_provides, ""))?;
-    fv_refusals.check(super::tabs::try_render(out, &super::tabs::Props { active: Cow::Borrowed(&*props.active), count: props.names.len() as i64, title: Cow::Borrowed("outer") }, super::tabs::Slots {
+    fv_refusals.check(super::tabs::try_render(out, &super::tabs::Props {
+        active: Cow::Borrowed(&*props.active),
+        count: props.names.len() as i64,
+        title: Cow::Borrowed("outer"),
+    }, super::tabs::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             out.push_str("<!--[-->");
             for fv_n_ref in props.names.iter() {
                 let fv_n: &str = fv_n_ref;
-                fv_refusals.join(super::tab::try_render(out, &super::tab::Props { name: Cow::Borrowed(fv_n), title: Cow::Borrowed(fv_n) }, fv_provides));
+                fv_refusals.join(super::tab::try_render(out, &super::tab::Props {
+                    name: Cow::Borrowed(fv_n),
+                    title: Cow::Borrowed(fv_n),
+                }, fv_provides));
             }
             out.push_str("<!--]-->");
             fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("in a slot") }, fv_provides, ""));
-            fv_refusals.join(super::tabs::try_render(out, &super::tabs::Props { active: Cow::Borrowed(&*props.inner), count: 1i64, title: Cow::Borrowed("inner") }, super::tabs::Slots {
+            fv_refusals.join(super::tabs::try_render(out, &super::tabs::Props {
+                active: Cow::Borrowed(&*props.inner),
+                count: 1i64,
+                title: Cow::Borrowed("inner"),
+            }, super::tabs::Slots {
                 default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                    fv_refusals.join(super::tab::try_render(out, &super::tab::Props { name: Cow::Borrowed(&*props.inner), title: Cow::Borrowed("nearer") }, fv_provides));
+                    fv_refusals.join(super::tab::try_render(out, &super::tab::Props {
+                        name: Cow::Borrowed(&*props.inner),
+                        title: Cow::Borrowed("nearer"),
+                    }, fv_provides));
                     true
                 }),
             }, fv_provides));
@@ -79,7 +99,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
             true
         }),
     }, fv_provides, &fv::attrs::Attrs::NONE))?;
-    fv_refusals.check(super::tab::try_render(out, &super::tab::Props { name: Cow::Borrowed("alone"), title: Cow::Borrowed("no tabs") }, fv_provides))?;
+    fv_refusals.check(super::tab::try_render(out, &super::tab::Props {
+        name: Cow::Borrowed("alone"),
+        title: Cow::Borrowed("no tabs"),
+    }, fv_provides))?;
     out.push_str("</main>");
     fv_refusals.check(Ok(()))
 }

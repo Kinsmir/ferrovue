@@ -42,7 +42,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(208 + props.amount.len() + props.name.len() + props.note.len());
+    out.reserve(
+        208
+        + props.amount.len()
+        + props.name.len()
+        + props.note.len()
+    );
     let s_n = props.count;
     let s_p = props.price;
     let s_a = &*props.amount;

@@ -102,7 +102,10 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push_str(if props.price == 2.5 { "true" } else { "false" });
     out.push_str(if props.ratio != 0.0 && !props.ratio.is_nan() { "<b>truthy</b>" } else { "<!---->" });
     out.push_str(if !(props.ratio != 0.0 && !props.ratio.is_nan()) { "<i>falsy</i></p>" } else { "<!----></p>" });
-    super::meter::try_render(out, &super::meter::Props { value: props.ratio, max: props.qty as f64 })?;
+    super::meter::try_render(out, &super::meter::Props {
+        value: props.ratio,
+        max: props.qty as f64,
+    })?;
     out.push_str("</div>");
     Ok(())
 }

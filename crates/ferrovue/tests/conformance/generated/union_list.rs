@@ -114,7 +114,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(243 + 8 * props.extra.as_deref().unwrap_or(&[]).len() + 7 * props.spare.as_deref().unwrap_or(&[]).len() + 7 * props.holes.len() + 18 * props.sizes.len() + 9 * props.hues.len() + 9 * props.holes.len() + props.named.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.label.len() + 2 * props.sizes.len());
+    out.reserve(
+        243
+        + 8 * props.extra.as_deref().unwrap_or(&[]).len()
+        + 7 * props.spare.as_deref().unwrap_or(&[]).len()
+        + 7 * props.holes.len()
+        + 18 * props.sizes.len()
+        + 9 * props.hues.len()
+        + 9 * props.holes.len()
+        + props.named.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>()
+        + props.label.len()
+        + 2 * props.sizes.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/UnionList.vue");
     let s_warm = props.hues.iter().copied().filter(|fv_h| *fv_h != super::types::Hue::Green).collect::<Vec<_>>();
     out.push_str("<!--[--><p title=\"");
@@ -135,11 +146,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for (fv_i, fv_h_ref) in props.hues.iter().enumerate() {
         let fv_h_2 = *fv_h_ref;
         let fv_i = fv_i as i64;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(fv_h_2), wide: Some(match fv_h_2 { super::types::Hue::Red => super::union_list_item::UnionListItemWide::Red, super::types::Hue::Green => super::union_list_item::UnionListItemWide::Green, super::types::Hue::BHue => super::union_list_item::UnionListItemWide::BHue }), hues: props.hues.to_vec(), extra: None, label: Cow::Borrowed(&*format!("{} {}", props.label, fv::core::Js(fv_i))) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props {
+            hue: Some(fv_h_2),
+            wide: Some(match fv_h_2 { super::types::Hue::Red => super::union_list_item::UnionListItemWide::Red, super::types::Hue::Green => super::union_list_item::UnionListItemWide::Green, super::types::Hue::BHue => super::union_list_item::UnionListItemWide::BHue }),
+            hues: props.hues.to_vec(),
+            extra: None,
+            label: Cow::Borrowed(&*format!("{} {}", props.label, fv::core::Js(fv_i))),
+        }))?;
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_warm.to_vec(), extra: props.extra.as_ref().map(|v| v.to_vec()), label: Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.to_vec(), extra: Some(props.spare.as_deref().unwrap_or(&[]).to_vec()), label: Cow::Borrowed(&*props.label) }))?;
+    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props {
+        hue: None,
+        wide: None,
+        hues: s_warm.to_vec(),
+        extra: props.extra.as_ref().map(|v| v.to_vec()),
+        label: Cow::Borrowed(&*props.label),
+    }))?;
+    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props {
+        hue: None,
+        wide: None,
+        hues: props.hues.to_vec(),
+        extra: Some(props.spare.as_deref().unwrap_or(&[]).to_vec()),
+        label: Cow::Borrowed(&*props.label),
+    }))?;
     out.push_str("<!--[-->");
     for fv_h_ref_2 in props.extra.as_deref().unwrap_or(&[]).iter() {
         let fv_h_3 = *fv_h_ref_2;
@@ -166,12 +195,24 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--><!--[-->");
     for fv_h_ref_5 in props.holes.iter() {
         let fv_h_6 = *fv_h_ref_5;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: fv_h_6, wide: None, hues: Vec::new(), extra: None, label: Cow::Borrowed(&*props.label) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props {
+            hue: fv_h_6,
+            wide: None,
+            hues: Vec::new(),
+            extra: None,
+            label: Cow::Borrowed(&*props.label),
+        }))?;
     }
     out.push_str("<!--]--><!--[-->");
     for (fv_k, fv_h_ref_6) in props.named.iter() {
         let fv_h_7: &str = fv_h_ref_6;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(match fv_h_7.parse::<super::types::Hue>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::render::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 57); super::types::Hue::Red } }), wide: None, hues: Vec::new(), extra: None, label: Cow::Borrowed(fv_k) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props {
+            hue: Some(match fv_h_7.parse::<super::types::Hue>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::render::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 57); super::types::Hue::Red } }),
+            wide: None,
+            hues: Vec::new(),
+            extra: None,
+            label: Cow::Borrowed(fv_k),
+        }))?;
     }
     out.push_str("<!--]--><q title=\"");
     fv::core::escape_join(out, props.holes.iter().map(|v| v.map(fv::props::Union::as_str)).map(|v| v.unwrap_or("")), ",");

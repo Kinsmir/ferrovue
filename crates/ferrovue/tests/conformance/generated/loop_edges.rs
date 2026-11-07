@@ -103,7 +103,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(108 + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.text.len() + 4);
+    out.reserve(
+        112
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+        + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>()
+        + props.text.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/LoopEdges.vue");
     let s_kept = props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv::strings::js_trim(fv_t).is_empty()).map(|fv_t_2| Cow::<str>::Owned(fv::strings::js_trim(&fv_t_2).to_owned())).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_lengths = std::cell::LazyCell::new(|| props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t_3| { let mut fv_count: f64 = 0.0f64; for fv_ch in fv_t_3.split_inclusive(|_: char| true) { if fv_ch != " " { fv_count += 1.0; } } fv_refusals.keep(fv::render::try_int(fv_count), 138, 5) }).collect::<Vec<_>>());

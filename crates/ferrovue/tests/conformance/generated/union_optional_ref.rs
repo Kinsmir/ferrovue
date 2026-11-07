@@ -126,7 +126,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(94 + 7 + props.note.as_deref().map_or(0, str::len) + props.label.len());
+    out.reserve(
+        101
+        + props.note.as_deref().map_or(0, str::len)
+        + props.label.len()
+    );
     let s_mood = props.start.map(|v| match v { super::types::Mood::Calm => UnionOptionalRefMood::Calm, super::types::Mood::Loud => UnionOptionalRefMood::Loud, super::types::Mood::QX => UnionOptionalRefMood::QX });
     if props.label.is_empty() {
         out.push_str("<section title>");
@@ -135,12 +139,30 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { Some(UnionOptionalRefMood::Calm) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, card: None, label: Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, card: Some(super::types::MoodCard { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, spare: match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None }, note: Cow::<str>::Borrowed(props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or(&props.label)) }), label: Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None }, label: Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match s_mood { Some(UnionOptionalRefMood::Calm) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::Loud) => super::types::Mood::QX, Some(UnionOptionalRefMood::QX) => super::types::Mood::Calm }), label: Cow::Borrowed(props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or("-")) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props {
+        mood: match s_mood { Some(UnionOptionalRefMood::Calm) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX },
+        card: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props {
+        mood: match s_mood { Some(UnionOptionalRefMood::Calm) => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX },
+        card: Some(super::types::MoodCard { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, spare: match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None }, note: Cow::<str>::Borrowed(props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or(&props.label)) }),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None },
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: Some(match s_mood { Some(UnionOptionalRefMood::Calm) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::Loud) => super::types::Mood::QX, Some(UnionOptionalRefMood::QX) => super::types::Mood::Calm }),
+        label: Cow::Borrowed(props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or("-")),
+    })?;
     if let Some((fv_mood, fv_mood_2)) = match s_mood { Some(UnionOptionalRefMood::Calm) => Some((UnionOptionalRefMood::Calm, super::types::Mood::Calm)), Some(UnionOptionalRefMood::Loud) => Some((UnionOptionalRefMood::Loud, super::types::Mood::Loud)), Some(UnionOptionalRefMood::QX) => Some((UnionOptionalRefMood::QX, super::types::Mood::QX)), Some(UnionOptionalRefMood::Empty) | None => None } {
-        super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood_2, card: None, label: Cow::Borrowed(fv::props::Union::as_str(fv_mood)) })?;
+        super::union_mood_card::try_render(out, &super::union_mood_card::Props {
+            mood: fv_mood_2,
+            card: None,
+            label: Cow::Borrowed(fv::props::Union::as_str(fv_mood)),
+        })?;
     } else {
         out.push_str("<i>");
         fv::core::escape_into(out, &props.label);
@@ -150,7 +172,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<i>empty</i>");
     } else {
         if let Some(fv_mood_3) = match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None } {
-            super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv_mood_3), label: Cow::Borrowed(&*props.label) })?;
+            super::union_badge::try_render(out, &super::union_badge::Props {
+                mood: Some(fv_mood_3),
+                label: Cow::Borrowed(&*props.label),
+            })?;
         } else {
             out.push_str("<!---->");
         }

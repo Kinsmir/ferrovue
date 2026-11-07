@@ -50,7 +50,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(213 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
+    out.reserve(
+        213
+        + props.text.len()
+        + props.other.len()
+        + props.sep.len()
+        + props.fill.as_deref().map_or(0, str::len)
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Strings.vue");
     let s_initial = fv::strings::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
     let s_words = fv::strings::js_split(&props.text, " ").into_iter().map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();

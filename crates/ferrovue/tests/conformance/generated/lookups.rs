@@ -65,12 +65,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(234 + 48 * props.badges.len() + 2 + 6 + props.badges.iter().map(|v| 6 + v.text.len()).sum::<usize>() + 5);
+    out.reserve(
+        247
+        + 48 * props.badges.len()
+        + props.badges.iter().map(|v| 6 + v.text.len()).sum::<usize>()
+    );
     let s_padding = match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" };
     let s_shout = if props.loud { "lg" } else { "sm" };
     let s_heading = format!("{} / {}", (match s_shout { "lg" => "Large \"L\"", _ => "Small" }), fv::core::Js(match props.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 600.0f64, super::types::Tone::Danger => 700.5f64 }));
     out.push_str("<section class=\"");
-    fv::attrs::class_into(out, false, &[match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" }, if !matches!(props.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "light" }]);
+    fv::attrs::class_into(out, false, &[
+        match props.size { super::types::Size::Sm => "p-1", super::types::Size::Md => "p-2", super::types::Size::Lg => "p-4" },
+        if !matches!(props.tone, super::types::Tone::Info | super::types::Tone::Warn) { "dark" } else { "light" },
+    ]);
     out.push_str("\" style=\"color:");
     fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "<b>\"&amp;'", super::types::Tone::Danger => "white" });
     out.push_str(";background:");

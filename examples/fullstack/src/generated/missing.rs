@@ -38,8 +38,20 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(154 + props.path.len());
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("Not found")), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("robots")), ("content", fv::head::HeadValue::str("noindex"))]), fv::head::HeadValue::object([("name", fv::head::HeadValue::str("description")), ("content", fv::head::HeadValue::str(&format!("Nothing lives at {}", props.path)))])]))]));
+    out.reserve(
+        154
+        + props.path.len()
+    );
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str("Not found")),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("robots")),
+            ("content", fv::head::HeadValue::str("noindex")),
+        ]), fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("description")),
+            ("content", fv::head::HeadValue::str(&format!("Nothing lives at {}", props.path))),
+        ])])),
+    ]));
     out.push_str("<section class=\"not-found\"><h1>Not found</h1><p>Nothing lives at <code>");
     fv::core::escape_into(out, &props.path);
     out.push_str("</code>.</p>");

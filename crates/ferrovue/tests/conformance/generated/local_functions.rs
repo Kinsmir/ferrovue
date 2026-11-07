@@ -78,7 +78,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(92 + props.members.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + props.unit.as_deref().map_or(0, str::len));
+    out.reserve(
+        92
+        + props.members.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.lead.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len))
+        + props.unit.as_deref().map_or(0, str::len)
+    );
     let s_visible = fv::strings::js_slice_items(props.members.iter(), 0.0f64, Some(3.0f64)).map(|fv_m| { let fv_unit = props.unit.as_deref(); { let fv_parts = &[&*(if let Some(fv_title) = fv_m.title.as_deref().filter(|v| !v.is_empty()) { Cow::<str>::Owned(format!("{} {}", fv_title, fv_m.name)) } else { Cow::<str>::Borrowed(&*fv_m.name) }), &*{ let fv_unit_2 = fv_unit.unwrap_or("pts"); if fv_m.score as f64 >= props.limit as f64 { Cow::<str>::Owned(format!("{} {}!", fv::core::Js(fv_m.score), fv_unit_2)) } else { Cow::<str>::Owned(format!("{} {}", fv::core::Js(fv_m.score), fv_unit_2)) } }, if fv_m.score as f64 >= 90.0 { "A" } else { if fv_m.score as f64 >= 50.0 { "B" } else { "C" } }]; Cow::<str>::Owned(fv_parts.iter().map(|v| &**v).collect::<Vec<_>>().join(" · ")) } }).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     if let Some(fv_lead) = props.lead.as_ref() {
         out.push_str("<section><h2>");

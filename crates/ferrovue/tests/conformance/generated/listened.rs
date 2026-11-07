@@ -40,7 +40,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(48 + props.id.len() + props.label.len());
+    out.reserve(
+        48
+        + props.id.len()
+        + props.label.len()
+    );
     if props.id.is_empty() {
         out.push_str("<div class=\"row\" id>");
     } else {

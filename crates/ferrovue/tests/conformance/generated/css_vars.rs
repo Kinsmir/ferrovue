@@ -63,7 +63,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(380 + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len());
+    out.reserve(
+        380
+        + props.color.len()
+        + props.label.as_deref().map_or(0, str::len)
+        + props.font.len()
+    );
     let s_doubled = props.size as f64 * 2.0;
     let s_theme = props.label.as_deref().unwrap_or("plain");
     out.push_str("<section");
@@ -114,7 +119,33 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         fv::core::push_int(out, props.size);
         out.push_str(";\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("vars")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("margin", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("1"))]), fv::attrs::Attr::style([("padding", fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}px", fv::core::Js(props.size))))), ("color", fv::attrs::Attr::str(&props.color))])]))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--b3187d50-color", if props.color.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.color) }), ("--b3187d50-doubled\\ \\+\\ \\\"px\\\"", if format!("{}px", fv::core::Js(s_doubled)).is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}px", fv::core::Js(s_doubled)))) }), ("--b3187d50-accent", fv::attrs::Attr::str("teal")), ("--b3187d50-label", match props.label.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--b3187d50-font", if props.font.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.font) }), ("--b3187d50-theme", if s_theme.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(s_theme) }), ("--b3187d50-ratio", fv::attrs::Attr::Float(props.ratio)), ("--b3187d50-gap", match props.gap { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") }), ("--b3187d50-size", fv::attrs::Attr::Int(props.size))]))]], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("class", fv::attrs::Attr::str("vars")),
+                ("style", fv::attrs::Attr::styles([
+                    fv::attrs::Attr::style([
+                        ("margin", fv::attrs::Attr::str("0")),
+                        ("--own", fv::attrs::Attr::str("1")),
+                    ]),
+                    fv::attrs::Attr::style([
+                        ("padding", fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}px", fv::core::Js(props.size))))),
+                        ("color", fv::attrs::Attr::str(&props.color)),
+                    ]),
+                ])),
+            ],
+            fv_attrs.list(),
+            &[("style", fv::attrs::Attr::style([
+                ("--b3187d50-color", if props.color.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.color) }),
+                ("--b3187d50-doubled\\ \\+\\ \\\"px\\\"", if format!("{}px", fv::core::Js(s_doubled)).is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}px", fv::core::Js(s_doubled)))) }),
+                ("--b3187d50-accent", fv::attrs::Attr::str("teal")),
+                ("--b3187d50-label", match props.label.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }),
+                ("--b3187d50-font", if props.font.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.font) }),
+                ("--b3187d50-theme", if s_theme.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(s_theme) }),
+                ("--b3187d50-ratio", fv::attrs::Attr::Float(props.ratio)),
+                ("--b3187d50-gap", match props.gap { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") }),
+                ("--b3187d50-size", fv::attrs::Attr::Int(props.size)),
+            ]))],
+        ], 1, "");
     }
     out.push_str(" data-v-b3187d50><h2 data-v-b3187d50>");
     if let Some(v) = props.label.as_deref() {

@@ -693,7 +693,11 @@ defineProps<{ scores: Record<string, number> }>();
 #
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(25 + 25 * props.scores.len() + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>());
+    out.reserve(
+        25
+        + 25 * props.scores.len()
+        + props.scores.iter().map(|(k, _)| k.len()).sum::<usize>()
+    );
     out.push_str("<ol><!--[-->");
     for (i, (name, score_ref)) in props.scores.iter().enumerate() {
         let score = *score_ref;

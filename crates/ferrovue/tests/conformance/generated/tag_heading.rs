@@ -119,7 +119,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(40 + 2 + props.text.len());
+    out.reserve(
+        42
+        + props.text.len()
+    );
     let fv_tag = match props.r#as.unwrap_or(TagHeadingAs::H2) { TagHeadingAs::H1 => "h1", TagHeadingAs::H2 => "h2", TagHeadingAs::H3 => "h3" };
     out.push('<');
     out.push_str(fv_tag);
@@ -132,7 +135,13 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
             out.push('"');
         }
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("heading")), ("title", fv::attrs::Attr::str(&props.text))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("class", fv::attrs::Attr::str("heading")),
+                ("title", fv::attrs::Attr::str(&props.text)),
+            ],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push_str(&fv::attrs::scope_attrs(fv_attrs.ids(), "data-v-0fcbdc2a", ""));
     out.push('>');

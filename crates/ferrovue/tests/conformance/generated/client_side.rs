@@ -47,7 +47,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(192 + props.title.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        192
+        + props.title.len()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<section class=\"client-side\" data-v-2da87e5e><h2 data-v-2da87e5e>");
     fv::core::escape_into(out, &props.title);
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {

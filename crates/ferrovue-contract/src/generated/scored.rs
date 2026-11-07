@@ -70,7 +70,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(43 + props.score.0.len() + props.extra.as_ref().map_or(0, |v| v.0.len()));
+    out.reserve(
+        43
+        + props.score.0.len()
+        + props.extra.as_ref().map_or(0, |v| v.0.len())
+    );
     if props.score.0.is_empty() {
         out.push_str("<p title>");
     } else {

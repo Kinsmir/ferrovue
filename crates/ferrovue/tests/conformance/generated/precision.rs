@@ -40,7 +40,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(152 + props.label.len());
+    out.reserve(
+        152
+        + props.label.len()
+    );
     let s_sum = props.x + props.n as f64;
     let s_shown = format!("{}: {}", props.label, fv::core::js_to_precision(props.x, 3));
     if fv::core::js_to_precision(props.x, 2).is_empty() {

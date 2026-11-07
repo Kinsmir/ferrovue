@@ -67,7 +67,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(201 + props.items.iter().map(|v| v.label.len() + v.note.as_deref().map_or(0, str::len) + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.query.len());
+    out.reserve(
+        201
+        + props.items.iter().map(|v| v.label.len() + v.note.as_deref().map_or(0, str::len) + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.query.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Arrays.vue");
     let s_cheap = props.items.iter().filter(|fv_i| fv_i.price < 10.0).collect::<Vec<_>>();
     let s_labels = props.items.iter().map(|fv_i_2| Cow::<str>::Owned(fv_i_2.label.to_uppercase())).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
@@ -160,10 +165,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]-->|");
     fv::core::escape_into(out, &(if !props.query.is_empty() { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w_10| fv_w_10.contains(&*props.query)).map(|v| Cow::<str>::Owned(v.into_owned())) } else { None }).unwrap_or(Cow::<str>::Borrowed("?")));
     out.push_str("</p>");
-    fv_refusals.check(super::chips::try_render(out, &super::chips::Props { chips: props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_11| **fv_w_11 != *props.query).collect(), counts: Some(props.nums.iter().copied().map(|fv_n_7| fv_refusals.keep(fv::render::try_int(fv_n_7 as f64 + 1.0), 33, 79)).collect()), marks: None }))?;
+    fv_refusals.check(super::chips::try_render(out, &super::chips::Props {
+        chips: props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_11| **fv_w_11 != *props.query).collect(),
+        counts: Some(props.nums.iter().copied().map(|fv_n_7| fv_refusals.keep(fv::render::try_int(fv_n_7 as f64 + 1.0), 33, 79)).collect()),
+        marks: None,
+    }))?;
     out.push_str("<!--[-->");
     for fv_item_6 in props.items.iter().filter(|fv_i_12| fv_i_12.tags.len() as i64 > 1) {
-        fv_refusals.check(super::chips::try_render(out, &super::chips::Props { chips: fv::strings::js_slice_items(fv_item_6.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect(), counts: None, marks: None }))?;
+        fv_refusals.check(super::chips::try_render(out, &super::chips::Props {
+            chips: fv::strings::js_slice_items(fv_item_6.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect(),
+            counts: None,
+            marks: None,
+        }))?;
     }
     out.push_str("<!--]--></section>");
     fv_refusals.check(Ok(()))

@@ -59,7 +59,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(119 + props.tint.len());
+    out.reserve(
+        119
+        + props.tint.len()
+    );
     out.push_str("<b");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"leaf\" style=\"color:");
@@ -78,7 +81,17 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
             out.push_str(";--b3dfb8d3-width:initial;\"");
         }
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("leaf")), ("style", fv::attrs::Attr::style([("color", fv::attrs::Attr::str(&props.tint))]))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--b3dfb8d3-tint", if props.tint.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tint) }), ("--b3dfb8d3-width", match props.width { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") })]))]], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("class", fv::attrs::Attr::str("leaf")),
+                ("style", fv::attrs::Attr::style([("color", fv::attrs::Attr::str(&props.tint))])),
+            ],
+            fv_attrs.list(),
+            &[("style", fv::attrs::Attr::style([
+                ("--b3dfb8d3-tint", if props.tint.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tint) }),
+                ("--b3dfb8d3-width", match props.width { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") }),
+            ]))],
+        ], 1, "");
     }
     out.push_str(" data-v-b3dfb8d3>");
     fv::render::slot_into(out, fv_slots.default, None);

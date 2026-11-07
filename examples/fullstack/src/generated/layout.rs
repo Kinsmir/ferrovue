@@ -45,8 +45,14 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(311 + props.shop.len());
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.shop)), ("titleTemplate", fv::head::HeadValue::str(&format!("%s · {}", props.shop)))]));
+    out.reserve(
+        311
+        + props.shop.len()
+    );
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str(&props.shop)),
+        ("titleTemplate", fv::head::HeadValue::str(&format!("%s · {}", props.shop))),
+    ]));
     out.push_str("<div class=\"layout\"><header>");
     {
         let fv_link = {

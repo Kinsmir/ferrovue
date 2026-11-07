@@ -44,7 +44,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(60 + props.to.len());
+    out.reserve(
+        60
+        + props.to.len()
+    );
     {
         let fv_link = fv_route.link(&props.to);
         if fv_attrs.is_empty() {
@@ -53,7 +56,14 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_route: &fv::rou
             out.push_str(&fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
         } else {
             out.push_str("<a");
-            fv::attrs::attrs_into(out, &[&[("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }), ("href", fv::attrs::Attr::str(&fv_link.href)), ("class", fv::attrs::Attr::str(if fv_link.exact { "router-link-active router-link-exact-active" } else if fv_link.active { "router-link-active" } else { "" }))], &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link")), ("title", fv::attrs::Attr::str("own"))], fv_attrs.list()])], 1, &fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
+            fv::attrs::attrs_into(out, &[
+                &[
+                    ("aria-current", if fv_link.exact { fv::attrs::Attr::str("page") } else { fv::attrs::Attr::Undefined }),
+                    ("href", fv::attrs::Attr::str(&fv_link.href)),
+                    ("class", fv::attrs::Attr::str(if fv_link.exact { "router-link-active router-link-exact-active" } else if fv_link.active { "router-link-active" } else { "" })),
+                ],
+                &fv::attrs::merge_props(&[&[("class", fv::attrs::Attr::str("link")), ("title", fv::attrs::Attr::str("own"))], fv_attrs.list()]),
+            ], 1, &fv::attrs::scope_attrs(fv_attrs.ids(), "", ""));
         }
         out.push_str(">go</a>");
     }

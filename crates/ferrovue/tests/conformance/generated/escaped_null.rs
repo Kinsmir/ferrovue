@@ -51,9 +51,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(84 + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        84
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<div class=\"escaped-null\">");
-    super::null_child::try_render(out, &super::null_child::Props { value: props.note.as_deref().map(Cow::Borrowed), entry: None }, super::null_child::Slots {
+    super::null_child::try_render(out, &super::null_child::Props {
+        value: props.note.as_deref().map(Cow::Borrowed),
+        entry: None,
+    }, super::null_child::Slots {
         default: None,
     })?;
     out.push_str("<!--[--><i");
