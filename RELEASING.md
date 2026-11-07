@@ -14,7 +14,11 @@ becomes public until a maintainer approves it, once on each registry.
    into one that describes it as it ships, and check each path, code and version an entry names
    against the code. Each entry is a change a user of the crates or the npm package can notice, in
    at most two lines ending with a link to the guide page that holds its detail. A release ships
-   such a change, so `release.ts bump` refuses an empty section. Its subsections are those of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), each at most once and in
+   such a change, so `release.ts bump` refuses an empty section. The section opens with a line
+   saying whether the release changes the HTML pages render, `Rendered output: unchanged.` or
+   `Rendered output: changes for …` naming each construct, checked against the conformance fixtures
+   recorded in the cycle (`git log <last tag>..main -- '*.html'`); `release.ts bump` refuses a
+   section without it, and the GitHub release's notes carry it. Its subsections are those of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), each at most once and in
    this order: `### Added`, `### Changed`, `### Deprecated`, `### Removed`, `### Fixed`,
    `### Security`. `release.ts bump` and `release.ts check` refuse any other heading or order.
 2. Choose the version. While the crates are at 0.x, a release that breaks a public API bumps the

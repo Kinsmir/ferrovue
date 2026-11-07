@@ -5,8 +5,12 @@ released together and share version numbers. The format follows
 [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and the guide holds each change's detail.
 The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 [CHANGELOG.md at v0.11.0](https://github.com/Kinsmir/ferrovue/blob/v0.11.0/CHANGELOG.md).
+From 0.16.0, each version opens with a line saying whether it changes the HTML pages render, and
+for which constructs, so a project knows whether to record its fixtures again.
 
 ## [Unreleased]
+
+Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes.
 
 ### Added
 

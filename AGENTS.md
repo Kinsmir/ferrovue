@@ -72,6 +72,11 @@ reference; this file is the short version.
   something added in the same cycle goes into that thing's entry; an entry of its own under
   `Fixed` is for a bug the last release has, worded as a fix of that release. A released section
   changes only to correct a fact that was wrong about that release.
+- Each version's notes open with a `Rendered output:` line, before the subsections: `Rendered
+  output: unchanged.` or `Rendered output: changes for …`, naming the constructs whose HTML a
+  release changes, so a project knows whether to record its fixtures again. A change of rendered
+  output updates the line under `## [Unreleased]`; `release.ts bump` and `release.ts check` refuse
+  notes without it.
 - A CHANGELOG entry is at most two lines: a short statement of the change, then, if needed, a bit
   of detail ending with a link to the docs.rs guide page that covers it. Lists of items, steps and
   reasons go in that page, and a breaking change links its section of the upgrade guide.
