@@ -10,7 +10,7 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ### Fixed
 
-- `"whitespace": "trim-edges"` and `trimEdges` trim edge whitespace only when it holds a line break, so `<span> by </span>` keeps its spaces; 0.15.0 rendered `<span>by</span>`.
+- `"whitespace": "trim-edges"` and `trimEdges` trim edge whitespace only when it holds a line break, and render a line break between two inline elements as a space, as a formatter reads both; 0.15.0 rendered `<span> by </span>` as `<span>by</span>`, and `<span>by</span>` and `<a>` on two lines without a space.
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 
 ## [0.15.0] - 2026-11-06

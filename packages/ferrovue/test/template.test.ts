@@ -943,6 +943,27 @@ describe("whitespace", () => {
     expect(pushed(trimmed("<p>{{ 1 }} by </p>"))).toMatch(/ by <\/p>$/);
   });
 
+  it("renders a line break between two inline HTML elements as one space with `trim-edges`", () => {
+    expect(pushed(render(sfc("", "<p>\n  <span>by</span>\n  <a>x</a>\n</p>")))).toBe("<p><span>by</span><a>x</a></p>");
+    expect(pushed(trimmed("<p>\n  <span>by</span>\n  <a>x</a>\n</p>"))).toBe("<p><span>by</span> <a>x</a></p>");
+    expect(pushed(trimmed("<p><span>by</span>\r\n<img alt=\"\">\n<button>b</button><svg></svg>\n<math></math></p>"))).toBe('<p><span>by</span> <img alt=\\"\\"> <button>b</button><svg></svg> <math></math></p>');
+    expect(pushed(trimmed("<p><span>a</span><b>b</b></p>"))).toBe("<p><span>a</span><b>b</b></p>");
+    expect(pushed(trimmed("<ul>\n  <li>a</li>\n  <li>b</li>\n</ul>"))).toBe("<ul><li>a</li><li>b</li></ul>");
+    expect(pushed(trimmed("<div>\n  <div>a</div>\n  <span>b</span>\n  <p>c</p>\n</div>"))).toBe("<div><div>a</div><span>b</span><p>c</p></div>");
+    expect(pushed(trimmed("<p>a<br>\n<span>b</span></p>"))).toBe("<p>a<br><span>b</span></p>");
+    expect(pushed(trimmed("<p><svg><path d=\"a\"/>\n<path d=\"b\"/></svg></p>"))).toBe('<p><svg><path d=\\"a\\"></path><path d=\\"b\\"></path></svg></p>');
+    expect(pushed(trimmed("<span>a</span>\n<span>b</span>"))).toBe("<!--[--><span>a</span><span>b</span><!--]-->");
+  });
+
+  it("keeps Vue's spacing around components, comments and `v-if` branches with `trim-edges`", () => {
+    const child = `<template><i>c</i></template>`;
+    expect(pushed(trimmed("<p>\n  <Child />\n  <span>b</span>\n</p>", { Child: child }))).not.toContain(" <span>");
+    expect(pushed(trimmed("<p>\n  <span>a</span><!-- c -->\n  <span>b</span>\n</p>"))).toBe("<p><span>a</span><!-- c --><span>b</span></p>");
+    const branches = pushed(trimmed('<p>\n  <b v-if="true">x</b>\n  <i v-else>y</i>\n  <a>z</a>\n</p>'));
+    expect(branches).toContain(" <a>z</a>");
+    expect(branches).not.toContain(" <i>");
+  });
+
   it("keeps `&nbsp;`, the content of `<template v-if>` and of a slot's fallback, and the text of `pre`, `textarea`, `v-pre` and a `white-space: pre` style", () => {
     expect(pushed(trimmed("<p>&nbsp;x&nbsp;</p>"))).toBe("<p> x </p>");
     expect(pushed(trimmed('<p><template v-if="true"> a </template></p>'))).toContain("<!--[--> a <!--]-->");

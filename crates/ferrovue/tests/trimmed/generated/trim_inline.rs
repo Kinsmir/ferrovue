@@ -43,16 +43,16 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(124 + props.label.len() + props.name.len());
-    out.push_str("<p><span> by </span><a>");
+    out.reserve(319 + props.label.len() + props.name.len());
+    out.push_str("<div><p><span> by </span><a>");
     fv::core::escape_into(out, &props.name);
-    out.push_str("</a><span>signed in through </span>");
+    out.push_str("</a> <span>signed in through </span>");
     fv::core::escape_into(out, &props.label);
-    out.push_str(" <span> · </span><b>");
+    out.push_str(" <span> · </span> <b>");
     fv::core::escape_into(out, &props.label);
-    out.push_str(" and </b><i> to ");
+    out.push_str(" and </b> <i> to ");
     fv::core::escape_into(out, &props.name);
-    out.push_str("</i><em> to ");
+    out.push_str("</i> <em> to ");
     fv::core::escape_into(out, &props.label);
     out.push_str(" by </em>");
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("inline") }, super::trim_button::Slots {
@@ -62,7 +62,28 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         })),
         after: None,
     })?;
-    out.push_str("</p>");
+    out.push_str("</p><p class=\"tagline\">submitted <span class=\"tagline-word\">by</span> <a class=\"author\" href=\"/u/");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("\">");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("</a> ");
+    if !props.label.is_empty() {
+        out.push_str("<b>");
+        fv::core::escape_into(out, &props.label);
+        out.push_str("</b>");
+    } else {
+        out.push_str("<i>none</i>");
+    }
+    out.push_str(" <img alt=\"\">");
+    super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("next") }, super::trim_button::Slots {
+        default: None,
+        after: None,
+    })?;
+    out.push_str("<span>after</span></p><ul><li>");
+    fv::core::escape_into(out, &props.label);
+    out.push_str("</li><li>");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("</li></ul></div>");
     Ok(())
 }
 
