@@ -66,6 +66,17 @@ describe("text", () => {
     const out = compile(island(component("on: boolean", `<p>{{ on ? ${literal} : "b" }}</p>`))).get("x.rs")!;
     expect(out).toContain("fv::core::escape_into(out, if props.on {");
   });
+
+  it("writes a lookup whose values need no escaping with no escaping", () => {
+    const out = compile(island(component(`size: "sm" | "lg"`, `<p :title="NAMES[size]">{{ NAMES[size] }}</p>`, `const NAMES = { sm: "small", lg: "large" } as const;\n`))).get("x.rs")!;
+    expect(out).not.toContain("escape_into");
+    expect(out).toMatch(/out\.push_str\(match props\.size \{ [^}]*=> "small", [^}]*=> "large" \}\);/);
+  });
+
+  it.each([`"a&b"`, `"it's"`, `'say "hi"'`, `"<b>"`, `"a>"`])("escapes a lookup where one value is %s", (literal) => {
+    const out = compile(island(component(`size: "sm" | "lg"`, `<p>{{ NAMES[size] }}</p>`, `const NAMES = { sm: ${literal}, lg: "large" } as const;\n`))).get("x.rs")!;
+    expect(out).toContain("fv::core::escape_into(out, match props.size {");
+  });
 });
 
 describe("attribute values", () => {

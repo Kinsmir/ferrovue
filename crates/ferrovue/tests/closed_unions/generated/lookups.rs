@@ -112,39 +112,39 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.reserve(128 + 1 + 1 + 4);
     let s_key = props.k;
     out.push_str("<p title=\"");
-    fv::core::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+    out.push_str(match props.k { K::A => "A", K::B => "B", K::C => "C" });
     out.push_str("\" class=\"");
     fv::attrs::class_into(out, false, &[match props.k { K::B => "y", K::A | K::C => "x" }]);
     out.push_str("\" style=\"opacity:");
     fv::core::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
     out.push_str(";\">");
-    fv::core::escape_into(out, match props.k { K::A => "A", K::B => "B", K::C => "C" });
+    out.push_str(match props.k { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape_into(out, match props.m.unwrap_or(K::A) { K::A => "A", K::B => "B", K::C => "C" });
+    out.push_str(match props.m.unwrap_or(K::A) { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape_into(out, match props.m.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" });
+    out.push_str(match props.m.unwrap_or(K::C) { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape_into(out, match props.k { K::B => "y", K::A | K::C => "x" });
+    out.push_str(match props.k { K::B => "y", K::A | K::C => "x" });
     out.push(' ');
     fv::core::push_number(out, match props.k { K::A => 1.0f64, K::B => 2.0f64, K::C => 1.5f64 });
     out.push(' ');
-    fv::core::escape_into(out, match s_key { K::A => "A", K::B => "B", K::C => "C" });
+    out.push_str(match s_key { K::A => "A", K::B => "B", K::C => "C" });
     out.push(' ');
-    fv::core::escape_into(out, match props.level { 1 => "one", 2 => "two", _ => "three" });
+    out.push_str(match props.level { 1 => "one", 2 => "two", _ => "three" });
     out.push(' ');
-    fv::core::escape_into(out, match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
+    out.push_str(match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
     out.push_str(if !matches!(props.k, K::A | K::B) { " <b>last</b>" } else { " <!---->" });
     out.push_str(if matches!(props.k, K::A) { "<b>first</b>" } else { "<!---->" });
     if !matches!(props.k, K::B) {
         out.push_str("<i>");
-        fv::core::escape_into(out, match props.k { K::A => "ia", K::C | K::B => "ic" });
+        out.push_str(match props.k { K::A => "ia", K::C | K::B => "ic" });
         out.push_str("</i>");
     } else {
         out.push_str("<!---->");
     }
     if matches!(props.k, K::A | K::B) {
         out.push_str("<i>");
-        fv::core::escape_into(out, match props.k { K::A => "ia", K::B | K::C => "ib" });
+        out.push_str(match props.k { K::A => "ia", K::B | K::C => "ib" });
         out.push_str("</i></p>");
     } else {
         out.push_str("<!----></p>");

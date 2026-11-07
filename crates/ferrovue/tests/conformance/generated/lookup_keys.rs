@@ -107,7 +107,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--[--><p title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\" data-half=\"half\">half|huge|zero|");
-    fv::core::escape_into(out, match props.size { LookupKeysSize::Sm => "small", LookupKeysSize::Lg => "large", LookupKeysSize::N => "umlaut" });
+    out.push_str(match props.size { LookupKeysSize::Sm => "small", LookupKeysSize::Lg => "large", LookupKeysSize::N => "umlaut" });
     out.push('|');
     fv::core::escape_into(out, (match props.size { LookupKeysSize::Sm => Some("lower small"), LookupKeysSize::Lg => Some("lower large"), LookupKeysSize::N => None }).unwrap_or("none"));
     out.push('|');

@@ -19,11 +19,12 @@ assert_eq!(out, r#"<p title="&quot; onmouseover=&quot;alert(1)">"#);
 ```
 
 A value the compiler proves holds none of those characters is written as it is: a `?:` whose
-branches are string literals free of them (`{{ on ? "yes" : "no" }}`), `String(n)` and a number's
-`.toString()`, which [`push_int`](crate::core::push_int) and
+branches are string literals free of them (`{{ on ? "yes" : "no" }}`), a lookup in a constant
+object whose values all are (`{{ NAMES[size] }}` with `NAMES = { sm: "small", lg: "large" }`),
+`String(n)` and a number's `.toString()`, which [`push_int`](crate::core::push_int) and
 [`push_number`](crate::core::push_number) write with no string built, and the digits of
 `.toFixed()`, `.toPrecision()` and `.toExponential()`. A literal with a `"`, `&`, `'`, `<` or `>`
-in it keeps the whole `?:` going through `escape_into`.
+in it keeps the whole `?:` or lookup going through `escape_into`.
 
 `escape_into` maps each character on its own, so a value joined with `+` or a template literal
 (`:title="'rank ' + rank"`, `` :href="`/r/${sub}/`" ``) is written part by part, with no string
