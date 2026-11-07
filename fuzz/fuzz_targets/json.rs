@@ -17,7 +17,10 @@ fuzz_target!(|value: Value| {
         .and_then(|rest| rest.strip_suffix("'><i></i></div>"))
         .expect("an island's markup around its props");
     assert_eq!(props, json.replace('&', "&amp;").replace('\'', "&#39;"));
-    assert!(!props.contains('\''), "data-props ends at its closing quote alone");
+    assert!(
+        !props.contains('\''),
+        "data-props ends at its closing quote alone"
+    );
     let read = props.replace("&#39;", "'").replace("&amp;", "&");
     assert_eq!(read, json);
     if value.reads_back() {
