@@ -311,8 +311,8 @@
       "type": "boolean"
     },
     "whitespace": {
-      "description": "How the text of templates is spaced: `\"condense\"` (the default) as Vue spaces it, or `\"trim-edges\"`, which also trims the whitespace where text meets its element's tags. The client compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`.",
-      "markdownDescription": "How the text of templates is spaced: `\"condense\"` (the default) as Vue spaces it, or `\"trim-edges\"`, which also trims the whitespace where text meets its element's tags. The client compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`.",
+      "description": "How the text of templates is spaced: `\"condense\"` (the default) as Vue spaces it, or `\"trim-edges\"`, which also trims the whitespace holding a line break where text meets its element's tags and renders a line break between two inline elements as a space. The client compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`.",
+      "markdownDescription": "How the text of templates is spaced: `\"condense\"` (the default) as Vue spaces it, or `\"trim-edges\"`, which also trims the whitespace holding a line break where text meets its element's tags and renders a line break between two inline elements as a space. The client compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`.",
       "type": "string",
       "enum": [
         "condense",

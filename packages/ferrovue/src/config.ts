@@ -112,9 +112,10 @@ export interface Config {
    * `false` and left out when it is `true`. */
   comments?: boolean;
   /** How the text of templates is spaced: `"condense"` (the default) as Vue spaces it, or
-   * `"trim-edges"`, which also trims the whitespace where text meets its element's tags. The
-   * client compiles the same way with `trimEdges` from `ferrovue/whitespace` in
-   * `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`. */
+   * `"trim-edges"`, which also trims the whitespace holding a line break where text meets its
+   * element's tags and renders a line break between two inline elements as a space. The client
+   * compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s
+   * `template.compilerOptions.nodeTransforms`. */
   whitespace?: WhitespaceMode;
   /** CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue
    * computes as postcss-modules does. Without it, `<style module>` is refused. */

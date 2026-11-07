@@ -421,8 +421,9 @@ export default {
 ```
 
 The mode trims the whitespace at the start of an element's first child and at the end of its last
-child, when those children are text written in the template. It applies to the content of
-elements, of components and of `<template v-slot>`:
+child, when those children are text written in the template and that whitespace holds a line
+break, as the whitespace a formatter adds does. A space typed on the same line as the tag stays.
+It applies to the content of elements, of components and of `<template v-slot>`:
 
 | Template | `"condense"` (the default) | `"trim-edges"` |
 |---|---|---|
@@ -430,11 +431,34 @@ elements, of components and of `<template v-slot>`:
 | `<p>\n  Hello {{ name }}\n</p>` | `<p> Hello Ada</p>` | `<p>Hello Ada</p>` |
 | `<p>\n  <span>x</span>\n  tail\n</p>` | `<p><span>x</span> tail </p>` | `<p><span>x</span> tail</p>` |
 | `<MyButton>\n  remove\n</MyButton>` | ` remove ` in the slot | `remove` in the slot |
+| `<span> by </span>` | `<span> by </span>` | the same |
+| `<p>\n  text </p>` | `<p> text </p>` | `<p>text </p>` |
+| `<p>\n  <span>by</span>\n  <a>Ada</a>\n</p>` | `<p><span>by</span><a>Ada</a></p>` | `<p><span>by</span> <a>Ada</a></p>` |
 | `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
+
+Vue drops the whitespace between two elements when it holds a line break. A formatter such as
+Prettier reads a line break between two inline elements as a space, as HTML does, and moves
+`<span>by</span> <a>` onto two lines when the line grows long. So the mode renders a line break
+between two inline elements as one space. Inline are the HTML elements other than the block, list
+and table elements, `<br>` and the elements of the page's head, and components other than
+`<Teleport>`, `<KeepAlive>`, `<Suspense>`, `<Transition>`, `<TransitionGroup>` and `<ClientOnly>`,
+which render no element of their own in place, and `<slot>` and `<template>` with `v-if`,
+`v-else-if`, `v-else` or `v-for`, whose content renders in place. Vue removes the whitespace between
+the branches of a `v-if`, so the space counts after the last branch. Vue's spacing holds between the
+`<template v-slot>`s of a component, after a comment, inside `<svg>` and `<math>` and at the
+template's root. Between elements a stylesheet makes block, flex or grid items, the space does not
+show.
+
+The space is decided when the template compiles, from its source, so it stays when a `v-if` or
+`v-for` beside it renders nothing. With only the first of two `<template v-if>`s on lines of their
+own rendering, the text ends in two spaces. The browser collapses them, so nothing shows, and they
+are in the server's HTML and in `textContent`, as in HTML written by hand. Where the branch renders,
+the space is the one it needs.
 
 Everything else stays as Vue condenses it:
 
-- the space between two elements, and between text and an interpolation;
+- whitespace at an edge with no line break in it, such as the spaces of `<span> by </span>`;
+- the space typed between two elements, and between text and an interpolation;
 - a value an interpolation renders, such as a prop that starts with a space;
 - the content of `<template v-if>`, `<template v-for>` and of a `<slot>`'s fallback, which render
   among the text around them;
@@ -443,7 +467,15 @@ Everything else stays as Vue condenses it:
   An element styled that way from a stylesheet takes the same `white-space` in its `style`
   attribute to keep its text.
 
-A `&nbsp;` is text: it stays at an edge.
+The mode reads tag names and sees no stylesheet, for `white-space` as for `display`. An element a
+class makes block, flex or grid, such as `<span class="block">`, still counts as inline, and a line
+break between it and its neighbour renders as a space. CSS discards whitespace next to a block box
+and between flex and grid items, so that space does not show. Between elements a class makes
+`inline-block`, written on lines of their own with no space meant between them, it shows as a gap:
+hug their tags, `</a\n><a>`, as a formatter writes them where no space is meant.
+
+A `&nbsp;` is text: it stays at an edge. So does whitespace written as a character reference, such
+as `&#10;`.
 
 The Vite plugin checks that plugin-vue and `ferrovue.config.json` agree, as it does for comments:
 a build fails when one trims and the other does not, and the dev server warns. It finds `trimEdges`

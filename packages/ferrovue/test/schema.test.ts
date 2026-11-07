@@ -263,7 +263,7 @@ describe("the configuration's JSON Schema", () => {
 import { plural } from "./helpers";
 defineProps<{ n: number; note?: string; at?: Date }>();
 </script>
-<template><p class="c"><RouterLink to="/about" :class="$style.m">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}<b> n </b></p></template>
+<template><p class="c"><RouterLink to="/about" :class="$style.m">{{ $t("hi") }}{{ plural(n) }}</RouterLink>{{ note }}<b>\n  n\n</b></p></template>
 <style scoped>.c { color: red }</style>
 <style module>.m { width: v-bind(n) }</style>
 `,
