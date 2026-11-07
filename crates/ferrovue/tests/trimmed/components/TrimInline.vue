@@ -26,6 +26,20 @@ defineProps<{ label: string; name: string }>();
       <TrimButton kind="next" />
       <span>after</span>
     </p>
+    <p class="byline">
+      submitted <time :title="label">{{ label }}</time>
+      <template v-if="name"
+        ><span class="tagline-word">by</span>
+        <a :href="`/u/${name}`">{{ name }}</a>
+        <TrimButton v-if="label" :kind="label" /></template
+      ><template v-else
+        ><span class="tagline-word">by</span> <span class="author-deleted">[deleted]</span></template
+      >
+      <template v-if="label"
+        ><span class="tagline-word">to</span>
+        <a :href="'/r/' + label + '/'">/r/{{ label }}</a></template
+      >
+    </p>
     <ul>
       <li>{{ label }}</li>
       <li>{{ name }}</li>

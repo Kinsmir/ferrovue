@@ -43,7 +43,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(322 + props.label.len() + props.name.len());
+    out.reserve(637 + props.label.len() + props.name.len());
     out.push_str("<div><p><span> by </span><a>");
     fv::core::escape_into(out, &props.name);
     out.push_str("</a> <span>signed in through </span>");
@@ -79,7 +79,40 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         default: None,
         after: None,
     })?;
-    out.push_str(" <span>after</span></p><ul><li>");
+    out.push_str(" <span>after</span></p><p class=\"byline\">submitted <time title=\"");
+    fv::core::escape_into(out, &props.label);
+    out.push_str("\">");
+    fv::core::escape_into(out, &props.label);
+    out.push_str("</time> ");
+    if !props.name.is_empty() {
+        out.push_str("<!--[--><span class=\"tagline-word\">by</span> <a href=\"/u/");
+        fv::core::escape_into(out, &props.name);
+        out.push_str("\">");
+        fv::core::escape_into(out, &props.name);
+        out.push_str("</a> ");
+        if !props.label.is_empty() {
+            super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed(&*props.label) }, super::trim_button::Slots {
+                default: None,
+                after: None,
+            })?;
+        } else {
+            out.push_str("<!---->");
+        }
+        out.push_str("<!--]-->");
+    } else {
+        out.push_str("<!--[--><span class=\"tagline-word\">by</span> <span class=\"author-deleted\">[deleted]</span><!--]-->");
+    }
+    out.push(' ');
+    if !props.label.is_empty() {
+        out.push_str("<!--[--><span class=\"tagline-word\">to</span> <a href=\"/r/");
+        fv::core::escape_into(out, &props.label);
+        out.push_str("/\">/r/");
+        fv::core::escape_into(out, &props.label);
+        out.push_str("</a><!--]-->");
+    } else {
+        out.push_str("<!---->");
+    }
+    out.push_str("</p><ul><li>");
     fv::core::escape_into(out, &props.label);
     out.push_str("</li><li>");
     fv::core::escape_into(out, &props.name);

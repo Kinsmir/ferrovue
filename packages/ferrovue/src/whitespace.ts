@@ -20,6 +20,7 @@ const ELEMENT = 1;
 const TEXT = 2;
 const PLAIN = 0;
 const COMPONENT = 1;
+const SLOT = 2;
 const TEMPLATE = 3;
 const LEADING = /^[ \t\n\f\r]+/;
 const TRAILING = /[ \t\n\f\r]+$/;
@@ -73,6 +74,8 @@ function trimChildren(el: TemplateNode): void {
 function inline(node: TemplateNode): boolean {
   if (node.type !== ELEMENT) return false;
   if (node.tagType === COMPONENT) return !PLACELESS_COMPONENTS.has(node.tag!.replaceAll("-", "").toLowerCase());
+  if (node.tagType === SLOT) return true;
+  if (node.tagType === TEMPLATE) return !node.props!.some((p) => p.type === 7 && p.name === "slot");
   if (node.tagType !== PLAIN) return false;
   const tag = node.tag!.toLowerCase();
   return (node.ns === HTML || tag === "svg" || tag === "math") && !SPACELESS_TAGS.has(tag);
@@ -107,8 +110,8 @@ function walk(node: TemplateNode): void {
  * trims the whitespace at the start and end of an element's text, where it meets the element's
  * tags, when that whitespace holds a line break, as `"whitespace": "trim-edges"` makes ferrovue's
  * Rust render it. A space typed on the same line as the tag stays. A line break between two
- * inline elements or components, such as `<span>` and `<a>`, renders as one space, as a formatter
- * reads it.
+ * inline elements, components, `<slot>`s or `<template>`s, such as `<span>` and `<a>`, renders as
+ * one space, as a formatter reads it.
  * It trims the content of elements, components and `<template v-slot>`, and leaves `<pre>`, `<textarea>`, `v-pre` and an
  * element whose `style` sets `white-space: pre`, `pre-wrap`, `pre-line` or `break-spaces` as they
  * are, with everything inside them. */

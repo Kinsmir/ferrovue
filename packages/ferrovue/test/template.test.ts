@@ -967,6 +967,11 @@ describe("whitespace", () => {
       expect(code, tag).not.toMatch(/> <span>c/);
     }
     expect(pushed(trimmed("<p>\n  <span>a</span><!-- c -->\n  <span>b</span>\n</p>"))).toBe("<p><span>a</span><!-- c --><span>b</span></p>");
+    expect(pushed(trimmed('<p>\n  <time>t</time>\n  <template v-if="true"><b>b</b></template>\n  <template v-for="i in 2" :key="i"><i>i</i></template>\n</p>'))).toBe("<p><time>t</time> <b>b</b> <!--[--><i>i</i><!--]--></p>");
+    expect(pushed(trimmed("<p>\n  <span>a</span>\n  <slot />\n</p>"))).toBe("<p><span>a</span> </p>");
+    const named = compileTemplate({ source: "<Child>\n  <template #a><b>a</b></template>\n  <template #b><i>b</i></template>\n</Child>", filename: "a.vue", id: "a", ssr: true, compilerOptions: { nodeTransforms: [trimEdges] } });
+    expect(named.errors).toEqual([]);
+    expect(named.code).not.toContain("_push(` `)");
     const branches = pushed(trimmed('<p>\n  <b v-if="true">x</b>\n  <i v-else>y</i>\n  <a>z</a>\n</p>'));
     expect(branches).toContain(" <a>z</a>");
     expect(branches).not.toContain(" <i>");

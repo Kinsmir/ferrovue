@@ -441,9 +441,11 @@ Prettier reads a line break between two inline elements as a space, as HTML does
 between two inline elements as one space. Inline are the HTML elements other than the block, list
 and table elements, `<br>` and the elements of the page's head, and components other than
 `<Teleport>`, `<KeepAlive>`, `<Suspense>`, `<Transition>`, `<TransitionGroup>` and `<ClientOnly>`,
-which render no element of their own in place. Vue's spacing holds after a comment, inside `<svg>`
-and `<math>`, between `v-if` branches and at the template's root. Between elements a stylesheet
-makes block, flex or grid items, the space does not show.
+which render no element of their own in place, and `<slot>` and `<template>` with `v-if` or
+`v-for`, whose content renders in place. Vue's spacing holds between the `<template v-slot>`s of a
+component, after a comment, inside `<svg>` and `<math>`, between `v-if` branches and at the
+template's root. Between elements a stylesheet makes block, flex or grid items, the space does not
+show.
 | `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
 
 Everything else stays as Vue condenses it:
