@@ -434,6 +434,7 @@ It applies to the content of elements, of components and of `<template v-slot>`:
 | `<span> by </span>` | `<span> by </span>` | the same |
 | `<p>\n  text </p>` | `<p> text </p>` | `<p>text </p>` |
 | `<p>\n  <span>by</span>\n  <a>Ada</a>\n</p>` | `<p><span>by</span><a>Ada</a></p>` | `<p><span>by</span> <a>Ada</a></p>` |
+| `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
 
 Vue drops the whitespace between two elements when it holds a line break. A formatter such as
 Prettier reads a line break between two inline elements as a space, as HTML does, and moves
@@ -446,12 +447,17 @@ which render no element of their own in place, and `<slot>` and `<template>` wit
 component, after a comment, inside `<svg>` and `<math>`, between `v-if` branches and at the
 template's root. Between elements a stylesheet makes block, flex or grid items, the space does not
 show.
-| `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
+
+The space is decided when the template compiles, from its source, so it stays when a `v-if` or
+`v-for` beside it renders nothing. With only the first of two `<template v-if>`s on lines of their
+own rendering, the text ends in two spaces. The browser collapses them, so nothing shows, and they
+are in the server's HTML and in `textContent`, as in HTML written by hand. Where the branch renders,
+the space is the one it needs.
 
 Everything else stays as Vue condenses it:
 
 - whitespace at an edge with no line break in it, such as the spaces of `<span> by </span>`;
-- the space between two elements, and between text and an interpolation;
+- the space typed between two elements, and between text and an interpolation;
 - a value an interpolation renders, such as a prop that starts with a space;
 - the content of `<template v-if>`, `<template v-for>` and of a `<slot>`'s fallback, which render
   among the text around them;
@@ -459,6 +465,13 @@ Everything else stays as Vue condenses it:
   `white-space` to `pre`, `pre-wrap`, `pre-line` or `break-spaces`, with everything inside them.
   An element styled that way from a stylesheet takes the same `white-space` in its `style`
   attribute to keep its text.
+
+The mode reads tag names and sees no stylesheet, for `white-space` as for `display`. An element a
+class makes block, flex or grid, such as `<span class="block">`, still counts as inline, and a line
+break between it and its neighbour renders as a space. CSS discards whitespace next to a block box
+and between flex and grid items, so that space does not show. Between elements a class makes
+`inline-block`, written on lines of their own with no space meant between them, it shows as a gap:
+hug their tags, `</a\n><a>`, as a formatter writes them where no space is meant.
 
 A `&nbsp;` is text: it stays at an edge. So does whitespace written as a character reference, such
 as `&#10;`.
