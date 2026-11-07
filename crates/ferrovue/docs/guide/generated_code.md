@@ -419,18 +419,22 @@ Vue condenses each run of whitespace in a template's text to one space and keeps
 text meets its element's tags, so `<button>\n  remove\n</button>` renders `<button> remove
 </button>`. A formatter that moves long text onto lines of its own adds those spaces to the page,
 in `textContent` and in what devtools shows. `"whitespace": "trim-edges"` in `ferrovue.config.json`
-trims them, and `trimEdges` from `ferrovue/whitespace` compiles the client the same way:
+trims them. The Vite plugin reads the key and gives plugin-vue `trimEdges` from
+`ferrovue/whitespace`, so the client compiles the same way, in `vite build`, on the dev server and
+in Vitest:
 
 ```ts
 // vite.config.ts
 import vue from "@vitejs/plugin-vue";
 import ferrovue from "ferrovue/vite";
-import { trimEdges } from "ferrovue/whitespace";
 
 export default {
-  plugins: [vue({ template: { compilerOptions: { nodeTransforms: [trimEdges] } } }), ferrovue()],
+  plugins: [vue(), ferrovue()],
 };
 ```
+
+A build without ferrovue's Vite plugin, such as a Vitest config with plugin-vue alone, adds the
+transform itself: `vue({ template: { compilerOptions: { nodeTransforms: [trimEdges] } } })`.
 
 The mode trims the whitespace at the start of an element's first child and at the end of its last
 child, when those children are text written in the template and that whitespace holds a line
@@ -490,24 +494,20 @@ Everything else stays as Vue condenses it:
 
 A stylesheet that gives a class a `white-space` of `pre`, `pre-wrap`, `pre-line` or `break-spaces`,
 such as Tailwind's `whitespace-pre-line`, shows the line breaks the mode would trim. List those
-classes in `ferrovue.config.json`, and give plugin-vue `trimEdges` with the same list:
+classes in `ferrovue.config.json`, and the Vite plugin hands them to `trimEdges`:
 
 ```jsonc
 // ferrovue.config.json
 { "whitespace": "trim-edges", "preserveWhitespace": { "classes": ["whitespace-pre-line", "whitespace-pre-wrap"] } }
 ```
 
-```ts
-// vite.config.ts
-vue({ template: { compilerOptions: { nodeTransforms: [trimEdges({ classes: ["whitespace-pre-line", "whitespace-pre-wrap"] })] } } });
-```
+A build without ferrovue's Vite plugin gives plugin-vue `trimEdges({ classes })` with the same list.
 
 A class counts by its exact name, variants included, so `md:whitespace-pre` is a class of its own.
 A `:class` expression counts when a string or object key in it names a listed class, whether or not
 it applies at render, so `:class="{ 'whitespace-pre-line': open }"` keeps the text in both states.
 A class the element gets from a prop, or from a parent through its attributes, is not seen: write
-the class in the template, or the `white-space` in the `style` attribute. The Vite plugin fails a
-build where the two lists differ.
+the class in the template, or the `white-space` in the `style` attribute.
 
 The mode reads tag names and sees no stylesheet, for `white-space` as for `display`. An element a
 class makes block, flex or grid, such as `<span class="block">`, still counts as inline, and a line
@@ -519,10 +519,11 @@ hug their tags, `</a\n><a>`, as a formatter writes them where no space is meant.
 A `&nbsp;` is text: it stays at an edge. So does whitespace written as a character reference, such
 as `&#10;`.
 
-The Vite plugin checks that plugin-vue and `ferrovue.config.json` agree, as it does for comments:
-a build fails when one trims and the other does not, and the dev server warns. It finds `trimEdges`
-in `template.compilerOptions.nodeTransforms` from any copy of the package. `attachSsrRender` from
-`ferrovue/testing/ssr` takes `{ whitespace }` for the same choice, and the conformance suite of
+A plugin-vue given `trimEdges` by hand keeps it, and the Vite plugin checks that it agrees with
+`ferrovue.config.json`, as it does for comments: a build fails when one trims and the other does
+not, or when the two leave other classes, and the dev server warns. It finds `trimEdges` in
+`template.compilerOptions.nodeTransforms` from any copy of the package. `attachSsrRender` from
+`ferrovue/testing/ssr` takes `{ whitespace, preserveClasses }` for the same choice, and the conformance suite of
 `ferrovue/testing` passes the configuration's.
 
 # `<component :is>`

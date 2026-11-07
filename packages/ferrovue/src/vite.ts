@@ -9,6 +9,7 @@ import { formatRefusal, formatWarning, isRefusal } from "./diagnostics.ts";
 import { allPages, fileRoutes, pagesFolder } from "./file-routes.ts";
 import { affects, type Inputs, inputsOf, watched } from "./inputs.ts";
 import { slashed } from "./paths.ts";
+import { trimEdges } from "./whitespace.ts";
 
 /** A route as vue-router's file-based routing builds it from a folder of pages. */
 export interface FileRoute {
@@ -74,6 +75,25 @@ function vueWhitespace(config: Pick<ResolvedConfig, "plugins">): VueWhitespace |
   if (trim === undefined) return { mode: "condense", classes: [] };
   const classes = (trim as unknown as Record<symbol, unknown>)[TRIM_CLASSES];
   return { mode: "trim-edges", classes: Array.isArray(classes) ? (classes as string[]) : [] };
+}
+
+/** Give plugin-vue `trimEdges`, with the classes of `preserveWhitespace`, when the configuration,
+ * `configFile`, sets `"whitespace": "trim-edges"` and plugin-vue has no `trimEdges` of its own. */
+function applyTrimEdges(config: Pick<ResolvedConfig, "plugins">, root: string, configFile: string): void {
+  const vue = config.plugins.find((p) => p.name === "vite:vue");
+  const api = vue?.api as { options?: { template?: { compilerOptions?: { nodeTransforms?: unknown[] } } } } | undefined;
+  if (!api?.options || vueWhitespace(config)?.mode === "trim-edges") return;
+  let own: Config;
+  try {
+    own = loadConfig(root, configFile, ignore);
+  } catch {
+    return;
+  }
+  if (own.whitespace !== "trim-edges") return;
+  const options = api.options;
+  const compilerOptions = options.template?.compilerOptions ?? {};
+  const transform = trimEdges({ classes: own.preserveWhitespace?.classes ?? [] });
+  api.options = { ...options, template: { ...options.template, compilerOptions: { ...compilerOptions, nodeTransforms: [transform, ...(compilerOptions.nodeTransforms ?? [])] } } };
 }
 
 function componentSources(root: string, config: Config): string[] {
@@ -307,6 +327,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
       readsImportedTypes(config);
       vue = vueScopeIds(config);
       comments = vueComments(config);
+      applyTrimEdges(config, root, configFile);
       whitespace = vueWhitespace(config);
       aliases = config.resolve.alias;
       css = config.css;

@@ -12,6 +12,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 - `"preserveWhitespace": { "classes": [...] }` names the classes a stylesheet gives a preserving `white-space`, which `"trim-edges"` leaves as Vue spaces them, and `trimEdges({ classes })` does the same for the client.
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
+- The Vite plugin adds `trimEdges` to plugin-vue itself when `ferrovue.config.json` sets `"whitespace": "trim-edges"`, so `vite.config.ts` and a Vitest config with the plugin need no `nodeTransforms`.
+  [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 
 ### Changed
 

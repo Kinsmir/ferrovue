@@ -114,9 +114,8 @@ export interface Config {
   /** How the text of templates is spaced: `"condense"` (the default) as Vue spaces it, or
    * `"trim-edges"`, which also trims the whitespace holding a line break where text meets a block
    * or inline-block element's tags and renders a line break between two inline elements as a
-   * space. The client
-   * compiles the same way with `trimEdges` from `ferrovue/whitespace` in `@vitejs/plugin-vue`'s
-   * `template.compilerOptions.nodeTransforms`. */
+   * space. The Vite plugin compiles the client the same way, by adding `trimEdges` from
+   * `ferrovue/whitespace` to `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms`. */
   whitespace?: WhitespaceMode;
   /** The elements `"whitespace": "trim-edges"` leaves as Vue spaces them, besides `<pre>`,
    * `<textarea>`, `v-pre` and a static `style` that sets a preserving `white-space`. */
