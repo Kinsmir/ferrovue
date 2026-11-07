@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
@@ -102,13 +102,14 @@ function linkModules(from: string, into: string, top: string): void {
   }
 }
 
-/** Render every conformance fixture of the project at `root` in the working tree and at the git
+/** Render every conformance fixture of the project at `project` in the working tree and at the git
  * ref `against`, with the working tree's `node_modules`, and compare the two. `tests` names the
  * test files that run the suite, relative to the directory of the project's Vitest
  * configuration; by default every test file there that calls `conformanceSuite`. */
-export function renderDiff(root: string, against: string, tests?: readonly string[]): RenderDiff {
+export function renderDiff(project: string, against: string, tests?: readonly string[]): RenderDiff {
+  const root = realpathSync.native(project);
   const git = (cwd: string, ...args: string[]): string => execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
-  const top = resolve(git(root, "rev-parse", "--show-toplevel"));
+  const top = realpathSync.native(resolve(git(root, "rev-parse", "--show-toplevel")));
   let commit: string;
   try {
     commit = git(root, "rev-parse", "--verify", "--quiet", `${against}^{commit}`);
