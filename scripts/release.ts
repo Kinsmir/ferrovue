@@ -106,6 +106,16 @@ export function renderedOutputProblems(notes: string, version: string): string[]
   return [`CHANGELOG.md's ${version} opens with no "Rendered output:" line: say whether the release changes what pages render, "Rendered output: unchanged." or "Rendered output: changes for …", for which constructs`];
 }
 
+/** The first release whose notes open with a "Rendered output:" line. */
+const RENDERED_OUTPUT_SINCE = [0, 16, 0];
+
+/** Whether `version` was released before its notes said whether rendered output changes. */
+export function predatesRenderedOutput(version: string): boolean {
+  const parts = version.split("-")[0]!.split(".").map(Number);
+  for (let i = 0; i < 3; i++) if (parts[i] !== RENDERED_OUTPUT_SINCE[i]) return parts[i]! < RENDERED_OUTPUT_SINCE[i]!;
+  return false;
+}
+
 /** A link reference at the changelog's foot: `[0.6.0]: https://…/compare/v0.5.0...v0.6.0`. */
 const LINK = /^\[([^\]]+)\]:\s*(\S+)\s*$/;
 const UNRELEASED_LINK = /^\[Unreleased\]:\s*(\S+)\/compare\/(v[^.\s]\S*?)\.\.\.HEAD\s*$/m;
@@ -216,7 +226,7 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   }
   const notes = changelogNotes(files.changelog, version);
   if (!notes) problems.push(`CHANGELOG.md has no notes for ${version}`);
-  else problems.push(...renderedOutputProblems(notes, version), ...sectionProblems(notes, version));
+  else problems.push(...(predatesRenderedOutput(version) ? [] : renderedOutputProblems(notes, version)), ...sectionProblems(notes, version));
   const links = files.changelog.split("\n").filter((l) => LINK.test(l));
   if (links.length && !links.some((l) => l.startsWith(`[${version}]:`))) problems.push(`CHANGELOG.md has no link for ${version}: \`release.ts bump\` writes it`);
   return problems;

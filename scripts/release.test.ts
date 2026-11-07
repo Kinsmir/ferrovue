@@ -13,6 +13,7 @@ import {
   isVersion,
   packageVersion,
   releaseChangelog,
+  predatesRenderedOutput,
   renderedOutputProblems,
   sectionProblems,
   setCargoVersion,
@@ -118,7 +119,11 @@ describe("release chores", () => {
     ]);
     expect(() => releaseChangelog(CHANGELOG.replace("Rendered output: unchanged.\n\n### Added", "### Added"), "0.2.0", "2026-11-01")).toThrow(/opens with no "Rendered output:" line/);
     const unsaid = { cargo: CARGO, pkg: PKG, changelog: CHANGELOG.replace("Rendered output: unchanged.\n\n- First.", "- First."), crates: CRATE_MANIFESTS };
-    expect(checkRelease("v0.1.0", unsaid).join("\n")).toMatch(/0\.1\.0 opens with no "Rendered output:" line/);
+    expect(checkRelease("v0.1.0", unsaid).join("\n")).not.toMatch(/Rendered output/);
+    expect(predatesRenderedOutput("0.15.2")).toBe(true);
+    expect(predatesRenderedOutput("0.16.0-rc.1")).toBe(false);
+    expect(predatesRenderedOutput("0.16.0")).toBe(false);
+    expect(predatesRenderedOutput("1.0.0")).toBe(false);
     expect(sectionProblems("### Added\n\n- a\n\n### Changed\n\n- b\n\n### Deprecated\n\n- c\n\n### Removed\n\n- d\n\n### Fixed\n\n- e\n\n### Security\n\n- f", "0.2.0")).toEqual([]);
     expect(sectionProblems("### Deprecated\n\n- c\n\n### Added\n\n- a", "0.2.0")).toEqual([
       "CHANGELOG.md's 0.2.0 has its sections as Deprecated, Added: each once, in the order Added, Changed, Deprecated, Removed, Fixed, Security",
