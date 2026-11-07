@@ -34,6 +34,8 @@ export interface ResolveOptions {
   /** Aliases tried before tsconfig's `paths`, as Vite's `resolve.alias` lists them: the Vite plugin
    * passes its build's own. */
   aliases?: readonly Alias[];
+  /** Called with each warning a component's template gives, such as FV0427. */
+  warn?: (warning: GenError) => void;
 }
 
 /** Every generated file, keyed by its name in the output directory. `sources` holds the text of
@@ -68,6 +70,9 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.comments = templateComments(config);
   ctx.whitespace = config.whitespace ?? "condense";
   ctx.preservedClasses = config.preserveWhitespace?.classes ?? [];
+  ctx.inlineBlockClasses = config.inlineBlockClasses ?? [];
+  ctx.warn = options.warn ?? ((): void => {});
+  ctx.warned = new Set();
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
   ctx.vnodeTag = null;

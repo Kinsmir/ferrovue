@@ -135,6 +135,7 @@ const FULL = {
   comments: true,
   whitespace: "trim-edges",
   preserveWhitespace: { classes: ["whitespace-pre-line"] },
+  inlineBlockClasses: ["btn"],
   cssModules: { generateScopedName: "[local]_[hash:base64:5]", hashPrefix: "p", context: "." },
   builders: false,
 };

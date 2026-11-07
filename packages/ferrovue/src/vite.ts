@@ -289,7 +289,7 @@ export default function ferrovue(options: FerrovueOptions = {}): Plugin {
     let config: Config | null = null;
     try {
       config = loadConfig(root, configFile, warn);
-      const written = write(root, building || comments === null ? config : { ...config, comments }, { aliases });
+      const written = write(root, building || comments === null ? config : { ...config, comments }, { aliases, warn });
       islands = written.islands;
       return written;
     } finally {

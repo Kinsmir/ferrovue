@@ -26,6 +26,7 @@ export interface Config {
         locale?: string;
         fallbackLocale?: string | string[];
     };
+    inlineBlockClasses?: string[];
     isProduction?: boolean;
     out: string;
     preserveWhitespace?: {
