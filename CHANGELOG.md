@@ -16,6 +16,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 - A generated module has no blank line before a closing brace and no two blank lines in a row, and a struct or struct literal with no fields is written `{}`.
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
+- `escape_into` escapes in one pass, copying the runs between the characters it replaces eight bytes at a time; the bench renders run up to 9% fewer instructions.
+  [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 
 ## [0.15.2] - 2026-11-07
 

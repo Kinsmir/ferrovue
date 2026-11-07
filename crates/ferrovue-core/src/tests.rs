@@ -30,6 +30,23 @@ mod escape {
         }
     }
 
+    #[test]
+    fn escape_finds_each_of_the_five_at_every_offset_of_every_length() {
+        for len in 1..=40 {
+            for at in 0..len {
+                for c in ['"', '&', '\'', '<', '>'] {
+                    let mut s = "a".repeat(len);
+                    s.replace_range(at..=at, &c.to_string());
+                    let mut out = String::new();
+                    escape_into(&mut out, &s);
+                    assert_eq!(out, escape_bytewise(&s), "{s:?}");
+                    assert_eq!(next_special(s.as_bytes(), 0), Some(at), "{s:?}");
+                    assert_eq!(next_special(s.as_bytes(), at + 1), None, "{s:?}");
+                }
+            }
+        }
+    }
+
     fn escape_bytewise(s: &str) -> String {
         let mut out = String::new();
         for c in s.chars() {
@@ -56,9 +73,16 @@ mod escape {
         }
 
         #[test]
-        fn needs_escape_is_whether_any_byte_is_one_of_the_five(s in "[a\"&'<>é🦀 ]{0,40}|[aé🦀 ]{0,40}") {
-            let any = s.bytes().any(|b| matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>'));
-            proptest::prop_assert_eq!(needs_escape(s.as_bytes()), any);
+        fn escaping_a_long_string_is_the_bytewise_reference(s in "[a\"&'<>é🦀 ]{0,8}[aé🦀 ]{0,200}[a\"&'<>é🦀 ]{0,8}[aé🦀 ]{0,40}") {
+            let mut out = String::new();
+            escape_into(&mut out, &s);
+            proptest::prop_assert_eq!(out, escape_bytewise(&s));
+        }
+
+        #[test]
+        fn next_special_is_the_first_of_the_five_from_an_offset(s in "[a\"&'<>é🦀 ]{0,40}|[aé🦀 ]{0,40}", from in 0usize..48) {
+            let want = s.bytes().enumerate().skip(from).find(|&(_, b)| matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>')).map(|(i, _)| i);
+            proptest::prop_assert_eq!(next_special(s.as_bytes(), from), want);
         }
     }
 }
