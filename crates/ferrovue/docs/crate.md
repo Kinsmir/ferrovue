@@ -170,7 +170,7 @@ assert_eq!(html, r#"<p class="greeting">Hello, Ada!<b>3 new</b><i>welcome back</
 
 // An island: the same markup in an element the client mounts on, with the props as JSON.
 let island = greeting::island(&props).into_string();
-assert!(island.starts_with(r#"<div data-island="Greeting" data-props="{&quot;name&quot;:&quot;Ada&quot;"#));
+assert!(island.starts_with(r#"<div data-island="Greeting" data-props='{"name":"Ada""#));
 
 // Or straight into a buffer you already hold: no allocation of its own.
 let mut page = String::from("<!doctype html><body>");

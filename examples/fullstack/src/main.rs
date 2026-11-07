@@ -224,7 +224,7 @@ mod tests {
             "{reviews}"
         );
         assert!(
-            reviews.contains(r#"}]}" data-hydrate="visible" data-dates="[{&quot;reviews&quot;:[{&quot;posted&quot;:1}]}]"><div class="review-list""#),
+            reviews.contains(r#"}]}' data-hydrate="visible" data-dates="[{&quot;reviews&quot;:[{&quot;posted&quot;:1}]}]"><div class="review-list""#),
             "{reviews}"
         );
         assert!(

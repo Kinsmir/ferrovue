@@ -661,7 +661,7 @@ mod tests {
             .expect("a body");
         assert_eq!(
             body,
-            r#"<div data-island="Name" data-props="{&quot;name&quot;:&quot;&lt;Ada&gt;&quot;}"><b>&lt;Ada&gt;</b></div>"#
+            r#"<div data-island="Name" data-props='{"name":"<Ada>"}'><b>&lt;Ada&gt;</b></div>"#
         );
     }
 
@@ -688,7 +688,7 @@ mod tests {
         let body = to_bytes(response.into_body()).await.expect("a body");
         assert_eq!(
             body,
-            r#"<div data-island="Name" data-props="{&quot;name&quot;:&quot;&lt;Ada&gt;&quot;}"><b>&lt;Ada&gt;</b></div>"#
+            r#"<div data-island="Name" data-props='{"name":"<Ada>"}'><b>&lt;Ada&gt;</b></div>"#
         );
 
         let whole = HtmlStream::new("<p>whole</p>".to_owned()).respond_to(&request);

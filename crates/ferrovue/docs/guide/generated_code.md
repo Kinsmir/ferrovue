@@ -697,7 +697,7 @@ With the `axum` or `actix-web` feature, an `Html` is also a response of its own;
 rebuilds the component from the props in `data-props` and nothing else. It wraps the markup as
 
 ```html
-<div data-island="Greeting" data-props="{&quot;name&quot;:&quot;Ada&quot;,&quot;unread&quot;:3}">…</div>
+<div data-island="Greeting" data-props='{"name":"Ada","unread":3}'>…</div>
 ```
 
 with the props serialised by `serde_json` (a non-finite `f64` as JavaScript writes it, `NaN` or

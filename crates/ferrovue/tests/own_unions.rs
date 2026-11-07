@@ -176,7 +176,7 @@ fn a_list_of_the_union_is_a_vec_of_the_applications_enum() {
         .extra([domain::Hue::Green]);
     let island = union_list_item::island(&props).into_string();
     assert!(
-        island.starts_with(r#"<div data-island="UnionListItem" data-props="{&quot;hue&quot;:&quot;green&quot;,&quot;hues&quot;:[&quot;&lt;b&gt;&amp;\&quot;hue&#39;&quot;,&quot;red&quot;],&quot;extra&quot;:[&quot;green&quot;],&quot;label&quot;:&quot;&lt;l&gt;&quot;}">"#),
+        island.starts_with(r#"<div data-island="UnionListItem" data-props='{"hue":"green","hues":["<b>&amp;\"hue&#39;","red"],"extra":["green"],"label":"<l>"}'>"#),
         "{island}"
     );
 }
@@ -188,13 +188,13 @@ fn data_props_hold_each_value_as_its_literal() {
         .picked(domain::Shade::XCool);
     let island = union_types::island(&props).into_string();
     assert!(
-        island.starts_with(r#"<div data-island="UnionTypes" data-props="{&quot;tone&quot;:&quot;&lt;b&gt;&amp;&#39;q&#39;\&quot;&quot;,&quot;other&quot;:&quot;warm&quot;,&quot;picked&quot;:&quot;x-cool&quot;,&quot;label&quot;:&quot;&lt;i&gt;&quot;}">"#),
+        island.starts_with(r#"<div data-island="UnionTypes" data-props='{"tone":"<b>&amp;&#39;q&#39;\"","other":"warm","picked":"x-cool","label":"<i>"}'>"#),
         "{island}"
     );
     let none = union_types::Props::new(domain::Shade::Warm, "");
     let island = union_types::island(&none).into_string();
     assert!(
-        island.starts_with(r#"<div data-island="UnionTypes" data-props="{&quot;tone&quot;:&quot;warm&quot;,&quot;picked&quot;:null,&quot;label&quot;:&quot;&quot;}">"#),
+        island.starts_with(r#"<div data-island="UnionTypes" data-props='{"tone":"warm","picked":null,"label":""}'>"#),
         "{island}"
     );
 }

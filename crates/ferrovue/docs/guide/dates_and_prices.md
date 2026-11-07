@@ -317,8 +317,8 @@ let island = post::island(&props).into_string();
 assert_eq!(
     island,
     concat!(
-        r#"<div data-island="Post" data-props="{&quot;title&quot;:&quot;Spring&quot;,"#,
-        r#"&quot;posted&quot;:&quot;2024-05-02T01:30:00.000Z&quot;,&quot;edited&quot;:&quot;2024-05-02T00:00:00.000Z&quot;}">"#,
+        r#"<div data-island="Post" data-props='{"title":"Spring","#,
+        r#""posted":"2024-05-02T01:30:00.000Z","edited":"2024-05-02T00:00:00.000Z"}'>"#,
         r#"<article><h2>Spring</h2><p>2/5/2024</p><p>edited 2024-05-02</p></article></div>"#
     )
 );

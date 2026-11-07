@@ -62,12 +62,15 @@ component's markup in the element the client mounts on, with the props it was re
 let html = counter::island(&counter::Props::new(5)).into_string();
 assert_eq!(
     html,
-    r#"<div data-island="Counter" data-props="{&quot;start&quot;:5}"><button>5</button></div>"#
+    r#"<div data-island="Counter" data-props='{"start":5}'><button>5</button></div>"#
 );
 ```
 
-The props travel as JSON, serialised with `serde_json` and escaped for the attribute, never in a
-`<script>`, so a page under a `script-src 'self'` policy needs no nonce for them. A `Float` that is
+The props travel as JSON, serialised with `serde_json` into an attribute in single quotes, never in
+a `<script>`, so a page under a `script-src 'self'` policy needs no nonce for them. Only `'` can end
+that attribute and only `&` can start a reference in it, so those two are the only characters
+escaped, as `&#39;` and `&amp;`: the JSON's own quotes stay as they are, and the browser gives
+`dataset.props` back as the JSON itself. A `Float` that is
 `NaN` or infinite is written as the bare token JavaScript writes (`NaN`, `Infinity`, `-Infinity`)
 where `serde_json` alone writes `null`, so the client gets the number the server rendered;
 see [`numbers`](crate::guide::numbers#keeping-islands-exact). An optional prop that is `None` is
@@ -137,7 +140,7 @@ use ferrovue::html::Hydrate;
 let props = reviews::Props { count: 3 };
 assert_eq!(
     reviews::island(&props).hydrate(Hydrate::Visible).into_string(),
-    r#"<div data-island="Reviews" data-props="{&quot;count&quot;:3}" data-hydrate="visible"><p>3 reviews</p></div>"#
+    r#"<div data-island="Reviews" data-props='{"count":3}' data-hydrate="visible"><p>3 reviews</p></div>"#
 );
 ```
 

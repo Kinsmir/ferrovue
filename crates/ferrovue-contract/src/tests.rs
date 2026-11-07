@@ -138,7 +138,9 @@ fn a_tuple_is_a_tuple_struct_built_from_its_parts_and_written_as_an_array() {
     assert_eq!(built.score.1, 3);
     let island = scored::island(&built).into_string();
     assert!(
-        island.starts_with(r#"<div data-island="Scored" data-props="{&quot;score&quot;:[&quot;Ada&quot;,3],&quot;extra&quot;:[&quot;on&quot;,true]}">"#),
+        island.starts_with(
+            r#"<div data-island="Scored" data-props='{"score":["Ada",3],"extra":["on",true]}'>"#
+        ),
         "{island}"
     );
     let plain = scored::Props::new(scored::Score::new("", 0));
@@ -160,7 +162,7 @@ fn a_union_of_string_literals_is_an_enum_built_from_a_variant_or_parsed() {
     assert_eq!(sized::html(&literal).into_string(), expected);
     let island = sized::island(&built).into_string();
     assert!(
-        island.starts_with(r#"<div data-island="Sized" data-props="{&quot;size&quot;:&quot;md&quot;,&quot;tone&quot;:&quot;loud&quot;}">"#),
+        island.starts_with(r#"<div data-island="Sized" data-props='{"size":"md","tone":"loud"}'>"#),
         "{island}"
     );
 
@@ -201,9 +203,7 @@ fn a_union_unions_names_an_enum_for_is_that_enum_written_as_its_literals() {
     );
     let island = toned::island(&toned::Props::new(Tone::Warm)).into_string();
     assert!(
-        island.starts_with(
-            r#"<div data-island="Toned" data-props="{&quot;tone&quot;:&quot;warm&quot;}">"#
-        ),
+        island.starts_with(r#"<div data-island="Toned" data-props='{"tone":"warm"}'>"#),
         "{island}"
     );
     let read = render_json("Toned", r#"{"tone": "x-cool", "other": "x-cool"}"#).unwrap();
@@ -224,7 +224,7 @@ fn a_date_prop_is_a_js_date_the_island_carries_as_its_iso_string() {
     assert_eq!(render(|out| posted::render(out, &built)), expected);
     assert_eq!(posted::html(&literal).into_string(), expected);
     let island = posted::island(&posted::Props::new(at).deleted(JsDate::INVALID)).into_string();
-    assert!(island.starts_with(r#"<div data-island="Posted" data-props="{&quot;at&quot;:&quot;2024-05-01T07:30:00.000Z&quot;,&quot;deleted&quot;:NaN}">"#), "{island}");
+    assert!(island.starts_with(r#"<div data-island="Posted" data-props='{"at":"2024-05-01T07:30:00.000Z","deleted":NaN}'>"#), "{island}");
     let read: posted::Props =
         serde_json::from_str(r#"{"at":"2024-05-01T07:30:00.000Z","deleted":null}"#).unwrap();
     assert_eq!(read.at, at);
@@ -242,8 +242,8 @@ fn dates_inside_lists_dictionaries_and_objects_are_js_dates_the_island_says_are_
     let props = timeline::Props::new(moments, vec![at], by);
     let island = timeline::island(&props).into_string();
     assert!(island.starts_with(concat!(
-        r#"<div data-island="Timeline" data-props="{&quot;moments&quot;:[{&quot;label&quot;:&quot;&lt;a&gt;&quot;,&quot;at&quot;:&quot;2024-05-01T07:30:00.000Z&quot;,&quot;seen&quot;:[null,NaN]}],"#,
-        r#"&quot;days&quot;:[&quot;2024-05-01T07:30:00.000Z&quot;],&quot;by&quot;:{&quot;x&quot;:&quot;1970-01-01T00:00:00.000Z&quot;}}" "#,
+        r#"<div data-island="Timeline" data-props='{"moments":[{"label":"<a>","at":"2024-05-01T07:30:00.000Z","seen":[null,NaN]}],"#,
+        r#""days":["2024-05-01T07:30:00.000Z"],"by":{"x":"1970-01-01T00:00:00.000Z"}}' "#,
         r#"data-dates="[{&quot;moments&quot;:[{&quot;at&quot;:1,&quot;seen&quot;:[1]}],&quot;days&quot;:[1],&quot;by&quot;:{&quot;*&quot;:1}}]"><ol>"#
     )), "{island}");
     assert_eq!(
@@ -262,7 +262,10 @@ fn html_island_and_their_owned_forms_render_the_same_markup() {
     let markup = render(|out| greeting::render(out, &props));
     assert_eq!(greeting::html(&props).into_string(), markup);
     let island = greeting::island(&props).into_string();
-    assert!(island.starts_with(r#"<div data-island="Greeting" data-props="{&quot;name&quot;:&quot;Ada&quot;,&quot;unread&quot;:2}">"#));
+    assert!(
+        island
+            .starts_with(r#"<div data-island="Greeting" data-props='{"name":"Ada","unread":2}'>"#)
+    );
     assert!(island.ends_with(&format!("{markup}</div>")));
     fn owned(name: String) -> Html<'static, greeting::Props<'static>> {
         greeting::into_html(greeting::Props::new(name))

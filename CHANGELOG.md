@@ -10,7 +10,7 @@ for which constructs, so a project knows whether to record its fixtures again.
 
 ## [Unreleased]
 
-Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes.
+Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes, and in an island's wrapper, whose `data-props` is in single quotes.
 
 ### Added
 
@@ -25,6 +25,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 
 ### Changed
 
+- An island's `data-props` is written in single quotes, escaping only `&` and `'`, so the props take 7 to 28% fewer bytes; `mountIslands` reads it unchanged.
+  [Islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#islands).
 - A render writes the text next to a `v-if` or `?:` inside each branch, and branches that only write text as one write of the text their test picks; the bench renders run up to 5% fewer instructions.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 - Text the compiler proves needs no escaping is written without `escape_into`: a `?:` or a constant lookup whose values are plain string literals, `String(n)` with no string built, and the digits of `.toFixed()` and its kin.

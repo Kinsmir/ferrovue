@@ -39,15 +39,22 @@ fn a_fallible_component_returns_its_try_render_s_refusal() {
 #[test]
 fn island_props_cannot_leave_their_attribute() {
     let props = Label {
-        label: r#""><script>alert(1)</script>"#,
+        label: r#""><script>alert(1)</script>' onclick='x' &amp;"#,
     };
     let html = Html::island("Label", &props, label).into_string();
-    assert!(!html.contains("<script>"), "{html}");
-    assert!(
-        html.starts_with(r#"<div data-island="Label" data-props="{&quot;label&quot;:"#),
-        "{html}"
+    let (start, rest) = html
+        .split_once("data-props='")
+        .expect("the props attribute");
+    assert_eq!(start, r#"<div data-island="Label" "#);
+    let (value, rest) = rest.split_once('\'').expect("the end of the attribute");
+    assert_eq!(
+        value,
+        r#"{"label":"\"><script>alert(1)</script>&#39; onclick=&#39;x&#39; &amp;amp;"}"#
     );
-    assert!(html.ends_with("&lt;/script&gt;</b></div>"), "{html}");
+    assert_eq!(
+        rest,
+        "><b>&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;&#39; onclick=&#39;x&#39; &amp;amp;</b></div>"
+    );
 }
 
 #[test]
@@ -80,7 +87,7 @@ fn an_islands_numbers_that_are_not_finite_are_written_as_javascript_writes_them(
     };
     assert_eq!(
         Html::island("Gauge", &props, gauge).into_string(),
-        r#"<div data-island="Gauge" data-props="{&quot;level&quot;:NaN,&quot;marks&quot;:[Infinity,0.5,-Infinity],&quot;top&quot;:-Infinity}">NaN</div>"#
+        r#"<div data-island="Gauge" data-props='{"level":NaN,"marks":[Infinity,0.5,-Infinity],"top":-Infinity}'>NaN</div>"#
     );
 }
 
@@ -149,8 +156,8 @@ fn an_island_says_when_it_hydrates_after_its_props_and_keeps_its_markup() {
         let html = Html::island("Label", &props, label)
             .hydrate(when)
             .into_string();
-        let marked = format!(r#"" data-hydrate="{attribute}">"#);
-        assert_eq!(html, eager.replacen("\">", &marked, 1));
+        let marked = format!(r#"' data-hydrate="{attribute}">"#);
+        assert_eq!(html, eager.replacen("'>", &marked, 1));
     }
 }
 
@@ -166,11 +173,11 @@ fn a_hostile_media_query_or_root_margin_cannot_leave_its_attribute() {
     .into_iter()
     .flat_map(|query| {
         [
-            (query, Hydrate::media(query), r#"" data-hydrate="media:"#),
+            (query, Hydrate::media(query), r#"' data-hydrate="media:"#),
             (
                 query,
                 Hydrate::visible_with(query),
-                r#"" data-hydrate="visible:"#,
+                r#"' data-hydrate="visible:"#,
             ),
         ]
     }) {
@@ -233,7 +240,7 @@ fn an_island_writes_where_its_props_hold_dates_beside_them() {
             .dates(r#"[{"at":"<&'>"}]"#)
             .hydrate(Hydrate::Idle)
             .into_string(),
-        r#"<div data-island="Gauge" data-props="{&quot;level&quot;:1.0,&quot;marks&quot;:[],&quot;top&quot;:null}" data-hydrate="idle" data-dates="[{&quot;at&quot;:&quot;&lt;&amp;&#39;&gt;&quot;}]">1</div>"#
+        r#"<div data-island="Gauge" data-props='{"level":1.0,"marks":[],"top":null}' data-hydrate="idle" data-dates="[{&quot;at&quot;:&quot;&lt;&amp;&#39;&gt;&quot;}]">1</div>"#
     );
     assert_eq!(Html::markup(&props, gauge).dates("[1]").into_string(), "1");
 }
@@ -436,7 +443,7 @@ mod basic_html {
         };
         assert_eq!(
             Html::island("Note", &props, render).into_string(),
-            r#"<div data-island="Note" data-props="{&quot;body&quot;:&quot;&lt;b&gt;a&lt;/b&gt; &amp;amp; &lt;i&gt;b&lt;/i&gt;&quot;}"><article><b>a</b> &amp; <i>b</i></article></div>"#
+            r#"<div data-island="Note" data-props='{"body":"<b>a</b> &amp;amp; <i>b</i>"}'><article><b>a</b> &amp; <i>b</i></article></div>"#
         );
         let json = serde_json::to_value(&props).unwrap();
         assert_eq!(json["body"], props.body.as_str());
@@ -669,7 +676,7 @@ mod sanitised {
         let island = Html::island("Review", &props, render).into_string();
         assert_eq!(
             island,
-            r#"<div data-island="Review" data-props="{&quot;body&quot;:&quot;&lt;b title=\&quot;a &amp;quot;b&amp;quot;\&quot;&gt;x&lt;/b&gt;&quot;}"><article><b title="a &quot;b&quot;">x</b></article></div>"#
+            r#"<div data-island="Review" data-props='{"body":"<b title=\"a &amp;quot;b&amp;quot;\">x</b>"}'><article><b title="a &quot;b&quot;">x</b></article></div>"#
         );
         let json: serde_json::Value = serde_json::to_value(&props).unwrap();
         assert_eq!(json["body"], props.body.as_str());

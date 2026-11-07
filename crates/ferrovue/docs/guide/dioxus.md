@@ -88,8 +88,9 @@ the client hydrates is byte for byte what ferrovue rendered, which is what Vue's
 writes; Dioxus adds nothing inside the element, in a fullstack render either.
 
 Dioxus writes the element's attributes itself. The values are the same, so the client reads the same
-props, but Dioxus spells the five escaped characters as numeric references (`&#34;` for `"`, `&#38;`,
-`&#39;`, `&#60;`, `&#62;`) where Vue writes `&quot;`, `&amp;`, `&#39;`, `&lt;` and `&gt;`. A
+props, but Dioxus puts `data-props` in double quotes and spells the five escaped characters as
+numeric references (`&#34;` for `"`, `&#38;`, `&#39;`, `&#60;`, `&#62;`), where `island()` writes
+it in single quotes with `&amp;` and `&#39;` its only references. A
 fullstack render, which Dioxus hydrates in the browser too, adds its own `data-node-hydration`
 attribute to the element. Neither changes what Vue hydrates: the props are read from the parsed
 attribute, and Vue mounts on the element's content and leaves the element itself alone.
@@ -165,7 +166,7 @@ assert!(island.ends_with(&format!(r#" data-node-hydration="0">{markup}</div>"#))
 // What ferrovue writes: the same element, the same props, the same markup.
 assert_eq!(
     counter::island(&props).into_string(),
-    format!(r#"<div data-island="Counter" data-props="{{&quot;label&quot;:&quot;Clicks&quot;,&quot;start&quot;:3}}">{markup}</div>"#)
+    format!(r#"<div data-island="Counter" data-props='{{"label":"Clicks","start":3}}'>{markup}</div>"#)
 );
 ```
 
@@ -213,7 +214,7 @@ rsx! {
 # assert_eq!(
 #     dioxus_ssr::render(&dom),
 #     concat!(
-#         r#"<section><div data-island="Counter" data-props="{&quot;label&quot;:&quot;Total&quot;,&quot;start&quot;:6}">"#,
+#         r#"<section><div data-island="Counter" data-props='{"label":"Total","start":6}'>"#,
 #         r#"<button type="button">Total: 6</button></div></section>"#,
 #     )
 # );

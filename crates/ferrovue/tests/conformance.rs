@@ -50,13 +50,13 @@ fn an_island_carries_the_props_it_was_rendered_from() {
 
     let island = generated::text::island(&props).into_string();
     let rest = island
-        .strip_prefix(r#"<div data-island="Text" data-props=""#)
+        .strip_prefix(r#"<div data-island="Text" data-props='"#)
         .expect("the island wrapper");
     let (attr, inner) = rest
-        .split_once(r#"">"#)
+        .split_once("'>")
         .expect("the end of the props attribute");
     assert_eq!(inner, format!("{markup}</div>"));
-    assert!(!attr.contains(['"', '<', '>']), "{attr}");
+    assert!(!attr.contains('\''), "{attr}");
     let read: serde_json::Value = serde_json::from_str(&unescape(attr)).unwrap();
     assert_eq!(
         read,
@@ -83,7 +83,7 @@ fn an_island_carries_numbers_that_are_not_finite() {
     page.push('\n');
     assert_eq!(page, include_str!("conformance/islands.html"));
     for ratio in ["NaN", "Infinity", "-Infinity"] {
-        assert!(page.contains(&format!(r#"data-props="{{&quot;ratio&quot;:{ratio}}}""#)));
+        assert!(page.contains(&format!(r#"data-props='{{"ratio":{ratio}}}'"#)));
     }
 }
 
@@ -103,11 +103,9 @@ fn an_island_carries_null_for_a_nullable_prop() {
     page.push('\n');
     assert_eq!(page, include_str!("conformance/null-islands.html"));
     assert!(page.contains(
-        r#"data-props="{&quot;label&quot;:null,&quot;count&quot;:null,&quot;ratio&quot;:null,&quot;on&quot;:null,&quot;entry&quot;:null,&quot;entries&quot;:[],&quot;tags&quot;:[null]}""#
+        r#"data-props='{"label":null,"count":null,"ratio":null,"on":null,"entry":null,"entries":[],"tags":[null]}'"#
     ));
-    assert!(page.contains(
-        r#"{&quot;title&quot;:&quot;e&quot;,&quot;deletedAt&quot;:null,&quot;score&quot;:0}"#
-    ));
+    assert!(page.contains(r#"{"title":"e","deletedAt":null,"score":0}"#));
 }
 
 #[test]
@@ -129,12 +127,10 @@ fn an_island_carries_its_dates_as_iso_strings_and_an_invalid_one_as_nan() {
     page.push('\n');
     assert_eq!(page, include_str!("conformance/date-islands.html"));
     assert!(page.contains(
-        r#"data-props="{&quot;posted&quot;:&quot;2024-03-10T08:05:09.007Z&quot;,&quot;edited&quot;:&quot;+010000-01-01T00:00:00.000Z&quot;,&quot;deleted&quot;:null,"#
+        r#"data-props='{"posted":"2024-03-10T08:05:09.007Z","edited":"+010000-01-01T00:00:00.000Z","deleted":null,"#
     ));
-    assert!(page.contains(
-        r#"{&quot;posted&quot;:NaN,&quot;deleted&quot;:&quot;1969-12-31T23:59:59.999Z&quot;,"#
-    ));
-    assert!(page.contains(r#"&quot;deleted&quot;:NaN,"#));
+    assert!(page.contains(r#"{"posted":NaN,"deleted":"1969-12-31T23:59:59.999Z","#));
+    assert!(page.contains(r#""deleted":NaN,"#));
 }
 
 #[test]
@@ -175,7 +171,7 @@ fn an_island_carries_dates_inside_lists_and_objects_and_where_they_are() {
     page.push('\n');
     assert_eq!(page, include_str!("conformance/nested-date-islands.html"));
     assert!(page.contains(
-        r#"&quot;marks&quot;:[&quot;+010000-01-01T00:00:00.000Z&quot;,NaN],&quot;seen&quot;:[null,&quot;1969-12-31T23:59:59.999Z&quot;,NaN]"#
+        r#""marks":["+010000-01-01T00:00:00.000Z",NaN],"seen":[null,"1969-12-31T23:59:59.999Z",NaN]"#
     ));
     assert!(page.contains(
         r#"data-dates="[{&quot;rows&quot;:[{&quot;at&quot;:1,&quot;edited&quot;:1,&quot;deleted&quot;:1,&quot;marks&quot;:[1],"#
@@ -683,9 +679,10 @@ mod dioxus {
 
     fn split_island<'h>(html: &'h str, name: &str, hydration: &str) -> (&'h str, &'h str) {
         let rest = html
-            .strip_prefix(&format!(r#"<div data-island="{name}" data-props=""#))
+            .strip_prefix(&format!(r#"<div data-island="{name}" data-props="#))
             .unwrap_or_else(|| panic!("an island's start tag: {html}"));
-        let (props, rest) = rest.split_once('"').expect("the end of data-props");
+        let quote = rest.chars().next().expect("the quote of data-props");
+        let (props, rest) = rest[1..].split_once(quote).expect("the end of data-props");
         let inner = rest
             .strip_prefix(hydration)
             .and_then(|r| r.strip_prefix('>'))

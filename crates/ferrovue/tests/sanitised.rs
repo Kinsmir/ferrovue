@@ -114,15 +114,11 @@ fn the_island_carries_the_sanitised_string_for_the_client() {
     let props = review::Props::new("Ada", Sanitised::new(HOSTILE));
     let island = review::island(&props).into_string();
     let attr = island
-        .strip_prefix(r#"<div data-island="Review" data-props=""#)
-        .and_then(|rest| rest.split_once(r#"">"#))
+        .strip_prefix(r#"<div data-island="Review" data-props='"#)
+        .and_then(|rest| rest.split_once("'>"))
         .map(|(attr, _)| attr)
         .expect("the props attribute");
-    let json = attr
-        .replace("&quot;", "\"")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&");
+    let json = attr.replace("&#39;", "'").replace("&amp;", "&");
     let read: serde_json::Value = serde_json::from_str(&json).unwrap();
     assert_eq!(read, serde_json::json!({ "reader": "Ada", "body": CLEAN }));
     assert!(island.ends_with(&format!(

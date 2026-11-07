@@ -205,7 +205,7 @@ async fn book(Path(id): Path<String>) -> Response {
 #     response,
 #     concat!(
 #         "<!doctype html><html><body><h1>dune</h1><section><!--[-->",
-#         r#"<div data-island="Reviews" data-props="{&quot;count&quot;:3}"><p>3 reviews</p></div>"#,
+#         r#"<div data-island="Reviews" data-props='{"count":3}'><p>3 reviews</p></div>"#,
 #         "<!--]--></section></body></html>",
 #     )
 # );

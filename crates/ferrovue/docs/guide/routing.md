@@ -388,7 +388,7 @@ assert_eq!(
     concat!(
         r#"<div id="app"><nav><a href="/" class="">home</a> "#,
         r#"<a aria-current="page" href="/users/ada" class="router-link-active router-link-exact-active">ada</a></nav>"#,
-        r#"<main><div data-island="Greeting" data-props="{&quot;name&quot;:&quot;Ada&quot;,&quot;unread&quot;:3}">"#,
+        r#"<main><div data-island="Greeting" data-props='{"name":"Ada","unread":3}'>"#,
         r#"<p class="greeting">Hello, Ada!<b>3 new</b><!----></p></div></main></div>"#,
     )
 );

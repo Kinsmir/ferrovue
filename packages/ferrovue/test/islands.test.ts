@@ -20,8 +20,12 @@ function fixture(component: string, name: string): { props: Record<string, unkno
   return { props, stores: $stores ?? {}, route: ($route as string | undefined) ?? "/", html: readFileSync(`${base}.html`, "utf8") };
 }
 
+const quoted = (json: string): string => json.replace(/&/g, "&amp;").replace(/'/g, "&#39;");
+
+const unquoted = (attr: string): string => attr.replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+
 const island = (name: string, props: unknown, html: string): string =>
-  `<div data-island="${escapeHtml(name)}" data-props="${escapeHtml(JSON.stringify(props))}">${html}</div>`;
+  `<div data-island="${escapeHtml(name)}" data-props='${quoted(JSON.stringify(props))}'>${html}</div>`;
 
 const stateScript = (state: unknown): string =>
   `<script type="application/json" id="__pinia">${JSON.stringify(state).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026")}</script>`;
@@ -73,7 +77,7 @@ it("hydrates a Float prop that is NaN or infinite as the number the server rende
   const ratios = { NaN: Number.NaN, Infinity: Number.POSITIVE_INFINITY, "-Infinity": Number.NEGATIVE_INFINITY };
   attachSsrRender(join(ROOT, "components", "Narrowing.vue"), "Narrowing", components.Narrowing!);
   const markup = await Promise.all(Object.values(ratios).map((ratio) => renderToString(createSSRApp(components.Narrowing!, { ratio }))));
-  expect(page).toBe(Object.keys(ratios).map((written, i) => `<div data-island="Narrowing" data-props="${escapeHtml(`{"ratio":${written}}`)}">${markup[i]}</div>`).join(""));
+  expect(page).toBe(Object.keys(ratios).map((written, i) => `<div data-island="Narrowing" data-props='${quoted(`{"ratio":${written}}`)}'>${markup[i]}</div>`).join(""));
 
   document.body.innerHTML = page;
   const islands = await mountIslands(components);
@@ -91,10 +95,10 @@ it("hydrates a nullable prop from the null the server wrote, which an absent pro
   const page = readFileSync(join(ROOT, "null-islands.html"), "utf8").trim();
   attachSsrRender(join(ROOT, "components", "Nullable.vue"), "Nullable", components.Nullable!);
   attachSsrRender(join(ROOT, "components", "NullChild.vue"), "NullChild", components.NullChild!);
-  const islands = [...page.matchAll(/<div data-island="Nullable" data-props="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
+  const islands = [...page.matchAll(/<div data-island="Nullable" data-props='([^']*)'>(.*?)<\/div>(?=<div data-island|$)/g)];
   expect(islands).toHaveLength(2);
   for (const [, attr, html] of islands) {
-    const props = JSON.parse(attr!.replace(/&quot;/g, '"').replace(/&amp;/g, "&")) as Record<string, unknown>;
+    const props = JSON.parse(unquoted(attr!)) as Record<string, unknown>;
     expect(Object.values(props)).toContain(null);
     expect(await renderToString(createSSRApp(components.Nullable!, props))).toBe(html);
   }
@@ -105,7 +109,7 @@ it("hydrates a nullable prop from the null the server wrote, which an absent pro
   expect(warnings).toEqual([]);
   mounted.unmount();
 
-  document.body.innerHTML = page.replace(/&quot;count&quot;:null,/, "");
+  document.body.innerHTML = page.replace(/"count":null,/, "");
   (await mountIslands(components)).unmount();
   expect(warnings.filter((w) => /hydrat|mismatch/i.test(w))).not.toEqual([]);
 });
@@ -114,7 +118,7 @@ it("hydrates a Date prop from the ISO string or NaN the server wrote, as a Date"
   const page = readFileSync(join(ROOT, "date-islands.html"), "utf8").trim();
   attachSsrRender(join(ROOT, "components", "DatePost.vue"), "DatePost", components.DatePost!);
   attachSsrRender(join(ROOT, "components", "DateStamp.vue"), "DateStamp", components.DateStamp!);
-  const islands = [...page.matchAll(/<div data-island="DatePost" data-props="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
+  const islands = [...page.matchAll(/<div data-island="DatePost" data-props='([^']*)'>(.*?)<\/div>(?=<div data-island|$)/g)];
   expect(islands).toHaveLength(3);
   const dates = [
     { posted: new Date("2024-03-10T08:05:09.007Z"), edited: new Date("+010000-01-01T00:00:00.000Z"), deleted: null },
@@ -122,7 +126,7 @@ it("hydrates a Date prop from the ISO string or NaN the server wrote, as a Date"
     { posted: new Date(-8.64e15), deleted: new Date(Number.NaN) },
   ];
   for (const [i, [, attr, html]] of islands.entries()) {
-    const props = JSON.parse(attr!.replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/:NaN/g, ":null")) as Record<string, unknown>;
+    const props = JSON.parse(unquoted(attr!).replace(/:NaN/g, ":null")) as Record<string, unknown>;
     expect(await renderToString(createSSRApp(components.DatePost!, { ...props, ...dates[i] }))).toBe(html);
   }
 
@@ -139,7 +143,7 @@ it("hydrates a Date prop from the ISO string or NaN the server wrote, as a Date"
   expect(given[0]!.edited).toEqual(new Date("+010000-01-01T00:00:00.000Z"));
   mounted.unmount();
 
-  document.body.innerHTML = page.replace("&quot;posted&quot;:NaN", "&quot;posted&quot;:null");
+  document.body.innerHTML = page.replace('"posted":NaN', '"posted":null');
   (await mountIslands(components)).unmount();
   expect(warnings.filter((w) => /Invalid prop|hydrat|mismatch/i.test(w))).not.toEqual([]);
 });
@@ -147,7 +151,7 @@ it("hydrates a Date prop from the ISO string or NaN the server wrote, as a Date"
 it("hydrates dates inside lists, dictionaries and objects from the plan the server wrote beside the props", async () => {
   const page = readFileSync(join(ROOT, "nested-date-islands.html"), "utf8").trim();
   for (const name of ["DateRows", "DateDays", "DateStamp"]) attachSsrRender(join(ROOT, "components", `${name}.vue`), name, components[name]!);
-  const islands = [...page.matchAll(/<div data-island="DateRows" data-props="([^"]*)" data-dates="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
+  const islands = [...page.matchAll(/<div data-island="DateRows" data-props='([^']*)' data-dates="([^"]*)">(.*?)<\/div>(?=<div data-island|$)/g)];
   expect(islands).toHaveLength(2);
   const at = (iso: string): Date => new Date(iso);
   const row = { marks: [at("+010000-01-01"), new Date(Number.NaN)], seen: [null, new Date(-1), new Date(Number.NaN)], byName: { ada: at("2024-01-01") }, at: at("2024-03-10T08:05:09.007Z"), edited: new Date(Number.NaN), deleted: null };
@@ -156,7 +160,7 @@ it("hydrates dates inside lists, dictionaries and objects from the plan the serv
     {},
   ];
   for (const [i, [, attr, , html]] of islands.entries()) {
-    const props = JSON.parse(attr!.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").replace(/NaN/g, "null")) as Record<string, unknown>;
+    const props = JSON.parse(unquoted(attr!).replace(/NaN/g, "null")) as Record<string, unknown>;
     const merged = { ...props, ...dates[i] } as { rows: Record<string, unknown>[]; lead: Record<string, unknown> | null };
     if (i === 0) {
       merged.rows = merged.rows.map((_, j) => ({ ...(props.rows as Record<string, unknown>[])[j], ...dates[0]!.rows![j] }));
@@ -196,6 +200,19 @@ it("leaves an island it cannot hydrate as the server rendered it, and says why",
   expect(islands.apps).toHaveLength(1);
   expect(problems).toEqual([expect.stringMatching(/^no component called "Missing" was given \(`ferrovue\/islands` holds/), "the props of Text are not JSON"]);
   expect(document.body.innerHTML).toContain("<p>kept</p>");
+  islands.unmount();
+});
+
+it("gives an island the props the server wrote in single quotes, quotes, ampersands and markup included", async () => {
+  const text = `'"&amp; <b>x</b></div></script>'`;
+  const Said = { props: { text: { type: String, required: true } }, render(this: { text: string }) { return h("p", this.text); } };
+  const html = await renderToString(createSSRApp(Said, { text }));
+  document.body.innerHTML = island("Said", { text }, html);
+  expect(document.body.innerHTML).toContain(`data-props="{&quot;text&quot;:&quot;'\\&quot;&amp;amp; <b>x</b></div></script>'&quot;}"`);
+  const islands = await mountIslands({ Said });
+  expect(islands.apps).toHaveLength(1);
+  expect(islands.apps[0]!._instance?.props.text).toBe(text);
+  expect(warnings).toEqual([]);
   islands.unmount();
 });
 
