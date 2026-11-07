@@ -46,7 +46,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(308 + props.label.len());
+    out.reserve(
+        308
+        + props.label.len()
+    );
     out.push_str("<div><pre>  ");
     fv::core::escape_into(out, &props.label);
     out.push_str("\n    <b> kept </b>\n</pre><textarea>  typed\n</textarea><div><b> {{ raw }} </b></div><div style=\"white-space:pre-wrap;\"><b>");
