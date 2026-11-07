@@ -73,15 +73,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     }));
     out.push_str("</header><div class=\"body\">");
     fv::render::slot_into(out, fv_slots.default, None);
-    out.push_str("</div>");
     if fv_slots.footer.is_some() {
-        out.push_str("<footer>");
+        out.push_str("</div><footer>");
         fv::render::slot_into(out, fv_slots.footer, None);
-        out.push_str("</footer>");
+        out.push_str("</footer></section>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</div><!----></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

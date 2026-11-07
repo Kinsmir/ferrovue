@@ -63,11 +63,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(333 + props.label.len() + props.maybe.as_deref().map_or(0, str::len) + props.css.len());
-    out.push_str("<div><p");
     if props.label.is_empty() {
-        out.push_str(" a.");
+        out.push_str("<div><p a.");
     } else {
-        out.push_str(" a.=\"");
+        out.push_str("<div><p a.=\"");
         fv::core::escape_into(out, &props.label);
         out.push('"');
     }
@@ -79,13 +78,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     if props.label.is_empty() {
-        out.push_str(" onx");
+        out.push_str(" onx title>keys</p><p");
     } else {
         out.push_str(" onx=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\" title>keys</p><p");
     }
-    out.push_str(" title>keys</p><p");
     if props.count != 0 {
         out.push_str(" hidden");
     }
@@ -104,13 +102,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     if props.label.is_empty() {
-        out.push_str(" id");
+        out.push_str(" id>merged</p><p class=\"");
     } else {
         out.push_str(" id=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">merged</p><p class=\"");
     }
-    out.push_str(">merged</p><p class=\"");
     fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
     out.push_str("\">alone</p><p");
     if props.maybe.as_deref().is_some() {
@@ -118,27 +115,23 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::attrs::class_into(out, false, &[props.maybe.as_deref().unwrap_or("")]);
         out.push('"');
     }
-    out.push_str(">absent</p><p");
     if props.label.is_empty() {
-        out.push_str(" id");
+        out.push_str(">absent</p><p id>none</p><p style=\"");
     } else {
-        out.push_str(" id=\"");
+        out.push_str(">absent</p><p id=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">none</p><p style=\"");
     }
-    out.push_str(">none</p><p style=\"");
     fv::core::escape_into(out, &props.css);
     out.push_str("\">style</p><p style=\"");
     fv::attrs::style_text_into(out, &props.css);
-    out.push('"');
     if props.label.is_empty() {
-        out.push_str(" id");
+        out.push_str("\" id>merged style</p></div>");
     } else {
-        out.push_str(" id=\"");
+        out.push_str("\" id=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">merged style</p></div>");
     }
-    out.push_str(">merged style</p></div>");
     Ok(())
 }
 

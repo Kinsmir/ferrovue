@@ -55,11 +55,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(271 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.tone.len());
-    out.push_str("<div class=\"box\"");
     if props.label.is_empty() {
-        out.push_str(" id");
+        out.push_str("<div class=\"box\" id");
     } else {
-        out.push_str(" id=\"");
+        out.push_str("<div class=\"box\" id=\"");
         fv::core::escape_into(out, &props.label);
         out.push('"');
     }
@@ -82,48 +81,41 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push_str(" data-own=\"x\"><a class=\"own");
     fv::attrs::class_into(out, true, &[if props.on { "on" } else { "off" }]);
-    out.push('"');
     if props.label.is_empty() {
-        out.push_str(" href");
+        out.push_str("\" href>");
     } else {
-        out.push_str(" href=\"");
+        out.push_str("\" href=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.label);
-    out.push_str("</a><span");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("</a><span title style=\"--tone:");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("</a><span title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\" style=\"--tone:");
     }
-    out.push_str(" style=\"--tone:");
     fv::core::escape_into(out, &props.tone);
     out.push_str(";margin:0;\">");
     fv::core::push_int(out, props.n);
-    out.push_str("</span><input");
     if props.label.is_empty() {
-        out.push_str(" value");
+        out.push_str("</span><input value");
     } else {
-        out.push_str(" value=\"");
+        out.push_str("</span><input value=\"");
         fv::core::escape_into(out, &props.label);
         out.push('"');
     }
     if props.on {
         out.push_str(" disabled");
     }
-    out.push_str(" type=\"text\"><p");
     if props.tip.as_deref().unwrap_or("none").is_empty() {
-        out.push_str(" data-tip");
+        out.push_str(" type=\"text\"><p data-tip class=\"");
     } else {
-        out.push_str(" data-tip=\"");
+        out.push_str(" type=\"text\"><p data-tip=\"");
         fv::core::escape_into(out, props.tip.as_deref().unwrap_or("none"));
-        out.push('"');
+        out.push_str("\" class=\"");
     }
-    out.push_str(" class=\"");
     fv::attrs::class_into(out, false, &[&*props.tone, if props.on { "lit" } else { "" }]);
     out.push_str("\"></p></div>");
     Ok(())

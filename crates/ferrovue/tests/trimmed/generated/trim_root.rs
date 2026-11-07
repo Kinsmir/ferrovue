@@ -48,15 +48,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.name);
     out.push_str("\">");
     fv::core::escape_into(out, &props.name);
-    out.push_str("</a> ");
     if !props.label.is_empty() {
-        out.push_str("<b>");
+        out.push_str("</a> <b>");
         fv::core::escape_into(out, &props.label);
-        out.push_str("</b>");
+        out.push_str("</b><div>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</a> <!----><div>");
     }
-    out.push_str("<div>");
     fv::core::escape_into(out, &props.label);
     out.push_str("</div><span>");
     fv::core::escape_into(out, &props.name);

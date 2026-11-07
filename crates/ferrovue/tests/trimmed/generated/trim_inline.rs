@@ -66,15 +66,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.name);
     out.push_str("\">");
     fv::core::escape_into(out, &props.name);
-    out.push_str("</a> ");
     if !props.label.is_empty() {
-        out.push_str("<b>");
+        out.push_str("</a> <b>");
         fv::core::escape_into(out, &props.label);
-        out.push_str("</b>");
+        out.push_str("</b> <img alt=\"\"> ");
     } else {
-        out.push_str("<i>none</i>");
+        out.push_str("</a> <i>none</i> <img alt=\"\"> ");
     }
-    out.push_str(" <img alt=\"\"> ");
     super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("next") }, super::trim_button::Slots {
         default: None,
         after: None,
@@ -83,9 +81,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.label);
     out.push_str("\">");
     fv::core::escape_into(out, &props.label);
-    out.push_str("</time> ");
     if !props.name.is_empty() {
-        out.push_str("<!--[--><span class=\"tagline-word\">by</span> <a href=\"/u/");
+        out.push_str("</time> <!--[--><span class=\"tagline-word\">by</span> <a href=\"/u/");
         fv::core::escape_into(out, &props.name);
         out.push_str("\">");
         fv::core::escape_into(out, &props.name);
@@ -98,33 +95,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         } else {
             out.push_str("<!---->");
         }
-        out.push_str("<!--]-->");
+        out.push_str("<!--]--> ");
     } else {
-        out.push_str("<!--[--><span class=\"tagline-word\">by</span> <span class=\"author-deleted\">[deleted]</span><!--]-->");
+        out.push_str("</time> <!--[--><span class=\"tagline-word\">by</span> <span class=\"author-deleted\">[deleted]</span><!--]--> ");
     }
-    out.push(' ');
     if !props.label.is_empty() {
         out.push_str("<!--[--><span class=\"tagline-word\">to</span> <a href=\"/r/");
         fv::core::escape_into(out, &props.label);
         out.push_str("/\">/r/");
         fv::core::escape_into(out, &props.label);
-        out.push_str("</a><!--]-->");
+        out.push_str("</a><!--]--></p><p class=\"edges\">ago<span> by ");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p><p class=\"edges\">ago<span> by ");
     }
-    out.push_str("</p><p class=\"edges\">ago<span> by ");
     fv::core::escape_into(out, &props.name);
     out.push_str("</span>");
     fv::core::escape_into(out, &props.label);
-    out.push(' ');
     if !props.label.is_empty() {
-        out.push_str("<span> · <button>");
+        out.push_str(" <span> · <button>");
         fv::core::escape_into(out, &props.label);
-        out.push_str("</button></span>");
+        out.push_str("</button></span> <button>remove ");
     } else {
-        out.push_str("<!---->");
+        out.push_str(" <!----> <button>remove ");
     }
-    out.push_str(" <button>remove ");
     fv::core::escape_into(out, &props.name);
     out.push_str("</button> <span>");
     fv::core::escape_into(out, &props.label);

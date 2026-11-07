@@ -55,11 +55,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     let s_summary = format!("{}/{}", fv_provides.look_key.unwrap_or(&fv_default_look).size, fv_provides.look_key.unwrap_or(&fv_default_look).tone);
     out.push_str("<span class=\"swatch swatch-");
     fv::core::escape_into(out, fv::strings::js_trim_end(&fv_provides.look_key.unwrap_or(&fv_default_look).size));
-    out.push('"');
     if fv_provides.look_key.unwrap_or(&fv_default_look).tone.is_empty() {
-        out.push_str(" data-tone");
+        out.push_str("\" data-tone");
     } else {
-        out.push_str(" data-tone=\"");
+        out.push_str("\" data-tone=\"");
         fv::core::escape_into(out, &fv_provides.look_key.unwrap_or(&fv_default_look).tone);
         out.push('"');
     }

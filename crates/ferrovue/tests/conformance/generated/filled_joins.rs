@@ -115,81 +115,60 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(191 + props.a.as_deref().map_or(0, str::len) + props.b.len() + props.s.len() + props.t.len() + 3);
     out.push_str("<div>");
     if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<p>");
-        if if props.c { !fv_a.is_empty() } else { !props.b.is_empty() } {
-            out.push_str("<span>shown</span>");
-        } else {
-            out.push_str("<!---->");
-        }
-        out.push_str("<i>");
+        out.push_str(if if props.c { !fv_a.is_empty() } else { !props.b.is_empty() } { "<p><span>shown</span><i>" } else { "<p><!----><i>" });
         fv::core::escape_into(out, { let a = if props.c { fv_a } else { &props.b }; if !a.is_empty() { a } else { "fb" } });
-        out.push_str("</i><em");
         if (if props.c { fv_a } else { &props.b }).is_empty() {
-            out.push_str(" title");
+            out.push_str("</i><em title></em><!--[-->");
         } else {
-            out.push_str(" title=\"");
+            out.push_str("</i><em title=\"");
             fv::core::escape_into(out, if props.c { fv_a } else { &props.b });
-            out.push('"');
+            out.push_str("\"></em><!--[-->");
         }
-        out.push_str("></em><!--[-->");
         for fv_x_ref in [fv_a, &*props.b].iter() {
             let fv_x: &str = fv_x_ref;
-            out.push_str("<!--[-->");
             if !fv_x.is_empty() {
-                out.push_str("<b>[");
+                out.push_str("<!--[--><b>[");
                 fv::core::escape_into(out, fv_x);
-                out.push_str("]</b>");
+                out.push_str("]</b><!--]-->");
             } else {
-                out.push_str("<i>empty</i>");
+                out.push_str("<!--[--><i>empty</i><!--]-->");
             }
-            out.push_str("<!--]-->");
         }
-        out.push_str("<!--]-->");
         if [&*props.b, fv_a].first().map(|v| &**v).is_some_and(|v| !v.is_empty()) {
-            out.push_str("<u>");
+            out.push_str("<!--]--><u>");
             if let Some(v) = [&*props.b, fv_a].first().map(|v| &**v) {
                 fv::core::escape_into(out, v);
             }
-            out.push_str("</u>");
+            out.push_str("</u></p>");
         } else {
-            out.push_str("<!---->");
+            out.push_str("<!--]--><!----></p>");
         }
-        out.push_str("</p>");
     } else {
         out.push_str("<!---->");
     }
-    if !Some(&*props.s).filter(|v| !v.is_empty()).unwrap_or(&*props.t).is_empty() {
-        out.push_str("<b>A</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<i");
+    out.push_str(if !Some(&*props.s).filter(|v| !v.is_empty()).unwrap_or(&*props.t).is_empty() { "<b>A</b><i" } else { "<!----><i" });
     if Some(&*props.s).filter(|v| !v.is_empty()).unwrap_or(&*props.t).is_empty() {
-        out.push_str(" title");
+        out.push_str(" title></i><s>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, Some(&*props.s).filter(|v| !v.is_empty()).unwrap_or(&*props.t));
-        out.push('"');
+        out.push_str("\"></i><s>");
     }
-    out.push_str("></i><s>");
     fv::core::escape_into(out, Some(&*props.s).filter(|v| !v.is_empty()).unwrap_or(&*props.t));
-    out.push_str("</s>");
     if !fv::props::Union::as_str(props.m).is_empty() {
-        out.push_str("<b>");
+        out.push_str("</s><b>");
         fv::core::escape_into(out, fv::props::Union::as_str(props.m));
-        out.push_str("</b>");
+        out.push_str("</b><q");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</s><!----><q");
     }
-    out.push_str("<q");
     if fv::props::Union::as_str(props.m).is_empty() {
-        out.push_str(" title");
+        out.push_str(" title></q></div>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, fv::props::Union::as_str(props.m));
-        out.push('"');
+        out.push_str("\"></q></div>");
     }
-    out.push_str("></q></div>");
     Ok(())
 }
 

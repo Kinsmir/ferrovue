@@ -209,11 +209,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push_str(" data-kind=\"");
         fv::core::escape_into(out, fv::props::Union::as_str(props.kind));
-        out.push('"');
         if fv::props::Union::as_str(props.mark).is_empty() {
-            out.push_str(" data-mark");
+            out.push_str("\" data-mark");
         } else {
-            out.push_str(" data-mark=\"");
+            out.push_str("\" data-mark=\"");
             fv::core::escape_into(out, fv::props::Union::as_str(props.mark));
             out.push('"');
         }
@@ -234,20 +233,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if props.eager {
             out.push_str(" title=\"a&quot;&lt;b&gt;\"");
         }
-        out.push_str("></iframe>");
         if !props.flair.is_empty() {
-            out.push_str("<b>");
+            out.push_str("></iframe><b>");
             fv::core::push_int(out, props.flair.len() as i64);
             out.push_str("</b>");
         } else {
-            out.push_str("<!---->");
+            out.push_str("></iframe><!---->");
         }
-        if props.flair.is_empty() {
-            out.push_str("<b>none</b>");
-        } else {
-            out.push_str("<!---->");
-        }
-        out.push_str("<!--[-->");
+        out.push_str(if props.flair.is_empty() { "<b>none</b><!--[-->" } else { "<!----><!--[-->" });
         for (fv_n, fv_part) in props.parts.iter().enumerate() {
             let fv_n = fv_n as i64;
             out.push_str("<p class=\"");
@@ -261,11 +254,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             if fv_part.tags.len() as i64 as f64 > fv_n as f64 {
                 out.push_str("<i>");
                 fv::core::push_int(out, fv_part.tags.len() as i64 - fv_n);
-                out.push_str("</i>");
+                out.push_str("</i></p>");
             } else {
-                out.push_str("<!---->");
+                out.push_str("<!----></p>");
             }
-            out.push_str("</p>");
         }
         out.push_str("<!--]--><!--[-->");
         for (fv_i, (fv_name, fv_part_2)) in props.by_name.iter().enumerate() {

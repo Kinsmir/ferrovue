@@ -98,15 +98,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(210 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.owner.as_ref().map_or(0, |v| v.name.len()));
     let s_kind = if props.label.as_deref().is_some() { "string" } else { "undefined" };
     let s_sized = if let Some(fv_size) = props.size { fv_size as f64 * 2.0 } else { -1.0f64 };
-    out.push_str("<section");
     if (if props.label.as_deref().is_some() { "string" } else { "undefined" }).is_empty() {
-        out.push_str(" data-kind");
+        out.push_str("<section data-kind class=\"");
     } else {
-        out.push_str(" data-kind=\"");
+        out.push_str("<section data-kind=\"");
         fv::core::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
-        out.push('"');
+        out.push_str("\" class=\"");
     }
-    out.push_str(" class=\"");
     fv::attrs::class_into(out, false, &[if props.label.as_deref().is_some() { "named" } else { "" }]);
     out.push_str("\"><p>");
     fv::core::escape_into(out, if props.label.as_deref().is_some() { "string" } else { "undefined" });
@@ -136,15 +134,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(if props.size.is_some() { "true" } else { "false" });
     out.push_str("|false|");
     out.push_str(if (if props.label.as_deref().is_some() { "string" } else { "undefined" }) == (if props.nick.as_deref().is_some() { "string" } else { "object" }) { "true" } else { "false" });
-    out.push_str("</p>");
     if let Some(fv_label) = props.label.as_deref() {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::push_int(out, fv::strings::js_length(fv_label));
         out.push(':');
         fv::core::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
-        out.push_str("<p>no label</p>");
+        out.push_str("</p><p>no label</p>");
     }
     if let Some(fv_owner) = props.owner.as_ref() {
         out.push_str("<p>");
@@ -156,11 +153,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_nick) = props.nick.as_deref() && fv::strings::js_length(fv_nick) > 2 {
         out.push_str("<i>");
         fv::core::escape_into(out, fv_nick);
-        out.push_str("</i>");
+        out.push_str("</i><b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><b>");
     }
-    out.push_str("<b>");
     fv::core::push_number(out, if let Some(fv_size_2) = props.size { fv_size_2 as f64 + 1.0 } else { -1.0f64 });
     out.push_str("</b></section>");
     Ok(())

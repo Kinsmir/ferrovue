@@ -119,50 +119,44 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if !props.on {
         out.push_str(" hidden");
     }
-    out.push_str(" data-a=\"1\">");
     if props.on {
-        out.push_str("<!--[--><i>a</i>");
+        out.push_str(" data-a=\"1\"><!--[--><i>a</i>");
         fv::core::escape_into(out, &props.label);
         out.push_str("<!--]-->");
     } else {
-        out.push_str("<!--[-->none<!--]-->");
+        out.push_str(" data-a=\"1\"><!--[-->none<!--]-->");
     }
     if props.on {
-        out.push_str("<b");
         if props.label.is_empty() {
-            out.push_str(" title");
+            out.push_str("<b title><!--[-->");
         } else {
-            out.push_str(" title=\"");
+            out.push_str("<b title=\"");
             fv::core::escape_into(out, &props.label);
-            out.push('"');
+            out.push_str("\"><!--[-->");
         }
-        out.push_str("><!--[-->");
         for fv_i_ref in props.items.iter() {
             let fv_i: &str = fv_i_ref;
             out.push_str("<u>");
             fv::core::escape_into(out, fv_i);
             out.push_str("</u>");
         }
-        out.push_str("<!--]--></b>");
+        out.push_str("<!--]--></b><!--[-->");
     } else {
-        out.push_str("<i");
         if props.label.is_empty() {
-            out.push_str(" title");
+            out.push_str("<i title><!--[-->");
         } else {
-            out.push_str(" title=\"");
+            out.push_str("<i title=\"");
             fv::core::escape_into(out, &props.label);
-            out.push('"');
+            out.push_str("\"><!--[-->");
         }
-        out.push_str("><!--[-->");
         for fv_i_ref_2 in props.items.iter() {
             let fv_i_2: &str = fv_i_ref_2;
             out.push_str("<u>");
             fv::core::escape_into(out, fv_i_2);
             out.push_str("</u>");
         }
-        out.push_str("<!--]--></i>");
+        out.push_str("<!--]--></i><!--[-->");
     }
-    out.push_str("<!--[-->");
     for fv_i_ref_3 in props.items.iter() {
         let fv_i_3: &str = fv_i_ref_3;
         super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(fv_i_3), size: None }, super::shape_square::Slots {
@@ -180,12 +174,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_i_4);
         out.push_str("</li>");
     }
-    out.push_str("</ul>");
-    if props.on {
-        out.push_str("<p>t</p>");
-    } else {
-        out.push_str("<!--v-if-->");
-    }
+    out.push_str(if props.on { "</ul><p>t</p>" } else { "</ul><!--v-if-->" });
     super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
         default: None,
         corner: None,
@@ -194,15 +183,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if !props.on {
         out.push_str(" disabled");
     }
-    out.push_str(" type=\"button\">b</button><img alt");
     if props.label.is_empty() {
-        out.push_str(" src");
+        out.push_str(" type=\"button\">b</button><img alt src> ");
     } else {
-        out.push_str(" src=\"");
+        out.push_str(" type=\"button\">b</button><img alt src=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\"> ");
     }
-    out.push_str("> ");
     fv::core::push_int(out, props.items.len() as i64);
     out.push_str(" &lt; ");
     fv::core::escape_into(out, fv::strings::js_trim(&props.label));

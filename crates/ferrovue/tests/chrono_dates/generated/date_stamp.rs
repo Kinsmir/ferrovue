@@ -61,13 +61,12 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     fv::core::push_number(out, fv::date::js_time_of(&props.at));
     out.push('|');
     fv::core::push_number(out, fv::date::js_utc_seconds(fv::date::js_time_of(&props.shown)));
-    out.push(' ');
     if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {
-        out.push_str("<span>");
+        out.push_str(" <span>");
         fv::core::push_number(out, fv_edited);
         out.push_str("</span>");
     } else {
-        out.push_str("<!---->");
+        out.push_str(" <!---->");
     }
     if let Some(fv_deleted) = props.deleted.as_ref().map(fv::date::js_time_of) {
         out.push_str("<span>");
@@ -76,12 +75,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     } else {
         out.push_str("<!---->");
     }
-    if props.edited.as_ref().map(fv::date::js_time_of).is_some() && props.deleted.as_ref().map(fv::date::js_time_of).is_some() {
-        out.push_str("<span>both</span>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</footer>");
+    out.push_str(if props.edited.as_ref().map(fv::date::js_time_of).is_some() && props.deleted.as_ref().map(fv::date::js_time_of).is_some() { "<span>both</span></footer>" } else { "<!----></footer>" });
     Ok(())
 }
 

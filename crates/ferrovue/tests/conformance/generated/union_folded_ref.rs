@@ -234,15 +234,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(107 + props.label.len());
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(super::types::Mood::Loud), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Loud, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;

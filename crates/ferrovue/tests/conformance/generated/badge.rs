@@ -53,11 +53,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     if let Some(fv_label) = fv_stores.prefs.label.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
         fv::core::escape_into(out, fv_label);
-        out.push_str("</b>");
+        out.push_str("</b><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><!--[-->");
     }
-    out.push_str("<!--[-->");
     for fv_t in fv_stores.prefs.tags.iter() {
         out.push_str("<i");
         if let Some(v) = fv_t.color.as_deref() {

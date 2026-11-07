@@ -317,15 +317,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('|');
     fv::core::push_int(out, props.seen.as_ref().map(fv::date::js_time_of).map(|fv_seen_2| fv::strings::js_length(&fv::date::js_to_utc_string(fv_seen_2))).unwrap_or(-1i64));
-    out.push_str("</p>");
     if props.title.as_deref().map(fv::strings::js_trim).is_some_and(|v| !v.is_empty()) {
-        out.push_str("<p>titled ");
+        out.push_str("</p><p>titled ");
         if let Some(v) = props.title.as_deref().map(fv::strings::js_trim) {
             fv::core::escape_into(out, v);
         }
         out.push_str("</p>");
     } else {
-        out.push_str("<p>untitled</p>");
+        out.push_str("</p><p>untitled</p>");
     }
     if props.tags.as_ref().map(|fv_tags_12| fv_tags_12.len() as i64).is_some_and(|v| v != 0) {
         out.push_str("<p>");
@@ -336,17 +335,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    if props.user.as_ref().and_then(|fv_user_13| fv_user_13.profile.as_ref()).and_then(|fv_profile_6| fv_profile_6.site.as_deref()).is_some() {
-        out.push_str("<p>site</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.user.as_ref().and_then(|fv_user_14| fv_user_14.nick.as_deref()).is_none() {
-        out.push_str("<p>no nick</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<ul><!--[-->");
+    out.push_str(if props.user.as_ref().and_then(|fv_user_13| fv_user_13.profile.as_ref()).and_then(|fv_profile_6| fv_profile_6.site.as_deref()).is_some() { "<p>site</p>" } else { "<!---->" });
+    out.push_str(if props.user.as_ref().and_then(|fv_user_14| fv_user_14.nick.as_deref()).is_none() { "<p>no nick</p><ul><!--[-->" } else { "<!----><ul><!--[-->" });
     for fv_t_ref in props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {
         let fv_t_5: &str = fv_t_ref;
         out.push_str("<li>");

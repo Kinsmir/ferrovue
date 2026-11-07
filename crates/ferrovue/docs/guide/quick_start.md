@@ -133,22 +133,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<p class=\"greeting\">Hello, ");
     fv::core::escape_into(out, &props.name);
-    out.push('!');
     if props.unread != 0 {
-        out.push_str("<b>");
+        out.push_str("!<b>");
         fv::core::push_int(out, props.unread);
         out.push_str(" new</b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("!<!---->");
     }
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
         fv::core::escape_into(out, fv_note);
-        out.push_str("</i>");
+        out.push_str("</i></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p>");
     }
-    out.push_str("</p>");
 }
 
 /// The component's markup, for a maud page that shows it without hydrating it.
@@ -238,22 +236,20 @@ Then build the props and render:
 #     out.reserve(70 + props.name.len() + props.note.as_deref().map_or(0, str::len));
 #     out.push_str("<p class=\"greeting\">Hello, ");
 #     fv::core::escape_into(out, &props.name);
-#     out.push('!');
 #     if props.unread != 0 {
-#         out.push_str("<b>");
+#         out.push_str("!<b>");
 #         fv::core::push_int(out, props.unread);
 #         out.push_str(" new</b>");
 #     } else {
-#         out.push_str("<!---->");
+#         out.push_str("!<!---->");
 #     }
 #     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
 #         out.push_str("<i>");
 #         fv::core::escape_into(out, fv_note);
-#         out.push_str("</i>");
+#         out.push_str("</i></p>");
 #     } else {
-#         out.push_str("<!---->");
+#         out.push_str("<!----></p>");
 #     }
-#     out.push_str("</p>");
 # }
 #
 # /// The component's markup, for a maud page that shows it without hydrating it.

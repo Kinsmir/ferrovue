@@ -51,25 +51,21 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(71 + props.label.len() + props.model_value.len() + props.heading.as_deref().map_or(0, str::len));
-    out.push_str("<!--[--><h2");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<!--[--><h2 title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<!--[--><h2 title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.label);
-    out.push_str("</h2><b");
     if props.model_value.is_empty() {
-        out.push_str(" data-mark");
+        out.push_str("</h2><b data-mark>");
     } else {
-        out.push_str(" data-mark=\"");
+        out.push_str("</h2><b data-mark=\"");
         fv::core::escape_into(out, &props.model_value);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.label);
     out.push(' ');
     fv::core::escape_into(out, &props.model_value);

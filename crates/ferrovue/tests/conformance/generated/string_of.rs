@@ -101,15 +101,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(143 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.names.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
     let s_line = format!("{}/{}/{}/{}", props.label.as_deref().unwrap_or("undefined"), fv::strings::JsOr(props.count.map(fv::core::Js), "undefined"), props.nick.as_deref().unwrap_or("null"), props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
     let s_kept = props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).collect::<Vec<_>>().join(",");
-    out.push_str("<section");
     if props.label.as_deref().unwrap_or("undefined").is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title data-n=\"");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, props.label.as_deref().unwrap_or("undefined"));
-        out.push('"');
+        out.push_str("\" data-n=\"");
     }
-    out.push_str(" data-n=\"");
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.count.map(fv::core::Js), "undefined")); }
     out.push_str("\"><p>");
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("undefined"));

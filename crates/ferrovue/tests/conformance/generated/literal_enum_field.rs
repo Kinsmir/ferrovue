@@ -261,15 +261,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).mood.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push('|');
     out.push_str(if (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).mood == Some(RowMood::Wild) { "true" } else { "false" });
-    out.push_str("</p>");
     if (Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).kind == RowKind::Loud {
-        out.push_str("<b>");
+        out.push_str("</p><b>");
         fv::core::escape_into(out, &((Row { text: std::borrow::Cow::<str>::Borrowed(&*props.text), kind: if props.loud { RowKind::Loud } else { RowKind::Plain }, mood: props.mood.map(|v| match v { LiteralEnumFieldMood::Calm => RowMood::Calm, LiteralEnumFieldMood::Wild => RowMood::Wild }) }).text).to_uppercase());
-        out.push_str("</b>");
+        out.push_str("</b><!--]-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!----><!--]-->");
     }
-    out.push_str("<!--]-->");
     Ok(())
 }
 

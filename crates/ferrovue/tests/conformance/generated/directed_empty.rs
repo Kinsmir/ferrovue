@@ -48,33 +48,29 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(121 + 39 * props.items.len() + props.id.len() + props.label.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<div class=\"directed\"><p>");
     fv::core::escape_into(out, &props.label);
-    out.push_str("</p><b></b><b class=\"x\"");
     if props.id.is_empty() {
-        out.push_str(" id");
+        out.push_str("</p><b></b><b class=\"x\" id");
     } else {
-        out.push_str(" id=\"");
+        out.push_str("</p><b></b><b class=\"x\" id=\"");
         fv::core::escape_into(out, &props.id);
         out.push('"');
     }
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str(" title></b><ul><!--[-->");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\"></b><ul><!--[-->");
     }
-    out.push_str("></b><ul><!--[-->");
     for fv_item_ref in props.items.iter() {
         let fv_item: &str = fv_item_ref;
-        out.push_str("<li><i");
         if fv_item.is_empty() {
-            out.push_str(" data-item");
+            out.push_str("<li><i data-item></i></li>");
         } else {
-            out.push_str(" data-item=\"");
+            out.push_str("<li><i data-item=\"");
             fv::core::escape_into(out, fv_item);
-            out.push('"');
+            out.push_str("\"></i></li>");
         }
-        out.push_str("></i></li>");
     }
     out.push_str("<!--]--></ul><span>");
     fv::core::escape_into(out, &props.id);

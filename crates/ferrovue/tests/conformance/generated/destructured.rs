@@ -79,11 +79,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_extra) = props.extra.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<small>");
         fv::core::escape_into(out, fv_extra);
-        out.push_str("</small>");
+        out.push_str("</small></h2>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></h2>");
     }
-    out.push_str("</h2>");
     Ok(())
 }
 

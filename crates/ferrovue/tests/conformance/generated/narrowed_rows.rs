@@ -68,20 +68,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(35 + 46 * props.shelves.len() + props.shelves.iter().map(|v| v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section><!--[-->");
     for fv_shelf in props.shelves.iter() {
-        out.push_str("<!--[-->");
         if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
-            out.push_str("<p><!--[-->");
+            out.push_str("<!--[--><p><!--[-->");
             for fv_tag_cow in fv_shelf.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv_t.is_empty()).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}{}", fv_note, fv_t_2)).into_owned())) {
                 let fv_tag: &str = &fv_tag_cow;
                 out.push_str("<b>");
                 fv::core::escape_into(out, fv_tag);
                 out.push_str("</b>");
             }
-            out.push_str("<!--]--></p>");
+            out.push_str("<!--]--></p><!--]-->");
         } else {
-            out.push_str("<!---->");
+            out.push_str("<!--[--><!----><!--]-->");
         }
-        out.push_str("<!--]-->");
     }
     out.push_str("<!--]--></section>");
     Ok(())

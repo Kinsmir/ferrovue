@@ -51,15 +51,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_late = std::cell::LazyCell::new(|| { let fv_copies_2 = fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 14, 18); std::borrow::Cow::<str>::Owned((if !props.show { std::borrow::Cow::<str>::Borrowed("hidden") } else { std::borrow::Cow::<str>::Owned(format!("{}!", fv_copies_2)) }).into_owned()) });
     out.push_str("<!--[--><p>");
     fv::core::escape_into(out, &s_guarded);
-    out.push_str("</p>");
     if props.show {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::escape_into(out, &s_late);
-        out.push_str("</p>");
+        out.push_str("</p><!--]-->");
     } else {
-        out.push_str("<p>hidden</p>");
+        out.push_str("</p><p>hidden</p><!--]-->");
     }
-    out.push_str("<!--]-->");
     fv_refusals.check(Ok(()))
 }
 

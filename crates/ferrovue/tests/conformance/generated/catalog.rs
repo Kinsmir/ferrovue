@@ -66,11 +66,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if props.tone == super::types::Volume::Loud {
         out.push_str("<p>LOUD</p>");
     } else {
-        if props.rank == Some(6i64) {
-            out.push_str("<p>high 6</p>");
-        } else {
-            out.push_str("<p>Nothing &amp; &quot;none&quot; Mid square</p>");
-        }
+        out.push_str(if props.rank == Some(6i64) { "<p>high 6</p>" } else { "<p>Nothing &amp; &quot;none&quot; Mid square</p>" });
     }
     out.push_str("<select><!--[-->");
     for fv_s_ref in ["sm", "md", "lg"].iter() {
@@ -109,12 +105,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, if fv_s_2.desc { " (desc)" } else { "" });
         out.push(' ');
         fv::core::escape_into(out, fv_s_2.badge.as_deref().unwrap_or("-"));
-        if fv_s_2.badge.as_deref().is_some() {
-            out.push_str("<!---->");
-        } else {
-            out.push_str("<b>plain</b>");
-        }
-        out.push_str("</li>");
+        out.push_str(if fv_s_2.badge.as_deref().is_some() { "<!----></li>" } else { "<b>plain</b></li>" });
     }
     out.push_str("<!--]--></ol><small>");
     fv::core::escape_into(out, &[1.0f64, 2.5f64, -3.0f64].iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(" / "));

@@ -60,9 +60,9 @@ describe("attribute values", () => {
       island(component("rank: number; score: Float; sub: string; tail: string; on: boolean; m?: number", '<li :aria-label="\'rank \' + rank" :title="sub + tail" :data-a="`${on}${sub}`" :data-m="`${m}`"><a :title="score + \' points\'">x</a></li>', 'import type { Float } from "ferrovue/types";\n')),
     ).get("x.rs")!;
     expect(out).not.toContain("format!");
-    expect(out).toContain(`out.push_str("<li aria-label=\\"rank ");\n    fv::core::push_int(out, props.rank);\n    out.push('"');\n    if props.sub.is_empty() && props.tail.is_empty() {`);
+    expect(out).toContain(`out.push_str("<li aria-label=\\"rank ");\n    fv::core::push_int(out, props.rank);\n    if props.sub.is_empty() && props.tail.is_empty() {\n        out.push_str("\\" title data-a=\\"");`);
     expect(out).toContain(`fv::core::escape_into(out, &props.sub);\n        fv::core::escape_into(out, &props.tail);`);
-    expect(out).toContain(`out.push_str(" data-a=\\"");\n    out.push_str(if props.on { "true" } else { "false" });\n    fv::core::escape_into(out, &props.sub);`);
+    expect(out).toContain(`out.push_str("\\" data-a=\\"");\n    }\n    out.push_str(if props.on { "true" } else { "false" });\n    fv::core::escape_into(out, &props.sub);`);
     expect(out).toContain(`{ use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined")); }`);
     expect(out).toContain(`fv::core::push_number(out, props.score);\n    out.push_str(" points\\">x</a></li>");`);
   });
@@ -75,7 +75,7 @@ describe("attribute values", () => {
 
   it("refuses `:hidden` bound to a `?:` of a string and a number, whose branches it treats differently", () => {
     expect(refusal(island(component("on: boolean", `<div><p :hidden="on ? 'a' : 1">x</p></div>`))).code).toBe("FV0623");
-    expect(compile(island(component("on: boolean", `<div><p :title="on ? 'a' : 1">x</p></div>`))).get("x.rs")).toContain("} else {\n        out.push('1');\n    }");
+    expect(compile(island(component("on: boolean", `<div><p :title="on ? 'a' : 1">x</p></div>`))).get("x.rs")).toContain(`out.push_str(if props.on { "<div><p title=\\"a\\">x</p></div>" } else { "<div><p title=\\"1\\">x</p></div>" });`);
   });
 
   it("refuses an attribute that may fall through bound to a list, with its code", () => {
@@ -132,11 +132,13 @@ describe("attributes Vue renders from virtual nodes", () => {
     ["a join that binds an optional string or a literal", "who ? 'hi ' + who : 'nobody'", "if if let Some(fv_who) = props.who.as_deref().filter(|v| !v.is_empty()) { false } else { false } {"],
     ["a join of a string its test fills or a literal", "who ? who + a : 'x'", "if if let Some(fv_who) = props.who.as_deref().filter(|v| !v.is_empty()) { false } else { false } {"],
   ])("tests a `?:` of %s for emptiness branch by branch", (_, bound, test) => {
-    expect(rendered(`<span :title="${bound}">x</span>`)).toContain(`out.push_str("><span");\n    ${test}\n        out.push_str(" title");`);
+    const out = rendered(`<span :title="${bound}">x</span>`);
+    expect(out).toContain(`\n    ${test}\n        out.push_str("`);
+    expect(out).toContain(` title>x</span></");\n    } else {`);
   });
 
   it("writes a `?:` of a join and a literal that are never empty with no test", () => {
-    expect(rendered(`<span :title="on ? 'hi ' + a : 'x'">x</span>`)).toContain(`out.push_str("><span title=\\"");\n    if props.on {`);
+    expect(rendered(`<span :title="on ? 'hi ' + a : 'x'">x</span>`)).toContain(`if props.on {\n        out.push_str("><span title=\\"hi ");`);
   });
 
   it.each([

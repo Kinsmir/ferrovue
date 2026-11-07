@@ -54,15 +54,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     fv::core::escape_into(out, &l_1.title);
     out.push_str(" by ");
     fv::core::escape_into(out, &props.name);
-    out.push_str("</h2>");
     if !fv::date::js_time_of(l_0).is_nan() {
-        out.push_str("<time datetime=\"");
+        out.push_str("</h2><time datetime=\"");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(l_0)), 16, 67));
         out.push_str("\">");
         fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(l_0)));
         out.push_str("</time>");
     } else {
-        out.push_str("<p>never opened ");
+        out.push_str("</h2><p>never opened ");
         fv::core::push_number(out, fv::date::js_time_of(l_0));
         out.push_str("</p>");
     }
@@ -70,11 +69,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("<p>closed ");
         fv::core::push_number(out, fv_closed);
         fv::core::escape_into(out, if fv_closed > fv::date::js_time_of(l_0) { " later" } else { "" });
-        out.push_str("</p>");
+        out.push_str("</p><!--[-->");
     } else {
-        out.push_str("<p>open</p>");
+        out.push_str("<p>open</p><!--[-->");
     }
-    out.push_str("<!--[-->");
     for fv_day in l_3.iter().map(fv::date::js_time_of) {
         out.push_str("<i>");
         fv::core::push_number(out, fv::date::js_utc_date(fv_day));

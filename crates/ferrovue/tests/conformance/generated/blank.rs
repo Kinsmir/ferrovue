@@ -40,11 +40,7 @@ pub fn render(out: &mut String, props: &Props) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(19);
-    if props.show {
-        out.push_str("<b>shown</b>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if props.show { "<b>shown</b>" } else { "<!---->" });
     Ok(())
 }
 

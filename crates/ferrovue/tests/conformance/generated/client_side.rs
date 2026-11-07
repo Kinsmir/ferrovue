@@ -53,15 +53,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(192 + props.title.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section class=\"client-side\" data-v-2da87e5e><h2 data-v-2da87e5e>");
     fv::core::escape_into(out, &props.title);
-    out.push_str("</h2><!--[-->");
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<p class=\"loading\" data-v-2da87e5e>");
+        out.push_str("</h2><!--[--><p class=\"loading\" data-v-2da87e5e>");
         fv::core::escape_into(out, fv_note);
-        out.push_str("</p>");
+        out.push_str("</p><span data-v-2da87e5e>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</h2><!--[--><!----><span data-v-2da87e5e>");
     }
-    out.push_str("<span data-v-2da87e5e>");
     fv::core::push_int(out, props.level);
     out.push_str("%</span><!--]--><!---->");
     super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.title) }, super::plain_box::Slots {

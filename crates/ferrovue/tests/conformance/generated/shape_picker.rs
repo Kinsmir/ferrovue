@@ -113,15 +113,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             corner: None,
         }, &fv::attrs::Attrs::new(&[("data-form", fv::attrs::Attr::str("mixed"))], " data-v-93b28aa1"))?;
     } else {
-        out.push_str("<em");
         if props.label.is_empty() {
-            out.push_str(" label");
+            out.push_str("<em label data-form=\"mixed\" data-v-93b28aa1>");
         } else {
-            out.push_str(" label=\"");
+            out.push_str("<em label=\"");
             fv::core::escape_into(out, &props.label);
-            out.push('"');
+            out.push_str("\" data-form=\"mixed\" data-v-93b28aa1>");
         }
-        out.push_str(" data-form=\"mixed\" data-v-93b28aa1>");
         fv::core::escape_into(out, &props.label);
         out.push_str("</em>");
     }

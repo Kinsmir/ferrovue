@@ -88,12 +88,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, v);
         out.push(';');
     }
-    out.push_str("\">b</p><p style=\"");
-    if props.big {
-        out.push_str("display:grid;");
-    } else {
-        out.push_str("display:flex;");
-    }
+    out.push_str(if props.big { "\">b</p><p style=\"display:grid;" } else { "\">b</p><p style=\"display:flex;" });
     if props.big {
         out.push_str("gap:1rem;");
     }
@@ -101,13 +96,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::push_int(out, props.size);
     out.push_str(";\">c</p><p style=\"");
     fv::core::escape_into(out, &props.raw);
-    out.push_str("\">d</p><p style=\"top: 0\">e</p><p style=\"");
-    if props.hidden {
-        out.push_str("display:none;");
-    } else {
-        out.push_str("display:block;");
-    }
-    out.push_str("\">f</p><p style=\"color:");
+    out.push_str(if props.hidden { "\">d</p><p style=\"top: 0\">e</p><p style=\"display:none;\">f</p><p style=\"color:" } else { "\">d</p><p style=\"top: 0\">e</p><p style=\"display:block;\">f</p><p style=\"color:" });
     fv::core::escape_into(out, &props.color);
     out.push(';');
     if !props.hidden {

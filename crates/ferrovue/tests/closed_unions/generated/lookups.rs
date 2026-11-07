@@ -134,17 +134,8 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     fv::core::escape_into(out, match props.level { 1 => "one", 2 => "two", _ => "three" });
     out.push(' ');
     fv::core::escape_into(out, match props.tone { super::types::Tone::Warn => "red", super::types::Tone::Info | super::types::Tone::Calm => "navy" });
-    out.push(' ');
-    if !matches!(props.k, K::A | K::B) {
-        out.push_str("<b>last</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if matches!(props.k, K::A) {
-        out.push_str("<b>first</b>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if !matches!(props.k, K::A | K::B) { " <b>last</b>" } else { " <!---->" });
+    out.push_str(if matches!(props.k, K::A) { "<b>first</b>" } else { "<!---->" });
     if !matches!(props.k, K::B) {
         out.push_str("<i>");
         fv::core::escape_into(out, match props.k { K::A => "ia", K::C | K::B => "ic" });
@@ -155,11 +146,10 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     if matches!(props.k, K::A | K::B) {
         out.push_str("<i>");
         fv::core::escape_into(out, match props.k { K::A => "ia", K::B | K::C => "ib" });
-        out.push_str("</i>");
+        out.push_str("</i></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p>");
     }
-    out.push_str("</p>");
     Ok(())
 }
 

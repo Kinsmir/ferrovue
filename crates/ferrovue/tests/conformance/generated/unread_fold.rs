@@ -62,13 +62,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(45 + props.label.as_deref().map_or(0, str::len));
-    out.push_str("<div class=\"fold\">");
     if let Some(fv_label) = props.label.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<b>");
+        out.push_str("<div class=\"fold\"><b>");
         fv::core::escape_into(out, fv_label);
         out.push_str("</b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<div class=\"fold\"><!---->");
     }
     if props.open.unwrap_or(false) {
         fv::render::slot_into(out, fv_slots.default, None);

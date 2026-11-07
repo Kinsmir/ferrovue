@@ -159,24 +159,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(v) = fv::strings::js_item_at([1i64, 2i64, 3i64].iter(), props.i as f64).copied() {
         fv::core::push_int(out, v);
     }
-    out.push_str("</p>");
     if let Some(fv_rows) = props.rows.first() {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::escape_into(out, &fv_rows.name);
         out.push(':');
         fv::core::push_int(out, fv_rows.n);
         out.push_str("</p>");
     } else {
-        out.push_str("<p>no rows</p>");
+        out.push_str("</p><p>no rows</p>");
     }
     if let Some(fv_words) = props.words.get(1).map(|v| &**v) {
         out.push_str("<p>second ");
         fv::core::escape_into(out, fv_words);
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><p>");
     }
-    out.push_str("<p>");
     if let Some(v) = props.rows.get(usize::try_from(props.i).unwrap_or(usize::MAX)).map(|fv_value| &*fv_value.name) {
         fv::core::escape_into(out, v);
     }

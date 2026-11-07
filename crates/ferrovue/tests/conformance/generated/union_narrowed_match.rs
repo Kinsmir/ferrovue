@@ -114,15 +114,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(88 + 7 + props.label.len());
     let s_mood = props.start.map(|v| match v { super::types::Mood::Calm => UnionNarrowedMatchMood::Calm, super::types::Mood::Loud => UnionNarrowedMatchMood::Loud, super::types::Mood::QX => UnionNarrowedMatchMood::QX }).unwrap_or(UnionNarrowedMatchMood::Empty);
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm | UnionNarrowedMatchMood::Empty => None, UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX) }, label: std::borrow::Cow::Borrowed(&*props.label) })?;

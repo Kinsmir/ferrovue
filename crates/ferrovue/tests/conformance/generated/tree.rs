@@ -51,11 +51,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         for fv_c in props.children.iter() {
             super::tree::try_render(out, fv_c)?;
         }
-        out.push_str("<!--]--></ul>");
+        out.push_str("<!--]--></ul></li>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></li>");
     }
-    out.push_str("</li>");
     Ok(())
 }
 

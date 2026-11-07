@@ -57,13 +57,12 @@ pub fn render(out: &mut String, props: &Props) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(313 + props.content.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + fv::html::TrustedHtml::trusted_html(&props.body).len() + props.note.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + fv::html::TrustedHtml::trusted_html(&props.lead).len());
-    out.push_str("<section>");
     if let Some(fv_content) = props.content.as_ref().filter(|v| !fv::html::TrustedHtml::trusted_html(*v).is_empty()) {
-        out.push_str("<div class=\"content\">");
+        out.push_str("<section><div class=\"content\">");
         fv::html::trusted_into(out, fv_content);
         out.push_str("</div>");
     } else {
-        out.push_str("<p>no content</p>");
+        out.push_str("<section><p>no content</p>");
     }
     if !fv::html::TrustedHtml::trusted_html(&props.body).is_empty() {
         out.push_str("<div class=\"body\">");
@@ -72,17 +71,8 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     } else {
         out.push_str("<p>no body</p>");
     }
-    if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) {
-        out.push_str("<!---->");
-    } else {
-        out.push_str("<b>not content</b>");
-    }
-    if fv::html::TrustedHtml::trusted_html(&props.body).is_empty() {
-        out.push_str("<b>not body</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<span>");
+    out.push_str(if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "<!---->" } else { "<b>not content</b>" });
+    out.push_str(if fv::html::TrustedHtml::trusted_html(&props.body).is_empty() { "<b>not body</b><span>" } else { "<!----><span>" });
     fv::core::escape_into(out, if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) { "content" } else { "none" });
     out.push(' ');
     fv::core::escape_into(out, if !fv::html::TrustedHtml::trusted_html(&props.body).is_empty() { "body" } else { "none" });
@@ -108,23 +98,9 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     if !props.note.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) {
         out.push_str("display:none;");
     }
-    out.push_str("\">shown</em>");
-    if fv::html::TrustedHtml::trusted_html(&props.lead).is_empty() {
-        out.push_str("<s>no lead</s>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) && !fv::html::TrustedHtml::trusted_html(&props.body).is_empty() {
-        out.push_str("<u>both</u>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.note.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) || !fv::html::TrustedHtml::trusted_html(&props.lead).is_empty() {
-        out.push_str("<u>either</u>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</section>");
+    out.push_str(if fv::html::TrustedHtml::trusted_html(&props.lead).is_empty() { "\">shown</em><s>no lead</s>" } else { "\">shown</em><!---->" });
+    out.push_str(if props.content.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) && !fv::html::TrustedHtml::trusted_html(&props.body).is_empty() { "<u>both</u>" } else { "<!---->" });
+    out.push_str(if props.note.as_ref().is_some_and(|v| !fv::html::TrustedHtml::trusted_html(v).is_empty()) || !fv::html::TrustedHtml::trusted_html(&props.lead).is_empty() { "<u>either</u></section>" } else { "<!----></section>" });
     Ok(())
 }
 

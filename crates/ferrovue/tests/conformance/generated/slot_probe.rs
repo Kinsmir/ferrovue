@@ -54,13 +54,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(86 + props.title.len());
     let s_closing = fv_slots.footer.is_some();
-    out.push_str("<section>");
     if fv_slots.header.is_some() {
-        out.push_str("<header>");
+        out.push_str("<section><header>");
         fv::render::slot_into(out, fv_slots.header, None);
         out.push_str("</header>");
     } else {
-        out.push_str("<h3>");
+        out.push_str("<section><h3>");
         fv::core::escape_into(out, &props.title);
         out.push_str("</h3>");
     }
@@ -68,11 +67,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     if s_closing {
         out.push_str("<footer>");
         fv::render::slot_into(out, fv_slots.footer, None);
-        out.push_str("</footer>");
+        out.push_str("</footer></section>");
     } else {
-        out.push_str("<small>no footer</small>");
+        out.push_str("<small>no footer</small></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

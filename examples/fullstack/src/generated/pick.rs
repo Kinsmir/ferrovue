@@ -44,15 +44,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(115 + props.book.id.len() + props.book.title.len() + props.book.author.len() + props.note.len());
-    out.push_str("<article class=\"pick\"");
     if props.book.id.is_empty() {
-        out.push_str(" data-id");
+        out.push_str("<article class=\"pick\" data-id><h2>");
     } else {
-        out.push_str(" data-id=\"");
+        out.push_str("<article class=\"pick\" data-id=\"");
         fv::core::escape_into(out, &props.book.id);
-        out.push('"');
+        out.push_str("\"><h2>");
     }
-    out.push_str("><h2>");
     fv::core::escape_into(out, &props.book.title);
     out.push_str("</h2><p class=\"by\">by ");
     fv::core::escape_into(out, &props.book.author);

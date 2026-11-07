@@ -46,13 +46,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(65 + props.color.len());
     out.push_str("<p class=\"shown");
     fv::attrs::class_into(out, true, &[if props.on { "on" } else { "" }]);
-    out.push_str("\" style=\"");
-    if !props.on {
-        out.push_str("display:none;");
-    } else {
-        out.push_str("display:block;");
-    }
-    out.push_str("color:");
+    out.push_str(if !props.on { "\" style=\"display:none;color:" } else { "\" style=\"display:block;color:" });
     fv::core::escape_into(out, &props.color);
     out.push_str(";\">x</p>");
     Ok(())

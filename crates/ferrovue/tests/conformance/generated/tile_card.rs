@@ -50,17 +50,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, props.tile.owner.as_deref().unwrap_or("nobody"));
     out.push('|');
     fv::core::escape_into(out, &props.tile.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
-    out.push_str("</p>");
     if let Some(fv_badge) = props.tile.badge.as_ref() {
-        out.push_str("<b class=\"");
+        out.push_str("</p><b class=\"");
         fv::attrs::class_into(out, false, &[&*fv_badge.tone]);
         out.push_str("\">");
         fv::core::escape_into(out, &fv_badge.label);
-        out.push_str("</b>");
+        out.push_str("</b></article>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!----></article>");
     }
-    out.push_str("</article>");
     Ok(())
 }
 

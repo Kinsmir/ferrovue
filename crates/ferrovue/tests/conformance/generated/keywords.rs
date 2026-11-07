@@ -77,27 +77,24 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(139 + props.r#type.len() + props.crate_.len() + props.r#match.as_deref().map_or(0, str::len) + props.r#async.as_deref().map_or(0, str::len));
-    out.push_str("<section");
     if props.r#type.is_empty() {
-        out.push_str(" data-type");
+        out.push_str("<section data-type><video");
     } else {
-        out.push_str(" data-type=\"");
+        out.push_str("<section data-type=\"");
         fv::core::escape_into(out, &props.r#type);
-        out.push('"');
+        out.push_str("\"><video");
     }
-    out.push_str("><video");
     if props.r#loop {
         out.push_str(" loop");
     }
     out.push_str("></video><p>");
     fv::core::escape_into(out, &props.crate_);
-    out.push_str("</p>");
     if let Some(fv_match) = props.r#match.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<i>");
+        out.push_str("</p><i>");
         fv::core::escape_into(out, fv_match);
         out.push_str("</i>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!---->");
     }
     if let Some(fv_self) = props.self_ {
         out.push_str("<b>");
@@ -106,19 +103,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    if props.r#static.unwrap_or(false) {
-        out.push_str("<em>static</em>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if props.r#static.unwrap_or(false) { "<em>static</em>" } else { "<!---->" });
     if let Some(fv_async) = props.r#async.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<u>");
         fv::core::escape_into(out, fv_async);
-        out.push_str("</u>");
+        out.push_str("</u></section>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

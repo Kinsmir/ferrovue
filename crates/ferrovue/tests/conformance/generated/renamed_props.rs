@@ -120,22 +120,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     if props.note.as_deref().unwrap_or("none").is_empty() {
-        out.push_str(" data-note");
+        out.push_str(" data-note>");
     } else {
         out.push_str(" data-note=\"");
         fv::core::escape_into(out, props.note.as_deref().unwrap_or("none"));
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.label);
     if !props.note.as_deref().unwrap_or("none").is_empty() {
         out.push_str("<small>");
         fv::core::escape_into(out, props.note.as_deref().unwrap_or("none"));
-        out.push_str("</small>");
+        out.push_str("</small><!--[-->");
     } else {
-        out.push_str("<!--v-if-->");
+        out.push_str("<!--v-if--><!--[-->");
     }
-    out.push_str("<!--[-->");
     for fv_row_ref in props.items.iter() {
         let fv_row: &str = fv_row_ref;
         out.push_str("<span>");

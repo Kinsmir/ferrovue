@@ -56,15 +56,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
     let fv_provided_theme_key = format!("{}+head", fv_inherited.theme_key.unwrap_or("light"));
     let fv_provides = super::provides::Provides { theme_key: Some(&*fv_provided_theme_key), ..fv_inherited };
     fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&format!("{} in {}", props.label, fv_inherited.theme_key.unwrap_or("light")))), ("htmlAttrs", fv::head::HeadValue::object([("data-theme", fv::head::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme")), ("content", fv::head::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])]))]));
-    out.push_str("<section");
     if fv_inherited.theme_key.unwrap_or("light").is_empty() {
-        out.push_str(" data-theme");
+        out.push_str("<section data-theme>");
     } else {
-        out.push_str(" data-theme=\"");
+        out.push_str("<section data-theme=\"");
         fv::core::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</section>");
     Ok(())

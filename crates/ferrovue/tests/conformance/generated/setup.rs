@@ -63,18 +63,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::attrs::class_into(out, true, &[crate::helpers::tone(props.score)]);
     out.push_str("\"><h2>Results</h2><p>");
     fv::core::escape_into(out, &s_label);
-    out.push_str("</p>");
-    if crate::helpers::is_even(props.count) {
-        out.push_str("<p>even</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if s_none {
-        out.push_str("<p>nothing yet</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<p>");
+    out.push_str(if crate::helpers::is_even(props.count) { "</p><p>even</p>" } else { "</p><!---->" });
+    out.push_str(if s_none { "<p>nothing yet</p><p>" } else { "<!----><p>" });
     fv::core::escape_into(out, crate::helpers::or_dash(props.name.as_deref()));
     out.push_str("</p></div>");
     Ok(())

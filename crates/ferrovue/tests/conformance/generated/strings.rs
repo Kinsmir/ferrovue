@@ -158,13 +158,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('|');
     fv::core::escape_into(out, &(if fv::strings::js_length(&s_short) < 3 { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
-    out.push_str("</p>");
-    if &*fv::strings::js_slice(&props.text, 0.0f64, Some(1.0f64)) == "a" {
-        out.push_str("<b>starts with a</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<p>");
+    out.push_str(if &*fv::strings::js_slice(&props.text, 0.0f64, Some(1.0f64)) == "a" { "</p><b>starts with a</b><p>" } else { "</p><!----><p>" });
     fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&props.text, 1.0f64, None).to_lowercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
     out.push('|');
     fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(&*props.sep) } });

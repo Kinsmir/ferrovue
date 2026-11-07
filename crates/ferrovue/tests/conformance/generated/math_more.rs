@@ -74,12 +74,7 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.push_str("</p><p>1024|9007199254740992|-27|1000000000000000|1|1|");
     fv::core::push_number(out, props.n as f64 * 256.0);
     out.push_str("|-9007199254740992</p><p>9007199254740991|-9007199254740991|2.220446049250313e-16|1.7976931348623157e+308|5e-324|Infinity|-Infinity|NaN</p>");
-    if fv::core::js_sign(props.x) < 0.0 {
-        out.push_str("<b>negative</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</section>");
+    out.push_str(if fv::core::js_sign(props.x) < 0.0 { "<b>negative</b></section>" } else { "<!----></section>" });
     Ok(())
 }
 

@@ -87,12 +87,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, fv_i);
         out.push_str("\">");
         fv::core::push_int(out, fv_n);
-        if fv_i == 0 {
-            out.push_str("<!--[--> first<!--]-->");
-        } else {
-            out.push_str("<!---->");
-        }
-        out.push_str("</li>");
+        out.push_str(if fv_i == 0 { "<!--[--> first<!--]--></li>" } else { "<!----></li>" });
     }
     out.push_str("<!--]--></ol><!--[-->");
     for fv_g in props.groups.iter() {
@@ -100,15 +95,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &fv_g.name);
         out.push_str(" (");
         fv::core::push_int(out, fv_g.members.len() as i64);
-        out.push_str(")</h3>");
         if let Some(fv_lead) = fv_g.lead.as_deref().filter(|v| !v.is_empty()) {
-            out.push_str("<b>");
+            out.push_str(")</h3><b>");
             fv::core::escape_into(out, fv_lead);
-            out.push_str("</b>");
+            out.push_str("</b><!--[-->");
         } else {
-            out.push_str("<!---->");
+            out.push_str(")</h3><!----><!--[-->");
         }
-        out.push_str("<!--[-->");
         for (fv_j, fv_m_ref) in fv_g.members.iter().enumerate() {
             let fv_m: &str = fv_m_ref;
             let fv_j = fv_j as i64;
@@ -120,13 +113,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push_str("<!--]--></div>");
     }
-    out.push_str("<!--]-->");
-    if props.words.is_empty() {
-        out.push_str("<p>no words</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</section>");
+    out.push_str(if props.words.is_empty() { "<!--]--><p>no words</p></section>" } else { "<!--]--><!----></section>" });
     Ok(())
 }
 

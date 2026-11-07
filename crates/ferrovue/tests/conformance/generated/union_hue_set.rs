@@ -44,15 +44,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(49 + 18 * props.set.hues.len() + 9 * props.set.hues.len() + props.set.note.len() + props.label.len());
-    out.push_str("<ol");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<ol title><!--[-->");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<ol title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\"><!--[-->");
     }
-    out.push_str("><!--[-->");
     for fv_h_ref in props.set.hues.iter() {
         let fv_h = *fv_h_ref;
         out.push_str("<li class=\"");

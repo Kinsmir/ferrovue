@@ -78,9 +78,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_e);
         out.push_str("</option>");
     }
-    out.push_str("<!--]-->");
     if !props.group.is_empty() {
-        out.push_str("<option value=\"");
+        out.push_str("<!--]--><option value=\"");
         fv::core::escape_into(out, &props.group);
         out.push('"');
         if s_p == &*props.group {
@@ -88,11 +87,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push('>');
         fv::core::escape_into(out, &props.group);
-        out.push_str("</option>");
+        out.push_str("</option></optgroup></select></form>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--><!----></optgroup></select></form>");
     }
-    out.push_str("</optgroup></select></form>");
     Ok(())
 }
 

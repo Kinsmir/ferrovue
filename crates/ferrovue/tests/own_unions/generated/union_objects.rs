@@ -142,15 +142,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(if matches!(props.align, crate::domain::Align::Left | crate::domain::Align::Center) { "true" } else { "false" });
     out.push('|');
     out.push_str(if matches!(props.align, crate::domain::Align::Left | crate::domain::Align::Right) { "true" } else { "false" });
-    out.push('|');
     if let Some(fv_align_2) = matches!(props.align, crate::domain::Align::Left | crate::domain::Align::Right).then_some(fv::props::Union::as_str(props.align)) {
-        out.push_str("<b>");
+        out.push_str("|<b>");
         fv::core::escape_into(out, match fv_align_2 { "left" => "<start>", _ => "end & \"after\"" });
-        out.push_str("</b>");
+        out.push_str("</b></p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("|<!----></p><p>");
     }
-    out.push_str("</p><p>");
     fv::core::escape_into(out, if let Some(fv_side_2) = props.side { if fv_side_2 != crate::domain::Align::Right { match fv_side_2 { crate::domain::Align::Left => "l", crate::domain::Align::Center | crate::domain::Align::Right => "c" } } else { "x" } } else { "x" });
     out.push('|');
     out.push_str(if props.state != UnionObjectsState::Todo && props.state != UnionObjectsState::Done { "true" } else { "false" });

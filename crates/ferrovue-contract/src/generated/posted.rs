@@ -56,15 +56,13 @@ pub fn render(out: &mut String, props: &Props) {
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(80);
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Posted.vue");
-    out.push_str("<time");
     if fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.at)), 6, 20).is_empty() {
-        out.push_str(" datetime");
+        out.push_str("<time datetime>");
     } else {
-        out.push_str(" datetime=\"");
+        out.push_str("<time datetime=\"");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.at)), 6, 20));
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(&props.at)));
     if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {
         out.push_str("<b>");
@@ -76,11 +74,10 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     if let Some(fv_deleted) = props.deleted.as_ref().map(fv::date::js_time_of) {
         out.push_str("<i>");
         fv::core::push_number(out, fv::date::js_utc_date(fv_deleted));
-        out.push_str("</i>");
+        out.push_str("</i></time>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></time>");
     }
-    out.push_str("</time>");
     fv_refusals.check(Ok(()))
 }
 

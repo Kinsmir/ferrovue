@@ -41,15 +41,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     fv::core::push_int(out, fv_stores.tally.count);
     out.push_str(" (");
     fv::core::push_number(out, fv_stores.tally.count as f64 * 2.0);
-    out.push_str(") ");
     if let Some(fv_best) = fv_stores.tally.best {
-        out.push_str("<b>");
+        out.push_str(") <b>");
         fv::core::push_int(out, fv_best);
-        out.push_str("</b>");
+        out.push_str("</b></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str(") <!----></p>");
     }
-    out.push_str("</p>");
     Ok(())
 }
 

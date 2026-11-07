@@ -108,9 +108,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_row in props.rows.iter() {
         out.push_str("<article><h3>");
         fv::core::escape_into(out, &fv_row.title);
-        out.push_str("</h3>");
         if !fv::date::js_time_of(&fv_row.at).is_nan() {
-            out.push_str("<time datetime=\"");
+            out.push_str("</h3><time datetime=\"");
             fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_row.at)), 25, 69));
             out.push_str("\">");
             fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(&fv_row.at)));
@@ -130,7 +129,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             fv::core::push_number(out, fv::date::js_utc_day(fv::date::js_time_of(&fv_row.at)));
             out.push_str("</time>");
         } else {
-            out.push_str("<p>invalid ");
+            out.push_str("</h3><p>invalid ");
             fv::core::push_number(out, fv::date::js_time_of(&fv_row.at));
             out.push(' ');
             fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_of(&fv_row.at)));
@@ -148,11 +147,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if let Some(fv_deleted) = fv_row.deleted.as_ref().map(fv::date::js_time_of) {
             out.push_str("<p>deleted ");
             fv::core::escape_into(out, &fv::date::js_to_utc_string(fv_deleted));
-            out.push_str("</p>");
+            out.push_str("</p><ul><!--[-->");
         } else {
-            out.push_str("<!---->");
+            out.push_str("<!----><ul><!--[-->");
         }
-        out.push_str("<ul><!--[-->");
         for (fv_j, fv_mark) in fv_row.marks.iter().map(fv::date::js_time_of).enumerate() {
             let fv_j = fv_j as i64;
             out.push_str("<li>");
@@ -203,13 +201,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, fv::date::js_utc_month(fv_day) + 1.0);
         out.push_str("</i>");
     }
-    out.push_str("<!--]-->");
     if let Some(fv_first) = s_first {
-        out.push_str("<b>");
+        out.push_str("<!--]--><b>");
         fv::core::push_number(out, fv_first);
         out.push_str("</b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--><!---->");
     }
     if let Some(fv_maybe_2) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) {
         out.push_str("<!--[-->");
@@ -219,11 +216,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             fv::core::push_number(out, fv_day_2);
             out.push_str("</s>");
         }
-        out.push_str("<!--]-->");
+        out.push_str("<!--]--><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><!--[-->");
     }
-    out.push_str("<!--[-->");
     for (fv_k, (fv_name_2, fv_stamp_ref_2)) in props.stamps.iter().enumerate() {
         let fv_stamp_2 = fv::date::js_time_of(fv_stamp_ref_2);
         let fv_k = fv_k as i64;
@@ -250,11 +246,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, fv::date::js_time_of(&fv_lead.at));
         out.push(' ');
         fv::core::push_int(out, fv_lead.marks.len() as i64);
-        out.push_str("</p>");
+        out.push_str("</p></section>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></section>");
     }
-    out.push_str("</section>");
     fv_refusals.check(Ok(()))
 }
 

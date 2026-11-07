@@ -51,21 +51,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::attrs::class_into(out, true, &[&*props.tone, "x"]);
         out.push_str("\"><i class=\"");
         fv::attrs::class_into(out, false, &[&*props.tone, "z"]);
-        out.push_str("\"></i>");
         if props.on {
-            out.push_str("<b><span class=\"s");
+            out.push_str("\"></i><b><span class=\"s");
             fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
             fv::core::escape_into(out, &props.tone);
-            out.push_str("</span></b>");
+            out.push_str("</span></b></section>");
         } else {
-            out.push_str("<em><span class=\"s");
+            out.push_str("\"></i><em><span class=\"s");
             fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
             fv::core::escape_into(out, &props.tone);
-            out.push_str("</span></em>");
+            out.push_str("</span></em></section>");
         }
-        out.push_str("</section>");
     } else {
         out.push_str("<div><p class=\"a b");
         fv::attrs::class_into(out, true, &[if props.on { "big" } else { "" }]);
@@ -73,21 +71,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::attrs::class_into(out, true, &[&*props.tone, "x"]);
         out.push_str("\"><i class=\"");
         fv::attrs::class_into(out, false, &[&*props.tone, "z"]);
-        out.push_str("\"></i>");
         if props.on {
-            out.push_str("<b><span class=\"s");
+            out.push_str("\"></i><b><span class=\"s");
             fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
             fv::core::escape_into(out, &props.tone);
-            out.push_str("</span></b>");
+            out.push_str("</span></b></div>");
         } else {
-            out.push_str("<em><span class=\"s");
+            out.push_str("\"></i><em><span class=\"s");
             fv::attrs::class_into(out, true, &[&*props.tone]);
             out.push_str("\">");
             fv::core::escape_into(out, &props.tone);
-            out.push_str("</span></em>");
+            out.push_str("</span></em></div>");
         }
-        out.push_str("</div>");
     }
     Ok(())
 }

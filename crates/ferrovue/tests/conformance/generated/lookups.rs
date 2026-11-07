@@ -111,24 +111,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push(' ');
     fv::core::escape_into(out, (match props.size { super::types::Size::Sm => None, super::types::Size::Md => Some("medium note"), super::types::Size::Lg => Some("large note") }).unwrap_or("no note"));
-    out.push_str("</p>");
     if matches!(props.kind.unwrap_or(super::types::Kind::Note), super::types::Kind::Note | super::types::Kind::Tip) {
-        out.push_str("<p class=\"");
+        out.push_str("</p><p class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.kind.unwrap_or(super::types::Kind::Note))]);
         out.push_str("\">");
         fv::core::escape_into(out, match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
         out.push_str("</p>");
     } else {
-        out.push_str("<p>no icon</p>");
+        out.push_str("</p><p>no icon</p>");
     }
     if let Some(fv_steps) = match props.level { 1 => Some("first"), 2 => Some("second"), _ => None } {
         out.push_str("<b>");
         fv::core::escape_into(out, fv_steps);
-        out.push_str("</b>");
+        out.push_str("</b><i>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><i>");
     }
-    out.push_str("<i>");
     fv::core::escape_into(out, (match props.level { 1 => Some("first"), 2 => Some("second"), _ => None }).unwrap_or("later"));
     out.push_str("</i><ul><!--[-->");
     for fv_b in props.badges.iter() {

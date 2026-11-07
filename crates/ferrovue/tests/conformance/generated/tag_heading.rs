@@ -126,11 +126,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
     out.push('<');
     out.push_str(fv_tag);
     if fv_attrs.is_empty() {
-        out.push_str(" class=\"heading\"");
         if props.text.is_empty() {
-            out.push_str(" title");
+            out.push_str(" class=\"heading\" title");
         } else {
-            out.push_str(" title=\"");
+            out.push_str(" class=\"heading\" title=\"");
             fv::core::escape_into(out, &props.text);
             out.push('"');
         }

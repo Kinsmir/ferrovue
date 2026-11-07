@@ -64,13 +64,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_c);
         out.push_str("</b>");
     }
-    out.push_str("<!--]-->");
     if let Some(fv_counts) = props.counts.as_ref() {
-        out.push_str("<i>");
+        out.push_str("<!--]--><i>");
         fv::core::escape_into(out, &fv_counts.iter().map(|v| fv::core::Js(*v).to_string()).collect::<Vec<_>>().join("+"));
         out.push_str("</i>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--><!---->");
     }
     if let Some(fv_marks) = props.marks.as_ref() {
         out.push_str("<!--[-->");
@@ -82,11 +81,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             fv::core::push_int(out, fv_m);
             out.push_str("</u>");
         }
-        out.push_str("<!--]-->");
+        out.push_str("<!--]--></span>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></span>");
     }
-    out.push_str("</span>");
     Ok(())
 }
 

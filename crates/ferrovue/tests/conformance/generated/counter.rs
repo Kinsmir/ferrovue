@@ -63,11 +63,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     if let Some(fv_owner) = fv_stores.counter.owner.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<b>");
         fv::core::escape_into(out, fv_owner);
-        out.push_str("</b>");
+        out.push_str("</b></p></div>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p></div>");
     }
-    out.push_str("</p></div>");
     Ok(())
 }
 

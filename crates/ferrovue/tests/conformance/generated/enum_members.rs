@@ -137,12 +137,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str("]</p>");
         }
     }
-    if props.rank as f64 == 2.0 {
-        out.push_str("<b>top 2</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<i>0 1 2 3 ");
+    out.push_str(if props.rank as f64 == 2.0 { "<b>top 2</b><i>0 1 2 3 " } else { "<!----><i>0 1 2 3 " });
     fv::core::push_int(out, props.rank);
     out.push(' ');
     if let Some(v) = props.label.as_deref() {

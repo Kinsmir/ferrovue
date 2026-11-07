@@ -77,13 +77,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
             out.push('"');
         }
     }
-    out.push_str(" data-v-56da6d99>");
     if let Some(fv_title) = props.title.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<h1 data-v-56da6d99>");
+        out.push_str(" data-v-56da6d99><h1 data-v-56da6d99>");
         fv::core::escape_into(out, fv_title);
         out.push_str("</h1>");
     } else {
-        out.push_str("<!---->");
+        out.push_str(" data-v-56da6d99><!---->");
     }
     if !props.items.is_empty() {
         out.push_str("<ul data-v-56da6d99><!--[-->");
@@ -178,11 +177,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_t
         })),
     }, " data-v-56da6d99"))?;
     fv_refusals.check(super::scoped_fade::try_render_scoped(out, &super::scoped_fade::Props { open: props.show }, " data-v-56da6d99"))?;
-    if props.show {
-        out.push_str("<p class=\"note\" data-v-56da6d99>fading</p>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if props.show { "<p class=\"note\" data-v-56da6d99>fading</p>" } else { "<!---->" });
     fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("kept")) }, " data-v-56da6d99"))?;
     fv::page::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
         out.push_str("<div class=\"modal\" data-v-56da6d99>");

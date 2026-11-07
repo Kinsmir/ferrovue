@@ -49,15 +49,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Prices.vue");
     let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
     let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
-    out.push_str("<section");
     if fv_i18n.locale().is_empty() {
-        out.push_str(" lang");
+        out.push_str("<section lang><p>");
     } else {
-        out.push_str(" lang=\"");
+        out.push_str("<section lang=\"");
         fv::core::escape_into(out, fv_i18n.locale());
-        out.push('"');
+        out.push_str("\"><p>");
     }
-    out.push_str("><p>");
     fv::core::escape_into(out, &fv_i18n.t("price", &fv::i18n::Args::new().with_named(&[("amount", fv::i18n::Value::Str(&s_amount))])));
     out.push_str("</p><p>");
     fv::core::escape_into(out, &props.total);

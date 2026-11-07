@@ -55,15 +55,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(287 + 7 + 7 + props.label.len());
     let s_choice = props.pick.map(|v| match v { super::types::Mood::Calm => super::types::MoodChoice::Calm, super::types::Mood::Loud => super::types::MoodChoice::Loud, super::types::Mood::QX => super::types::MoodChoice::QX }).unwrap_or(super::types::MoodChoice::Empty);
     let s_other = if props.on { match props.mood { super::types::Mood::Calm => super::types::MoodChoice::Calm, super::types::Mood::Loud => super::types::MoodChoice::Loud, super::types::Mood::QX => super::types::MoodChoice::QX } } else { super::types::MoodChoice::Empty };
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::QX, super::types::Mood::Loud => super::types::Mood::Calm, super::types::Mood::QX => super::types::Mood::Loud }), label: std::borrow::Cow::Borrowed(match s_choice { super::types::MoodChoice::Calm => "Calm", super::types::MoodChoice::Loud => "Loud", super::types::MoodChoice::QX => "Odd 'one'", super::types::MoodChoice::Empty => "<none> & \"all\"" }) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: match props.mood { super::types::Mood::Calm => Some(super::types::Mood::Loud), super::types::Mood::Loud | super::types::Mood::QX => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
@@ -77,13 +75,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, fv::props::Union::as_str(s_choice));
     out.push(' ');
     fv::core::escape_into(out, fv::props::Union::as_str(s_other));
-    out.push_str("</p>");
-    if (match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }) == super::types::Mood::Loud {
-        out.push_str("<i>loud next</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<select><option value=\"\"");
+    out.push_str(if (match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }) == super::types::Mood::Loud { "</p><i>loud next</i><select><option value=\"\"" } else { "</p><!----><select><option value=\"\"" });
     if fv::props::Union::as_str(s_choice).is_empty() {
         out.push_str(" selected");
     }

@@ -67,17 +67,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(134 + 16 * props.user.roles.len() + 22 * props.badges.as_deref().unwrap_or(&[]).len() + props.user.name.len() + props.user.avatar.as_deref().map_or(0, str::len) + props.user.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2 + 2 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"card card-");
     fv::core::escape_into(out, fv::strings::js_trim_end(fv::props::Union::as_str(props.size.unwrap_or(super::types::Size::Md))));
-    out.push_str("\">");
     if let Some(fv_avatar) = props.user.avatar.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<img src=\"");
+        out.push_str("\"><img src=\"");
         fv::core::escape_into(out, fv_avatar);
         out.push_str("\" alt=\"");
         fv::core::escape_into(out, &props.user.name);
-        out.push_str("\">");
+        out.push_str("\"><b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("\"><!----><b>");
     }
-    out.push_str("<b>");
     fv::core::escape_into(out, &props.user.name);
     out.push_str("</b> <small>#");
     fv::core::push_int(out, props.user.id);
@@ -97,15 +95,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &fv_b.label);
         out.push_str("</span>");
     }
-    out.push_str("<!--]-->");
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<em>");
+        out.push_str("<!--]--><em>");
         fv::core::escape_into(out, fv_note);
-        out.push_str("</em>");
+        out.push_str("</em></div>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--><!----></div>");
     }
-    out.push_str("</div>");
     Ok(())
 }
 

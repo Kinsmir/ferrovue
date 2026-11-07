@@ -14,6 +14,7 @@ import { extraParams, fieldInit, takesSlots } from "./children.ts";
 import { paramsOf, type RenderParam, renderParams, slotContextOf, slotFieldsOf } from "./plugin.ts";
 import { scopeFor } from "./script.ts";
 import { readable } from "./names.ts";
+import { foldBranches } from "./folding.ts";
 
 export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
@@ -340,6 +341,7 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
     if (name !== undefined && !e.reads(name, i + 1)) e.lines.splice(i, 1);
   }
   e.flush();
+  e.lines = foldBranches(e.lines);
   const refuses = e.lines.some((l) => new RegExp(`\\b${REFUSALS}\\.(?!check\\()`).test(l));
   if (!refuses) e.lines = unchecked(e.lines.join("\n")).split("\n");
   e.lines.push(refuses ? `    ${REFUSALS}.check(Ok(()))` : "    Ok(())");

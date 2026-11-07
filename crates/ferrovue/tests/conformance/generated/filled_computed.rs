@@ -73,55 +73,47 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_pick = if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) { if fv::strings::js_length(&props.b) != 0 { fv_a } else { &props.b } } else { "none" };
     let s_both = if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { [fv_a_2, &*props.b].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() };
     let s_built = if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) { { let fv_r = Tally { n: props.bs.len() as i64, tags: props.bs.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }; [fv_a_3, if fv_r.n as f64 > 0.0 { "some" } else { "none" }].to_vec() } } else { { let fv_q = Tally { n: props.bs.len() as i64 + 1, tags: props.bs.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }; [&*props.b, if fv_q.n as f64 > 1.0 { "some" } else { "none" }].to_vec() } };
-    out.push_str("<div>");
     if !s_pick.is_empty() {
-        out.push_str("<b>[");
+        out.push_str("<div><b>[");
         fv::core::escape_into(out, s_pick);
-        out.push_str("]</b>");
+        out.push_str("]</b><em");
     } else {
-        out.push_str("<i>empty</i>");
+        out.push_str("<div><i>empty</i><em");
     }
-    out.push_str("<em");
     if s_pick.is_empty() {
-        out.push_str(" title");
+        out.push_str(" title></em><!--[-->");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, s_pick);
-        out.push('"');
+        out.push_str("\"></em><!--[-->");
     }
-    out.push_str("></em><!--[-->");
     for fv_x_cow in s_both.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
         let fv_x: &str = &fv_x_cow;
-        out.push_str("<!--[-->");
         if !fv_x.is_empty() {
-            out.push_str("<s>");
+            out.push_str("<!--[--><s>");
             fv::core::escape_into(out, fv_x);
-            out.push_str("</s>");
+            out.push_str("</s><q");
         } else {
-            out.push_str("<u>none</u>");
+            out.push_str("<!--[--><u>none</u><q");
         }
-        out.push_str("<q");
         if fv_x.is_empty() {
-            out.push_str(" title");
+            out.push_str(" title></q><!--]-->");
         } else {
             out.push_str(" title=\"");
             fv::core::escape_into(out, fv_x);
-            out.push('"');
+            out.push_str("\"></q><!--]-->");
         }
-        out.push_str("></q><!--]-->");
     }
     out.push_str("<!--]--><!--[-->");
     for fv_x_ref in s_built.iter() {
         let fv_x_2: &str = fv_x_ref;
-        out.push_str("<!--[-->");
         if !fv_x_2.is_empty() {
-            out.push_str("<s>");
+            out.push_str("<!--[--><s>");
             fv::core::escape_into(out, fv_x_2);
-            out.push_str("</s>");
+            out.push_str("</s><!--]-->");
         } else {
-            out.push_str("<u>none</u>");
+            out.push_str("<!--[--><u>none</u><!--]-->");
         }
-        out.push_str("<!--]-->");
     }
     out.push_str("<!--]--></div>");
     Ok(())

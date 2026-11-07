@@ -74,11 +74,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(125 + 9 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.len() + props.tone.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     let s_loud = props.label.to_uppercase();
-    out.push_str("<article");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<article title");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<article title=\"");
         fv::core::escape_into(out, &props.label);
         out.push('"');
     }
@@ -114,11 +113,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_note) = props.note.as_deref() {
         out.push_str("<em>");
         fv::core::escape_into(out, fv_note);
-        out.push_str("</em>");
+        out.push_str("</em><small>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><small>");
     }
-    out.push_str("<small>");
     fv::core::escape_into(out, props.note.as_deref().unwrap_or("no note"));
     out.push_str("</small></article>");
     Ok(())

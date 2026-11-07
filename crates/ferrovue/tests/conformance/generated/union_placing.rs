@@ -96,17 +96,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(133 + 18 * props.places.len() + 43 * props.named.len() + 18 * props.slots.len() + props.place.as_ref().map_or(0, |_| 14) + 14 * props.places.len() + props.named.iter().map(|(k, _)| k.len() + 14).sum::<usize>() + props.slot.place.as_ref().map_or(0, |_| 14) + 6 + props.slots.iter().map(|v| v.place.as_ref().map_or(0, |_| 14) + 6).sum::<usize>());
-    out.push_str("<section>");
     if let Some(fv_place) = props.place.as_ref() {
-        out.push_str("<p class=\"");
+        out.push_str("<section><p class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_place.align)]);
         out.push_str("\">");
         fv::core::escape_into(out, fv::props::Union::as_str(fv_place.shade));
-        out.push_str("</p>");
+        out.push_str("</p><ul><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<section><!----><ul><!--[-->");
     }
-    out.push_str("<ul><!--[-->");
     for fv_p in props.places.iter() {
         out.push_str("<li class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(fv_p.align)]);

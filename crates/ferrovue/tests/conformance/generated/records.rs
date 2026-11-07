@@ -143,9 +143,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.scores.values().map(|fv_s| std::borrow::Cow::<str>::Borrowed(&fv_s.by)).collect::<Vec<_>>().join("/"));
     out.push('|');
     out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|fv_item| *fv_item == *"a") { "true" } else { "false" });
-    out.push_str("</p>");
     if let Some(fv_extra) = props.extra.as_ref() {
-        out.push_str("<!--[-->");
+        out.push_str("</p><!--[-->");
         for (fv_flag, fv_on_ref) in fv_extra.iter() {
             let fv_on = *fv_on_ref;
             out.push_str("<i data-on=\"");
@@ -156,7 +155,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push_str("<!--]-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!---->");
     }
     super::chips::try_render(out, &super::chips::Props { chips: props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).collect(), counts: None, marks: Some(props.counts.to_owned()) })?;
     out.push_str("</section>");

@@ -107,13 +107,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(fv_tag);
     out.push_str(" datarole=\"casing\"><p datafoo=\"x\" aria-label=\"y\" viewbox=\"0 0 1 1\"");
     if props.label.is_empty() {
-        out.push_str(" databar");
+        out.push_str(" databar>a</p><svg viewBox=\"0 0 10 10\"");
     } else {
         out.push_str(" databar=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">a</p><svg viewBox=\"0 0 10 10\"");
     }
-    out.push_str(">a</p><svg viewBox=\"0 0 10 10\"");
     if props.label.is_empty() {
         out.push_str(" baseProfile");
     } else {
@@ -142,15 +141,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(" value=\"b\">b</option></select>");
     super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.label) }, super::plain_box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
-            out.push_str("<span foobar=\"1\"");
             if props.label.is_empty() {
-                out.push_str(" dataq");
+                out.push_str("<span foobar=\"1\" dataq>");
             } else {
-                out.push_str(" dataq=\"");
+                out.push_str("<span foobar=\"1\" dataq=\"");
                 fv::core::escape_into(out, &props.label);
-                out.push('"');
+                out.push_str("\">");
             }
-            out.push('>');
             fv::core::escape_into(out, &props.label);
             out.push_str("</span>");
         })),

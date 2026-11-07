@@ -68,11 +68,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
     let fv_provides = super::provides::Provides { theme_key: Some(&s_mine), tone: Some("scoped"), ..fv_inherited };
     out.push_str("<div");
     if fv_attrs.is_empty() {
-        out.push_str(" class=\"scope\"");
         if fv_inherited.theme_key.unwrap_or("light").is_empty() {
-            out.push_str(" data-outer");
+            out.push_str(" class=\"scope\" data-outer");
         } else {
-            out.push_str(" data-outer=\"");
+            out.push_str(" class=\"scope\" data-outer=\"");
             fv::core::escape_into(out, fv_inherited.theme_key.unwrap_or("light"));
             out.push('"');
         }

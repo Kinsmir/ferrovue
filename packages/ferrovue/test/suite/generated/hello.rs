@@ -49,11 +49,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if props.count != 0 {
         out.push_str("<b>");
         fv::core::push_int(out, props.count);
-        out.push_str("</b>");
+        out.push_str("</b></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p>");
     }
-    out.push_str("</p>");
     Ok(())
 }
 

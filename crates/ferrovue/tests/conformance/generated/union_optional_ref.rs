@@ -130,15 +130,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(94 + 7 + props.note.as_deref().map_or(0, str::len) + props.label.len());
     let s_mood = props.start.map(|v| match v { super::types::Mood::Calm => UnionOptionalRefMood::Calm, super::types::Mood::Loud => UnionOptionalRefMood::Loud, super::types::Mood::QX => UnionOptionalRefMood::QX });
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { Some(UnionOptionalRefMood::Calm) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, card: Some(super::types::MoodCard { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => super::types::Mood::Calm, Some(UnionOptionalRefMood::Loud) | Some(UnionOptionalRefMood::Empty) | None => super::types::Mood::Loud, Some(UnionOptionalRefMood::QX) => super::types::Mood::QX }, spare: match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None }, note: std::borrow::Cow::<str>::Borrowed(props.note.as_deref().filter(|v| !v.is_empty()).unwrap_or(&props.label)) }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { Some(UnionOptionalRefMood::Calm) => Some(super::types::Mood::Calm), Some(UnionOptionalRefMood::Loud) => Some(super::types::Mood::Loud), Some(UnionOptionalRefMood::QX) => Some(super::types::Mood::QX), Some(UnionOptionalRefMood::Empty) | None => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;

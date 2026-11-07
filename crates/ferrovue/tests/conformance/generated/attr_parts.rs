@@ -63,45 +63,39 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(430 + props.sub.len() + props.tail.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<li aria-label=\"rank ");
     fv::core::push_int(out, props.rank);
-    out.push('"');
     if props.sub.is_empty() && props.tail.is_empty() {
-        out.push_str(" title");
+        out.push_str("\" title");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("\" title=\"");
         fv::core::escape_into(out, &props.sub);
         fv::core::escape_into(out, &props.tail);
         out.push('"');
     }
     if props.sub.is_empty() {
-        out.push_str(" data-sub");
+        out.push_str(" data-sub data-mid=\"");
     } else {
         out.push_str(" data-sub=\"");
         fv::core::escape_into(out, &props.sub);
-        out.push('"');
+        out.push_str("\" data-mid=\"");
     }
-    out.push_str(" data-mid=\"");
     fv::core::escape_into(out, &props.sub);
     fv::core::push_int(out, props.rank);
     fv::core::escape_into(out, &props.tail);
-    out.push_str("\" data-lit=\"only\"");
     if props.sub.is_empty() {
-        out.push_str(" data-empty");
+        out.push_str("\" data-lit=\"only\" data-empty data-score=\"");
     } else {
-        out.push_str(" data-empty=\"");
+        out.push_str("\" data-lit=\"only\" data-empty=\"");
         fv::core::escape_into(out, &props.sub);
-        out.push('"');
+        out.push_str("\" data-score=\"");
     }
-    out.push_str(" data-score=\"");
     fv::core::push_number(out, props.score);
-    out.push_str(" points\"");
     if props.sub.is_empty() {
-        out.push_str(" data-tpl");
+        out.push_str(" points\" data-tpl data-flag=\"");
     } else {
-        out.push_str(" data-tpl=\"");
+        out.push_str(" points\" data-tpl=\"");
         fv::core::escape_into(out, &props.sub);
-        out.push('"');
+        out.push_str("\" data-flag=\"");
     }
-    out.push_str(" data-flag=\"");
     out.push_str(if props.on { "true" } else { "false" });
     fv::core::escape_into(out, &props.sub);
     out.push_str("\" data-opt=\"m");

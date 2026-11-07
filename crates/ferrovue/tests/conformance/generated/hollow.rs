@@ -168,21 +168,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("spaced") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::new(&|out: &mut String| {
-            if props.on {
-                out.push_str("<b>x</b>");
-            } else {
-                out.push_str("<!---->");
-            }
-            out.push(' ');
+            out.push_str(if props.on { "<b>x</b> " } else { "<!----> " });
             if let Some(v) = props.pad.as_deref() {
                 fv::core::escape_into(out, v);
             }
-            out.push(' ');
-            if !props.on {
-                out.push_str("<i>y</i>");
-            } else {
-                out.push_str("<!---->");
-            }
+            out.push_str(if !props.on { " <i>y</i>" } else { " <!---->" });
         })),
     }))?;
     fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("blank") }, super::frame::Slots {

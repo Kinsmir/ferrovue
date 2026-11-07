@@ -63,15 +63,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(69 + 7 * props.tags.len() + props.title.len() + 7 + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<article class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.mood)]);
-    out.push('"');
     if props.title.is_empty() {
-        out.push_str(" title");
+        out.push_str("\" title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("\" title=\"");
         fv::core::escape_into(out, &props.title);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.title);
     out.push_str(" ×");
     fv::core::push_int(out, props.count.unwrap_or(1i64));

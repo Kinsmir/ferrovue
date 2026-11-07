@@ -47,25 +47,22 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(137 + 7 * props.lines.len() + props.hint.len() + props.lines.iter().map(|v| v.len()).sum::<usize>());
     if props.editing {
-        out.push_str("<textarea");
         if props.hint.is_empty() {
-            out.push_str(" placeholder");
+            out.push_str("<textarea placeholder");
         } else {
-            out.push_str(" placeholder=\"");
+            out.push_str("<textarea placeholder=\"");
             fv::core::escape_into(out, &props.hint);
             out.push('"');
         }
         out.push_str(">Write &lt;b&gt;here&lt;/b&gt; &amp; &quot;now&quot;</textarea>");
     } else {
-        out.push_str("<p");
         if props.hint.is_empty() {
-            out.push_str(" title");
+            out.push_str("<p title><!--[-->");
         } else {
-            out.push_str(" title=\"");
+            out.push_str("<p title=\"");
             fv::core::escape_into(out, &props.hint);
-            out.push('"');
+            out.push_str("\"><!--[-->");
         }
-        out.push_str("><!--[-->");
         for fv_line_ref in props.lines.iter() {
             let fv_line: &str = fv_line_ref;
             out.push_str("<i>");

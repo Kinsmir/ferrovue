@@ -44,15 +44,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(28 + props.label.len());
-    out.push_str("<form");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<form title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<form title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     super::root_textarea::try_render_scoped(out, &super::root_textarea::Props { model_value: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("big")), ("placeholder", fv::attrs::Attr::str(&props.label))], ""))?;
     super::root_textarea_text::try_render_scoped(out, &super::root_textarea_text::Props {  }, &fv::attrs::Attrs::new(&[("id", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("t-{}", props.label))))], ""))?;
     super::root_input::try_render_scoped(out, &super::root_input::Props { model_value: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("name", fv::attrs::Attr::str(&props.label)), ("disabled", fv::attrs::Attr::Bool(!props.on))], ""))?;
