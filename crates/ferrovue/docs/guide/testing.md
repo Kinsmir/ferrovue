@@ -133,3 +133,32 @@ itself, which `fixtureApp` always imports:
 // vitest.config.ts
 export default defineConfig({ test: { server: { deps: { inline: ["ferrovue"] } } } });
 ```
+
+# Seeing what a change renders
+
+`ferrovue diff --against <ref>` shows what a change renders differently: a change of
+`ferrovue.config.json`, of a component or of a fixture. It renders every fixture of the conformance suite twice with Vue, once in the working tree and once in
+a temporary git worktree of `<ref>`, a branch, tag or commit, and compares the text each shows:
+
+```sh
+pnpm ferrovue diff --against main
+pnpm ferrovue diff --against v0.15.2 --format json
+```
+
+Both renders use the working tree's `node_modules`, so they run one version of ferrovue and Vue,
+with the configuration, components and fixtures of each side. An upgrade of ferrovue shows in its
+release notes and in `pnpm ferrovue --check --diff` of the generated Rust. The suite runs through the project's
+own Vitest configuration, the nearest `vitest.config.*` or `vite.config.*` above the configuration
+file, with each test file there that calls `conformanceSuite`, or the one `--test <file>` names.
+In this mode the suite only renders: it writes each fixture's HTML for the comparison, and checks
+nothing.
+
+For each fixture whose text changed, the command prints a unified diff of the text. A fixture whose
+markup changed and whose text reads the same, such as a space dropped between two block elements, is
+listed on one line. The text is read from tag names: each block, list, table and head element and
+each `<br>` starts a line, a run of whitespace shows as one space, whitespace at the start and end
+of a line does not show, `<pre>` and `<textarea>` keep theirs, and comments, scripts and styles show
+nothing. A stylesheet is not read, so a space between two flex or grid items still counts as text.
+
+The command exits 0 when no fixture's text changed, 1 when one did, and 2 when it could not render
+one side, so a CI job can fail on a change of rendered text.

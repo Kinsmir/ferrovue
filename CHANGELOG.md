@@ -20,6 +20,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 - The Vite plugin adds `trimEdges` to plugin-vue itself when `ferrovue.config.json` sets `"whitespace": "trim-edges"`, so `vite.config.ts` and a Vitest config with the plugin need no `nodeTransforms`.
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
+- `ferrovue diff --against <ref>` renders the conformance fixtures in the working tree and at a git ref, and prints the fixtures whose visible text changed, exiting 1 when one did.
+  [Seeing what a change renders](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html#seeing-what-a-change-renders).
 
 ### Changed
 

@@ -114,6 +114,7 @@ pnpm ferrovue --check   # in CI: exits 1 if the committed modules are stale
 pnpm ferrovue --check --diff  # …and shows what differs, as `diff -u` does
 pnpm ferrovue --check --format json  # errors as JSON, for an editor or CI annotations
 pnpm ferrovue --watch   # regenerates when components or configs change
+pnpm ferrovue diff --against main  # which fixtures' rendered text a change alters
 ```
 
 `-c, --config <path>` reads another configuration file. `--watch` regenerates on a change to what a

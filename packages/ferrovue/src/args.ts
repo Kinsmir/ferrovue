@@ -12,12 +12,15 @@ export interface Flag {
 /** The commands `ferrovue` takes, with their lines in `--help`. */
 export const COMMANDS: Readonly<Record<string, string>> = {
   init: "scaffold starter ferrovue.config.json and components",
+  diff: "render the conformance fixtures at a git ref and now, and show whose text changed",
 };
 
 /** The options `ferrovue` takes. */
 export const FLAGS: readonly Flag[] = [
   { names: ["--check"], help: "check that generated files match committed files without writing" },
   { names: ["-d", "--diff"], help: "show unified diff of changes when checking (use with --check)" },
+  { names: ["--against"], value: "<ref>", help: "the git branch, tag or commit `diff` renders the fixtures at (use with diff)" },
+  { names: ["--test"], value: "<file>", help: "a test file that registers the conformance suite (use with diff; default: each one found)" },
   { names: ["--format"], value: "<format>", help: "how to write errors and results: human (default) or json" },
   { names: ["--watch"], help: "watch components, stores, routes and config for changes and regenerate" },
   { names: ["-c", "--config"], value: "<path>", help: "path to configuration file (default: ferrovue.config.json)" },
