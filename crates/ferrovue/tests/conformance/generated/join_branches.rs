@@ -71,47 +71,41 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("mosaic-");
     fv::core::escape_into(out, fv::strings::js_trim_end(&props.shape));
     fv::attrs::class_into(out, true, &[&*props.extra]);
-    out.push_str("\">");
     if props.count != 0 {
-        out.push_str("more (");
+        out.push_str("\">more (");
         fv::core::push_int(out, props.count);
-        out.push(')');
+        out.push_str(")</a><a class=\"");
     } else {
-        out.push_str("more");
+        out.push_str("\">more</a><a class=\"");
     }
-    out.push_str("</a><a class=\"");
     let fv_class_2 = out.len();
     fv::attrs::class_into(out, false, &[&*props.extra]);
     if out.len() != fv_class_2 { out.push(' '); }
     fv::core::escape_into(out, fv::strings::js_trim_start(&props.head));
     out.push_str("-head");
     fv::attrs::class_into(out, true, &[&*(if props.on { std::borrow::Cow::<str>::Borrowed("lit") } else { std::borrow::Cow::<str>::Owned(format!("{}{}", props.extra, props.shape)) })]);
-    out.push_str("\">");
     if let Some(fv_who) = props.who.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("hi ");
+        out.push_str("\">hi ");
         fv::core::escape_into(out, fv_who);
     } else {
-        out.push_str("nobody");
+        out.push_str("\">nobody");
     }
     out.push_str("</a><span class=\"inline-block bar-");
     fv::core::push_int(out, props.bar);
-    out.push_str("\" title=\"");
     if let Some(fv_who_2) = props.who.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("by ");
+        out.push_str("\" title=\"by ");
         fv::core::escape_into(out, fv_who_2);
     } else {
-        out.push_str("anon ");
+        out.push_str("\" title=\"anon ");
         fv::core::push_int(out, props.count);
     }
-    out.push_str("\">");
     if let Some(fv_who_3) = props.who.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("by ");
+        out.push_str("\">by ");
         fv::core::escape_into(out, fv_who_3);
-        out.push('.');
+        out.push_str(".</span><i class=\"");
     } else {
-        out.push_str("anon");
+        out.push_str("\">anon</span><i class=\"");
     }
-    out.push_str("</span><i class=\"");
     let fv_class_3 = out.len();
     fv::attrs::class_into(out, false, &[&*format!("{}{}", props.both, props.shape)]);
     if out.len() != fv_class_3 { out.push(' '); }

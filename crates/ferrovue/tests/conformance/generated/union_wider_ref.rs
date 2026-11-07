@@ -392,15 +392,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_spared = props.spare.map(|v| match v { super::types::Mark::Amp => UnionWiderRefSpared::Amp, super::types::Mark::Bang => UnionWiderRefSpared::Bang, super::types::Mark::Hex => UnionWiderRefSpared::Hex, super::types::Mark::Tag => UnionWiderRefSpared::Tag });
     let s_kept = match props.mood { super::types::Mood::Calm => UnionWiderRefKept::Calm, super::types::Mood::Loud => UnionWiderRefKept::Loud, super::types::Mood::QX => UnionWiderRefKept::QX };
     let s_chosen = if props.on { match props.mood { super::types::Mood::Calm => UnionWiderRefChosen::Calm, super::types::Mood::Loud => UnionWiderRefChosen::Loud, super::types::Mood::QX => UnionWiderRefChosen::QX } } else { UnionWiderRefChosen::Empty };
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title><p class=\"");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\"><p class=\"");
     }
-    out.push_str("><p class=\"");
     fv::attrs::class_into(out, false, &[if s_picked == UnionWiderRefPicked::Empty { "none" } else { "" }, if s_held == UnionWiderRefHeld::Bang { "bang" } else { "" }]);
     out.push_str("\" data-held=\"");
     fv::core::escape_into(out, fv::props::Union::as_str(s_held));

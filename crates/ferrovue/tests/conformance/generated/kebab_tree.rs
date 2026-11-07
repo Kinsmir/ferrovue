@@ -66,11 +66,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
     if &*props.label == "root" {
         out.push_str("<ul data-v-189d3616>");
         super::kebab_tree::try_render_scoped(out, &super::kebab_tree::Props { label: std::borrow::Cow::Borrowed("end"), children: Vec::new() }, " data-v-189d3616")?;
-        out.push_str("</ul>");
+        out.push_str("</ul></li>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></li>");
     }
-    out.push_str("</li>");
     Ok(())
 }
 

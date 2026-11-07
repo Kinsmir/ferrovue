@@ -68,11 +68,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_card.spare.map(fv::props::Union::as_str).unwrap_or("none"));
         out.push('|');
         fv::core::escape_into(out, &fv_card.note);
-        out.push_str("</i>");
+        out.push_str("</i></b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></b>");
     }
-    out.push_str("</b>");
     Ok(())
 }
 

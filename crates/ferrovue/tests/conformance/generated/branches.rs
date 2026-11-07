@@ -109,31 +109,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             }
         }
     }
-    if !props.on {
-        out.push_str("<i>off</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.on && props.count != 0 {
-        out.push_str("<i>on and counted</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.count == 0 || !props.on {
-        out.push_str("<i>either</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.count as f64 == 3.0 {
-        out.push_str("<i>three</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.note.as_deref().is_some() {
-        out.push_str("<!---->");
-    } else {
-        out.push_str("<i>no note</i>");
-    }
+    out.push_str(if !props.on { "<i>off</i>" } else { "<!---->" });
+    out.push_str(if props.on && props.count != 0 { "<i>on and counted</i>" } else { "<!---->" });
+    out.push_str(if props.count == 0 || !props.on { "<i>either</i>" } else { "<!---->" });
+    out.push_str(if props.count as f64 == 3.0 { "<i>three</i>" } else { "<!---->" });
+    out.push_str(if props.note.as_deref().is_some() { "<!---->" } else { "<i>no note</i>" });
     if let Some(fv_score) = props.score {
         out.push_str("<i>scored ");
         fv::core::push_int(out, fv_score);
@@ -154,11 +134,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if let Some(fv_url) = fv_author.url.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<a href=\"");
             fv::core::escape_into(out, fv_url);
-            out.push_str("\">link</a>");
+            out.push_str("\">link</a></span>");
         } else {
-            out.push_str("<!---->");
+            out.push_str("<!----></span>");
         }
-        out.push_str("</span>");
     } else {
         out.push_str("<span>anonymous</span>");
     }
@@ -169,12 +148,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    if props.on {
-        out.push_str("<!--[--><u>one</u><u>two</u><!--]-->");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</div>");
+    out.push_str(if props.on { "<!--[--><u>one</u><u>two</u><!--]--></div>" } else { "<!----></div>" });
     Ok(())
 }
 

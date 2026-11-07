@@ -128,17 +128,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(if s_gap.partial_cmp(&props.x).is_some() { "true" } else { "false" });
     out.push_str(" true ");
     out.push_str(if s_gap < props.x { "true" } else { "false" });
-    out.push_str("</p>");
     if props.on {
-        out.push_str("<p title=\"");
+        out.push_str("</p><p title=\"");
         fv::core::escape_into(out, if true { "true" } else { "false" });
         out.push_str("\">");
         fv::core::escape_into(out, if props.on { if !props.x.is_nan() { "same" } else { "nan" } } else { "off" });
-        out.push_str("</p>");
+        out.push_str("</p></div>");
     } else {
-        out.push_str("<p>0</p>");
+        out.push_str("</p><p>0</p></div>");
     }
-    out.push_str("</div>");
     Ok(())
 }
 

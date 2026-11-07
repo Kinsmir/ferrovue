@@ -51,15 +51,13 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     out.reserve(47);
     out.push_str("<p><time>");
     fv::core::escape_into(out, &{ let fv_now = fv::date::js_time_of(&props.now); { let fv_then = fv::date::js_time_of(&props.then); { let fv_seconds = fv::core::js_round((fv_now - fv_then) / 1000.0); if fv_seconds.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_seconds < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_seconds < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_minutes = fv::core::js_round(fv_seconds / 60.0); if fv_minutes < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::Js(fv_minutes), (if fv_minutes == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_hours = fv::core::js_round(fv_minutes / 60.0); if fv_hours < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::Js(fv_hours), (if fv_hours == 1.0 { "hour" } else { "hours" }))) } else { { let fv_days = fv::core::js_round(fv_hours / 24.0); if fv_days == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_days == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::Js(fv_days), (if fv_days == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } } });
-    out.push_str("</time>");
     if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {
-        out.push_str("<span>edited ");
+        out.push_str("</time><span>edited ");
         fv::core::escape_into(out, &{ let fv_now_2 = fv::date::js_time_of(&props.now); { let fv_seconds_2 = fv::core::js_round((fv_now_2 - fv_edited) / 1000.0); if fv_seconds_2.is_nan() { std::borrow::Cow::<str>::Borrowed("at an unknown time") } else { if fv_seconds_2 < 0.0 { std::borrow::Cow::<str>::Borrowed("in the future") } else { if fv_seconds_2 < 45.0 { std::borrow::Cow::<str>::Borrowed("just now") } else { { let fv_minutes_2 = fv::core::js_round(fv_seconds_2 / 60.0); if fv_minutes_2 < 60.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::Js(fv_minutes_2), (if fv_minutes_2 == 1.0 { "minute" } else { "minutes" }))) } else { { let fv_hours_2 = fv::core::js_round(fv_minutes_2 / 60.0); if fv_hours_2 < 24.0 { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::Js(fv_hours_2), (if fv_hours_2 == 1.0 { "hour" } else { "hours" }))) } else { { let fv_days_2 = fv::core::js_round(fv_hours_2 / 24.0); if fv_days_2 == 1.0 { std::borrow::Cow::<str>::Borrowed("yesterday") } else { if fv_days_2 == 7.0 { std::borrow::Cow::<str>::Borrowed("a week ago") } else { std::borrow::Cow::<str>::Owned(format!("{} {} ago", fv::core::Js(fv_days_2), (if fv_days_2 == 1.0 { "day" } else { "days" }))) } } } } } } } } } } } });
-        out.push_str("</span>");
+        out.push_str("</span></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</time><!----></p>");
     }
-    out.push_str("</p>");
     Ok(())
 }
 

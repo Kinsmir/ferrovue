@@ -52,15 +52,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_stepped = if props.count as f64 > 2.0 { super::types::Mood::QX } else { if props.on { super::types::Mood::Calm } else { super::types::Mood::Loud } };
     let s_next = match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm };
     let s_kept = if props.label.is_empty() { super::types::Mood::Calm } else { props.mood };
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_picked, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_stepped, card: Some(super::types::MoodCard { mood: s_stepped, spare: Some(s_next), note: std::borrow::Cow::<str>::Borrowed(&*props.label) }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_next), label: std::borrow::Cow::Borrowed(&*props.label) })?;

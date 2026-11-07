@@ -84,18 +84,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &fv::strings::js_pad_start(&fv::core::Js(fv::date::js_utc_seconds(*s_date)).to_string(), 2.0f64, "0"));
     out.push('.');
     fv::core::push_number(out, fv::date::js_utc_milliseconds(*s_date));
-    out.push_str("</p>");
     if let Some(fv_updated) = props.updated.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(fv_updated), 17, 26)), 17, 26));
         out.push_str("</p>");
     } else {
-        out.push_str("<p>never updated</p>");
+        out.push_str("</p><p>never updated</p>");
     }
     if s_valid {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(s_moment), 19, 24));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     } else {
         out.push_str("<p>invalid: ");
         fv::core::push_number(out, s_moment);
@@ -115,9 +114,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, fv::date::js_utc_seconds(s_moment));
         out.push('|');
         fv::core::push_number(out, fv::date::js_utc_milliseconds(s_moment));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     }
-    out.push_str("<p>");
     fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_clip(props.at as f64)));
     out.push('|');
     fv::core::push_number(out, fv::date::js_time_clip(props.offset));

@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Changed
+
+- A render writes the text next to a `v-if` or `?:` inside each branch, and branches that only write text as one write of the text their test picks; the bench renders run up to 5% fewer instructions.
+  [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
+
 ## [0.15.2] - 2026-11-07
 
 ### Fixed

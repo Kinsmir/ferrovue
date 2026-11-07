@@ -152,15 +152,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_range = format!("{}–{}", props.booking.span.0, props.booking.span.1);
     let s_total = std::cell::LazyCell::new(|| fv::strings::js_reduce(props.scores.iter(), 0i64, |fv_sum, fv_item| fv_refusals.keep(fv::render::try_int(fv_sum as f64 + fv_item.1 as f64), 21, 66)));
     let s_names = props.scores.iter().map(|fv_item_2| std::borrow::Cow::<str>::Borrowed(&fv_item_2.0)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
-    out.push_str("<section");
     if s_range.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title data-seats=\"");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &s_range);
-        out.push('"');
+        out.push_str("\" data-seats=\"");
     }
-    out.push_str(" data-seats=\"");
     fv::core::push_number(out, props.booking.seats.0 as f64 + props.booking.seats.1 as f64);
     out.push_str("\">");
     fv_refusals.check(super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.booking.tagged.0), label: std::borrow::Cow::Borrowed(props.booking.tagged.1.as_deref().unwrap_or("none")) }))?;
@@ -194,17 +192,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.nested.0.name);
     out.push(' ');
     fv::core::escape_into(out, &props.nested.0.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
-    out.push_str("</p>");
     if let Some(fv_extra) = props.extra.as_ref() {
-        out.push_str("<b>");
+        out.push_str("</p><b>");
         fv::core::escape_into(out, &fv_extra.0);
         out.push('=');
         fv::core::push_int(out, fv_extra.1);
-        out.push_str("</b>");
+        out.push_str("</b> ");
     } else {
-        out.push_str("<i>none</i>");
+        out.push_str("</p><i>none</i> ");
     }
-    out.push(' ');
     fv::core::push_int(out, *s_total);
     out.push('|');
     fv::core::escape_into(out, if props.score.1 as f64 > 1.0 { &props.score.0 } else { "-" });

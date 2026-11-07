@@ -51,12 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(29 + props.label.len());
     out.push_str("<b>");
     fv::core::escape_into(out, &props.label);
-    if props.on_sale.unwrap_or(false) {
-        out.push_str("<i> on sale</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</b>");
+    out.push_str(if props.on_sale.unwrap_or(false) { "<i> on sale</i></b>" } else { "<!----></b>" });
     Ok(())
 }
 

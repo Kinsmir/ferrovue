@@ -1827,7 +1827,7 @@ defineProps<{ on: boolean; c: string }>();
 </script>
 <template><p style="display: block; color: red" :style="{ color: c }" v-show="on">x</p></template>`),
       ).get("x.rs")!;
-      expect(out).toMatch(/if !props\.on \{\s*out\.push_str\("display:none;"\);\s*\} else \{\s*out\.push_str\("display:block;"\);/);
+      expect(out).toContain('out.push_str(if !props.on { "<p style=\\"display:none;color:" } else { "<p style=\\"display:block;color:" });');
       expect(out).toContain("fv::core::escape_into(out, &props.c);");
     });
 
@@ -2075,7 +2075,7 @@ ${script}
       expect(out).toMatch(/let s_wide = std::cell::LazyCell::new\(\|\| fv_refusals\.keep\(fv::strings::try_pad_end\(/);
       expect(out).toContain("let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.at), 6, 28)), 6, 28));");
       expect(out).toContain("let s_ms = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_date_parse(&props.at), 7, 27));");
-      expect(out).toMatch(/if props\.on \{\n\s+out\.push_str\("<p>"\);\n\s+fv::core::escape_into\(out, &s_many\);/);
+      expect(out).toMatch(/if props\.on \{\n\s+out\.push_str\("<section><p>"\);\n\s+fv::core::escape_into\(out, &s_many\);/);
       expect(out).toContain("fv::core::push_number(out, *s_ms);");
     });
 
@@ -7099,7 +7099,7 @@ describe("constant lookups", () => {
     );
     expect(out).toContain('fv::core::escape_into(out, (match props.kind { XKind::A => Some("A"), XKind::B => Some("B"), XKind::C => None }).unwrap_or("-"));');
     expect(out).toContain('if let Some(v) = match props.kind { XKind::A => Some("x"), XKind::B | XKind::C => None } {');
-    expect(out).toContain('if matches!(props.kind, XKind::A) {\n        out.push_str("<b>x</b>");');
+    expect(out).toContain('out.push_str(if matches!(props.kind, XKind::A) { "</i><b>x</b>" } else { "</i><!---->" });');
     expect(out).toMatch(/if let Some\((fv_t)\) = match props\.kind \{ XKind::A => Some\("A"\), XKind::B => Some\("B"\), XKind::C => None \} \{\n {8}out\.push_str\("<s>"\);\n {8}fv::core::escape_into\(out, \1\);/);
   });
 
@@ -7143,7 +7143,7 @@ p { color: v-bind(color); gap: v-bind(gap); width: v-bind('color + "px"'); }
 
   it("writes `initial` for an absent value and a space for an empty string, as `ssrRenderStyle` does", () => {
     const out = generate(island(source), { ...CONFIG, scopeId: "filepath", isProduction: false }).get("x.rs")!;
-    expect(out).toContain(`-gap:initial;");`);
+    expect(out).toContain(`;--7db74d24-gap:initial;`);
     expect(out).toContain("out.push(' ');");
   });
 });
@@ -8886,7 +8886,7 @@ defineProps<{ note?: string; kind: Kind; mark: Mark; eager: boolean; on: boolean
     const out = known(`<div :title="note || undefined" :data-kind="kind" :data-mark="mark"></div>`);
     expect(out).toContain('if let Some(v) = props.note.as_deref().filter(|v| !v.is_empty()) {\n        out.push_str(" title=\\"");\n        fv::core::escape_into(out, v);');
     expect(out).toContain('out.push_str(" data-kind=\\"");\n    fv::core::escape_into(out, fv::props::Union::as_str(props.kind));');
-    expect(out).toContain('if fv::props::Union::as_str(props.mark).is_empty() {\n        out.push_str(" data-mark");');
+    expect(out).toContain('if fv::props::Union::as_str(props.mark).is_empty() {\n        out.push_str("\\" data-mark></div>");');
     expect(out.match(/is_empty\(\) \{/g)).toHaveLength(1);
     const guarded = known(`<div v-if="note" :data-note="note"></div>`);
     expect(guarded).toContain('if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {\n        out.push_str("<div data-note=\\"");\n        fv::core::escape_into(out, fv_note);');
@@ -8946,7 +8946,7 @@ ${setup}
       ["a computed `?:`", `<b v-if="pick">x</b>`, "const pick = computed(() => (props.a ? (props.b.length ? props.a : props.b) : 'none'));"],
       ["a computed array literal's item", `<template v-for="x in both"><b v-if="x">x</b></template>`, "const both = computed(() => (props.a ? [props.a, props.b] : []));"],
     ])("tests %s for the empty string", (_, template, setup) => {
-      expect(joined(template, setup)).toMatch(/is_empty\(\) \}? ?\{\n {4,}out\.push_str\("<b>x<\/b>"\);/);
+      expect(joined(template, setup)).toMatch(/is_empty\(\) \}? ?\{ "[^"]*<b>x<\/b>/);
     });
 
     it.each([
@@ -8955,8 +8955,8 @@ ${setup}
       ["an array literal's item", `<p v-if="a"><template v-for="x in [a, 'none']"><b v-if="x">x</b></template></p>`],
     ])("tests %s of two non-empty strings for nothing", (_, template) => {
       const out = joined(template);
-      expect(out).toContain('out.push_str("<b>x</b>");');
-      expect(out).not.toMatch(/is_empty\(\) \}? ?\{\n {4,}out\.push_str\("<b>x<\/b>"\);/);
+      expect(out).toMatch(/"[^"]*<b>x<\/b>/);
+      expect(out).not.toMatch(/is_empty\(\) \}? ?\{ "[^"]*<b>x<\/b>/);
     });
   });
 });

@@ -67,9 +67,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_shown = props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.posted));
     out.push_str("<article><h2>");
     fv::core::escape_into(out, &props.title);
-    out.push_str("</h2>");
     if s_valid {
-        out.push_str("<p><time datetime=\"");
+        out.push_str("</h2><p><time datetime=\"");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.posted)), 14, 38));
         out.push_str("\">");
         fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&props.posted)));
@@ -79,7 +78,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, s_year);
         out.push_str("</time></p>");
     } else {
-        out.push_str("<p>invalid: ");
+        out.push_str("</h2><p>invalid: ");
         fv::core::push_number(out, fv::date::js_time_of(&props.posted));
         out.push('|');
         fv::core::push_number(out, s_year);
@@ -105,11 +104,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_number(out, fv::date::js_utc_minutes(fv_deleted));
         out.push(':');
         fv::core::push_number(out, fv::date::js_utc_seconds(fv_deleted));
-        out.push_str("</p>");
+        out.push_str("</p><ul><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><ul><!--[-->");
     }
-    out.push_str("<ul><!--[-->");
     for (fv_i, fv_tag_ref) in props.tags.iter().enumerate() {
         let fv_tag: &str = fv_tag_ref;
         let fv_i = fv_i as i64;

@@ -61,15 +61,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     let (Some(_), Some(l_3)) = (l_2, l_3) else { return Ok(()); };
     let l_4 = fv_loads.get(super::loaders::LoadTotal { query: super::loaders::LoadTotalQuery { exact: props.query.exact, lang: props.query.lang.as_deref().map(String::from), page: props.query.page, term: String::from(&*props.query.term) }, scale: Some(2i64) });
     let (Some(_),) = (l_4,) else { return Ok(()); };
-    out.push_str("<section");
     if props.term.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title><!--[-->");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.term);
-        out.push('"');
+        out.push_str("\"><!--[-->");
     }
-    out.push_str("><!--[-->");
     for fv_h_ref in l_0.iter() {
         let fv_h: &str = fv_h_ref;
         out.push_str("<p>");

@@ -95,11 +95,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if let Some(fv_note) = fv_item.note.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<i>");
             fv::core::escape_into(out, fv_note);
-            out.push_str("</i>");
+            out.push_str("</i></li>");
         } else {
-            out.push_str("<!---->");
+            out.push_str("<!----></li>");
         }
-        out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
     fv::core::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w_3| std::borrow::Cow::<str>::Owned(fv::strings::js_trim(&fv_w_3).to_owned())).filter(|fv_w_4| !fv_w_4.is_empty()).collect::<Vec<_>>().join(", "));

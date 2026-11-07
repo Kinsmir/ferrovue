@@ -90,22 +90,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(106 + 29 * props.rows.len() + props.title.len() + props.entry.meta.tag_2.len() + props.entry.meta.tag.len() + props.entry.label.len() + props.rows.iter().map(|v| v.meta.tag_2.len() + v.meta.tag.len() + v.label.len()).sum::<usize>());
     let s_label_2 = format!("{}!", props.title);
     let s_label = fv::strings::js_trim(&props.entry.label);
-    out.push_str("<section");
     if s_label_2.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &s_label_2);
         out.push('"');
     }
     if props.entry.meta.tag_2.is_empty() {
-        out.push_str(" data-tag");
+        out.push_str(" data-tag><h2>");
     } else {
         out.push_str(" data-tag=\"");
         fv::core::escape_into(out, &props.entry.meta.tag_2);
-        out.push('"');
+        out.push_str("\"><h2>");
     }
-    out.push_str("><h2>");
     fv::core::escape_into(out, &s_label_2);
     out.push('|');
     fv::core::escape_into(out, s_label);

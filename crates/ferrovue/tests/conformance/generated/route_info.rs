@@ -74,18 +74,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     if let Some(v) = fv_route.param("slug") {
         fv::core::escape_into(out, v);
     }
-    out.push_str("</dd>");
-    if s_on_post {
-        out.push_str("<dd>a post</dd>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if fv_route.param("tab") == Some("edit") {
-        out.push_str("<dd>editing</dd>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<dd data-q=\"");
+    out.push_str(if s_on_post { "</dd><dd>a post</dd>" } else { "</dd><!---->" });
+    out.push_str(if fv_route.param("tab") == Some("edit") { "<dd>editing</dd><dd data-q=\"" } else { "<!----><dd data-q=\"" });
     fv::core::escape_into(out, fv_route.query("q").attr_value().unwrap_or("not one"));
     out.push_str("\" title=\"");
     fv::core::escape_into(out, fv_route.query("x").attr_value().unwrap_or("none"));
@@ -95,12 +85,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     fv_route.query("x").or("none").write_display(out);
     out.push('|');
     fv::core::escape_into(out, fv_route.full_path());
-    out.push_str("</dd>");
-    if fv_route.query("q").is_array() {
-        out.push_str("<dd>several</dd>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if fv_route.query("q").is_array() { "</dd><dd>several</dd>" } else { "</dd><!---->" });
     if let Some(fv_q) = fv_route.query("q").attr_value() {
         out.push_str("<dd data-one=\"");
         fv::core::escape_into(out, fv_q);
@@ -108,22 +93,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     } else {
         out.push_str("<!---->");
     }
-    if fv_route.query("q").is("rust") {
-        out.push_str("<dd>rust</dd>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if fv_route.query("flag").is_undefined() {
-        out.push_str("<dd>no flag</dd>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if fv_route.query("flag").truthy() {
-        out.push_str("<dd>flag set</dd>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</dl>");
+    out.push_str(if fv_route.query("q").is("rust") { "<dd>rust</dd>" } else { "<!---->" });
+    out.push_str(if fv_route.query("flag").is_undefined() { "<dd>no flag</dd>" } else { "<!---->" });
+    out.push_str(if fv_route.query("flag").truthy() { "<dd>flag set</dd></dl>" } else { "<!----></dl>" });
     Ok(())
 }
 

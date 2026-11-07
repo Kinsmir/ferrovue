@@ -595,11 +595,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if props.mode == UnionEnumsMode::A {
         out.push_str("<b>is a</b>");
     } else {
-        if props.mode != UnionEnumsMode::C {
-            out.push_str("<b>not c</b>");
-        } else {
-            out.push_str("<b>c</b>");
-        }
+        out.push_str(if props.mode != UnionEnumsMode::C { "<b>not c</b>" } else { "<b>c</b>" });
     }
     if let Some(fv_other) = props.other {
         out.push_str("<i>");
@@ -617,12 +613,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<i>no gap</i>");
     }
-    if props.level == crate::domain::Level::High {
-        out.push_str("<u>high</u>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<s>");
+    out.push_str(if props.level == crate::domain::Level::High { "<u>high</u><s>" } else { "<!----><s>" });
     fv::core::escape_into(out, props.picked.map(fv::props::Union::as_str).unwrap_or("none"));
     out.push(' ');
     fv::core::escape_into(out, if let Some(fv_picked) = props.picked { fv::props::Union::as_str(fv_picked) } else { "null" });

@@ -96,15 +96,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &fv::date::js_json_date(fv_refusals.keep(fv::date::try_date_parse(&props.published), 15, 97)));
     out.push('|');
     fv::core::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
-    out.push_str("</p>");
     if fv::date::js_to_json(fv::date::js_time_of(&props.due)).as_deref().is_none() {
-        out.push_str("<p>due is invalid</p>");
+        out.push_str("</p><p>due is invalid</p><p>");
     } else {
-        out.push_str("<p>due ");
+        out.push_str("</p><p>due ");
         fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_of(&props.due)));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     }
-    out.push_str("<p>");
     fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, 0.0f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 11));
     out.push('|');
     fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, props.month as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 18, 32));
@@ -126,15 +124,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(if !fv::date::js_time_of(&props.posted).is_nan() { "true" } else { "false" });
     out.push('|');
     out.push_str(if fv_refusals.keep(fv::date::try_date_parse(&props.published), 19, 105) < fv::date::js_time_of(&props.posted) { "true" } else { "false" });
-    out.push_str("</p>");
     if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) && fv_edited > fv::date::js_time_of(&props.posted) {
-        out.push_str("<p>edited later, ");
+        out.push_str("</p><p>edited later, ");
         fv::core::escape_into(out, &fv::date::js_to_utc_string(fv_edited));
-        out.push_str("</p>");
+        out.push_str("</p><ul><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!----><ul><!--[-->");
     }
-    out.push_str("<ul><!--[-->");
     for fv_t_ref in props.times.iter() {
         let fv_t = *fv_t_ref;
         out.push_str("<li class=\"");

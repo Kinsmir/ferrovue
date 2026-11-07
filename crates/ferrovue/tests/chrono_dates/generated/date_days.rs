@@ -75,17 +75,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, if props.days.iter().map(fv::date::js_time_of).any(|fv_d_3| fv::date::js_utc_day(fv_d_3) == 0.0) { "a Sunday" } else { "no Sunday" });
     out.push_str(", ");
     fv::core::push_int(out, props.days.iter().map(fv::date::js_time_of).position(|fv_d_4| fv::date::js_utc_month(fv_d_4) == 1.0).map_or(-1, |i| i as i64));
-    out.push_str("</p>");
     if let Some(fv_maybe) = props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()) {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::push_int(out, fv_maybe.len() as i64);
         out.push_str(" maybe: ");
         fv::core::escape_into(out, &fv_maybe.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!----><p>");
     }
-    out.push_str("<p>");
     fv::core::escape_into(out, &props.by.keys().map(std::borrow::Cow::<str>::Borrowed).collect::<Vec<_>>().join(","));
     out.push(' ');
     fv::core::escape_into(out, &props.by.values().map(fv::date::js_time_of).map(fv::date::js_utc_hours).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));

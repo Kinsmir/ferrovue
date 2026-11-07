@@ -127,9 +127,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
     fv::render::scoped_slot_into(out, fv_slots.header, &HeaderSlotProps { title: &props.title, note: props.note.as_deref() }, Some(&mut |out: &mut String| {
         fv::core::escape_into(out, &props.title);
     }));
-    out.push_str("</header>");
     if !props.rows.is_empty() {
-        out.push_str("<ul><!--[-->");
+        out.push_str("</header><ul><!--[-->");
         for (fv_i, fv_r) in props.rows.iter().enumerate() {
             let fv_i = fv_i as i64;
             out.push_str("<li>");
@@ -140,16 +139,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
             }));
             out.push_str("</li>");
         }
-        out.push_str("<!--]--></ul>");
+        out.push_str("<!--]--></ul><footer>");
     } else {
-        out.push_str("<p>");
+        out.push_str("</header><p>");
         fv::render::scoped_slot_into(out, fv_slots.empty, &EmptySlotProps { title: &props.title }, Some(&mut |out: &mut String| {
             out.push_str("no rows in ");
             fv::core::escape_into(out, &props.title);
         }));
-        out.push_str("</p>");
+        out.push_str("</p><footer>");
     }
-    out.push_str("<footer>");
     fv::render::scoped_slot_into(out, fv_slots.default, &DefaultSlotProps { count: props.rows.len() as i64, title: &props.title }, None);
     out.push_str("</footer></section>");
     Ok(())

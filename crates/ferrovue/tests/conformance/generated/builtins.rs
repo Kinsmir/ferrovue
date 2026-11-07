@@ -46,13 +46,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(181 + 9 * props.items.len() + 7 * props.items.len() + props.text.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
-    out.push_str("<div>");
-    if props.on {
-        out.push_str("<p>shown</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<ul name=\"list\">");
+    out.push_str(if props.on { "<div><p>shown</p><ul name=\"list\">" } else { "<div><!----><ul name=\"list\">" });
     for fv_i_ref in props.items.iter() {
         let fv_i: &str = fv_i_ref;
         out.push_str("<li>");
@@ -74,15 +68,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &props.text);
     out.push_str("</p><p>{{ not interpolated }}</p><p>");
     fv::core::escape_into(out, &props.text);
-    out.push_str("</p><input class=\"focused\"");
     if props.text.is_empty() {
-        out.push_str(" value");
+        out.push_str("</p><input class=\"focused\" value></div>");
     } else {
-        out.push_str(" value=\"");
+        out.push_str("</p><input class=\"focused\" value=\"");
         fv::core::escape_into(out, &props.text);
-        out.push('"');
+        out.push_str("\"></div>");
     }
-    out.push_str("></div>");
     Ok(())
 }
 

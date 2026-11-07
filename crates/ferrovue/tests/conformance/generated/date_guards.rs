@@ -69,25 +69,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_either = props.deleted.as_ref().map(fv::date::js_time_of).or(props.edited.as_ref().map(fv::date::js_time_of));
     let s_parsed = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_date_parse(&props.stamp), 8, 31));
     let s_iso = std::cell::LazyCell::new(|| fv_refusals.keep(fv::date::try_to_iso_string(*s_parsed), 9, 28));
-    out.push_str("<article");
     if props.title.is_empty() {
-        out.push_str(" title");
+        out.push_str("<article title><h2>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<article title=\"");
         fv::core::escape_into(out, &props.title);
-        out.push('"');
+        out.push_str("\"><h2>");
     }
-    out.push_str("><h2>");
     fv::core::escape_into(out, &props.title);
-    out.push_str("</h2>");
     if !fv::date::js_time_of(&props.at).is_nan() {
-        out.push_str("<p><time datetime=\"");
+        out.push_str("</h2><p><time datetime=\"");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.at)), 15, 60));
         out.push_str("\">");
         fv::core::push_number(out, fv::date::js_utc_full_year(fv::date::js_time_of(&props.at)));
         out.push_str("</time></p>");
     } else {
-        out.push_str("<p>invalid ");
+        out.push_str("</h2><p>invalid ");
         fv::core::push_number(out, fv::date::js_time_of(&props.at));
         out.push_str("</p>");
     }
@@ -98,15 +95,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str(if fv::date::js_time_of(&props.at).fract() == 0.0 { "true" } else { "false" });
         out.push('|');
         out.push_str(if matches!(fv::date::js_time_of(&props.at), v if v.fract() == 0.0 && v.abs() <= 9_007_199_254_740_991.0) { "true" } else { "false" });
-        out.push_str("</p>");
+        out.push_str("</p><p data-valid=\"");
     } else {
         out.push_str("<p>");
         out.push_str(if fv::date::js_time_of(&props.at).is_finite() { "true" } else { "false" });
         out.push('|');
         out.push_str(if fv::date::js_utc_date(fv::date::js_time_of(&props.at)).is_nan() { "true" } else { "false" });
-        out.push_str("</p>");
+        out.push_str("</p><p data-valid=\"");
     }
-    out.push_str("<p data-valid=\"");
     out.push_str(if (*s_parsed).is_finite() { "true" } else { "false" });
     out.push_str("\">");
     fv::core::push_number(out, props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.at)));
@@ -118,13 +114,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::push_number(out, fv::date::js_time_of(&props.at));
     out.push('|');
     fv::core::push_number(out, fv::date::js_utc_date(props.deleted.as_ref().map(fv::date::js_time_of).or(props.edited.as_ref().map(fv::date::js_time_of)).unwrap_or(fv::date::js_time_of(&props.at))));
-    out.push_str("</p>");
     if let Some(fv_either) = s_either {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::push_number(out, fv_either);
         out.push_str("</p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!---->");
     }
     if props.deleted.as_ref().map(fv::date::js_time_of).is_some() || props.edited.as_ref().map(fv::date::js_time_of).is_some() {
         out.push_str("<p>");
@@ -136,11 +131,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) && !fv_edited.is_nan() {
         out.push_str("<p>");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_edited), 22, 60));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><p>");
     }
-    out.push_str("<p>");
     fv::core::push_number(out, props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.fallback)));
     out.push('|');
     fv::core::push_number(out, props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.fallback)));
@@ -148,15 +142,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::push_number(out, props.deleted.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.at)));
     out.push('|');
     fv::core::push_number(out, props.deleted.as_ref().map(fv::date::js_time_of).or(props.edited.as_ref().map(fv::date::js_time_of)).unwrap_or(fv::date::js_time_of(&props.fallback)));
-    out.push_str("</p>");
     if (*s_parsed).is_nan() {
-        out.push_str("<p>bad stamp</p>");
+        out.push_str("</p><p>bad stamp</p></article>");
     } else {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::escape_into(out, &s_iso);
-        out.push_str("</p>");
+        out.push_str("</p></article>");
     }
-    out.push_str("</article>");
     fv_refusals.check(Ok(()))
 }
 

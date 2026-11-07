@@ -44,9 +44,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(178 + props.tone.len());
-    out.push_str("<!--[-->");
     if props.on {
-        out.push_str("<!--[--><p style=\"--d62f6e13-tone:");
+        out.push_str("<!--[--><!--[--><p style=\"--d62f6e13-tone:");
         if props.tone.is_empty() {
             out.push(' ');
         } else {
@@ -60,14 +59,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }
         out.push_str(";\" data-v-d62f6e13>b</p><!--]-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--[--><!---->");
     }
-    if props.on {
-        out.push_str("<b data-v-d62f6e13>c</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str(" text ");
+    out.push_str(if props.on { "<b data-v-d62f6e13>c</b> text " } else { "<!----> text " });
     fv::core::escape_into(out, &props.tone);
     out.push_str("<!--]-->");
     Ok(())

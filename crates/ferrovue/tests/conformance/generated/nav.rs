@@ -56,22 +56,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     out.push_str(">intro</a> ");
     fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-active router-link-exact-active", &["tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }], false);
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str(" title>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.label);
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<i>");
         fv::core::escape_into(out, fv_note);
-        out.push_str("</i>");
+        out.push_str("</i></a></nav>");
     } else {
-        out.push_str("<!--v-if-->");
+        out.push_str("<!--v-if--></a></nav>");
     }
-    out.push_str("</a></nav>");
     Ok(())
 }
 

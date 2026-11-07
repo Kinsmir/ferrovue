@@ -81,15 +81,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push_str(">Hello, ");
     fv::core::escape_into(out, &props.name);
-    out.push('!');
     if props.show_head.unwrap_or(false) {
-        out.push_str("<b>");
+        out.push_str("!<b>");
         if let Some(v) = props.unread {
             fv::core::push_int(out, v);
         }
         out.push_str("</b>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("!<!---->");
     }
     if let Some(v) = props.model_value.as_deref() {
         fv::core::escape_into(out, v);

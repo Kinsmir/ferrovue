@@ -186,11 +186,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
                 filled = true;
                 out.push_str("<em data-v-71d8588a>");
                 fv::core::escape_into(out, fv_note);
-                out.push_str("</em>");
+                out.push_str("</em><!--[-->");
             } else {
-                out.push_str("<!--v-if-->");
+                out.push_str("<!--v-if--><!--[-->");
             }
-            out.push_str("<!--[-->");
             for fv_w_cow in fv::strings::js_split(&props.title, " ").into_iter() {
                 let fv_w: &str = &fv_w_cow;
                 filled = true;
@@ -225,7 +224,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
         }
         out.push_str("<!--]-->");
         fv::render::slot_into(out, fv_slots.default, None);
-        out.push_str("</ol>");
+        out.push_str("</ol><h4 data-v-71d8588a>static ");
     } else {
         out.push_str("<ul class=\"");
         fv::attrs::class_into(out, false, &[if props.ordered { "ordered" } else { "" }]);
@@ -238,9 +237,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
         }
         out.push_str("<!--]-->");
         fv::render::slot_into(out, fv_slots.default, None);
-        out.push_str("</ul>");
+        out.push_str("</ul><h4 data-v-71d8588a>static ");
     }
-    out.push_str("<h4 data-v-71d8588a>static ");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h4>");
     if let Some(fv_note_2) = props.note.as_deref().filter(|v| !v.is_empty()) {
@@ -253,11 +251,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
         fv::core::escape_into(out, fv_note_2);
         out.push_str("</");
         out.push_str(fv_tag);
-        out.push('>');
+        out.push_str("></article>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></article>");
     }
-    out.push_str("</article>");
     Ok(())
 }
 

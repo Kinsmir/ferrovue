@@ -99,22 +99,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if props.tone == crate::domain::Shade::Warm {
         out.push_str("<b>warm</b>");
     } else {
-        if props.tone != crate::domain::Shade::XCool {
-            out.push_str("<b>mark</b>");
-        } else {
-            out.push_str("<b>cool</b>");
-        }
+        out.push_str(if props.tone != crate::domain::Shade::XCool { "<b>mark</b>" } else { "<b>cool</b>" });
     }
     if let Some(fv_other) = props.other {
         out.push_str("<i>");
         fv::core::escape_into(out, match fv_other { crate::domain::Shade::Warm => "Warm & <w>", crate::domain::Shade::XCool => "Cool", crate::domain::Shade::BQ => "Mark" });
         out.push(' ');
         fv::core::escape_into(out, fv::props::Union::as_str(fv_other));
-        out.push_str("</i>");
+        out.push_str("</i><s>");
     } else {
-        out.push_str("<i>no other</i>");
+        out.push_str("<i>no other</i><s>");
     }
-    out.push_str("<s>");
     out.push_str(if props.picked.map(fv::props::Union::as_str) == Some(fv::props::Union::as_str(props.tone)) { "true" } else { "false" });
     out.push(' ');
     fv::core::escape_into(out, if let Some(fv_picked) = props.picked { fv::props::Union::as_str(fv_picked) } else { "null" });

@@ -57,15 +57,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(105 + 36 * props.tags.len() + props.q.len() + props.path.len() + props.tag.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
     let s_search = format!("/search?q={}&page={}", fv::core::js_encode_uri_component(&props.q), fv::core::js_encode_uri_component(&format!("{}", fv::core::Js(props.page))));
     let s_kept = fv::core::js_encode_uri(fv::strings::js_trim(&props.path));
-    out.push_str("<nav");
     if fv::core::js_encode_uri_component(&props.q).is_empty() {
-        out.push_str(" data-q");
+        out.push_str("<nav data-q><a href=\"");
     } else {
-        out.push_str(" data-q=\"");
+        out.push_str("<nav data-q=\"");
         fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.q));
-        out.push('"');
+        out.push_str("\"><a href=\"");
     }
-    out.push_str("><a href=\"");
     fv::core::escape_into(out, &s_search);
     out.push_str("\">");
     fv::core::escape_into(out, &s_search);

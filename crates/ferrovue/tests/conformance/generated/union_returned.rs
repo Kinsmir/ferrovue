@@ -55,15 +55,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(121 + 7 + 10 + 7 + props.label.len());
     let s_shown = fv::props::Union::as_str(props.mood);
     let s_spared = props.spare.map(fv::props::Union::as_str);
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title><p class=\"");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\"><p class=\"");
     }
-    out.push_str("><p class=\"");
     fv::attrs::class_into(out, false, &[if fv::props::Union::as_str(props.mood) == "-" { "dash" } else { "" }, if fv::props::Union::as_str(props.mood) == "calm" { "calm" } else { "" }, if fv::props::Union::as_str(props.mark) != "-" { "other" } else { "" }]);
     out.push_str("\" data-mood=\"");
     fv::core::escape_into(out, s_shown);
@@ -73,18 +71,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, fv::props::Union::as_str(props.mark));
     out.push(' ');
     fv::core::escape_into(out, fv::props::Union::as_str(props.mood));
-    out.push_str("</p>");
-    if fv::props::Union::as_str(props.mood) == "-" {
-        out.push_str("<i>dash</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if s_shown == &*props.label {
-        out.push_str("<b>same</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<em class=\"");
+    out.push_str(if fv::props::Union::as_str(props.mood) == "-" { "</p><i>dash</i>" } else { "</p><!---->" });
+    out.push_str(if s_shown == &*props.label { "<b>same</b><em class=\"" } else { "<!----><em class=\"" });
     fv::attrs::class_into(out, false, &[if s_spared.is_none() { "none" } else { "" }, if s_spared == Some("-") { "dash" } else { "" }]);
     out.push_str("\">");
     if let Some(v) = s_spared {

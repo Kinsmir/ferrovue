@@ -50,13 +50,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     out.push_str(" data-v-f60bf031>intro</a>");
     fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str(" title data-v-f60bf031>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\" data-v-f60bf031>");
     }
-    out.push_str(" data-v-f60bf031>");
     fv::core::escape_into(out, &props.label);
     out.push_str(" <i data-v-f60bf031>");
     fv::core::escape_into(out, &props.href);

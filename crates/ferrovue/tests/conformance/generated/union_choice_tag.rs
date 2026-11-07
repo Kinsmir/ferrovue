@@ -108,15 +108,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(35 + 7 + props.label.len());
-    out.push_str("<s");
     if fv::props::Union::as_str(props.choice).is_empty() {
-        out.push_str(" data-choice");
+        out.push_str("<s data-choice>");
     } else {
-        out.push_str(" data-choice=\"");
+        out.push_str("<s data-choice=\"");
         fv::core::escape_into(out, fv::props::Union::as_str(props.choice));
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.label);
     out.push(' ');
     fv::core::escape_into(out, { let a = fv::props::Union::as_str(props.choice); if !a.is_empty() { a } else { "none" } });

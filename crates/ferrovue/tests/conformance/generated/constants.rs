@@ -64,63 +64,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    if s_unlabelled {
-        out.push_str("<p>unlabelled</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if s_prefixed {
-        out.push_str("<p>never</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.label.is_empty() {
-        out.push_str("<p>label empty</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("<!---->");
-    if props.note.as_deref().unwrap_or("").is_empty() {
-        out.push_str("<p>no note</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.label.is_empty() {
-        out.push_str("<p>still empty</p>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if s_unlabelled { "<p>unlabelled</p>" } else { "<!---->" });
+    out.push_str(if s_prefixed { "<p>never</p>" } else { "<!---->" });
+    out.push_str(if props.label.is_empty() { "<p>label empty</p><!---->" } else { "<!----><!---->" });
+    out.push_str(if props.note.as_deref().unwrap_or("").is_empty() { "<p>no note</p>" } else { "<!---->" });
+    out.push_str(if props.label.is_empty() { "<p>still empty</p>" } else { "<!---->" });
     out.push_str("<p title=\"calm &amp; &lt;quiet&gt; &quot;x&quot; &#39;y&#39;\">hi calm &amp; &lt;quiet&gt; &quot;x&quot; &#39;y&#39;</p>");
-    if props.note.as_deref() == Some("") {
-        out.push_str("<p>note empty</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if !fv::strings::js_trim(&props.label).is_empty() {
-        out.push_str("<p>trimmed</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.label.is_empty() {
-        out.push_str("<p>label is status</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if fv::strings::js_slice(&props.label, 1.0f64, None).is_empty() {
-        out.push_str("<p>tail empty</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.tags.iter().any(|v| v.is_empty()) {
-        out.push_str("<p>a blank tag</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if ["", "x"].iter().any(|v| **v == *props.label) {
-        out.push_str("<p>blank or x</p>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if props.note.as_deref() == Some("") { "<p>note empty</p>" } else { "<!---->" });
+    out.push_str(if !fv::strings::js_trim(&props.label).is_empty() { "<p>trimmed</p>" } else { "<!---->" });
+    out.push_str(if props.label.is_empty() { "<p>label is status</p>" } else { "<!---->" });
+    out.push_str(if fv::strings::js_slice(&props.label, 1.0f64, None).is_empty() { "<p>tail empty</p>" } else { "<!---->" });
+    out.push_str(if props.tags.iter().any(|v| v.is_empty()) { "<p>a blank tag</p>" } else { "<!---->" });
+    out.push_str(if ["", "x"].iter().any(|v| **v == *props.label) { "<p>blank or x</p>" } else { "<!---->" });
     out.push_str("<select><option value=\"\" selected>none</option><option value=\"a\">a</option></select><select><option value=\"\"");
     if s_picked.is_empty() {
         out.push_str(" selected");
@@ -133,15 +88,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if s_picked.is_empty() {
         out.push_str(" checked");
     }
-    out.push_str(" value=\"\"><!---->");
     if props.count as f64 > 0.0 {
-        out.push_str("<p>");
+        out.push_str(" value=\"\"><!----><p>");
         fv::core::push_int(out, props.count);
-        out.push_str("</p>");
+        out.push_str("</p></section>");
     } else {
-        out.push_str("<!---->");
+        out.push_str(" value=\"\"><!----><!----></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

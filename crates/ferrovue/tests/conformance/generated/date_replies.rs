@@ -47,15 +47,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_reply in props.replies.iter() {
         out.push_str("<li><b>");
         fv::core::escape_into(out, &fv_reply.author);
-        out.push_str("</b>");
         if !fv::date::js_time_of(&fv_reply.at).is_nan() {
-            out.push_str("<time datetime=\"");
+            out.push_str("</b><time datetime=\"");
             fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_reply.at)), 11, 73));
             out.push_str("\">");
             fv::core::push_number(out, fv::date::js_utc_date(fv::date::js_time_of(&fv_reply.at)));
             out.push_str("</time>");
         } else {
-            out.push_str("<i>");
+            out.push_str("</b><i>");
             fv::core::push_number(out, fv::date::js_time_of(&fv_reply.at));
             out.push_str("</i>");
         }

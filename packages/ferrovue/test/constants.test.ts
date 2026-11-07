@@ -492,7 +492,7 @@ describe("constants read by a key known only when rendering", () => {
   it("writes a table of booleans as a test of the keys", () => {
     expect(read('k: "a" | "b" | "c"', "{ a: true, b: false, c: true }", '<p>{{ T[k] }}</p>')).toMatch(like('out.push_str(if !matches!(props.k, XK::B) { "true" } else { "false" });'));
     expect(read('k: "a" | "b" | "c"', "{ a: true, b: false, c: false }", '<p v-if="T[k]">x</p>')).toMatch(like("if matches!(props.k, XK::A) {"));
-    expect(read('k: "a" | "b"', "{ a: true, b: true }", '<p v-if="T[k]">x</p>')).toMatch(like("if true {"));
+    expect(read('k: "a" | "b"', "{ a: true, b: true }", '<p v-if="T[k]">x</p>')).toMatch(like('out.push_str("<p>x</p>");'));
   });
 
   it("reads lists by key as slices", () => {

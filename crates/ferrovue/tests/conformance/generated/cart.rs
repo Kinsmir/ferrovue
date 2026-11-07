@@ -49,11 +49,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     fv::core::escape_into(out, &props.heading);
     out.push_str(": ");
     fv::core::escape_into(out, &fv_stores.cart.owner);
-    out.push_str("&#39;s cart</h3>");
     if fv_stores.cart.lines.len() as i64 == 0 {
-        out.push_str("<p>nothing yet</p>");
+        out.push_str("&#39;s cart</h3><p>nothing yet</p><p>");
     } else {
-        out.push_str("<ul><!--[-->");
+        out.push_str("&#39;s cart</h3><ul><!--[-->");
         for fv_l in fv_stores.cart.lines.iter() {
             out.push_str("<li>");
             fv::core::escape_into(out, &fv_l.sku);
@@ -61,9 +60,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
             fv::core::push_int(out, fv_l.qty);
             out.push_str("</li>");
         }
-        out.push_str("<!--]--></ul>");
+        out.push_str("<!--]--></ul><p>");
     }
-    out.push_str("<p>");
     fv::core::escape_into(out, &s_summary);
     out.push('|');
     fv::core::push_int(out, fv_stores.prefs.tags.len() as i64);

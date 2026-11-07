@@ -192,24 +192,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv::props::Union::as_str(fv_s));
         out.push_str("</em>");
     }
-    out.push_str("<!--]-->");
     if let Some(fv_extra) = props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref() {
-        out.push_str("<span>");
+        out.push_str("<!--]--><span>");
         fv::core::push_int(out, fv_extra.len() as i64);
         out.push(' ');
         fv::core::escape_into(out, &fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join(","));
         out.push_str("</span>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--><!---->");
     }
     if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_h_8| &*fv_h_8 == "red") {
         out.push_str("<u>");
         fv::core::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).filter(|fv_h_9| &**fv_h_9 != "red").collect::<Vec<_>>().join("|"));
-        out.push_str("</u>");
+        out.push_str("</u><!--]-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><!--]-->");
     }
-    out.push_str("<!--]-->");
     fv_refusals.check(Ok(()))
 }
 

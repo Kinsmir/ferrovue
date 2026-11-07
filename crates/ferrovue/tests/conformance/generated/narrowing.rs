@@ -79,15 +79,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(283 + props.label.as_deref().map_or(0, str::len) + props.user.as_ref().map_or(0, |v| v.name.len() + v.avatar.as_deref().map_or(0, str::len) + v.roles.iter().map(|v| v.name.len()).sum::<usize>() + 2));
-    out.push_str("<section>");
     if let Some(fv_label) = props.label.as_deref() {
-        out.push_str("<p>");
+        out.push_str("<section><p>");
         fv::core::push_int(out, fv::strings::js_length(fv_label));
         out.push(':');
         fv::core::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<section><!---->");
     }
     if let Some(fv_count) = props.count {
         out.push_str("<p>");
@@ -131,11 +130,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_user_2) = props.user.as_ref() && let Some(fv_avatar_2) = fv_user_2.avatar.as_deref() {
         out.push_str("<p>");
         fv::core::escape_into(out, fv::strings::js_trim(fv_avatar_2));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><p>");
     }
-    out.push_str("<p>");
     fv::core::push_number(out, if let Some(fv_count_2) = props.count { fv_count_2 as f64 / 4.0 } else { -1.0f64 });
     out.push('|');
     fv::core::escape_into(out, &(if let Some(fv_count_3) = props.count { std::borrow::Cow::<str>::Owned(fv::core::Js(fv_count_3 as f64 - 1.0).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
@@ -166,13 +164,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, v);
         out.push('"');
     }
-    out.push_str("></p><!---->");
-    if props.label.as_deref().is_some() || props.count.is_some() {
-        out.push_str("<p>some</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</section>");
+    out.push_str(if props.label.as_deref().is_some() || props.count.is_some() { "></p><!----><p>some</p></section>" } else { "></p><!----><!----></section>" });
     Ok(())
 }
 

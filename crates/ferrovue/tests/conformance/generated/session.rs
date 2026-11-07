@@ -54,21 +54,19 @@ pub fn try_render(out: &mut String, _props: &Props, fv_stores: &super::stores::S
         fv::core::push_int(out, v);
         out.push('"');
     }
-    out.push('>');
     if let Some(fv_user) = fv_stores.session.user.as_deref() {
-        out.push_str("<p>");
+        out.push_str("><p>");
         fv::core::escape_into(out, fv_user);
         out.push_str(" (");
         fv::core::push_int(out, fv_stores.session.visits.unwrap_or(0i64));
-        out.push_str(")</p>");
+        out.push_str(")</p></div>");
     } else {
-        out.push_str("<p>");
+        out.push_str("><p>");
         fv::core::escape_into(out, fv_stores.session.user.as_deref().unwrap_or("guest"));
         out.push('|');
         out.push_str(if fv_stores.session.visits.is_none() { "true" } else { "false" });
-        out.push_str("</p>");
+        out.push_str("</p></div>");
     }
-    out.push_str("</div>");
     Ok(())
 }
 

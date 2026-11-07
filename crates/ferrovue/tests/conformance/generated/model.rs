@@ -67,13 +67,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::push_int(out, props.level.unwrap_or(3i64));
     out.push_str("\">");
     fv::core::escape_into(out, &props.model_value);
-    out.push_str("</span>");
-    if props.open.unwrap_or(false) {
-        out.push_str("<b>open</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</div>");
+    out.push_str(if props.open.unwrap_or(false) { "</span><b>open</b></div>" } else { "</span><!----></div>" });
     Ok(())
 }
 

@@ -174,17 +174,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('|');
     fv::core::escape_into(out, props.author.as_ref().and_then(|fv_author_3| fv_author_3.site.as_deref()).unwrap_or("no site"));
-    if props.pick.as_deref() == Some("a") {
-        out.push_str("<i>picked a</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if props.pick.as_deref().is_some() {
-        out.push_str("<i>picked</i>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</p><ol><!--[-->");
+    out.push_str(if props.pick.as_deref() == Some("a") { "<i>picked a</i>" } else { "<!---->" });
+    out.push_str(if props.pick.as_deref().is_some() { "<i>picked</i></p><ol><!--[-->" } else { "<!----></p><ol><!--[-->" });
     for fv_i in 1..=3i64 {
         out.push_str("<li>");
         fv::core::push_int(out, fv_i);
@@ -217,13 +208,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &fv_item.label);
         out.push_str("</li>");
     }
-    out.push_str("<!--]--></ul>");
-    if props.n as f64 % 2.0 == 0.0 && props.n as f64 >= 2.0 {
-        out.push_str("<b>even, at least two</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</div>");
+    out.push_str(if props.n as f64 % 2.0 == 0.0 && props.n as f64 >= 2.0 { "<!--]--></ul><b>even, at least two</b></div>" } else { "<!--]--></ul><!----></div>" });
     Ok(())
 }
 

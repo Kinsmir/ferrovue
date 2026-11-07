@@ -59,12 +59,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     super::comment_box::try_render_scoped(out, &super::comment_box::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::comment_box::Slots {
         default: None,
     }, &fv::attrs::Attrs::NONE)?;
-    if props.on {
-        out.push_str("<i>yes</i>");
-    } else {
-        out.push_str("<i>no</i>");
-    }
-    out.push_str("<!--[-->");
+    out.push_str(if props.on { "<i>yes</i><!--[-->" } else { "<i>no</i><!--[-->" });
     for fv_i_ref in props.items.iter() {
         let fv_i: &str = fv_i_ref;
         out.push_str("<!--[-->");

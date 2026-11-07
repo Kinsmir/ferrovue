@@ -1081,7 +1081,7 @@ describe("names holding `$`", () => {
   it("declares a `computed` whose name holds `$` as a Rust local without the `$`", () => {
     const out = render('import { computed } from "vue";\nconst props = defineProps<{ s: string }>();\nconst $x = computed(() => props.s + "!");', '<p :title="$x">{{ $x }}</p>');
     expect(rustOnly(out)).not.toContain("$");
-    expect(flat(out)).toContain(['let s_x = format!("{}!", props.s);', 'out.push_str("<p");', "if s_x.is_empty() {"].join("\n"));
+    expect(flat(out)).toContain(['let s_x = format!("{}!", props.s);', "if s_x.is_empty() {", 'out.push_str("<p title>");'].join("\n"));
   });
 
   it("gives a setup name holding `$` the next free suffix where another name takes its Rust name", () => {

@@ -55,22 +55,19 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     let s_heading = format!("{} ({} views)", l_1.title, fv::core::Js(*l_2));
     out.push_str("<article><h1>");
     fv::core::escape_into(out, &s_heading);
-    out.push_str("</h1>");
     if let Some(fv_writer) = l_1.author.as_ref() {
-        out.push_str("<p>");
+        out.push_str("</h1><p>");
         fv::core::escape_into(out, &fv_writer.name);
         if let Some(fv_bio) = fv_writer.bio.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<span> — ");
             fv::core::escape_into(out, fv_bio);
-            out.push_str("</span>");
+            out.push_str("</span></p><ul><!--[-->");
         } else {
-            out.push_str("<!---->");
+            out.push_str("<!----></p><ul><!--[-->");
         }
-        out.push_str("</p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</h1><!----><ul><!--[-->");
     }
-    out.push_str("<ul><!--[-->");
     for fv_tag_ref in l_0.tags.iter() {
         let fv_tag: &str = fv_tag_ref;
         out.push_str("<li>");

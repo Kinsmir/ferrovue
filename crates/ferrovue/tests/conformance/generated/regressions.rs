@@ -79,20 +79,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &fv::core::Js(0.5f64).to_string());
     out.push_str("\"></header><i title=\"");
     fv::core::escape_into(out, &fv::core::js_to_fixed(0.5f64, 1));
-    out.push_str("\"></i>");
     if let Some(fv_os1) = props.os1.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<ul><li lang=\"");
+        out.push_str("\"></i><ul><li lang=\"");
         if props.ob2.unwrap_or(false) {
             fv::core::escape_into(out, fv_os1);
             fv::core::escape_into(out, fv_os1);
         } else {
             fv::core::escape_into(out, fv_os1);
         }
-        out.push_str("\"></li></ul>");
+        out.push_str("\"></li></ul><footer class=\"");
     } else {
-        out.push_str("<!---->");
+        out.push_str("\"></i><!----><footer class=\"");
     }
-    out.push_str("<footer class=\"");
     fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(true, &*fv::core::Js(props.f2).to_string()), (true, &*fv::core::js_to_fixed(0.0f64, 0))])]);
     out.push_str("\"></footer><em class=\"");
     fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(true, "active"), (true, &*fv::core::js_to_fixed(2.380952380952381f64, 0))])]);
@@ -114,15 +112,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &(if props.b0 { std::borrow::Cow::<str>::Borrowed("a") } else { std::borrow::Cow::<str>::Owned(fv::strings::js_trim(&fv::core::js_to_fixed(props.f2 as f64, 2)).to_owned()) }));
     out.push('|');
     fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Borrowed(fv::strings::js_trim(&props.s1)); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Owned(fv::strings::js_trim(&format!("{}x", props.s1)).to_owned()) } });
-    out.push_str("</p>");
     if let Some(fv_os1_2) = props.os1.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::escape_into(out, &(if true { std::borrow::Cow::<str>::Owned(fv::strings::js_trim_end(&fv_os1_2.to_uppercase()).to_owned()) } else { std::borrow::Cow::<str>::Borrowed("a") }));
-        out.push_str("</p>");
+        out.push_str("</p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!----><p>");
     }
-    out.push_str("<p>");
     fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Borrowed(props.os1.as_deref().unwrap_or("px")); if !a.is_empty() { a } else { props.os1.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("{}x", fv::core::Js(props.n3)))) } });
     out.push_str("</p><p data-n=\"");
     fv::core::push_number(out, 7.0 / -(props.l2.len() as i64 as f64));

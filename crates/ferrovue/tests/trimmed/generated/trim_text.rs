@@ -67,21 +67,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_item);
         out.push_str(" item</li>");
     }
-    out.push_str("<!--]--></ul>");
-    if props.on {
-        out.push_str("<p>shown</p>");
-    } else {
-        out.push_str("<p>hidden</p>");
-    }
-    out.push_str("<p>a");
+    out.push_str(if props.on { "<!--]--></ul><p>shown</p><p>a" } else { "<!--]--></ul><p>hidden</p><p>a" });
     if props.on {
         out.push_str("<!--[--> and ");
         fv::core::escape_into(out, &props.label);
-        out.push_str("<!--]-->");
+        out.push_str("<!--]-->c</p><p><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!---->c</p><p><!--[-->");
     }
-    out.push_str("c</p><p><!--[-->");
     for fv_item_ref_2 in props.items.iter() {
         let fv_item_2: &str = fv_item_ref_2;
         out.push_str("<!--[-->");

@@ -143,13 +143,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('"');
     }
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str(" title>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::escape_into(out, &props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));
     out.push(' ');
     fv::core::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref().map(|fv_extra| std::borrow::Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));

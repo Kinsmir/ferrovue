@@ -45,22 +45,20 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
     out.reserve(90 + props.name.len());
     let s_title = std::cell::LazyCell::new(|| fv_i18n.t("greeting", &fv::i18n::Args::new().with_named(&[("name", fv::i18n::Value::Str(&props.name))])));
-    out.push_str("<section");
     if fv_i18n.locale().is_empty() {
-        out.push_str(" lang");
+        out.push_str("<section lang");
     } else {
-        out.push_str(" lang=\"");
+        out.push_str("<section lang=\"");
         fv::core::escape_into(out, fv_i18n.locale());
         out.push('"');
     }
     if fv_i18n.t("common.app", &fv::i18n::Args::new()).is_empty() {
-        out.push_str(" title");
+        out.push_str(" title><h1>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, &fv_i18n.t("common.app", &fv::i18n::Args::new()));
-        out.push('"');
+        out.push_str("\"><h1>");
     }
-    out.push_str("><h1>");
     fv::core::escape_into(out, &s_title);
     out.push_str("</h1><p>");
     fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_plural(props.count)));

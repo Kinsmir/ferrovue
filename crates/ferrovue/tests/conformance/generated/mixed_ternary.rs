@@ -71,19 +71,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("none");
     }
-    out.push('"');
     if !props.on && props.label.is_empty() {
-        out.push_str(" data-price");
+        out.push_str("\" data-price><p>");
     } else {
-        out.push_str(" data-price=\"");
+        out.push_str("\" data-price=\"");
         if props.on {
             fv::core::push_number(out, props.price);
         } else {
             fv::core::escape_into(out, &props.label);
         }
-        out.push('"');
+        out.push_str("\"><p>");
     }
-    out.push_str("><p>");
     if props.count as f64 > 0.0 {
         fv::core::push_int(out, props.count);
     } else {

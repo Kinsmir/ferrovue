@@ -42,15 +42,13 @@ pub fn try_render(out: &mut String, props: &Props, fv_loads: &fv::loaders::Loads
     out.reserve(40);
     let fv_refusals = fv::render::Refusals::new(NAME, "components/LoadedStamp.vue");
     let Some(l_0) = fv_loads.get(super::loaders::LoadViews) else { return Ok(()); };
-    out.push_str("<time");
     if fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 29))), 9, 18).is_empty() {
-        out.push_str(" datetime");
+        out.push_str("<time datetime>");
     } else {
-        out.push_str(" datetime=\"");
+        out.push_str("<time datetime=\"");
         fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 29))), 9, 18));
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_utc(props.year as f64, *l_0 as f64, 1.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 9, 70));
     out.push_str("</time>");
     fv_refusals.check(Ok(()))

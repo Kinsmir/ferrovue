@@ -61,13 +61,12 @@ pub fn render(out: &mut String, props: &Props) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(87);
-    out.push_str("<p class=\"ranks\">");
     if let Some(fv_best) = props.best {
-        out.push_str("<b>");
+        out.push_str("<p class=\"ranks\"><b>");
         fv::core::push_int(out, fv_best);
         out.push_str("</b>");
     } else {
-        out.push_str("<i>none</i>");
+        out.push_str("<p class=\"ranks\"><i>none</i>");
     }
     if let Some(fv_worst) = props.worst {
         out.push_str("<s>");
@@ -79,11 +78,10 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
     if let Some(fv_open) = props.open {
         out.push_str("<u>");
         out.push_str(if fv_open { "true" } else { "false" });
-        out.push_str("</u>");
+        out.push_str("</u></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p>");
     }
-    out.push_str("</p>");
     Ok(())
 }
 

@@ -72,9 +72,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &s_upper);
     out.push('|');
     fv::core::escape_into(out, &s_padded);
-    out.push_str("</p>");
     if props.show {
-        out.push_str("<!--[--><time datetime=\"");
+        out.push_str("</p><!--[--><time datetime=\"");
         fv::core::escape_into(out, &s_iso);
         out.push_str("\">");
         fv::core::escape_into(out, &s_stamp);
@@ -99,7 +98,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }))?;
         out.push_str("<!--]-->");
     } else {
-        out.push_str("<p>hidden</p>");
+        out.push_str("</p><p>hidden</p>");
     }
     fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: Some(props.show), label: None }, super::unread_fold::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {

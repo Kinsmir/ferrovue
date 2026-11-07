@@ -72,15 +72,13 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
         } else {
             fv::core::escape_into(out, &props.tint);
         }
-        out.push(';');
         if let Some(v) = props.width {
-            out.push_str("--b3dfb8d3-width:");
+            out.push_str(";--b3dfb8d3-width:");
             fv::core::push_int(out, v);
-            out.push(';');
+            out.push_str(";\"");
         } else {
-            out.push_str("--b3dfb8d3-width:initial;");
+            out.push_str(";--b3dfb8d3-width:initial;\"");
         }
-        out.push('"');
     } else {
         fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("leaf")), ("style", fv::attrs::Attr::style([("color", fv::attrs::Attr::str(&props.tint))]))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--b3dfb8d3-tint", if props.tint.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tint) }), ("--b3dfb8d3-width", match props.width { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") })]))]], 1, "");
     }

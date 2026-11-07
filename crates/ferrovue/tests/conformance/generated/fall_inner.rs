@@ -52,11 +52,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
     out.push_str(fv_attrs.ids());
     out.push_str("><span");
     if fv_attrs.is_empty() {
-        out.push_str(" id=\"inner\" class=\"in\"");
         if props.label.is_empty() {
-            out.push_str(" title");
+            out.push_str(" id=\"inner\" class=\"in\" title");
         } else {
-            out.push_str(" title=\"");
+            out.push_str(" id=\"inner\" class=\"in\" title=\"");
             fv::core::escape_into(out, &props.label);
             out.push('"');
         }

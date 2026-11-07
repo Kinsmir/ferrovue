@@ -87,19 +87,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, s_shown);
     out.push_str(" (");
     fv::core::push_int(out, s_total);
-    out.push_str(" of max 3)</p>");
     if !s_panels.is_empty() {
-        out.push_str("<p><!--[-->");
+        out.push_str(" of max 3)</p><p><!--[-->");
         for fv_panel in s_panels.iter() {
             out.push_str("<b>");
             fv::core::escape_into(out, &fv_panel.title);
             out.push_str("</b>");
         }
-        out.push_str("<!--]--></p>");
+        out.push_str("<!--]--></p><ul><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str(" of max 3)</p><!----><ul><!--[-->");
     }
-    out.push_str("<ul><!--[-->");
     for fv_item in props.items.iter() {
         out.push_str("<li>#");
         fv::core::push_int(out, fv_item.id);

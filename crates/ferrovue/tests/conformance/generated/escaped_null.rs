@@ -67,15 +67,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('>');
     fv::core::escape_into(out, props.note.as_deref().unwrap_or("no note"));
-    out.push_str("</i>");
     if let Some(fv_stars) = props.stars {
-        out.push_str("<b>");
+        out.push_str("</i><b>");
         fv::core::push_int(out, fv_stars);
-        out.push_str("</b>");
+        out.push_str("</b><!--]-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</i><!----><!--]-->");
     }
-    out.push_str("<!--]-->");
     crate::vendor::star_rating(out, &super::twins::StarRatingProps { value: props.stars.unwrap_or(0i64), max: None, label: props.note.as_deref(), readonly: false }, super::twins::StarRatingSlots {
         default: None,
     }, &fv::attrs::Attrs::NONE);

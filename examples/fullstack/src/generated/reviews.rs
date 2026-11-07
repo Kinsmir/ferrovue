@@ -41,9 +41,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(294 + 131 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "client/components/Reviews.vue");
-    out.push_str("<div class=\"review-list\" data-v-458b887c>");
     if !props.reviews.is_empty() {
-        out.push_str("<ol data-v-458b887c><!--[-->");
+        out.push_str("<div class=\"review-list\" data-v-458b887c><ol data-v-458b887c><!--[-->");
         for (fv_i, fv_r) in props.reviews.iter().enumerate() {
             let fv_i = fv_i as i64;
             out.push_str("<li style=\"");
@@ -61,15 +60,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
                 fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv_posted), 17, 78));
                 out.push_str("\" data-v-458b887c>, ");
                 fv::core::push_number(out, fv::date::js_utc_full_year(fv_posted));
-                out.push_str("</time>");
+                out.push_str("</time></li>");
             } else {
-                out.push_str("<!---->");
+                out.push_str("<!----></li>");
             }
-            out.push_str("</li>");
         }
         out.push_str("<!--]--></ol>");
     } else {
-        out.push_str("<p data-v-458b887c>No reviews yet.</p>");
+        out.push_str("<div class=\"review-list\" data-v-458b887c><p data-v-458b887c>No reviews yet.</p>");
     }
     if props.reviews.len() as i64 > 2 {
         out.push_str("<button type=\"button\" class=\"more\" data-v-458b887c>Show all ");

@@ -52,12 +52,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &fv::strings::js_slice(&fv_refusals.keep(fv::date::try_to_iso_string(fv_refusals.keep(fv::date::try_date_parse(&props.ordered), 10, 69)), 10, 69), 0.0f64, Some(10.0f64)));
     out.push_str("</time>, arrives ");
     if props.days as f64 == 1.0 {
-        out.push_str("the next day");
+        out.push_str("the next day, on <time datetime=\"");
     } else {
         fv::core::push_int(out, props.days);
-        out.push_str(" days later");
+        out.push_str(" days later, on <time datetime=\"");
     }
-    out.push_str(", on <time datetime=\"");
     fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(*s_arrives), 11, 83));
     out.push_str("\">");
     fv::core::escape_into(out, &fv::strings::js_slice(&fv::date::js_to_utc_string(*s_arrives), 0.0f64, Some(16.0f64)));

@@ -167,15 +167,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(104 + props.label.len() + 2 + 2);
-    out.push_str("<section");
     if props.label.is_empty() {
-        out.push_str(" title");
+        out.push_str("<section title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<section title=\"");
         fv::core::escape_into(out, &props.label);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     let fv_tag = match props.heading.unwrap_or(ModelIsHeading::H3) { ModelIsHeading::H2 => "h2", ModelIsHeading::H3 => "h3" };
     out.push('<');
     out.push_str(fv_tag);
@@ -199,16 +197,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(fv_tag_2);
     out.push('>');
     if props.model_value == ModelIsModelValue::B {
-        out.push_str("<strong></strong>");
+        out.push_str("<strong></strong></section>");
     } else {
         let fv_tag_3 = match props.model_value { ModelIsModelValue::B => "b", ModelIsModelValue::I => "i", ModelIsModelValue::Em => "em" };
         out.push('<');
         out.push_str(fv_tag_3);
         out.push_str("></");
         out.push_str(fv_tag_3);
-        out.push('>');
+        out.push_str("></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

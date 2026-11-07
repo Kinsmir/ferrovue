@@ -79,13 +79,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
         fv::render::scoped_slot_into_slotted(out, fv_slots.row.map(|f| move |out: &mut String, fv_sp: &RowSlotProps<'_>, fv_sid: &str| f(out, fv_sp, fv_sid, fv_provides)).as_ref(), &RowSlotProps { item: fv_item, index: fv_i }, "data-v-c4d7ae83-s", None);
         out.push_str("</li>");
     }
-    out.push_str("<!--]--></ul>");
     if let Some(fv_tags) = fv_inherited.tags {
-        out.push_str("<p data-v-c4d7ae83>");
+        out.push_str("<!--]--></ul><p data-v-c4d7ae83>");
         fv::core::escape_into(out, &fv_tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
         out.push_str("</p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--></ul><!---->");
     }
     fv::render::scoped_slot_into_slotted(out, fv_slots.default.map(|f| move |out: &mut String, _: &(), fv_sid: &str| f(out, fv_sid, fv_provides)).as_ref(), &(), "data-v-c4d7ae83-s", None);
     out.push_str("</div>");

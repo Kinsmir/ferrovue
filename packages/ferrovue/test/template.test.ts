@@ -245,11 +245,10 @@ const on = ref(false);
             let mut filled = false;
             if props.on {
                 filled = true;
-                out.push_str("<!--[-->x<!--]-->");
+                out.push_str("<!--[-->x<!--]--><!-- c --><!-- e -->");
             } else {
-                out.push_str("<!--v-if-->");
+                out.push_str("<!--v-if--><!-- c --><!-- e -->");
             }
-            out.push_str("<!-- c --><!-- e -->");
             filled
         })),
     })?;
@@ -267,11 +266,10 @@ const on = ref(false);
             let mut filled = false;
             if props.on {
                 filled = true;
-                out.push_str("<!--[-->x<!--]-->");
+                out.push_str("<!--[-->x<!--]--><!-- c -->");
             } else {
-                out.push_str("<!--v-if-->");
+                out.push_str("<!--v-if--><!-- c -->");
             }
-            out.push_str("<!-- c -->");
             filled
         })),
     })?;
@@ -557,11 +555,10 @@ describe("slot content whose emptiness is decided at run time", () => {
             let mut filled = false;
             if props.on {
                 filled = true;
-                out.push_str("<!--[-->x<!--]-->");
+                out.push_str("<!--[-->x<!--]--><!-- c --><!-- e -->");
             } else {
-                out.push_str("<!---->");
+                out.push_str("<!----><!-- c --><!-- e -->");
             }
-            out.push_str("<!-- c --><!-- e -->");
             filled
         })),
     })?;
@@ -640,15 +637,13 @@ describe("components and directives resolved by name", () => {
     out.push_str("<div>");
     super::r#box::try_render(out, &super::r#box::Props {  }, super::r#box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
-            out.push_str("<b");
             if props.n.is_empty() {
-                out.push_str(" title");
+                out.push_str("<b title></b>");
             } else {
-                out.push_str(" title=\\"");
+                out.push_str("<b title=\\"");
                 fv::core::escape_into(out, &props.n);
-                out.push('"');
+                out.push_str("\\"></b>");
             }
-            out.push_str("></b>");
         })),
     })?;
     out.push_str("</div>");
@@ -710,26 +705,10 @@ describe("v-if", () => {
 `);
   });
 
-  it("tests at run time a value that is always truthy, unless the test is a logical expression or a negation", () => {
+  it("writes the branch a value that is always truthy takes, unless the test is a logical expression or a negation", () => {
     expect(render(sfc("on: boolean; xs?: string[]; ys: string[]; a?: string", `<div><b v-if="on ? 'a' : 'b'">1</b><b v-if="xs ?? ys">2</b><b v-if="typeof a">3</b></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(56 + props.ys.iter().map(|v| v.len()).sum::<usize>() + props.a.as_deref().map_or(0, str::len));
-    out.push_str("<div>");
-    if true {
-        out.push_str("<b>1</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if true {
-        out.push_str("<b>2</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if true {
-        out.push_str("<b>3</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</div>");
+    out.push_str("<div><b>1</b><b>2</b><b>3</b></div>");
     Ok(())
 }
 `);
@@ -738,13 +717,7 @@ describe("v-if", () => {
   it("translates a negated test as a condition", () => {
     expect(render(sfc("a?: string; n?: number", `<div><b v-if="!(a && n)">x</b></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(26 + props.a.as_deref().map_or(0, str::len));
-    out.push_str("<div>");
-    if !(if props.a.as_deref().is_some_and(|v| !v.is_empty()) { props.n.is_some_and(|v| v != 0) } else { false }) {
-        out.push_str("<b>x</b>");
-    } else {
-        out.push_str("<!---->");
-    }
-    out.push_str("</div>");
+    out.push_str(if !(if props.a.as_deref().is_some_and(|v| !v.is_empty()) { props.n.is_some_and(|v| v != 0) } else { false }) { "<div><b>x</b></div>" } else { "<div><!----></div>" });
     Ok(())
 }
 `);
@@ -753,15 +726,13 @@ describe("v-if", () => {
   it("drops a known true part of a test that narrows", () => {
     expect(render(sfc("a?: string", `<div><p v-if="a && true">{{ a }}</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(25 + props.a.as_deref().map_or(0, str::len));
-    out.push_str("<div>");
     if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<p>");
+        out.push_str("<div><p>");
         fv::core::escape_into(out, fv_a);
-        out.push_str("</p>");
+        out.push_str("</p></div>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<div><!----></div>");
     }
-    out.push_str("</div>");
     Ok(())
 }
 `);
@@ -779,23 +750,13 @@ describe("v-if", () => {
   it("translates each test once", () => {
     expect(render(sfc("on: boolean; a?: string", `<div><p v-if="on && (a ? a.length : 0) > 1">y</p><p v-if="(a ? a.length : 0) > 1 || on">z</p><p v-if="a && (on || a.length > 2)">w</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(56 + props.a.as_deref().map_or(0, str::len));
-    out.push_str("<div>");
-    if props.on && (if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_a) } else { 0i64 }) as f64 > 1.0 {
-        out.push_str("<p>y</p>");
-    } else {
-        out.push_str("<!---->");
-    }
-    if (if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_a_2) } else { 0i64 }) as f64 > 1.0 || props.on {
-        out.push_str("<p>z</p>");
-    } else {
-        out.push_str("<!---->");
-    }
+    out.push_str(if props.on && (if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_a) } else { 0i64 }) as f64 > 1.0 { "<div><p>y</p>" } else { "<div><!---->" });
+    out.push_str(if (if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_a_2) } else { 0i64 }) as f64 > 1.0 || props.on { "<p>z</p>" } else { "<!---->" });
     if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) && (props.on || fv::strings::js_length(fv_a_3) > 2) {
-        out.push_str("<p>w</p>");
+        out.push_str("<p>w</p></div>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></div>");
     }
-    out.push_str("</div>");
     Ok(())
 }
 `);
@@ -828,15 +789,13 @@ describe("form fields at the root", () => {
   it("merges the model after an attribute whose value is not a literal", () => {
     expect(render(field('<input :maxlength="text.length" v-model="text">'))).toContain(`out.push_str("<input maxlength=\\"");
     fv::core::push_int(out, fv::strings::js_length(&props.model_value));
-    out.push('"');
     if props.model_value.is_empty() {
-        out.push_str(" value");
+        out.push_str("\\" value>");
     } else {
-        out.push_str(" value=\\"");
+        out.push_str("\\" value=\\"");
         fv::core::escape_into(out, &props.model_value);
-        out.push('"');
-    }
-    out.push('>');`);
+        out.push_str("\\">");
+    }`);
   });
 
   it("translates a `?:` of text in a component with a root `<textarea>`", () => {

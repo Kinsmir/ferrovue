@@ -75,19 +75,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, (match props.code { 404 => Some("missing"), 500 => Some("broken"), _ => None }).unwrap_or("fine"));
     out.push('|');
     out.push_str(if matches!(props.code, 404 | 500) { "true" } else { "false" });
-    out.push_str("</p>");
     if let Some(fv_role_4) = matches!(&*props.role, "7" | "mod" | "admin").then_some(&*props.role) {
-        out.push_str("<b title=\"");
+        out.push_str("</p><b title=\"");
         fv::core::escape_into(out, fv_role_4);
         out.push_str("\">");
         fv::core::escape_into(out, match fv_role_4 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" });
-        out.push_str("</b>");
+        out.push_str("</b></section>");
     } else {
-        out.push_str("<b>");
+        out.push_str("</p><b>");
         fv::core::escape_into(out, &props.role);
-        out.push_str("</b>");
+        out.push_str("</b></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

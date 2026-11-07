@@ -85,19 +85,17 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         }
         out.push_str(";--b3187d50-doubled\\ \\+\\ \\&quot;px\\&quot;:");
         match AsRef::<str>::as_ref(&format!("{}px", fv::core::Js(s_doubled))) { "" => out.push(' '), v => fv::core::escape_into(out, v) }
-        out.push_str(";--b3187d50-accent:teal;");
         if let Some(v) = props.label.as_deref() {
-            out.push_str("--b3187d50-label:");
+            out.push_str(";--b3187d50-accent:teal;--b3187d50-label:");
             if v.is_empty() {
                 out.push(' ');
             } else {
                 fv::core::escape_into(out, v);
             }
-            out.push(';');
+            out.push_str(";--b3187d50-font:");
         } else {
-            out.push_str("--b3187d50-label:initial;");
+            out.push_str(";--b3187d50-accent:teal;--b3187d50-label:initial;--b3187d50-font:");
         }
-        out.push_str("--b3187d50-font:");
         if props.font.is_empty() {
             out.push(' ');
         } else {
@@ -111,15 +109,13 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         }
         out.push_str(";--b3187d50-ratio:");
         fv::core::push_number(out, props.ratio);
-        out.push(';');
         if let Some(v) = props.gap {
-            out.push_str("--b3187d50-gap:");
+            out.push_str(";--b3187d50-gap:");
             fv::core::push_int(out, v);
-            out.push(';');
+            out.push_str(";--b3187d50-size:");
         } else {
-            out.push_str("--b3187d50-gap:initial;");
+            out.push_str(";--b3187d50-gap:initial;--b3187d50-size:");
         }
-        out.push_str("--b3187d50-size:");
         fv::core::push_int(out, props.size);
         out.push_str(";\"");
     } else {

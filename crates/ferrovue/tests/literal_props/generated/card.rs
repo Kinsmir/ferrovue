@@ -48,11 +48,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_email);
         out.push_str("\">");
         fv::core::escape_into(out, fv_email);
-        out.push_str("</a>");
+        out.push_str("</a></p><ul><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p><ul><!--[-->");
     }
-    out.push_str("</p><ul><!--[-->");
     for fv_tag in props.tags.iter() {
         out.push_str("<li");
         if let Some(v) = fv_tag.hint.as_deref() {
@@ -64,13 +63,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &fv_tag.label);
         out.push_str("</li>");
     }
-    out.push_str("<!--]--></ul>");
     if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
-        out.push_str("<i>");
+        out.push_str("<!--]--></ul><i>");
         fv::core::escape_into(out, fv_note);
         out.push_str("</i>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!--]--></ul><!---->");
     }
     super::badge::try_render(out, &super::badge::Props { label: None, count: Some(props.tags.len() as i64) })?;
     out.push_str("</article>");

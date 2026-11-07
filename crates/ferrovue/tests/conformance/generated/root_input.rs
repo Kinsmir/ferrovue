@@ -50,11 +50,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
     out.reserve(37 + props.model_value.len());
     out.push_str("<input");
     if fv_attrs.is_empty() {
-        out.push_str(" maxlength=\"40\"");
         if props.model_value.is_empty() {
-            out.push_str(" value");
+            out.push_str(" maxlength=\"40\" value");
         } else {
-            out.push_str(" value=\"");
+            out.push_str(" maxlength=\"40\" value=\"");
             fv::core::escape_into(out, &props.model_value);
             out.push('"');
         }

@@ -48,22 +48,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(134 + props.label.len());
     let s_sum = props.x + props.n as f64;
     let s_shown = format!("{}: {}", props.label, fv::core::js_to_precision(props.x, 3));
-    out.push_str("<div");
     if fv::core::js_to_precision(props.x, 2).is_empty() {
-        out.push_str(" data-p");
+        out.push_str("<div data-p");
     } else {
-        out.push_str(" data-p=\"");
+        out.push_str("<div data-p=\"");
         fv::core::escape_into(out, &fv::core::js_to_precision(props.x, 2));
         out.push('"');
     }
     if fv::core::js_to_exponential(props.n as f64, Some(1)).is_empty() {
-        out.push_str(" title");
+        out.push_str(" title><p>");
     } else {
         out.push_str(" title=\"");
         fv::core::escape_into(out, &fv::core::js_to_exponential(props.n as f64, Some(1)));
-        out.push('"');
+        out.push_str("\"><p>");
     }
-    out.push_str("><p>");
     fv::core::escape_into(out, &fv::core::Js(props.x).to_string());
     out.push('|');
     fv::core::escape_into(out, &fv::core::Js(props.x).to_string());

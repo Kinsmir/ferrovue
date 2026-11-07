@@ -40,11 +40,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_count) = props.count.filter(|v| *v != 0) {
         out.push_str("<b>");
         fv::core::push_int(out, fv_count);
-        out.push_str("</b>");
+        out.push_str("</b></span>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></span>");
     }
-    out.push_str("</span>");
     Ok(())
 }
 

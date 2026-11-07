@@ -53,15 +53,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     out.reserve(141 + props.article.len());
     let Some(l_0) = fv_loads.get(super::loaders::LoadComments { article: String::from(&*props.article), page: props.page, drafts: if props.drafts.unwrap_or(false) { Some(true) } else { None } }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadNote { page: l_0.len() as i64 }) else { return Ok(()); };
-    out.push_str("<section>");
     if let Some(fv_note) = l_1.as_deref() {
-        out.push_str("<p class=\"note\">");
+        out.push_str("<section><p class=\"note\">");
         fv::core::escape_into(out, fv_note);
-        out.push_str("</p>");
+        out.push_str("</p><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<section><!----><!--[-->");
     }
-    out.push_str("<!--[-->");
     for fv_comment_ref in l_0.iter() {
         let fv_comment: &str = fv_comment_ref;
         out.push_str("<p>");
@@ -74,20 +72,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     fv::core::push_int(out, l_0.len() as i64);
     out.push_str(" on page ");
     fv::core::push_int(out, props.page);
-    out.push_str("</footer>");
     if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::strings::js_length(&fv_c) > 6) {
-        out.push_str("<ol><!--[-->");
+        out.push_str("</footer><ol><!--[-->");
         for fv_c_cow in fv::strings::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::strings::js_length(fv_c_2) > 6), |a, b| fv::strings::js_cmp(a, b)) {
             let fv_c_3: &str = &fv_c_cow;
             out.push_str("<li>");
             fv::core::escape_into(out, fv_c_3);
             out.push_str("</li>");
         }
-        out.push_str("<!--]--></ol>");
+        out.push_str("<!--]--></ol></section>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</footer><!----></section>");
     }
-    out.push_str("</section>");
     Ok(())
 }
 

@@ -64,11 +64,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if let Some(fv_mark) = props.mark.as_deref() {
         out.push_str("<small>");
         fv::core::escape_into(out, fv_mark);
-        out.push_str("</small>");
+        out.push_str("</small></legend><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></legend><!--[-->");
     }
-    out.push_str("</legend><!--[-->");
     for fv_item in props.items.iter() {
         out.push_str("<label class=\"");
         fv::attrs::class_into(out, false, &[if Some(&*fv_item.label) == props.selected.as_deref() { "on" } else { "" }]);

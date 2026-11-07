@@ -77,15 +77,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(43 + props.score.0.len() + props.extra.as_ref().map_or(0, |v| v.0.len()));
-    out.push_str("<p");
     if props.score.0.is_empty() {
-        out.push_str(" title");
+        out.push_str("<p title>");
     } else {
-        out.push_str(" title=\"");
+        out.push_str("<p title=\"");
         fv::core::escape_into(out, &props.score.0);
-        out.push('"');
+        out.push_str("\">");
     }
-    out.push('>');
     fv::core::push_int(out, props.score.1);
     if let Some(fv_extra) = props.extra.as_ref() {
         out.push_str("<b>");
@@ -94,11 +92,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         if let Some(v) = fv_extra.1 {
             out.push_str(if v { "true" } else { "false" });
         }
-        out.push_str("</b>");
+        out.push_str("</b></p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></p>");
     }
-    out.push_str("</p>");
     Ok(())
 }
 

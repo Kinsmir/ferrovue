@@ -81,25 +81,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, props.size);
         out.push_str(";\">");
         fv::core::escape_into(out, fv_tone);
-        out.push_str("</p>");
+        out.push_str("</p><!--[-->");
     } else {
-        out.push_str("<span style=\"");
         if let Some(v) = props.tone.as_deref() {
-            out.push_str("--d9e366c1-tone:");
+            out.push_str("<span style=\"--d9e366c1-tone:");
             if v.is_empty() {
                 out.push(' ');
             } else {
                 fv::core::escape_into(out, v);
             }
-            out.push(';');
+            out.push_str(";--d9e366c1-size:");
         } else {
-            out.push_str("--d9e366c1-tone:initial;");
+            out.push_str("<span style=\"--d9e366c1-tone:initial;--d9e366c1-size:");
         }
-        out.push_str("--d9e366c1-size:");
         fv::core::push_int(out, props.size);
-        out.push_str(";\">none</span>");
+        out.push_str(";\">none</span><!--[-->");
     }
-    out.push_str("<!--[-->");
     for fv_item_ref in props.items.iter() {
         let fv_item: &str = fv_item_ref;
         out.push_str("<i>");

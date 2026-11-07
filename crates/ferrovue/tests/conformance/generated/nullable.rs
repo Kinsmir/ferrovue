@@ -156,21 +156,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
         out.push(';');
     }
-    out.push_str("\">styled</p>");
     if let Some(fv_label) = props.label.as_deref() {
-        out.push_str("<p>");
+        out.push_str("\">styled</p><p>");
         fv::core::push_int(out, fv::strings::js_length(fv_label));
         out.push(':');
         fv::core::escape_into(out, &fv_label.to_uppercase());
         out.push_str("</p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("\">styled</p><!---->");
     }
-    if props.label.as_deref().is_some() {
-        out.push_str("<!---->");
-    } else {
-        out.push_str("<p>no label</p>");
-    }
+    out.push_str(if props.label.as_deref().is_some() { "<!---->" } else { "<p>no label</p>" });
     if let Some(fv_count_2) = props.count {
         out.push_str("<p>");
         fv::core::push_number(out, fv_count_2 as f64 * 2.0);
@@ -178,11 +173,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    if props.count.is_some() {
-        out.push_str("<!---->");
-    } else {
-        out.push_str("<p>no count</p>");
-    }
+    out.push_str(if props.count.is_some() { "<!---->" } else { "<p>no count</p>" });
     if let Some(fv_ratio) = props.ratio {
         out.push_str("<p>");
         fv::core::push_number(out, fv_ratio + 1.0);
@@ -198,11 +189,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<p>falsy</p>");
     }
     if let Some(fv_scaled) = (*s_scaled) && fv_scaled as f64 > 20.0 {
-        out.push_str("<p>big</p>");
+        out.push_str("<p>big</p><p>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----><p>");
     }
-    out.push_str("<p>");
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("none"));
     out.push('|');
     fv::core::push_int(out, props.count.unwrap_or(-1i64));
@@ -236,20 +226,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('|');
     out.push_str(if props.entry.as_ref().and_then(|fv_entry_5| fv_entry_5.deleted_at.as_deref()).is_none() { "true" } else { "false" });
-    out.push_str("</p>");
     if let Some(fv_entry_6) = props.entry.as_ref() {
-        out.push_str("<p>");
+        out.push_str("</p><p>");
         fv::core::escape_into(out, &fv_entry_6.title);
         if let Some(fv_deleted_at) = fv_entry_6.deleted_at.as_deref() {
             out.push_str(" (deleted ");
             fv::core::escape_into(out, fv_deleted_at);
             out.push(')');
         }
-        out.push_str("</p>");
+        out.push_str("</p><ul><!--[-->");
     } else {
-        out.push_str("<!---->");
+        out.push_str("</p><!----><ul><!--[-->");
     }
-    out.push_str("<ul><!--[-->");
     for fv_e in props.entries.iter() {
         out.push_str("<li");
         if let Some(v) = fv_e.deleted_at.as_deref() {

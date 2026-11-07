@@ -738,6 +738,20 @@ may write a ref only where the server never runs the write, as in `onMounted` or
 so the server renders the seed. The render reads the value in its place and keeps only the branch
 it takes: `const fresh = ref(0)` makes `v-if="fresh > 0"` an `<!---->`.
 
+# How a render writes text
+
+A render writes the markup it knows at compile time in as few writes as it can, and reserves the
+room the page needs before the first one:
+
+- the text between two values is one `out.push_str`;
+- text of at most 48 bytes next to a `v-if`, a `?:` or a `v-show` whose every branch starts or ends
+  with text goes into each branch, so the branch and the markup beside it are one write. Text
+  before the branches moves only when their tests can neither return nor write;
+- branches that only write text are one `out.push_str` of the text their test picks, and a test the
+  compiler knows the result of leaves the text of the branch it takes.
+
+What each branch writes, and the order of the writes, stay those of Vue's `renderToString`.
+
 # `render_json`, for your own conformance tests
 
 `mod.rs` has, under `#[cfg(test)]`, a `render_json(component, json)` that renders a component by

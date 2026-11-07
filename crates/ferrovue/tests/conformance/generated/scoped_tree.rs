@@ -59,11 +59,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
         for fv_c in props.children.iter() {
             super::scoped_tree::try_render_scoped(out, fv_c, " data-v-c34199e4")?;
         }
-        out.push_str("<!--]--></ul>");
+        out.push_str("<!--]--></ul></li>");
     } else {
-        out.push_str("<!---->");
+        out.push_str("<!----></li>");
     }
-    out.push_str("</li>");
     Ok(())
 }
 
