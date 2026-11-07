@@ -12,15 +12,10 @@ pub const NAME: &str = "FormModifiers";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "price")]
     pub price: f64,
-    #[serde(rename = "amount")]
     pub amount: Cow<'a, str>,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "note")]
     pub note: Cow<'a, str>,
 }
 

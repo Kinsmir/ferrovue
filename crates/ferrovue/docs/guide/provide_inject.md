@@ -95,7 +95,6 @@ pub struct Provides<'p> {
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "label")]
 #     pub label: Cow<'a, str>,
 # }
 #
@@ -138,7 +137,6 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "theme")]
 #     pub theme: Cow<'a, str>,
 # }
 #

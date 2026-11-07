@@ -12,9 +12,7 @@ pub const NAME: &str = "TrimSlots";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 
@@ -43,7 +41,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(52 + props.label.len());
     out.push_str("<div>");
-    super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("a") }, super::trim_button::Slots {
+    super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("a") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("remove ");
             fv::core::escape_into(out, &props.label);
@@ -51,12 +49,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         after: None,
     })?;
     out.push(' ');
-    super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("b") }, super::trim_button::Slots {
+    super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("b") }, super::trim_button::Slots {
         default: None,
         after: None,
     })?;
     out.push(' ');
-    super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("c") }, super::trim_button::Slots {
+    super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("c") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("named ");
             fv::core::escape_into(out, &props.label);
@@ -69,7 +67,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     })?;
     out.push(' ');
     if props.on {
-        super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("d") }, super::trim_button::Slots {
+        super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("d") }, super::trim_button::Slots {
             default: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push_str("<b>");
                 fv::core::escape_into(out, &props.label);

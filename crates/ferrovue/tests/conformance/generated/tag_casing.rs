@@ -68,11 +68,8 @@ impl ferrovue::props::Union for TagCasingTag {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tag")]
     pub tag: TagCasingTag,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 
@@ -137,7 +134,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str(" selected");
     }
     out.push_str(" value=\"b\">b</option></select>");
-    super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.label) }, super::plain_box::Slots {
+    super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: Cow::Borrowed(&*props.label) }, super::plain_box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             if props.label.is_empty() {
                 out.push_str("<span foobar=\"1\" dataq>");

@@ -12,9 +12,7 @@ pub const NAME: &str = "SetupValues";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -57,7 +55,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     out.push(' ');
     fv::core::escape_into(out, &s_padded);
     out.push_str("</p><p>\u{202e}a\u{202e}b\u{2066}c</p>");
-    super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*s_padded) }, fv_provides, "")?;
+    super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed(&*s_padded) }, fv_provides, "")?;
     out.push_str("<!--]-->");
     Ok(())
 }

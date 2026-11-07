@@ -12,13 +12,11 @@ pub const NAME: &str = "Page";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
     #[serde(rename = "showHead")]
     pub show_head: bool,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -52,7 +50,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(46 + 7 * props.items.len() + props.title.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
-    super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if props.show_head {

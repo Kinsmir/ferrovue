@@ -12,11 +12,9 @@ pub const NAME: &str = "SwatchShelf";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "size")]
     pub size: Cow<'a, str>,
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -61,11 +59,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(25 + props.size.len() + props.tone.len() + props.note.as_deref().map_or(0, str::len));
     let fv_inherited = fv_provides;
-    let fv_provided_look_key = super::types::Look { size: std::borrow::Cow::Borrowed(&*props.size), tone: std::borrow::Cow::Borrowed(&*props.tone), note: props.note.as_deref().map(std::borrow::Cow::Borrowed), count: 5i64 };
+    let fv_provided_look_key = super::types::Look { size: Cow::Borrowed(&*props.size), tone: Cow::Borrowed(&*props.tone), note: props.note.as_deref().map(Cow::Borrowed), count: 5i64 };
     let fv_provides = super::provides::Provides { look_key: Some(&fv_provided_look_key), ..fv_inherited };
     out.push_str("<div class=\"shelf\">");
-    super::swatch::try_render(out, &super::swatch::Props { label: std::borrow::Cow::Borrowed(&*props.tone), size: None }, fv_provides)?;
-    super::swatch::try_render(out, &super::swatch::Props { label: std::borrow::Cow::Borrowed("fixed"), size: Some(std::borrow::Cow::Borrowed("xs")) }, fv_provides)?;
+    super::swatch::try_render(out, &super::swatch::Props { label: Cow::Borrowed(&*props.tone), size: None }, fv_provides)?;
+    super::swatch::try_render(out, &super::swatch::Props { label: Cow::Borrowed("fixed"), size: Some(Cow::Borrowed("xs")) }, fv_provides)?;
     fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);
     out.push_str("</div>");
     Ok(())

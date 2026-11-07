@@ -12,9 +12,8 @@ pub const NAME: &str = "CssVarsLeaf";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tint")]
     pub tint: Cow<'a, str>,
-    #[serde(rename = "width", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<i64>,
 }
 

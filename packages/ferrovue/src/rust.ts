@@ -6,7 +6,7 @@ import { ctx, INLINE_HTML } from "./context.ts";
 import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
-import { bare, closing, occurrences } from "./parens.ts";
+import { bare, closing, literalEnd, occurrences } from "./parens.ts";
 import { statements } from "./template.ts";
 import { cssVarsReads, inlineCssVars } from "./styles.ts";
 import { slotFieldBorrows, slotFieldTy, slotTypeName } from "./slots.ts";
@@ -108,6 +108,21 @@ function param(ty: Ty, comp: Component, arg: string): { ty: string; value: strin
   return { ty: fieldTy(ty, comp), value: arg };
 }
 
+function shortCow(code: string): string {
+  let out = "";
+  let last = 0;
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i]!;
+    if (ch === '"' || ch === "'") i = literalEnd(code, i);
+    else if (ch === "s" && code.startsWith("std::borrow::Cow", i) && !/[\w:]/.test(code[i - 1] ?? "")) {
+      out += `${code.slice(last, i)}Cow`;
+      i += "std::borrow::Cow".length - 1;
+      last = i + 1;
+    }
+  }
+  return out + code.slice(last);
+}
+
 /** How serde reads and writes a field's dates and unions mapped to an application's enums. */
 function serdeWith(f: Field): string {
   const absent = f.ty.k === "opt" && f.ty.none === undefined;
@@ -117,7 +132,8 @@ function serdeWith(f: Field): string {
 
 function serdeAttrs(f: Field): string {
   const absent = f.ty.k === "opt" && f.ty.none === undefined;
-  return `    #[serde(rename = ${rustStr(f.js)}${absent ? ', default, skip_serializing_if = "Option::is_none"' : ""}${serdeWith(f)})]`;
+  const args = `${f.rust === f.js ? "" : `, rename = ${rustStr(f.js)}`}${absent ? ', default, skip_serializing_if = "Option::is_none"' : ""}${serdeWith(f)}`;
+  return args ? `    #[serde(${args.slice(2)})]\n` : "";
 }
 
 /** The serde attribute of a part of a tuple struct, which has no name and is never absent. */
@@ -174,7 +190,7 @@ ${ctx.builders ? `\n${builderSource(st, comp, life)}` : ""}`;
   }
   const fields = st.fields
     .map((f) => {
-      return `${serdeAttrs(f)}\n    pub ${f.rust}: ${fieldTy(f.ty, comp)},`;
+      return `${serdeAttrs(f)}    pub ${f.rust}: ${fieldTy(f.ty, comp)},`;
     })
     .join("\n");
   const derives = st.fields.some((f) => f.ty.k !== "opt") ? "Debug, Clone" : "Debug, Clone, Default";
@@ -434,13 +450,13 @@ ${manyArgs(1 + renderParamCount(comp))}pub fn html${gen}(props: &'p Props${named
     fv::html::Html::markup(props, fv::html::Fallible(move |out: &mut String, props: &Props${named}| try_render(out, props${args})))${plan === null ? "" : `.dates(${rustStr(plan)})`}
 }
 `;
-  const render = renderSource(comp, life, args, e);
+  const render = shortCow(renderSource(comp, life, args, e));
   return () => {
     const written = [...comp.structs.values()].filter((st) => st.name !== "Props" && !st.slot && (!comp.typeDecls.has(st.name) || comp.reached.has(st.name)));
     const structs = written.map((st) => structSource(st, comp, `/// \`${st.name}\` in \`${basename(comp.file)}\`.\n`)).join("\n");
     const taken = [...written.map((st) => st.name), "Props", ...(takesSlots(comp) ? ["Slots"] : []), ...[...comp.slotShapes.values()].map((st) => st.name), ...comp.slotNames.map((n) => slotTypeName(n, "Slot"))];
     const enums = enumsSource(comp.module, taken);
-    const usesCow = /Cow</.test(structs + structSource(comp.props, comp, ""));
+    const usesCow = /Cow</.test(structs + structSource(comp.props, comp, "")) || /(?<![\w:])Cow::/.test(render);
     return `${header(comp.file)}
 ${usesCow ? "use std::borrow::Cow;\n\n" : ""}use ferrovue as fv;
 ${/\.parse_union::</.test(render) ? "use ferrovue::props::ParseUnion as _;\n" : ""}

@@ -25,7 +25,6 @@ piece at once, then each hole's content when it is ready, each followed by the n
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "title")]
 #     pub title: Cow<'a, str>,
 # }
 #

@@ -10,7 +10,6 @@ pub const NAME: &str = "Picker";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "picked")]
     pub picked: i64,
 }
 

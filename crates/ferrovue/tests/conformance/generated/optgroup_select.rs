@@ -12,11 +12,8 @@ pub const NAME: &str = "OptgroupSelect";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "picked")]
     pub picked: Cow<'a, str>,
-    #[serde(rename = "group")]
     pub group: Cow<'a, str>,
-    #[serde(rename = "extra")]
     pub extra: Vec<Cow<'a, str>>,
 }
 

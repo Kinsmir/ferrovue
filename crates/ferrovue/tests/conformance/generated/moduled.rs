@@ -12,11 +12,9 @@ pub const NAME: &str = "Moduled";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
 }
 
@@ -72,7 +70,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><p class=\"");
     fv::attrs::class_into(out, false, &[s_picked, "Moduled-vue-vue-type-style-index-0-lang-module__sm--hidden___SkXzu"]);
     out.push_str("\" data-v-46bce602>Moduled-vue-vue-type-style-index-0-lang-module__comp___MclRi Moduled-vue-vue-type-style-index-0-lang-module__title___L-tf4 Moduled-vue-vue-type-style-index-0-lang-module__active___YOcDk</p><span class=\"Moduled-vue-vue-type-style-index-1-lang-module__big___ydGGn plain\" data-v-46bce602>Moduled-vue-vue-type-style-index-1-lang-module__small___20ewv</span><i class=\"Moduled-vue-vue-type-style-index-2-scoped-46bce602-lang-module__dot___hS8nn\" data-v-46bce602></i>");
-    super::moduled_chip::try_render_scoped(out, &super::moduled_chip::Props { label: std::borrow::Cow::Borrowed(&*props.text) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"))?;
+    super::moduled_chip::try_render_scoped(out, &super::moduled_chip::Props { label: Cow::Borrowed(&*props.text) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("Moduled-vue-vue-type-style-index-0-lang-module__boxed___oVrp3"))], " data-v-46bce602"))?;
     out.push_str("</section>");
     Ok(())
 }

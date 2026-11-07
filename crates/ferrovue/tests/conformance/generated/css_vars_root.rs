@@ -12,9 +12,7 @@ pub const NAME: &str = "CssVarsRoot";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tint")]
     pub tint: Cow<'a, str>,
-    #[serde(rename = "shade")]
     pub shade: Cow<'a, str>,
 }
 
@@ -48,7 +46,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.tint.len() + props.shade.len());
-    super::css_vars_leaf::try_render_scoped(out, &super::css_vars_leaf::Props { tint: std::borrow::Cow::Borrowed(&*props.tint), width: Some(3i64) }, super::css_vars_leaf::Slots {
+    super::css_vars_leaf::try_render_scoped(out, &super::css_vars_leaf::Props { tint: Cow::Borrowed(&*props.tint), width: Some(3i64) }, super::css_vars_leaf::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();

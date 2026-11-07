@@ -10,7 +10,6 @@ pub const NAME: &str = "Reviews";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "reviews")]
     pub reviews: Vec<super::types::Review<'a>>,
 }
 

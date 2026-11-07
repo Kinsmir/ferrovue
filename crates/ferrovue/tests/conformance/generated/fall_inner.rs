@@ -12,7 +12,6 @@ pub const NAME: &str = "FallInner";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

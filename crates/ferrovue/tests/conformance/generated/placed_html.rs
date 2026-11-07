@@ -10,11 +10,8 @@ pub const NAME: &str = "PlacedHtml";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "cell")]
     pub cell: crate::Sanitised,
-    #[serde(rename = "label")]
     pub label: crate::Sanitised,
-    #[serde(rename = "formula")]
     pub formula: crate::Sanitised,
 }
 

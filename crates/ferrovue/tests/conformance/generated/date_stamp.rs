@@ -10,13 +10,13 @@ pub const NAME: &str = "DateStamp";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "at", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub at: ferrovue::date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
+    #[serde(default, with = "fv::date::opt_date_prop")]
     pub deleted: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "shown", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub shown: ferrovue::date::JsDate,
 }
 

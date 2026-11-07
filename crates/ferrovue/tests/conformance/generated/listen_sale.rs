@@ -12,7 +12,6 @@ pub const NAME: &str = "ListenSale";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
     #[serde(rename = "onSale", default, skip_serializing_if = "Option::is_none")]
     pub on_sale: Option<bool>,

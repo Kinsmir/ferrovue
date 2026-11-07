@@ -12,13 +12,11 @@ pub const NAME: &str = "BoolKid";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "flag")]
     pub flag: bool,
-    #[serde(rename = "opt", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub opt: Option<bool>,
     #[serde(rename = "fooBar", default, skip_serializing_if = "Option::is_none")]
     pub foo_bar: Option<bool>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

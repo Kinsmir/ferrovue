@@ -12,11 +12,8 @@ pub const NAME: &str = "Modal";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "open")]
     pub open: bool,
-    #[serde(rename = "inline")]
     pub inline: bool,
 }
 

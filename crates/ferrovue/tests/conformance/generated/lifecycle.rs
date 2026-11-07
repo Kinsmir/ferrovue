@@ -12,9 +12,7 @@ pub const NAME: &str = "Lifecycle";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Item<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
 }
 
@@ -29,7 +27,6 @@ impl<'a> Item<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Panel<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -44,9 +41,7 @@ impl<'a> Panel<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "items")]
     pub items: Vec<Item<'a>>,
-    #[serde(rename = "query")]
     pub query: Cow<'a, str>,
 }
 

@@ -14,9 +14,8 @@ pub const NAME: &str = "SelectText";
 pub struct Props<'a> {
     #[serde(rename = "modelValue")]
     pub model_value: Cow<'a, str>,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maybe: Option<Cow<'a, str>>,
-    #[serde(rename = "chosen")]
     pub chosen: Option<Cow<'a, str>>,
 }
 

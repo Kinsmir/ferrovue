@@ -12,9 +12,8 @@ pub const NAME: &str = "Deferred";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -49,7 +48,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(84 + props.title.len() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section class=\"deferred\" data-v-d4eff95c>");
-    super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.title) }, super::plain_box::Slots {
+    super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: Cow::Borrowed(&*props.title) }, super::plain_box::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
@@ -63,7 +62,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }, " data-v-d4eff95c")?;
-    super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-d4eff95c")?;
+    super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: props.note.as_deref().map(Cow::Borrowed) }, " data-v-d4eff95c")?;
     out.push_str("</section>");
     Ok(())
 }

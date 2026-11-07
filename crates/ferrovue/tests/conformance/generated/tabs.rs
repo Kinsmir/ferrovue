@@ -12,11 +12,8 @@ pub const NAME: &str = "Tabs";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "active")]
     pub active: Cow<'a, str>,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -56,7 +53,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
     out.reserve(33 + props.active.len() + props.title.len());
     let fv_inherited = fv_provides;
     let s_active = &*props.active;
-    let fv_provided_tabs_key = super::types::TabsState { active: std::borrow::Cow::Borrowed(s_active), count: props.count };
+    let fv_provided_tabs_key = super::types::TabsState { active: Cow::Borrowed(s_active), count: props.count };
     let fv_provides = super::provides::Provides { tabs_key: Some(&fv_provided_tabs_key), ..fv_inherited };
     out.push_str("<div class=\"tabs\"><h2>");
     fv::core::escape_into(out, &props.title);

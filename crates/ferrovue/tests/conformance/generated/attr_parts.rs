@@ -12,21 +12,14 @@ pub const NAME: &str = "AttrParts";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "rank")]
     pub rank: i64,
-    #[serde(rename = "score")]
     pub score: f64,
-    #[serde(rename = "sub")]
     pub sub: Cow<'a, str>,
-    #[serde(rename = "tail")]
     pub tail: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maybe: Option<f64>,
-    #[serde(rename = "big")]
     pub big: i64,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -125,7 +118,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\" data-opt=\"");
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.maybe.map(fv::core::Js), "undefined")); }
     out.push('|');
-    fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");
+    fv::core::escape_join(out, props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)), ",");
     out.push_str("\" data-str=\"n");
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::core::Js(props.rank)); }
     { use std::fmt::Write as _; let _ = write!(out, "{}", fv::core::Js(props.score)); }

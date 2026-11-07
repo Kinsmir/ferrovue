@@ -60,9 +60,7 @@ impl<'a> TupleTypesNested<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct TupleTypesNested0<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -89,19 +87,13 @@ impl<'a> TupleTypesExtra<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "booking")]
     pub booking: super::types::Booking<'a>,
-    #[serde(rename = "spans")]
     pub spans: Vec<super::types::Span<'a>>,
-    #[serde(rename = "score")]
     pub score: TupleTypesScore<'a>,
-    #[serde(rename = "scores")]
     pub scores: Vec<TupleTypesScores<'a>>,
-    #[serde(rename = "when")]
     pub when: TupleTypesWhen<'a>,
-    #[serde(rename = "nested")]
     pub nested: TupleTypesNested<'a>,
-    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra: Option<TupleTypesExtra<'a>>,
 }
 
@@ -138,7 +130,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let fv_refusals = fv::render::Refusals::new(NAME, "components/TupleTypes.vue");
     let s_range = format!("{}–{}", props.booking.span.0, props.booking.span.1);
     let s_total = std::cell::LazyCell::new(|| fv::strings::js_reduce(props.scores.iter(), 0i64, |fv_sum, fv_item| fv_refusals.keep(fv::render::try_int(fv_sum as f64 + fv_item.1 as f64), 21, 66)));
-    let s_names = props.scores.iter().map(|fv_item_2| std::borrow::Cow::<str>::Borrowed(&fv_item_2.0)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_names = props.scores.iter().map(|fv_item_2| Cow::<str>::Borrowed(&fv_item_2.0)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     if s_range.is_empty() {
         out.push_str("<section title data-seats=\"");
     } else {
@@ -148,7 +140,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     fv::core::push_number(out, props.booking.seats.0 as f64 + props.booking.seats.1 as f64);
     out.push_str("\">");
-    fv_refusals.check(super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.booking.tagged.0), label: std::borrow::Cow::Borrowed(props.booking.tagged.1.as_deref().unwrap_or("none")) }))?;
+    fv_refusals.check(super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.booking.tagged.0), label: Cow::Borrowed(props.booking.tagged.1.as_deref().unwrap_or("none")) }))?;
     out.push_str("<!--[-->");
     for (fv_i, fv_item_3) in props.spans.iter().enumerate() {
         let fv_i = fv_i as i64;
@@ -163,11 +155,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str(" 2</p>");
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: { let fv_tuple = &props.score; super::tuple_badge::TupleBadgePair(std::borrow::Cow::Borrowed(&*fv_tuple.0), fv_tuple.1) }, rest: Some(props.scores.iter().map(|fv_tuple_2| super::tuple_badge::TupleBadgeRest(std::borrow::Cow::Borrowed(&*fv_tuple_2.0), fv_tuple_2.1)).collect()) }))?;
-    fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: super::tuple_badge::TupleBadgePair(std::borrow::Cow::<str>::Borrowed(&*props.score.0), 0i64), rest: Some(Vec::from([super::tuple_badge::TupleBadgeRest(std::borrow::Cow::<str>::Borrowed("x"), 1i64), super::tuple_badge::TupleBadgeRest(std::borrow::Cow::<str>::Owned(s_names.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")), *s_total)])) }))?;
+    fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: { let fv_tuple = &props.score; super::tuple_badge::TupleBadgePair(Cow::Borrowed(&*fv_tuple.0), fv_tuple.1) }, rest: Some(props.scores.iter().map(|fv_tuple_2| super::tuple_badge::TupleBadgeRest(Cow::Borrowed(&*fv_tuple_2.0), fv_tuple_2.1)).collect()) }))?;
+    fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: super::tuple_badge::TupleBadgePair(Cow::<str>::Borrowed(&*props.score.0), 0i64), rest: Some(Vec::from([super::tuple_badge::TupleBadgeRest(Cow::<str>::Borrowed("x"), 1i64), super::tuple_badge::TupleBadgeRest(Cow::<str>::Owned(s_names.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")), *s_total)])) }))?;
     out.push_str("<!--[-->");
     for fv_s in props.scores.iter() {
-        fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: { let fv_tuple_3 = &fv_s; super::tuple_badge::TupleBadgePair(std::borrow::Cow::Borrowed(&*fv_tuple_3.0), fv_tuple_3.1) }, rest: None }))?;
+        fv_refusals.check(super::tuple_badge::try_render(out, &super::tuple_badge::Props { pair: { let fv_tuple_3 = &fv_s; super::tuple_badge::TupleBadgePair(Cow::Borrowed(&*fv_tuple_3.0), fv_tuple_3.1) }, rest: None }))?;
     }
     out.push_str("<!--]--><time datetime=\"");
     fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.when.0)), 32, 22));

@@ -12,9 +12,7 @@ pub const NAME: &str = "MappedChoice";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "words")]
     pub words: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 
@@ -42,14 +40,14 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
     out.reserve(22 + props.words.len());
-    if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
+    if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| Cow::<str>::Owned((if props.on { Cow::<str>::Owned(fv_w.to_uppercase()) } else { Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
         out.push_str("<p title>");
     } else {
         out.push_str("<p title=\"");
-        fv::core::escape_join(out, fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())), "-");
+        fv::core::escape_join(out, fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| Cow::<str>::Owned((if props.on { Cow::<str>::Owned(fv_w.to_uppercase()) } else { Cow::<str>::Borrowed(&*fv_w) }).into_owned())), "-");
         out.push_str("\">");
     }
-    fv::core::escape_join(out, fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())), "|");
+    fv::core::escape_join(out, fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| Cow::<str>::Owned((if props.on { Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())), "|");
     out.push_str("</p>");
     Ok(())
 }

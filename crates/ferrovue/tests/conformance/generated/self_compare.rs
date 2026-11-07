@@ -12,17 +12,12 @@ pub const NAME: &str = "SelfCompare";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "x")]
     pub x: f64,
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "s")]
     pub s: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "off")]
     pub off: bool,
-    #[serde(rename = "o", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub o: Option<Cow<'a, str>>,
 }
 

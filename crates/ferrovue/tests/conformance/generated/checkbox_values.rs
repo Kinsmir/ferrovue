@@ -12,11 +12,8 @@ pub const NAME: &str = "CheckboxValues";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "state")]
     pub state: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: Cow<'a, str>,
-    #[serde(rename = "off")]
     pub off: Cow<'a, str>,
 }
 

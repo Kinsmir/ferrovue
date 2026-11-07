@@ -12,9 +12,7 @@ pub const NAME: &str = "ScopedPair";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "term")]
     pub term: Cow<'a, str>,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
 }
 

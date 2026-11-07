@@ -12,9 +12,7 @@ pub const NAME: &str = "Lookups";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Badge<'a> {
-    #[serde(rename = "tone")]
     pub tone: super::types::Tone,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
 }
 
@@ -29,17 +27,12 @@ impl<'a> Badge<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "size")]
     pub size: super::types::Size,
-    #[serde(rename = "tone")]
     pub tone: super::types::Tone,
-    #[serde(rename = "level")]
     pub level: i64,
-    #[serde(rename = "badges")]
     pub badges: Vec<Badge<'a>>,
-    #[serde(rename = "loud")]
     pub loud: bool,
-    #[serde(rename = "kind", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kind: Option<super::types::Kind>,
 }
 

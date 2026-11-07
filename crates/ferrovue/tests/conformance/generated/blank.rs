@@ -10,7 +10,6 @@ pub const NAME: &str = "Blank";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "show")]
     pub show: bool,
 }
 

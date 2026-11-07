@@ -12,11 +12,9 @@ pub const NAME: &str = "AsyncClass";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -52,7 +50,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(35 + props.tone.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
     out.push_str("<section>");
     super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tone)) == fv::strings::js_length(&props.tone) { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) })], ""))?;
-    super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&format!(" {} ", props.tone))) == fv::strings::js_length(&format!(" {} ", props.tone)) { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!(" {} ", props.tone))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&format!(" {} ", props.tone)), &*format!(" {} ", props.tone)])) }), ("title", fv::attrs::Attr::str("g"))], ""))?;
+    super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&format!(" {} ", props.tone))) == fv::strings::js_length(&format!(" {} ", props.tone)) { fv::attrs::Attr::Str(Cow::<str>::Owned(format!(" {} ", props.tone))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&format!(" {} ", props.tone)), &*format!(" {} ", props.tone)])) }), ("title", fv::attrs::Attr::str("g"))], ""))?;
     super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[&*props.tone, "x"])))], ""))?;
     super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if !props.tone.is_empty() { "on" } else { "" }, if props.tone.is_empty() { "off" } else { "" }])))], ""))?;
     super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::new(&[("class", if !props.tone.is_empty() { if fv::strings::js_length(fv::strings::js_trim(&props.tone)) == fv::strings::js_length(&props.tone) { fv::attrs::Attr::str(&props.tone) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tone), &*props.tone])) } } else { fv::attrs::Attr::str("none") })], ""))?;
@@ -63,8 +61,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::attrs::class_into(out, false, &[&*props.tone]);
         out.push_str("\"></b>");
     }
-    super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) == fv::strings::js_length(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")) { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")), &*props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")])) })], ""))?;
-    super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str(&props.tone)), ("title", fv::attrs::Attr::Str(props.note.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}-", fv_t)).into_owned())).find(|fv_t_2| fv::strings::js_length(fv_t_2) > 2).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")))))], ""))?;
+    super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::new(&[("class", if fv::strings::js_length(fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) == fv::strings::js_length(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")) { fv::attrs::Attr::Str(Cow::<str>::Owned(props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" "))) } else { fv::attrs::Attr::from(fv::attrs::class_names(&[fv::strings::js_trim(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")), &*props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" ")])) })], ""))?;
+    super::divider::try_render_scoped(out, &super::divider::Props {}, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str(&props.tone)), ("title", fv::attrs::Attr::Str(props.note.as_deref().map(Cow::<str>::Borrowed).unwrap_or(props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t| Cow::<str>::Owned(Cow::<str>::Owned(format!("{}-", fv_t)).into_owned())).find(|fv_t_2| fv::strings::js_length(fv_t_2) > 2).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("-")))))], ""))?;
     out.push_str("</section>");
     Ok(())
 }

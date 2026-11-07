@@ -12,9 +12,8 @@ pub const NAME: &str = "Exprs";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Author<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "site", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub site: Option<Cow<'a, str>>,
 }
 
@@ -35,9 +34,7 @@ impl<'a> Author<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Row<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -52,21 +49,15 @@ impl<'a> Row<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "m")]
     pub m: i64,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "nums")]
     pub nums: Vec<i64>,
-    #[serde(rename = "author", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub author: Option<Author<'a>>,
-    #[serde(rename = "rows")]
     pub rows: Vec<Row<'a>>,
-    #[serde(rename = "pick", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pick: Option<Cow<'a, str>>,
 }
 

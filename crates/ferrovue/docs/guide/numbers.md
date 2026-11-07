@@ -163,7 +163,6 @@ An island's props travel as JSON, which has no words for some numbers JavaScript
 #     use ferrovue as fv;
 #     #[derive(Debug, Clone, serde::Serialize)]
 #     pub struct Props {
-#         #[serde(rename = "level")]
 #         pub level: f64,
 #     }
 #     pub fn render(out: &mut String, props: &Props) {

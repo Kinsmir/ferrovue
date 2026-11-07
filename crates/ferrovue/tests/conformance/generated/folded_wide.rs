@@ -68,15 +68,10 @@ impl ferrovue::props::Union for FoldedWideTone {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: FoldedWideTone,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "f")]
     pub f: f64,
-    #[serde(rename = "parts")]
     pub parts: Vec<Cow<'a, str>>,
 }
 
@@ -122,7 +117,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_x_2 in props.parts.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|_| -1i64).flat_map(|fv_b| [fv_b as f64, 0.0f64, 0.5f64].to_vec()) {
+    for fv_x_2 in props.parts.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|_| -1i64).flat_map(|fv_b| [fv_b as f64, 0.0f64, 0.5f64].to_vec()) {
         out.push_str("<b>");
         fv::core::push_number(out, fv_x_2);
         out.push_str("</b>");

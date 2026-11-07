@@ -12,17 +12,15 @@ pub const NAME: &str = "DateGuards";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "at", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub at: ferrovue::date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
+    #[serde(default, with = "fv::date::opt_date_prop")]
     pub deleted: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "fallback", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub fallback: ferrovue::date::JsDate,
-    #[serde(rename = "stamp")]
     pub stamp: Cow<'a, str>,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 

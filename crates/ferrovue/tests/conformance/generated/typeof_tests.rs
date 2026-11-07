@@ -12,7 +12,6 @@ pub const NAME: &str = "TypeofTests";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Owner<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
 }
 
@@ -27,21 +26,16 @@ impl<'a> Owner<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
-    #[serde(rename = "nick")]
     pub nick: Option<Cow<'a, str>>,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "ratio")]
     pub ratio: f64,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "owner", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<Owner<'a>>,
-    #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
 }
 

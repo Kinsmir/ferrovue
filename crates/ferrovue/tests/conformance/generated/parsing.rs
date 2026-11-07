@@ -12,13 +12,9 @@ pub const NAME: &str = "Parsing";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "input")]
     pub input: Cow<'a, str>,
-    #[serde(rename = "inputs")]
     pub inputs: Vec<Cow<'a, str>>,
-    #[serde(rename = "flag")]
     pub flag: bool,
-    #[serde(rename = "n")]
     pub n: i64,
 }
 
@@ -71,13 +67,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_number(out, fv::core::js_round(fv::strings::js_parse_float(&props.input)));
     out.push_str("</p><p>");
-    fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).filter(|fv_x| *fv_x > 0.0), ", ");
+    fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).filter(|fv_x| *fv_x > 0.0), ", ");
     out.push('|');
-    fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_2| fv::strings::js_parse_int(&fv_s_2, 10)), ",");
+    fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s_2| fv::strings::js_parse_int(&fv_s_2, 10)), ",");
     out.push('|');
-    fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s_3| fv::strings::js_parse_float(&fv_s_3)), " ");
+    fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s_3| fv::strings::js_parse_float(&fv_s_3)), " ");
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &format!("[{}]", props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &format!("[{}]", props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
     out.push('|');
     fv::core::escape_into(out, &fv::strings::js_json_string(&props.input));
     out.push('|');

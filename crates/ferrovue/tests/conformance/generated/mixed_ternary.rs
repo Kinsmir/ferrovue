@@ -12,19 +12,13 @@ pub const NAME: &str = "MixedTernary";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "price")]
     pub price: f64,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spare: Option<i64>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "ratio")]
     pub ratio: Option<f64>,
 }
 
@@ -105,7 +99,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
     }
     out.push(' ');
-    if let Some(v) = (if props.on { props.spare.map(|fv_spare_2| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(fv_spare_2)))) } else { Some(std::borrow::Cow::<str>::Borrowed("absent")) }).as_deref() {
+    if let Some(v) = (if props.on { props.spare.map(|fv_spare_2| Cow::<str>::Owned(format!("{}", fv::core::Js(fv_spare_2)))) } else { Some(Cow::<str>::Borrowed("absent")) }).as_deref() {
         fv::core::escape_into(out, v);
     }
     out.push(' ');
@@ -128,7 +122,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('|');
     if props.on {
-        fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");
+        fv::core::escape_join(out, props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)), ",");
     } else {
         fv::core::push_number(out, props.price);
     }

@@ -206,7 +206,7 @@ enum.
 # /// The props `Button.vue` declares.
 # #[derive(Debug, Clone, Default, serde::Serialize)]
 # pub struct Props {
-#     #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+#     #[serde(default, skip_serializing_if = "Option::is_none")]
 #     pub size: Option<ButtonSize>,
 # }
 #
@@ -393,9 +393,9 @@ impl Union for Tone {
 #     /// The props `Card.vue` declares.
 #     #[derive(Debug, Clone, serde::Serialize)]
 #     pub struct Props {
-#         #[serde(rename = "tone", with = "ferrovue::props::union_prop")]
+#         #[serde(with = "ferrovue::props::union_prop")]
 #         pub tone: super::Tone,
-#         #[serde(rename = "tones", with = "ferrovue::props::union_prop")]
+#         #[serde(with = "ferrovue::props::union_prop")]
 #         pub tones: Vec<super::Tone>,
 #     }
 # }
@@ -482,11 +482,8 @@ setter that consumes and returns the struct. The fields are public, so a struct 
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Row<'a> {
-#     #[serde(rename = "id")]
 #     pub id: i64,
-#     #[serde(rename = "label")]
 #     pub label: Cow<'a, str>,
-#     #[serde(rename = "tags")]
 #     pub tags: Vec<Cow<'a, str>>,
 # }
 #
@@ -503,11 +500,9 @@ setter that consumes and returns the struct. The fields are public, so a struct 
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "rows")]
 #     pub rows: Vec<Row<'a>>,
-#     #[serde(rename = "title")]
 #     pub title: Cow<'a, str>,
-#     #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+#     #[serde(default, skip_serializing_if = "Option::is_none")]
 #     pub note: Option<Cow<'a, str>>,
 # }
 #
@@ -684,7 +679,6 @@ defineProps<{ scores: Record<string, number> }>();
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "scores")]
 #     pub scores: ferrovue::props::Record<'a, i64>,
 # }
 #

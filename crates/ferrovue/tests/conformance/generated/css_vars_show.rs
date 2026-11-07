@@ -12,9 +12,7 @@ pub const NAME: &str = "CssVarsShow";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 

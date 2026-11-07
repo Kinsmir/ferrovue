@@ -12,11 +12,9 @@ pub const NAME: &str = "ClientSide";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "level")]
     pub level: i64,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -61,7 +59,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     fv::core::push_int(out, props.level);
     out.push_str("%</span><!--]--><!---->");
-    super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: std::borrow::Cow::Borrowed(&*props.title) }, super::plain_box::Slots {
+    super::plain_box::try_render_scoped(out, &super::plain_box::Props { text: Cow::Borrowed(&*props.title) }, super::plain_box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<!---->");
         })),

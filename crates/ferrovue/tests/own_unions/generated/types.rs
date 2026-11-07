@@ -131,11 +131,9 @@ fn shade_gives_each_member_its_literal() {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Step<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "state")]
     pub state: StepState,
-    #[serde(rename = "align", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub align: Option<crate::domain::Align>,
 }
 

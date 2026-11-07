@@ -68,13 +68,9 @@ impl ferrovue::props::Union for TagContentTag {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tag")]
     pub tag: TagContentTag,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -157,7 +153,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     for fv_i_ref_3 in props.items.iter() {
         let fv_i_3: &str = fv_i_ref_3;
-        super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(fv_i_3), size: None }, super::shape_square::Slots {
+        super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: Cow::Borrowed(fv_i_3), size: None }, super::shape_square::Slots {
             default: None,
             corner: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push('c');
@@ -173,7 +169,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str(if props.on { "</ul><p>t</p>" } else { "</ul><!--v-if-->" });
-    super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: std::borrow::Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
+    super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
         default: None,
         corner: None,
     }, &fv::attrs::Attrs::NONE)?;

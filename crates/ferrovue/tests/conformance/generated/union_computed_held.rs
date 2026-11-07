@@ -12,13 +12,9 @@ pub const NAME: &str = "UnionComputedHeld";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -57,10 +53,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_picked, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_stepped, card: Some(super::types::MoodCard { mood: s_stepped, spare: Some(s_next), note: std::borrow::Cow::<str>::Borrowed(&*props.label) }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_next), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_kept), label: std::borrow::Cow::Borrowed(fv::props::Union::as_str(s_kept)) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_picked, card: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: s_stepped, card: Some(super::types::MoodCard { mood: s_stepped, spare: Some(s_next), note: Cow::<str>::Borrowed(&*props.label) }), label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_next), label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(s_kept), label: Cow::Borrowed(fv::props::Union::as_str(s_kept)) })?;
     out.push_str("<p data-picked=\"");
     fv::core::escape_into(out, fv::props::Union::as_str(s_picked));
     out.push_str("\">");

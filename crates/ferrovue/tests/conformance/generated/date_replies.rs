@@ -10,9 +10,7 @@ pub const NAME: &str = "DateReplies";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "replies")]
     pub replies: Vec<super::types::Reply<'a>>,
-    #[serde(rename = "depth")]
     pub depth: i64,
 }
 

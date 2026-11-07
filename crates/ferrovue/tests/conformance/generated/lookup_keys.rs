@@ -72,11 +72,8 @@ impl ferrovue::props::Union for LookupKeysSize {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "size")]
     pub size: LookupKeysSize,
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -115,7 +112,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, (match props.size { LookupKeysSize::Sm => Some("shout"), LookupKeysSize::Lg | LookupKeysSize::N => None }).unwrap_or("-"));
     out.push_str("</p>");
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud | super::types::Mood::QX => super::types::Mood::Calm }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud | super::types::Mood::QX => super::types::Mood::Calm }), label: Cow::Borrowed(&*props.label) })?;
     out.push_str("<!--]-->");
     Ok(())
 }

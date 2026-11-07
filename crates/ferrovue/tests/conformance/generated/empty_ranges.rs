@@ -12,9 +12,7 @@ pub const NAME: &str = "EmptyRanges";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

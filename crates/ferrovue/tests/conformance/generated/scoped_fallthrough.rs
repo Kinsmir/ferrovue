@@ -12,9 +12,8 @@ pub const NAME: &str = "ScopedFallthrough";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
 }
 
@@ -49,10 +48,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(42 + props.label.len() + props.tone.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"scoped\" data-v-29a5eea9>");
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("s")), ("data-tone", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", fv::attrs::Attr::str(&props.label))], " data-v-29a5eea9"))?;
-    super::fall_root::try_render_scoped(out, &super::fall_root::Props { text: Some(std::borrow::Cow::Borrowed(&*props.label)) }, &fv::attrs::Attrs::new(&[("class", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("data-k", fv::attrs::Attr::str("k"))], " data-v-29a5eea9"))?;
-    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("data-tone", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], " data-v-29a5eea9"))?;
-    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: std::borrow::Cow::Borrowed("/") }, fv_route, &fv::attrs::Attrs::new(&[("title", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], " data-v-29a5eea9"))?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("s")), ("data-tone", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", fv::attrs::Attr::str(&props.label))], " data-v-29a5eea9"))?;
+    super::fall_root::try_render_scoped(out, &super::fall_root::Props { text: Some(Cow::Borrowed(&*props.label)) }, &fv::attrs::Attrs::new(&[("class", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("data-k", fv::attrs::Attr::str("k"))], " data-v-29a5eea9"))?;
+    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("data-tone", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], " data-v-29a5eea9"))?;
+    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: Cow::Borrowed("/") }, fv_route, &fv::attrs::Attrs::new(&[("title", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], " data-v-29a5eea9"))?;
     out.push_str("</div>");
     Ok(())
 }

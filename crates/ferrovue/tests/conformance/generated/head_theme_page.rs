@@ -12,11 +12,9 @@ pub const NAME: &str = "HeadThemePage";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "theme", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme: Option<Cow<'a, str>>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -52,12 +50,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     out.reserve(props.label.len() + props.theme.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadThemePage.vue");
     fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str(&format!("%s | {}", props.label))), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme")), ("content", fv::head::HeadValue::str("page"))])]))]));
-    fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: props.theme.as_deref().map(std::borrow::Cow::Borrowed) }, super::theme_scope::Slots {
+    fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: props.theme.as_deref().map(Cow::Borrowed) }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-            fv_refusals.join(super::head_theme::try_render(out, &super::head_theme::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::head_theme::Slots {
+            fv_refusals.join(super::head_theme::try_render(out, &super::head_theme::Props { label: Cow::Borrowed(&*props.label) }, super::head_theme::Slots {
                 default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                    fv_refusals.join(super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.label), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head));
-                    fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""));
+                    fv_refusals.join(super::head_article::try_render(out, &super::head_article::Props { title: Cow::Borrowed(&*props.label), tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect() }, fv_head));
+                    fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed(&*props.label) }, fv_provides, ""));
                     true
                 }),
             }, fv_provides, fv_head));

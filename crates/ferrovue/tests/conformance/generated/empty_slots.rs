@@ -12,7 +12,6 @@ pub const NAME: &str = "EmptySlots";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -41,17 +40,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(11 + props.title.len());
     out.push_str("<div>");
-    super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|_out: &mut String| -> bool {
             false
         })),
     })?;
-    super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
         default: None,
     })?;
-    super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: Some(fv::render::Slot::markup(&|_out: &mut String| -> bool {
             false
         })),
@@ -63,7 +62,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     })?;
-    super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: Some(fv::render::Slot::markup(&|_out: &mut String| -> bool {
             false
         })),
@@ -71,7 +70,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             false
         })),
     })?;
-    super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed(&*props.title), note: None }, super::data_list::Slots {
+    super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: Cow::Borrowed(&*props.title), note: None }, super::data_list::Slots {
         header: Some(&|_out: &mut String, _fv_sp: &super::data_list::HeaderSlotProps<'_>| -> bool {
             false
         }),
@@ -79,7 +78,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         empty: None,
         default: None,
     })?;
-    super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed(&*props.title), note: None }, super::data_list::Slots {
+    super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: Cow::Borrowed(&*props.title), note: None }, super::data_list::Slots {
         header: Some(&|_out: &mut String, _fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             false
         }),

@@ -12,11 +12,8 @@ pub const NAME: &str = "RegexText";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Cow<'a, str>,
-    #[serde(rename = "code")]
     pub code: Cow<'a, str>,
 }
 
@@ -56,7 +53,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\"><h1>");
     fv::core::escape_into(out, &({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("\\s+", "g")); &RE }).replace(&props.title, " "));
     out.push_str("</h1><!--[-->");
-    for fv_t_cow in ({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("\\s*[,;]\\s*", "")); &RE }).split(&props.tags, None).into_iter().map(std::borrow::Cow::<str>::Owned) {
+    for fv_t_cow in ({ static RE: std::sync::LazyLock<fv::strings::JsRegex> = std::sync::LazyLock::new(|| fv::strings::JsRegex::new("\\s*[,;]\\s*", "")); &RE }).split(&props.tags, None).into_iter().map(Cow::<str>::Owned) {
         let fv_t: &str = &fv_t_cow;
         out.push_str("<i>");
         fv::core::escape_into(out, fv_t);

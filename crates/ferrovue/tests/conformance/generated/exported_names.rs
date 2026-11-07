@@ -68,9 +68,7 @@ impl ferrovue::props::Union for ExportedNamesTone {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "tone")]
     pub tone: ExportedNamesTone,
 }
 

@@ -12,9 +12,8 @@ pub const NAME: &str = "Links";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "user")]
     pub user: Cow<'a, str>,
-    #[serde(rename = "tab", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tab: Option<Cow<'a, str>>,
 }
 

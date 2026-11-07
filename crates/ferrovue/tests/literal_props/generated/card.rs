@@ -12,13 +12,10 @@ pub const NAME: &str = "Card";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "owner")]
     pub owner: super::types::Owner<'a>,
-    #[serde(rename = "tags")]
     pub tags: Vec<super::types::Tag<'a>>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 

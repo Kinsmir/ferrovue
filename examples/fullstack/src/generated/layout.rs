@@ -12,7 +12,6 @@ pub const NAME: &str = "Layout";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "shop")]
     pub shop: Cow<'a, str>,
 }
 
@@ -75,7 +74,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         out.push_str(">Book of the week</a>");
     }
     out.push_str("</nav><div id=\"basket\">");
-    super::basket_summary::try_render(out, &super::basket_summary::Props { label: std::borrow::Cow::Borrowed("Basket") }, fv_stores)?;
+    super::basket_summary::try_render(out, &super::basket_summary::Props { label: Cow::Borrowed("Basket") }, fv_stores)?;
     out.push_str("</div></header><main>");
     fv_slots.router_view.render_to(out);
     out.push_str("</main><footer>Rendered in Rust by ferrovue, hydrated by Vue.</footer></div>");

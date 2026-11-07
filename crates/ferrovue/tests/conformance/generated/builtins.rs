@@ -12,11 +12,8 @@ pub const NAME: &str = "Builtins";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
 }
 

@@ -39,7 +39,6 @@ response's body.
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "name")]
 #     pub name: Cow<'a, str>,
 # }
 #
@@ -235,7 +234,6 @@ an `HttpResponse` with `.into()`.
 # use ferrovue as fv;
 # #[derive(Debug, Clone, serde::Serialize)]
 # pub struct Props<'a> {
-#     #[serde(rename = "name")]
 #     pub name: Cow<'a, str>,
 # }
 # impl<'a> Props<'a> {

@@ -12,7 +12,6 @@ pub const NAME: &str = "Index";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "heading")]
     pub heading: Cow<'a, str>,
 }
 

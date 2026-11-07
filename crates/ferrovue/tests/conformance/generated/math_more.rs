@@ -10,9 +10,7 @@ pub const NAME: &str = "MathMore";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "x")]
     pub x: f64,
-    #[serde(rename = "n")]
     pub n: i64,
 }
 

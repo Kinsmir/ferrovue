@@ -12,7 +12,6 @@ pub const NAME: &str = "Forward";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -48,7 +47,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(19 + props.title.len());
     out.push_str("<section>");
-    super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;

@@ -10,7 +10,6 @@ pub const NAME: &str = "TileCard";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tile")]
     pub tile: super::types::Tile<'a>,
 }
 

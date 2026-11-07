@@ -12,7 +12,6 @@ pub const NAME: &str = "LoadedRanks";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "board")]
     pub board: Cow<'a, str>,
 }
 
@@ -58,7 +57,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::
         fv::core::escape_into(out, &props.board);
         out.push_str("</p>");
     });
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.board), page: 1i64, drafts: None }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: Cow::Borrowed(&*props.board), page: 1i64, drafts: None }, fv_loads)?;
     out.push_str("<!--]-->");
     Ok(())
 }

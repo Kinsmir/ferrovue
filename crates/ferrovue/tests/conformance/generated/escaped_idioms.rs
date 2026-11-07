@@ -12,9 +12,7 @@ pub const NAME: &str = "EscapedIdioms";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "stars")]
     pub stars: i64,
 }
 

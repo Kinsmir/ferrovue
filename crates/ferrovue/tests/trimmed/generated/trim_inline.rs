@@ -12,9 +12,7 @@ pub const NAME: &str = "TrimInline";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
 }
 
@@ -53,7 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</i> <em> to ");
     fv::core::escape_into(out, &props.label);
     out.push_str(" by </em> ");
-    super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("inline") }, super::trim_button::Slots {
+    super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("inline") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str(" to ");
             fv::core::escape_into(out, &props.label);
@@ -71,7 +69,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("</a> <i>none</i> <img alt=\"\"> ");
     }
-    super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed("next") }, super::trim_button::Slots {
+    super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("next") }, super::trim_button::Slots {
         default: None,
         after: None,
     })?;
@@ -86,7 +84,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.name);
         out.push_str("</a> ");
         if !props.label.is_empty() {
-            super::trim_button::try_render(out, &super::trim_button::Props { kind: std::borrow::Cow::Borrowed(&*props.label) }, super::trim_button::Slots {
+            super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed(&*props.label) }, super::trim_button::Slots {
                 default: None,
                 after: None,
             })?;

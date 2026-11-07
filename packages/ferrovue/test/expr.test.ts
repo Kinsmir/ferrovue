@@ -277,11 +277,11 @@ describe("types stated with `as` and `satisfies`", () => {
   });
 
   it("builds an object literal and a list of them as the struct stated", () => {
-    const one = 'let s_c = Card { label: std::borrow::Cow::<str>::Borrowed("x") };';
+    const one = 'let s_c = Card { label: Cow::<str>::Borrowed("x") };';
     expect(render(c("({ label: 'x' } as Card)"), "<p>{{ c.label }}</p>")).toMatch(like(one));
     expect(render(c("({ label: 'x' } as Card | undefined)"), "<p>{{ c?.label }}</p>")).toMatch(like(one));
     expect(render(c("(({ label: 'x' }) as Card)"), "<p>{{ c.label }}</p>")).toMatch(like(one));
-    const list = 'let s_c = Vec::from([Card { label: std::borrow::Cow::<str>::Borrowed("x") }]);';
+    const list = 'let s_c = Vec::from([Card { label: Cow::<str>::Borrowed("x") }]);';
     expect(render(c("[{ label: 'x' }] as Card[]"), '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like(list));
     expect(render(c("([{ label: 'x' }]) as Card[]"), '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like(list));
   });
@@ -289,7 +289,7 @@ describe("types stated with `as` and `satisfies`", () => {
   it("types an empty array literal by the list stated", () => {
     expect(render(c("[] as Card[]"), '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like("let s_c = <&[Card<'_>]>::default();"));
     expect(render(c("[] as Card[] | undefined"), '<p v-for="x in c ?? []">{{ x.label }}</p>')).toMatch(like("let s_c = <&[Card<'_>]>::default();"));
-    expect(render(c("[] as string[]"), '<p v-for="x in c">{{ x }}</p>')).toMatch(like("let s_c = <&[std::borrow::Cow<str>]>::default();"));
+    expect(render(c("[] as string[]"), '<p v-for="x in c">{{ x }}</p>')).toMatch(like("let s_c = <&[Cow<str>]>::default();"));
     expect(render(c('["a"] as string[]'), '<p v-for="x in c">{{ x }}</p>')).toMatch(like('let s_c = &["a"];'));
   });
 
@@ -336,14 +336,14 @@ describe("types stated with `as` and `satisfies`", () => {
   });
 
   it("types the object literals a return type states, in branches and nested lists", () => {
-    const tern = 'Vec::from([if props.on { Card { label: std::borrow::Cow::<str>::Borrowed("a") } } else { Card { label: std::borrow::Cow::<str>::Borrowed("b") } }])';
+    const tern = 'Vec::from([if props.on { Card { label: Cow::<str>::Borrowed("a") } } else { Card { label: Cow::<str>::Borrowed("b") } }])';
     expect(render(`import { computed } from "vue";\n${card}const props = defineProps<{ on: boolean }>();\nconst c = computed((): Card[] => [props.on ? { label: "a" } : { label: "b" }]);`, '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like(`let s_c = ${tern};`));
-    expect(render(`import { computed } from "vue";\n${card}const c = computed((): Card[] => [({ label: "a" })]);`, '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like('let s_c = Vec::from([Card { label: std::borrow::Cow::<str>::Borrowed("a") }]);'));
+    expect(render(`import { computed } from "vue";\n${card}const c = computed((): Card[] => [({ label: "a" })]);`, '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like('let s_c = Vec::from([Card { label: Cow::<str>::Borrowed("a") }]);'));
     expect(render(`import { computed } from "vue";\n${card}const props = defineProps<{ ws: string[] }>();\nconst c = computed((): Card[] => props.ws.map((w) => ({ label: w })));`, '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like(
-      "let s_c = props.ws.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s1| Card { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_s1)) }).collect::<Vec<_>>();",
+      "let s_c = props.ws.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s1| Card { label: Cow::<str>::Owned(str::to_owned(&*fv_s1)) }).collect::<Vec<_>>();",
     ));
     expect(render(`import { computed } from "vue";\n${card}const props = defineProps<{ c?: Card }>();\nconst c = computed((): Card => props.c ?? { label: "a" });`, "<p>{{ c.label }}</p>")).toMatch(like(
-      'let s_c = props.c.as_ref().cloned().unwrap_or(Card { label: std::borrow::Cow::<str>::Borrowed("a") });',
+      'let s_c = props.c.as_ref().cloned().unwrap_or(Card { label: Cow::<str>::Borrowed("a") });',
     ));
     expect(render(`import { computed } from "vue";\n${card}const c = computed((): Card[] => []);`, '<p v-for="x in c">{{ x.label }}</p>')).toMatch(like("let s_c = <&[Card<'_>]>::default();"));
   });
@@ -387,10 +387,10 @@ describe("items read by `[…]`", () => {
   it("reads a string's character by an integer index, holding it where the string is computed", () => {
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s[i] }}</p>")).toMatch(like("if let Some(v) = Some(fv::strings::js_char_at(&props.s, props.i as f64)).filter(|c| !c.is_empty()) {"));
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ (s + 'x')[i] }}</p>")).toMatch(like(
-      'if let Some(v) = Some(fv::strings::js_char_at(&format!("{}x", props.s), props.i as f64)).filter(|c| !c.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())).as_deref() {',
+      'if let Some(v) = Some(fv::strings::js_char_at(&format!("{}x", props.s), props.i as f64)).filter(|c| !c.is_empty()).map(|v| Cow::<str>::Owned(v.to_owned())).as_deref() {',
     ));
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s.toUpperCase()[i] ?? '-' }}</p>")).toMatch(like(
-      'fv::core::escape_into(out, &Some(fv::strings::js_char_at(&props.s.to_uppercase(), props.i as f64)).filter(|c| !c.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));',
+      'fv::core::escape_into(out, &Some(fv::strings::js_char_at(&props.s.to_uppercase(), props.i as f64)).filter(|c| !c.is_empty()).map(|v| Cow::<str>::Owned(v.to_owned())).unwrap_or(Cow::<str>::Borrowed("-")));',
     ));
   });
 
@@ -454,7 +454,7 @@ describe("optional chains", () => {
   const struct = (chain: string, optional = true) => render(`${c}defineProps<{ c${optional ? "?" : ""}: C }>();`, `<p>{{ ${chain} }}</p>`);
 
   it("maps the rest of the chain over a value that may be absent", () => {
-    expect(struct("c?.a.toUpperCase()")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.a.to_uppercase())).as_deref() {"));
+    expect(struct("c?.a.toUpperCase()")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| Cow::<str>::Owned(fv_o1.a.to_uppercase())).as_deref() {"));
     expect(struct("c?.a?.length")).toMatch(like("if let Some(v) = props.c.as_ref().map(|fv_o1| &*fv_o1.a).map(fv::strings::js_length) {"));
     expect(struct("c?.a", false)).toMatch(like("fv::core::escape_into(out, &props.c.a);"));
     expect(struct("c?.o")).toMatch(like("if let Some(v) = props.c.as_ref().and_then(|fv_o1| fv_o1.o.as_deref()) {"));
@@ -467,24 +467,24 @@ describe("optional chains", () => {
 
   it("holds what the chain computes", () => {
     expect(read("l?: string[]", "l?.[0]?.toUpperCase()")).toMatch(like(
-      "if let Some(v) = props.l.as_ref().and_then(|fv_o1| fv_o1.first().map(|v| &**v)).map(|fv_o2| std::borrow::Cow::<str>::Owned(fv_o2.to_uppercase())).as_deref() {",
+      "if let Some(v) = props.l.as_ref().and_then(|fv_o1| fv_o1.first().map(|v| &**v)).map(|fv_o2| Cow::<str>::Owned(fv_o2.to_uppercase())).as_deref() {",
     ));
     expect(read("s?: string", "s?.toUpperCase().at(0)")).toMatch(like(
-      "if let Some(v) = props.s.as_deref().and_then(|fv_o1| fv::strings::js_at(&fv_o1.to_uppercase(), 0.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).as_deref() {",
+      "if let Some(v) = props.s.as_deref().and_then(|fv_o1| fv::strings::js_at(&fv_o1.to_uppercase(), 0.0f64).map(|v| Cow::<str>::Owned(v.to_owned()))).as_deref() {",
     ));
-    expect(read("s?: string", "s?.toUpperCase()")).toMatch(like("if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref() {"));
+    expect(read("s?: string", "s?.toUpperCase()")).toMatch(like("if let Some(v) = props.s.as_deref().map(|fv_o1| Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref() {"));
     expect(read("l?: string[]", "l?.join('-').toUpperCase()")).toMatch(like(
-      'if let Some(v) = props.l.as_ref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.iter().map(|v| &**v).collect::<Vec<_>>().join("-").to_uppercase())).as_deref() {',
+      'if let Some(v) = props.l.as_ref().map(|fv_o1| Cow::<str>::Owned(fv_o1.iter().map(|v| &**v).collect::<Vec<_>>().join("-").to_uppercase())).as_deref() {',
     ));
     expect(read("s?: string", "s?.toUpperCase()?.trim()")).toMatch(like(
-      "if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().map(|fv_o2| std::borrow::Cow::<str>::Owned(fv::strings::js_trim(fv_o2).to_owned())).as_deref() {",
+      "if let Some(v) = props.s.as_deref().map(|fv_o1| Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().map(|fv_o2| Cow::<str>::Owned(fv::strings::js_trim(fv_o2).to_owned())).as_deref() {",
     ));
     expect(read("l?: string[]", "l?.[0]?.at(0)")).toMatch(like("if let Some(v) = props.l.as_ref().and_then(|fv_o1| fv_o1.first().map(|v| &**v)).and_then(|fv_o2| fv::strings::js_at(fv_o2, 0.0f64)) {"));
     expect(read("s?: string", "s?.toUpperCase()?.at(0)")).toMatch(like(
-      "if let Some(v) = props.s.as_deref().map(|fv_o1| std::borrow::Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().and_then(|fv_o2| fv::strings::js_at(fv_o2, 0.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))).as_deref() {",
+      "if let Some(v) = props.s.as_deref().map(|fv_o1| Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().and_then(|fv_o2| fv::strings::js_at(fv_o2, 0.0f64).map(|v| Cow::<str>::Owned(v.to_owned()))).as_deref() {",
     ));
     expect(render("defineProps<{ l?: string[] }>();", '<p v-for="x in l?.filter((y) => !!y) ?? []">{{ x }}</p>')).toMatch(like(
-      "for x_ref in props.l.as_ref().map(|fv_o1| fv_o1.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s2| !fv_s2.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {",
+      "for x_ref in props.l.as_ref().map(|fv_o1| fv_o1.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_s2| !fv_s2.is_empty()).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {",
     ));
   });
 });
@@ -499,9 +499,9 @@ describe("a `?:` shown as text whose branches differ in type", () => {
       return `if ${test} {\n${pad}    ${yes}\n${pad}} else {\n${pad}    ${no}\n${pad}}`;
     };
     expect(out).toMatch(like(`${branches("props.on", n, s)}\n    out.push('|');\n    ${branches("props.on", n, s)}\n    out.push('|');\n    ${branches("props.on", s, n)}`));
-    expect(out).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(std::borrow::Cow::<str>::Borrowed(&*props.s)) }).as_deref() {`));
+    expect(out).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(Cow::<str>::Borrowed(&*props.s)) }).as_deref() {`));
     expect(render("defineProps<{ on: boolean; off: boolean; n: number; s: string }>();", "<p>{{ on ? (off ? n : s) : s }}</p>")).toMatch(like(branches("props.on", branches("props.off", n, s, 8), s)));
-    expect(render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", '<p :id="on ? m : s"></p>')).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(std::borrow::Cow::<str>::Borrowed(&*props.s)) }).as_deref() {`));
+    expect(render("defineProps<{ on: boolean; n: number; s: string; m?: number }>();", '<p :id="on ? m : s"></p>')).toMatch(like(`if let Some(v) = (if props.on { props.m.map(|n1| Cow::<str>::Owned(format!("{}", fv::core::Js(n1)))) } else { Some(Cow::<str>::Borrowed(&*props.s)) }).as_deref() {`));
     expect(
       render(
         "defineProps<{ on: boolean; n: number; s: string; b: boolean; l: string[]; m?: number }>();",
@@ -514,7 +514,7 @@ describe("a `?:` shown as text whose branches differ in type", () => {
         branches("props.on", `{ use std::fmt::Write as _; let _ = write!(out, "{}", fv::strings::JsOr(props.m.map(fv::core::Js), "undefined")); }`, s),
         `fv::core::escape_into(out, (if props.on { None } else { Some(&*props.s) }).unwrap_or("null"));`,
         `fv::core::escape_into(out, (if props.on { None } else { Some(&*props.s) }).unwrap_or("undefined"));`,
-        `fv::core::escape_into(out, &(if props.on { std::borrow::Cow::<str>::Owned(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { std::borrow::Cow::<str>::Borrowed(&*props.s) }));`,
+        `fv::core::escape_into(out, &(if props.on { Cow::<str>::Owned(props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")) } else { Cow::<str>::Borrowed(&*props.s) }));`,
         branches("props.on", 'out.push_str("1.5");', s),
       ].join("\n    out.push('|');\n    "),
     ));
@@ -532,13 +532,13 @@ describe("`.length`", () => {
   it("counts a record, a list, what a list method computes and a string", () => {
     expect(length("r: Record<string, number>", "Object.entries(r).length")).toMatch(like("fv::core::push_int(out, props.r.len() as i64);"));
     expect(length("r: Record<string, number>", "Object.keys(r).length")).toMatch(like("fv::core::push_int(out, props.r.keys().count() as i64);"));
-    expect(length("r: Record<string, number>", "Object.keys(r).map((x) => x).length")).toMatch(like("fv::core::push_int(out, props.r.keys().map(std::borrow::Cow::<str>::Borrowed).count() as i64);"));
+    expect(length("r: Record<string, number>", "Object.keys(r).map((x) => x).length")).toMatch(like("fv::core::push_int(out, props.r.keys().map(Cow::<str>::Borrowed).count() as i64);"));
     expect(length("r: Record<string, number>", "Object.entries(r).map((e) => e.length).join()")).toMatch(like("props.r.iter().map(|_| 2i64)"));
     expect(length("l: string[]", "[...l].length")).toMatch(like("fv::core::push_int(out, props.l.len() as i64);"));
-    expect(length("l: string[]", "l.map((x) => x + '!').length")).toMatch(like("fv::core::push_int(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).count() as i64);"));
-    expect(length("l: string[]", "l.filter((x) => !!x).length")).toMatch(like("fv::core::push_int(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_s1| !fv_s1.is_empty()).count() as i64);"));
-    expect(length("l: string[]", "l.slice(1).length")).toMatch(like("fv::core::push_int(out, fv::strings::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
-    expect(length("l: string[]", "l.slice(1).map((x) => x).length")).toMatch(like("fv::core::push_int(out, fv::strings::js_slice_items(props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
+    expect(length("l: string[]", "l.map((x) => x + '!').length")).toMatch(like("fv::core::push_int(out, props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)).count() as i64);"));
+    expect(length("l: string[]", "l.filter((x) => !!x).length")).toMatch(like("fv::core::push_int(out, props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_s1| !fv_s1.is_empty()).count() as i64);"));
+    expect(length("l: string[]", "l.slice(1).length")).toMatch(like("fv::core::push_int(out, fv::strings::js_slice_items(props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
+    expect(length("l: string[]", "l.slice(1).map((x) => x).length")).toMatch(like("fv::core::push_int(out, fv::strings::js_slice_items(props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).count() as i64);"));
     expect(length("s: string", "s.length")).toMatch(like("fv::core::push_int(out, fv::strings::js_length(&props.s));"));
     expect(length("s: string", "[].length")).toMatch(like('out.push_str("<p>0</p>");'));
   });
@@ -546,7 +546,7 @@ describe("`.length`", () => {
   it("adds to the length of a list it holds as an integer, and to a count of computed items as a number", () => {
     expect(length("r: Record<string, number>", "Object.entries(r).map((e) => e[0]).length + 1")).toMatch(like("fv::core::push_int(out, props.r.len() as i64 + 1);"));
     expect(length("l: string[]", "l.filter((x) => !!x).length + 1")).toMatch(like(
-      "fv::core::push_number(out, props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).count() as i64 as f64 + 1.0);",
+      "fv::core::push_number(out, props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).count() as i64 as f64 + 1.0);",
     ));
   });
 
@@ -634,7 +634,7 @@ describe("array literals", () => {
     expect(loop("n: number", "[n, 1.5]")).toMatch(like("for x_ref in [props.n as f64, 1.5f64].iter() {"));
     expect(loop("s: string[]", "s.map(() => -1).flatMap((b) => [b, 10 * 0, 0.5])")).toMatch(like("[fv_b as f64, 0.0f64, 0.5f64]"));
     expect(loop("s: string[]", "s.map(() => -1)")).toMatch(like(".map(|_| -1i64)"));
-    expect(loop("l: string[]", "[...l, 'a']")).toMatch(like('for x_cow in props.l.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).chain([std::borrow::Cow::<str>::Borrowed("a")]) {'));
+    expect(loop("l: string[]", "[...l, 'a']")).toMatch(like('for x_cow in props.l.iter().map(|v| Cow::<str>::Borrowed(&**v)).chain([Cow::<str>::Borrowed("a")]) {'));
   });
 
   const one = "FV0611 an array literal holds strings, numbers or booleans, all of one type";
@@ -741,17 +741,17 @@ describe("expressions checked a second time", () => {
 
   it("types the object literals a function's return type states through `let` assigned again and loops", () => {
     expect(render(`${card}defineProps<{ on: boolean }>();\nfunction f(): Card { let c = "a"; c = "b"; return { label: c }; }`, "<p>{{ f().label }}</p>")).toMatch(like(
-      'fv::core::escape_into(out, &((Card { label: std::borrow::Cow::<str>::Borrowed("b") }).label));',
+      'fv::core::escape_into(out, &((Card { label: Cow::<str>::Borrowed("b") }).label));',
     ));
     expect(render(`${card}const props = defineProps<{ xs: string[] }>();\nfunction f(): Card { let c = ""; for (const x of props.xs) { c = c + x; } return { label: c }; }`, "<p>{{ f().label }}</p>")).toMatch(
-      /fv::core::escape_into\(out, &\(\(\{ let mut \w+: String = String::new\(\); for \w+ in props\.xs\.iter\(\)[^]*Card \{ label: std::borrow::Cow::<str>::Owned\(str::to_owned\(&\*\w+\)\) \} \}\)\.label\)\);/,
+      /fv::core::escape_into\(out, &\(\(\{ let mut \w+: String = String::new\(\); for \w+ in props\.xs\.iter\(\)[^]*Card \{ label: Cow::<str>::Owned\(str::to_owned\(&\*\w+\)\) \} \}\)\.label\)\);/,
     );
   });
 
   it("types a `?:` of an object literal and a struct in a list, and refuses `&&` of an object literal", () => {
     const list = (items: string) => render(`import { computed } from "vue";\n${card}const props = defineProps<{ on: boolean; c: Card }>();\nconst c = computed((): Card[] => [${items}]);`, '<p v-for="x in c">{{ x.label }}</p>');
-    expect(list('props.on ? { label: "a" } : props.c')).toMatch(like('let s_c = Vec::from([if props.on { Card { label: std::borrow::Cow::<str>::Borrowed("a") } } else { props.c.clone() }]);'));
-    expect(list('props.on ? props.c : { label: "a" }')).toMatch(like('let s_c = Vec::from([if props.on { props.c.clone() } else { Card { label: std::borrow::Cow::<str>::Borrowed("a") } }]);'));
+    expect(list('props.on ? { label: "a" } : props.c')).toMatch(like('let s_c = Vec::from([if props.on { Card { label: Cow::<str>::Borrowed("a") } } else { props.c.clone() }]);'));
+    expect(list('props.on ? props.c : { label: "a" }')).toMatch(like('let s_c = Vec::from([if props.on { props.c.clone() } else { Card { label: Cow::<str>::Borrowed("a") } }]);'));
     expect(refusals(`import { computed } from "vue";\n${card}const props = defineProps<{ on: boolean }>();\nconst c = computed((): Card | false => props.on && { label: "a" });`, "<p>{{ c }}</p>")).toEqual([
       "FV0634 an object literal in a `computed` whose type is not known, which the server builds as the Rust struct of an interface: annotate the `computed`, as `computed<Card>(() => …)` or `computed((): Card => …)` (the template reads it as `c` at components/X.vue:7:17)",
     ]);
@@ -759,7 +759,7 @@ describe("expressions checked a second time", () => {
 
   it("reads a type stated in a `.ts` file where the file declares it", () => {
     expect(render('import { one } from "./lib";', "<p>{{ one().label }}</p>", { files: { "lib.ts": 'export interface Card { label: string }\nexport function one(): Card { return { label: "a" } as Card; }\n' } })).toMatch(like(
-      'fv::core::escape_into(out, &((super::types::Card { label: std::borrow::Cow::<str>::Borrowed("a") }).label));',
+      'fv::core::escape_into(out, &((super::types::Card { label: Cow::<str>::Borrowed("a") }).label));',
     ));
   });
 
@@ -821,7 +821,7 @@ describe("values built from object literals in place", () => {
   it("builds a list of a union's members as a list of its enum, and reads it", () => {
     const script = 'type Tone = "calm" | "loud";\ninterface Mix { tones: Tone[] }\nconst props = defineProps<{ t: Tone }>();\nfunction mix(): Mix { return { tones: [props.t, "loud"] }; }';
     expect(render(script, '<p>{{ mix().tones.join(",") }}</p>')).toMatch(like(
-      'fv::core::escape_join(out, ((Mix { tones: vec![props.t, Tone::Loud] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");',
+      'fv::core::escape_join(out, ((Mix { tones: vec![props.t, Tone::Loud] }).tones).iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");',
     ));
   });
 
@@ -833,7 +833,7 @@ describe("values built from object literals in place", () => {
   });
 
   const card = 'interface Card { label: string }\nconst props = defineProps<{ on: boolean; cs: Card[]; c: Card; oc?: Card }>();\nfunction cards(): Card[] { return [{ label: "a" }]; }\nfunction one(): Card { return { label: "b" }; }\nfunction maybe(): Card | undefined { return props.on ? { label: "c" } : undefined; }\n';
-  const built = (label: string) => `Card { label: std::borrow::Cow::<str>::Borrowed("${label}") }`;
+  const built = (label: string) => `Card { label: Cow::<str>::Borrowed("${label}") }`;
 
   it("chooses between one and another value of its type, which it copies", () => {
     const loop = (list: string) => render(card, `<p v-for="x in ${list}">{{ x.label }}</p>`);
@@ -886,7 +886,7 @@ describe("`||`, `??` and `?:` of strings, numbers and booleans", () => {
     ["s ?? t", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(&*props.t));"],
     ["s ?? 'x'", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(\"x\"));"],
     ["s ?? (on ? 'a' : 'b')", "fv::core::escape_into(out, props.s.as_deref().unwrap_or(if props.on { \"a\" } else { \"b\" }));"],
-    ["(t + 'a') || 'b'", "fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!(\"{}a\", props.t)); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(\"b\") } });"],
+    ["(t + 'a') || 'b'", "fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(format!(\"{}a\", props.t)); if !a.is_empty() { a } else { Cow::<str>::Borrowed(\"b\") } });"],
     ["on ? t : s", "if let Some(v) = if props.on { Some(&*props.t) } else { props.s.as_deref() } {"],
     ["on ? s : t", "if let Some(v) = if props.on { props.s.as_deref() } else { Some(&*props.t) } {"],
     ["on ? s : undefined", "if let Some(v) = if props.on { props.s.as_deref() } else { None } {"],
@@ -982,8 +982,8 @@ describe("types written in other files", () => {
 
   it("builds an object literal, and the items of a `.map()`, as the interface of the `.ts` file whose function takes them", () => {
     const lib = { files: { "lib.ts": "export interface Item { a: string }\nexport function f(p: Item) { return p.a; }\nexport function g(ps: Item[]) { return ps.length; }\n" } };
-    expect(render('import { f } from "./lib";', '<p>{{ f({ a: "x" }) }}</p>', lib)).toMatch(like('let fv_p = super::types::Item { a: std::borrow::Cow::<str>::Borrowed("x") };'));
-    expect(render('import { g } from "./lib";\nconst xs = ["x", "y"];', "<p>{{ g(xs.map((x) => ({ a: x }))) }}</p>", lib)).toMatch(like(".map(|fv_x| super::types::Item { a: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_x)) })"));
+    expect(render('import { f } from "./lib";', '<p>{{ f({ a: "x" }) }}</p>', lib)).toMatch(like('let fv_p = super::types::Item { a: Cow::<str>::Borrowed("x") };'));
+    expect(render('import { g } from "./lib";\nconst xs = ["x", "y"];', "<p>{{ g(xs.map((x) => ({ a: x }))) }}</p>", lib)).toMatch(like(".map(|fv_x| super::types::Item { a: Cow::<str>::Owned(str::to_owned(&*fv_x)) })"));
   });
 });
 
@@ -1092,7 +1092,7 @@ describe("names holding `$`", () => {
   it("writes a prop and fields whose names hold `$` as Rust fields renamed to their JSON keys", () => {
     const out = whole("interface Meta { $tag: string; tag: string; a$b: number; $type: string }\ndefineProps<{ price$: number; meta: Meta }>();", "<p>{{ price$ }}|{{ meta.$tag }}|{{ meta.tag }}|{{ meta.a$b }}|{{ meta.$type }}</p>");
     expect(rustOnly(out.replace(/#\[serde\(rename = "[^"]*"\)\]/g, ""))).not.toContain("$");
-    expect(out).toContain('    #[serde(rename = "$tag")]\n    pub tag_2: Cow<\'a, str>,\n    #[serde(rename = "tag")]\n    pub tag: Cow<\'a, str>,\n    #[serde(rename = "a$b")]\n    pub a_b: i64,\n    #[serde(rename = "$type")]\n    pub r#type: Cow<\'a, str>,');
+    expect(out).toContain('    #[serde(rename = "$tag")]\n    pub tag_2: Cow<\'a, str>,\n    pub tag: Cow<\'a, str>,\n    #[serde(rename = "a$b")]\n    pub a_b: i64,\n    #[serde(rename = "$type")]\n    pub r#type: Cow<\'a, str>,');
     expect(out).toContain('    #[serde(rename = "price$")]\n    pub price: i64,');
     expect(flat(out)).toContain(["fv::core::push_int(out, props.price);", "out.push('|');", "fv::core::escape_into(out, &props.meta.tag_2);", "out.push('|');", "fv::core::escape_into(out, &props.meta.tag);", "out.push('|');", "fv::core::push_int(out, props.meta.a_b);", "out.push('|');", "fv::core::escape_into(out, &props.meta.r#type);"].join("\n"));
   });

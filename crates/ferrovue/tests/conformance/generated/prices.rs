@@ -12,11 +12,8 @@ pub const NAME: &str = "Prices";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "cents")]
     pub cents: i64,
-    #[serde(rename = "total")]
     pub total: Cow<'a, str>,
-    #[serde(rename = "posted")]
     pub posted: Cow<'a, str>,
 }
 
@@ -46,7 +43,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
     out.reserve(98 + props.total.len() + props.posted.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Prices.vue");
     let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
-    let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
+    let s_amount = if fv_i18n.locale() == "nl" { Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { Cow::<str>::Borrowed(&*s_fixed) };
     if fv_i18n.locale().is_empty() {
         out.push_str("<section lang><p>");
     } else {

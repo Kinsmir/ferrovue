@@ -10,11 +10,9 @@ use std::borrow::Cow;
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct CartState<'a> {
-    #[serde(rename = "lines")]
     pub lines: Vec<Cow<'a, str>>,
-    #[serde(rename = "owner")]
     pub owner: Cow<'a, str>,
-    #[serde(rename = "coupon", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coupon: Option<Cow<'a, str>>,
 }
 
@@ -36,7 +34,6 @@ impl<'a> CartState<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Stores<'a> {
-    #[serde(rename = "cart")]
     pub cart: CartState<'a>,
 }
 

@@ -12,9 +12,7 @@ pub const NAME: &str = "UnionListBuilt";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Swatch<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "hue")]
     pub hue: super::types::Hue,
 }
 
@@ -29,13 +27,9 @@ impl<'a> Swatch<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "swatches")]
     pub swatches: Vec<Swatch<'a>>,
-    #[serde(rename = "hues")]
     pub hues: Vec<super::types::Hue>,
-    #[serde(rename = "hue")]
     pub hue: super::types::Hue,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -72,12 +66,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.swatches.iter().map(|fv_s_3| fv_s_3.hue).collect(), extra: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.to_vec(), extra: Some(props.hues.iter().copied().enumerate().filter(|fv_entry| { let fv_h_2 = &fv_entry.1; let fv_i = fv_entry.0 as i64; fv_i as f64 > 0.0 || *fv_h_2 == super::types::Hue::Red }).map(|(_, v)| v).collect()), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_bright.to_vec(), extra: Some(s_named.to_vec()), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: vec![props.hue, super::types::Hue::Green], extra: Some(Vec::new()), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_hue_set::try_render(out, &super::union_hue_set::Props { set: super::types::HueSet { hues: vec![props.hue, super::types::Hue::Red, props.hue], note: std::borrow::Cow::<str>::Borrowed(&*props.label) }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_hue_set::try_render(out, &super::union_hue_set::Props { set: super::types::HueSet { hues: props.swatches.iter().map(|fv_s_4| fv_s_4.hue).collect(), note: std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(s_bright.len() as i64))) }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.swatches.iter().map(|fv_s_3| fv_s_3.hue).collect(), extra: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.to_vec(), extra: Some(props.hues.iter().copied().enumerate().filter(|fv_entry| { let fv_h_2 = &fv_entry.1; let fv_i = fv_entry.0 as i64; fv_i as f64 > 0.0 || *fv_h_2 == super::types::Hue::Red }).map(|(_, v)| v).collect()), label: Cow::Borrowed(&*props.label) })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_bright.to_vec(), extra: Some(s_named.to_vec()), label: Cow::Borrowed(&*props.label) })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: vec![props.hue, super::types::Hue::Green], extra: Some(Vec::new()), label: Cow::Borrowed(&*props.label) })?;
+    super::union_hue_set::try_render(out, &super::union_hue_set::Props { set: super::types::HueSet { hues: vec![props.hue, super::types::Hue::Red, props.hue], note: Cow::<str>::Borrowed(&*props.label) }, label: Cow::Borrowed(&*props.label) })?;
+    super::union_hue_set::try_render(out, &super::union_hue_set::Props { set: super::types::HueSet { hues: props.swatches.iter().map(|fv_s_4| fv_s_4.hue).collect(), note: Cow::<str>::Owned(format!("{}", fv::core::Js(s_bright.len() as i64))) }, label: Cow::Borrowed(&*props.label) })?;
     out.push_str("<!--[-->");
     for fv_h_ref in s_bright.iter() {
         let fv_h_3 = *fv_h_ref;

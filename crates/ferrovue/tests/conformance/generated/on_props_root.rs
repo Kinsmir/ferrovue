@@ -72,15 +72,14 @@ impl ferrovue::props::Union for OnPropsRootTone {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub n: Option<i64>,
-    #[serde(rename = "text", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<Cow<'a, str>>,
-    #[serde(rename = "flag")]
     pub flag: bool,
-    #[serde(rename = "rate", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rate: Option<f64>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<OnPropsRootTone>,
 }
 
@@ -132,7 +131,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.text.as_deref().map_or(0, str::len) + 4);
-    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: props.n.filter(|v| *v != 0), on_text: props.text.as_deref().map(std::borrow::Cow::Borrowed).filter(|v| !v.is_empty()), on_flag: Some(props.flag).filter(|v| *v), on_set: Some(props.flag).filter(|v| *v), on_rate: Some(props.rate.unwrap_or(0.0f64).sqrt()).filter(|v| *v != 0.0 && !v.is_nan()), on_tone: props.tone.map(|v| match v { OnPropsRootTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsRootTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsRootTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }).filter(|v| *v != super::on_props_kid::OnPropsKidOnTone::Empty), on_req: props.flag, on_num: 7i64 })?;
+    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: props.n.filter(|v| *v != 0), on_text: props.text.as_deref().map(Cow::Borrowed).filter(|v| !v.is_empty()), on_flag: Some(props.flag).filter(|v| *v), on_set: Some(props.flag).filter(|v| *v), on_rate: Some(props.rate.unwrap_or(0.0f64).sqrt()).filter(|v| *v != 0.0 && !v.is_nan()), on_tone: props.tone.map(|v| match v { OnPropsRootTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsRootTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsRootTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }).filter(|v| *v != super::on_props_kid::OnPropsKidOnTone::Empty), on_req: props.flag, on_num: 7i64 })?;
     Ok(())
 }
 

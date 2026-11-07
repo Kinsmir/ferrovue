@@ -12,17 +12,13 @@ pub const NAME: &str = "CssVars";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "color")]
     pub color: Cow<'a, str>,
-    #[serde(rename = "size")]
     pub size: i64,
-    #[serde(rename = "ratio")]
     pub ratio: f64,
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
-    #[serde(rename = "font")]
     pub font: Cow<'a, str>,
-    #[serde(rename = "gap", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gap: Option<i64>,
 }
 
@@ -118,7 +114,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         fv::core::push_int(out, props.size);
         out.push_str(";\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("vars")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("margin", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("1"))]), fv::attrs::Attr::style([("padding", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("{}px", fv::core::Js(props.size))))), ("color", fv::attrs::Attr::str(&props.color))])]))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--b3187d50-color", if props.color.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.color) }), ("--b3187d50-doubled\\ \\+\\ \\\"px\\\"", if format!("{}px", fv::core::Js(s_doubled)).is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("{}px", fv::core::Js(s_doubled)))) }), ("--b3187d50-accent", fv::attrs::Attr::str("teal")), ("--b3187d50-label", match props.label.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--b3187d50-font", if props.font.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.font) }), ("--b3187d50-theme", if s_theme.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(s_theme) }), ("--b3187d50-ratio", fv::attrs::Attr::Float(props.ratio)), ("--b3187d50-gap", match props.gap { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") }), ("--b3187d50-size", fv::attrs::Attr::Int(props.size))]))]], 1, "");
+        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("vars")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("margin", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("1"))]), fv::attrs::Attr::style([("padding", fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}px", fv::core::Js(props.size))))), ("color", fv::attrs::Attr::str(&props.color))])]))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--b3187d50-color", if props.color.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.color) }), ("--b3187d50-doubled\\ \\+\\ \\\"px\\\"", if format!("{}px", fv::core::Js(s_doubled)).is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}px", fv::core::Js(s_doubled)))) }), ("--b3187d50-accent", fv::attrs::Attr::str("teal")), ("--b3187d50-label", match props.label.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--b3187d50-font", if props.font.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.font) }), ("--b3187d50-theme", if s_theme.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(s_theme) }), ("--b3187d50-ratio", fv::attrs::Attr::Float(props.ratio)), ("--b3187d50-gap", match props.gap { Some(v) => fv::attrs::Attr::Int(v), None => fv::attrs::Attr::str("initial") }), ("--b3187d50-size", fv::attrs::Attr::Int(props.size))]))]], 1, "");
     }
     out.push_str(" data-v-b3187d50><h2 data-v-b3187d50>");
     if let Some(v) = props.label.as_deref() {

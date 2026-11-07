@@ -12,11 +12,10 @@ pub const NAME: &str = "Chips";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "chips")]
     pub chips: Vec<Cow<'a, str>>,
-    #[serde(rename = "counts", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counts: Option<Vec<i64>>,
-    #[serde(rename = "marks", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marks: Option<ferrovue::props::Record<'a, i64>>,
 }
 

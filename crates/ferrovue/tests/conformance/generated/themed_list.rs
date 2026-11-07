@@ -12,11 +12,8 @@ pub const NAME: &str = "ThemedList";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
-    #[serde(rename = "theme")]
     pub theme: Cow<'a, str>,
-    #[serde(rename = "wide")]
     pub wide: bool,
 }
 

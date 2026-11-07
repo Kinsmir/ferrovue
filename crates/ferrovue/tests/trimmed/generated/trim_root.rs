@@ -12,9 +12,7 @@ pub const NAME: &str = "TrimRoot";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
 }
 

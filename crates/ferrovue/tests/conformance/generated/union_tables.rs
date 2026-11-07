@@ -12,13 +12,10 @@ pub const NAME: &str = "UnionTables";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "pick", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pick: Option<super::types::Mood>,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -61,11 +58,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::QX, super::types::Mood::Loud => super::types::Mood::Calm, super::types::Mood::QX => super::types::Mood::Loud }), label: std::borrow::Cow::Borrowed(match s_choice { super::types::MoodChoice::Calm => "Calm", super::types::MoodChoice::Loud => "Loud", super::types::MoodChoice::QX => "Odd 'one'", super::types::MoodChoice::Empty => "<none> & \"all\"" }) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match props.mood { super::types::Mood::Calm => Some(super::types::Mood::Loud), super::types::Mood::Loud | super::types::Mood::QX => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match s_choice { super::types::MoodChoice::Calm => super::types::Mood::Calm, super::types::MoodChoice::Loud => super::types::Mood::Loud, super::types::MoodChoice::QX | super::types::MoodChoice::Empty => super::types::Mood::QX }), label: std::borrow::Cow::Borrowed(match s_other { super::types::MoodChoice::Calm => "Calm", super::types::MoodChoice::Loud => "Loud", super::types::MoodChoice::QX => "Odd 'one'", super::types::MoodChoice::Empty => "<none> & \"all\"" }) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match match s_other { super::types::MoodChoice::Calm => super::types::Mood::Calm, super::types::MoodChoice::Loud => super::types::Mood::Loud, super::types::MoodChoice::QX | super::types::MoodChoice::Empty => super::types::Mood::QX } { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }), label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::QX, super::types::Mood::Loud => super::types::Mood::Calm, super::types::Mood::QX => super::types::Mood::Loud }), label: Cow::Borrowed(match s_choice { super::types::MoodChoice::Calm => "Calm", super::types::MoodChoice::Loud => "Loud", super::types::MoodChoice::QX => "Odd 'one'", super::types::MoodChoice::Empty => "<none> & \"all\"" }) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: match props.mood { super::types::Mood::Calm => Some(super::types::Mood::Loud), super::types::Mood::Loud | super::types::Mood::QX => None }, label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match s_choice { super::types::MoodChoice::Calm => super::types::Mood::Calm, super::types::MoodChoice::Loud => super::types::Mood::Loud, super::types::MoodChoice::QX | super::types::MoodChoice::Empty => super::types::Mood::QX }), label: Cow::Borrowed(match s_other { super::types::MoodChoice::Calm => "Calm", super::types::MoodChoice::Loud => "Loud", super::types::MoodChoice::QX => "Odd 'one'", super::types::MoodChoice::Empty => "<none> & \"all\"" }) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match match s_other { super::types::MoodChoice::Calm => super::types::Mood::Calm, super::types::MoodChoice::Loud => super::types::Mood::Loud, super::types::MoodChoice::QX | super::types::MoodChoice::Empty => super::types::Mood::QX } { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud => super::types::Mood::QX, super::types::Mood::QX => super::types::Mood::Calm }), label: Cow::Borrowed(&*props.label) })?;
     out.push_str("<p data-choice=\"");
     fv::core::escape_into(out, fv::props::Union::as_str(s_choice));
     out.push_str("\">");

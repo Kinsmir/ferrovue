@@ -128,15 +128,11 @@ impl ferrovue::props::Union for TagGalleryRule {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "level")]
     pub level: TagGalleryLevel,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "rule")]
     pub rule: TagGalleryRule,
-    #[serde(rename = "ordered")]
     pub ordered: bool,
 }
 
@@ -178,7 +174,7 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(330 + 2 + props.title.len() + props.note.as_deref().map_or(0, str::len) + 2);
     out.push_str("<article data-v-71d8588a>");
-    super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
+    super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(match props.level { TagGalleryLevel::H1 => super::tag_heading::TagHeadingAs::H1, TagGalleryLevel::H2 => super::tag_heading::TagHeadingAs::H2, TagGalleryLevel::H3 => super::tag_heading::TagHeadingAs::H3 }), text: Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
@@ -200,7 +196,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
             filled
         })),
     }, &fv::attrs::Attrs::new(&[("data-role", fv::attrs::Attr::str("title"))], " data-v-71d8588a"))?;
-    super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: None, text: std::borrow::Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
+    super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: None, text: Cow::Borrowed(&*props.title) }, super::tag_heading::Slots {
         default: None,
     }, &fv::attrs::Attrs::scoped(" data-v-71d8588a"))?;
     match props.rule {

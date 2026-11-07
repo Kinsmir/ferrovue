@@ -12,7 +12,6 @@ pub const NAME: &str = "ImportedPropsMixed";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Extra {
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
 }
 
@@ -27,13 +26,10 @@ impl Extra {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on: Option<bool>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -72,9 +68,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::escape_into(out, &props.label);
     if props.on.unwrap_or(false) {
-        super::imported_props::try_render(out, &super::imported_props::Props { title: std::borrow::Cow::Borrowed(&*props.label), count: None, mood: props.mood, tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect(), note: None })?;
+        super::imported_props::try_render(out, &super::imported_props::Props { title: Cow::Borrowed(&*props.label), count: None, mood: props.mood, tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect(), note: None })?;
     } else {
-        super::imported_props::try_render(out, &super::imported_props::Props { title: std::borrow::Cow::Borrowed(&*format!("{}!", props.label)), count: Some(props.tags.len() as i64), mood: props.mood, tags: Vec::new(), note: Some(std::borrow::Cow::Borrowed(&*props.label)) })?;
+        super::imported_props::try_render(out, &super::imported_props::Props { title: Cow::Borrowed(&*format!("{}!", props.label)), count: Some(props.tags.len() as i64), mood: props.mood, tags: Vec::new(), note: Some(Cow::Borrowed(&*props.label)) })?;
     }
     out.push_str("</section>");
     Ok(())

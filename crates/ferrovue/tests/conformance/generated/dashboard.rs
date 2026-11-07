@@ -12,15 +12,11 @@ pub const NAME: &str = "Dashboard";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "heading")]
     pub heading: Cow<'a, str>,
-    #[serde(rename = "panels")]
     pub panels: Vec<super::panel::Props<'a>>,
-    #[serde(rename = "words")]
     pub words: Vec<Cow<'a, str>>,
-    #[serde(rename = "footer", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub footer: Option<Cow<'a, str>>,
-    #[serde(rename = "total")]
     pub total: i64,
 }
 
@@ -56,14 +52,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(81 + 7 * props.words.len() + 16 * props.panels.len() + 7 * props.words.len() + props.heading.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.footer.as_deref().map_or(0, str::len));
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Dashboard.vue");
     out.push_str("<main>");
-    fv_refusals.check(super::panel::try_render(out, &super::panel::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: Some(props.total) }, super::panel::Slots {
+    fv_refusals.check(super::panel::try_render(out, &super::panel::Props { title: Cow::Borrowed(&*props.heading), count: Some(props.total) }, super::panel::Slots {
         title: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<h1>");
             fv::core::escape_into(out, &props.heading);
             out.push_str("</h1>");
         })),
         default: Some(fv::render::Slot::new(&|out: &mut String| {
-            fv_refusals.join(super::text::try_render(out, &super::text::Props { title: std::borrow::Cow::Borrowed(&*props.heading), count: props.total, on: props.total as f64 != 0.0, note: None, score: None, padded: std::borrow::Cow::Borrowed(" x ") }));
+            fv_refusals.join(super::text::try_render(out, &super::text::Props { title: Cow::Borrowed(&*props.heading), count: props.total, on: props.total as f64 != 0.0, note: None, score: None, padded: Cow::Borrowed(" x ") }));
         })),
         footer: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -83,7 +79,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv_refusals.check(super::panel::try_render(out, fv_p, super::panel::Slots {
             title: None,
             default: Some(fv::render::Slot::new(&|out: &mut String| {
-                fv_refusals.join(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.heading) }, super::frame::Slots {
+                fv_refusals.join(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.heading) }, super::frame::Slots {
                     head: None,
                     default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
                         let mut filled = false;
@@ -104,7 +100,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         }))?;
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::panel::try_render(out, &super::panel::Props { title: std::borrow::Cow::Borrowed("static"), count: None }, super::panel::Slots {
+    fv_refusals.check(super::panel::try_render(out, &super::panel::Props { title: Cow::Borrowed("static"), count: None }, super::panel::Slots {
         title: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;

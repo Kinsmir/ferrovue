@@ -12,19 +12,16 @@ pub const NAME: &str = "Fallthrough";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "title", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<Cow<'a, str>>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "color", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Cow<'a, str>>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -77,26 +74,26 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(28 + props.label.len() + props.title.as_deref().map_or(0, str::len) + props.tone.as_deref().map_or(0, str::len) + props.color.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
     out.push_str("<article>");
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&["extra", if props.on { "on" } else { "" }, if !props.on { "off" } else { "" }]))), ("id", fv::attrs::Attr::str("given")), ("data-k", fv::attrs::Attr::str("v")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::style([("color", props.color.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("fontWeight", fv::attrs::Attr::Int(props.n))])), ("aria-label", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("disabled", fv::attrs::Attr::Bool(props.on)), ("hidden", fv::attrs::Attr::Bool(!props.on)), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed("plain"), shown: None, note: None }, &fv::attrs::Attrs::NONE)?;
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed("same"), shown: None, note: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("leaf"))], ""))?;
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed("hidden"), shown: Some(props.on), note: None }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("display", fv::attrs::Attr::str("flex"))])), ("data-tone", fv::attrs::Attr::str(props.tone.as_deref().unwrap_or("none")))], ""))?;
-    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("passed")), ("id", fv::attrs::Attr::str("given")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::style([("color", props.color.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))])), ("data-x", fv::attrs::Attr::str("1"))], ""))?;
-    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: std::borrow::Cow::Borrowed("bare") }, &fv::attrs::Attrs::NONE)?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed(&*props.label), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&["extra", if props.on { "on" } else { "" }, if !props.on { "off" } else { "" }]))), ("id", fv::attrs::Attr::str("given")), ("data-k", fv::attrs::Attr::str("v")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::style([("color", props.color.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("fontWeight", fv::attrs::Attr::Int(props.n))])), ("aria-label", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("disabled", fv::attrs::Attr::Bool(props.on)), ("hidden", fv::attrs::Attr::Bool(!props.on)), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed("plain"), shown: None, note: None }, &fv::attrs::Attrs::NONE)?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed("same"), shown: None, note: props.note.as_deref().map(Cow::Borrowed) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("leaf"))], ""))?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed("hidden"), shown: Some(props.on), note: None }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("display", fv::attrs::Attr::str("flex"))])), ("data-tone", fv::attrs::Attr::str(props.tone.as_deref().unwrap_or("none")))], ""))?;
+    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("passed")), ("id", fv::attrs::Attr::str("given")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::style([("color", props.color.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))])), ("data-x", fv::attrs::Attr::str("1"))], ""))?;
+    super::fall_inner::try_render_scoped(out, &super::fall_inner::Props { label: Cow::Borrowed("bare") }, &fv::attrs::Attrs::NONE)?;
     out.push_str("<dl>");
-    super::fall_pair::try_render_scoped(out, &super::fall_pair::Props { first: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("dropped")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
+    super::fall_pair::try_render_scoped(out, &super::fall_pair::Props { first: Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("dropped")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
     out.push_str("</dl>");
-    super::fall_root::try_render_scoped(out, &super::fall_root::Props { text: props.title.as_deref().map(std::borrow::Cow::Borrowed) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("outer")), ("data-via", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", fv::attrs::Attr::str(&props.label))], ""))?;
+    super::fall_root::try_render_scoped(out, &super::fall_root::Props { text: props.title.as_deref().map(Cow::Borrowed) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("outer")), ("data-via", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", fv::attrs::Attr::str(&props.label))], ""))?;
     super::fall_root::try_render_scoped(out, &super::fall_root::Props { text: None }, &fv::attrs::Attrs::NONE)?;
     super::fall_use::try_render_scoped(out, &super::fall_use::Props {}, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[props.tone.as_deref().unwrap_or(""), "used"]))), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("data-use", fv::attrs::Attr::str("1")), ("style", fv::attrs::Attr::style([("color", props.color.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))]))], ""))?;
-    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: std::borrow::Cow::Borrowed("/") }, fv_route, &fv::attrs::Attrs::new(&[("class", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("data-link", fv::attrs::Attr::str("1"))], ""))?;
-    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: std::borrow::Cow::Borrowed("/search") }, fv_route, &fv::attrs::Attrs::NONE)?;
-    super::fall_binds::try_render_scoped(out, &super::fall_binds::Props { cls: props.tone.as_deref().map(std::borrow::Cow::Borrowed), css: std::borrow::Cow::Borrowed(&*format!("color: {}; top: 1px", props.color.as_deref().unwrap_or("red"))) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("x")), ("style", fv::attrs::Attr::style([("margin", fv::attrs::Attr::str("0"))])), ("title", props.note.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
-    super::fall_binds::try_render_scoped(out, &super::fall_binds::Props { cls: None, css: std::borrow::Cow::Borrowed("") }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if props.on { "on" } else { "" }])))], ""))?;
+    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: Cow::Borrowed("/") }, fv_route, &fv::attrs::Attrs::new(&[("class", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("data-link", fv::attrs::Attr::str("1"))], ""))?;
+    super::fall_link::try_render_scoped(out, &super::fall_link::Props { to: Cow::Borrowed("/search") }, fv_route, &fv::attrs::Attrs::NONE)?;
+    super::fall_binds::try_render_scoped(out, &super::fall_binds::Props { cls: props.tone.as_deref().map(Cow::Borrowed), css: Cow::Borrowed(&*format!("color: {}; top: 1px", props.color.as_deref().unwrap_or("red"))) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("x")), ("style", fv::attrs::Attr::style([("margin", fv::attrs::Attr::str("0"))])), ("title", props.note.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
+    super::fall_binds::try_render_scoped(out, &super::fall_binds::Props { cls: None, css: Cow::Borrowed("") }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if props.on { "on" } else { "" }])))], ""))?;
     super::fall_switch::try_render_scoped(out, &super::fall_switch::Props { mode: if props.on { super::fall_switch::FallSwitchMode::On } else { super::fall_switch::FallSwitchMode::Off } }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("switched")), ("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))], ""))?;
     super::fall_switch::try_render_scoped(out, &super::fall_switch::Props { mode: super::fall_switch::FallSwitchMode::None }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("lost"))], ""))?;
-    super::fall_fade::try_render_scoped(out, &super::fall_fade::Props { text: std::borrow::Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("class", fv::attrs::Attr::str("through"))], ""))?;
-    super::fall_bare::try_render_scoped(out, &super::fall_bare::Props {}, &fv::attrs::Attrs::new(&[("class", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::Str(std::borrow::Cow::<str>::Owned(format!("margin: {}px", fv::core::Js(props.n))))), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
+    super::fall_fade::try_render_scoped(out, &super::fall_fade::Props { text: Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("title", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("class", fv::attrs::Attr::str("through"))], ""))?;
+    super::fall_bare::try_render_scoped(out, &super::fall_bare::Props {}, &fv::attrs::Attrs::new(&[("class", props.title.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::Str(Cow::<str>::Owned(format!("margin: {}px", fv::core::Js(props.n))))), ("data-n", fv::attrs::Attr::Int(props.n))], ""))?;
     out.push_str("</article>");
     Ok(())
 }

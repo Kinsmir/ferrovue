@@ -12,11 +12,8 @@ pub const NAME: &str = "Comments";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
 }
 
@@ -47,14 +44,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--[--><section title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\">");
-    super::comment_box::try_render_scoped(out, &super::comment_box::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::comment_box::Slots {
+    super::comment_box::try_render_scoped(out, &super::comment_box::Props { label: Cow::Borrowed(&*props.label) }, super::comment_box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<b>");
             fv::core::escape_into(out, &props.label);
             out.push_str("</b>");
         })),
     }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("outer")), ("data-label", fv::attrs::Attr::str(&props.label))], ""))?;
-    super::comment_box::try_render_scoped(out, &super::comment_box::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, super::comment_box::Slots {
+    super::comment_box::try_render_scoped(out, &super::comment_box::Props { label: Cow::Borrowed(&*props.label) }, super::comment_box::Slots {
         default: None,
     }, &fv::attrs::Attrs::NONE)?;
     out.push_str(if props.on { "<i>yes</i><!--[-->" } else { "<i>no</i><!--[-->" });

@@ -12,13 +12,10 @@ pub const NAME: &str = "Picker";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "items")]
     pub items: Vec<super::types::Choice<'a>>,
-    #[serde(rename = "heading")]
     pub heading: Cow<'a, str>,
-    #[serde(rename = "selected", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub selected: Option<Cow<'a, str>>,
-    #[serde(rename = "mark")]
     pub mark: Option<Cow<'a, str>>,
 }
 

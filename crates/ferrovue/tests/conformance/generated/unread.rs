@@ -12,19 +12,13 @@ pub const NAME: &str = "Unread";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "when")]
     pub when: Cow<'a, str>,
-    #[serde(rename = "show")]
     pub show: bool,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "word")]
     pub word: Cow<'a, str>,
-    #[serde(rename = "width")]
     pub width: i64,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -65,8 +59,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_stamp = std::cell::LazyCell::new(|| format!("{} ({})", (*s_iso), props.word));
     let s_day = std::cell::LazyCell::new(|| fv::date::js_utc_date(fv_refusals.keep(fv::date::try_date_parse(&props.when), 11, 28)));
     let s_size = std::cell::LazyCell::new(|| fv::strings::js_length(&fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 12, 29)));
-    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&fv_t, props.count as f64), 13, 53)).into_owned())).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
-    let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|fv_note| std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(fv_note, props.count as f64), 14, 45))));
+    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t| Cow::<str>::Owned(Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&fv_t, props.count as f64), 13, 53)).into_owned())).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
+    let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|fv_note| Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(fv_note, props.count as f64), 14, 45))));
     out.push_str("<section><p>");
     fv::core::escape_into(out, &s_upper);
     out.push('|');
@@ -83,7 +77,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push('|');
         fv::core::escape_into(out, (*s_echoed).as_deref().unwrap_or("-"));
         out.push_str("</p><ul><!--[-->");
-        for fv_c_cow in (*s_copies).iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
+        for fv_c_cow in (*s_copies).iter().map(|v| Cow::<str>::Borrowed(&**v)) {
             let fv_c: &str = &fv_c_cow;
             out.push_str("<li>");
             fv::core::escape_into(out, fv_c);
@@ -92,7 +86,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
-        fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: None, label: Some(std::borrow::Cow::Borrowed(&*(*s_stamp))) }, super::unread_fold::Slots {
+        fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: None, label: Some(Cow::Borrowed(&*(*s_stamp))) }, super::unread_fold::Slots {
             default: None,
         }))?;
         out.push_str("<!--]-->");

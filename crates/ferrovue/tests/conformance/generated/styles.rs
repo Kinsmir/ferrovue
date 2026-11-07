@@ -12,21 +12,15 @@ pub const NAME: &str = "Styles";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "color")]
     pub color: Cow<'a, str>,
-    #[serde(rename = "size")]
     pub size: i64,
-    #[serde(rename = "shown")]
     pub shown: bool,
-    #[serde(rename = "hidden")]
     pub hidden: bool,
-    #[serde(rename = "raw")]
     pub raw: Cow<'a, str>,
-    #[serde(rename = "accent", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accent: Option<Cow<'a, str>>,
-    #[serde(rename = "width", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub width: Option<i64>,
-    #[serde(rename = "big")]
     pub big: bool,
 }
 

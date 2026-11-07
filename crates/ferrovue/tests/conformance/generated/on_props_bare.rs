@@ -12,13 +12,12 @@ pub const NAME: &str = "OnPropsBare";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "on1", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on1: Option<i64>,
     #[serde(rename = "onLabel", default, skip_serializing_if = "Option::is_none")]
     pub on_label: Option<Cow<'a, str>>,
     #[serde(rename = "onShown", default, skip_serializing_if = "Option::is_none")]
     pub on_shown: Option<bool>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

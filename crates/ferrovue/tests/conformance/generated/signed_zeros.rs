@@ -10,9 +10,7 @@ pub const NAME: &str = "SignedZeros";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "m")]
     pub m: i64,
 }
 

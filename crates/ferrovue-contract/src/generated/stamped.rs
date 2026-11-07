@@ -12,13 +12,9 @@ pub const NAME: &str = "Stamped";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "on")]
     pub on: Cow<'a, str>,
-    #[serde(rename = "year")]
     pub year: i64,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "fill")]
     pub fill: Cow<'a, str>,
 }
 

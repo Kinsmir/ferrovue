@@ -68,13 +68,9 @@ impl ferrovue::props::Union for HeadChoiceKind {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "article")]
     pub article: bool,
-    #[serde(rename = "kind")]
     pub kind: HeadChoiceKind,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -105,16 +101,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head)
     fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str("%s (chosen)"))]));
     out.push_str("<div>");
     if props.article {
-        super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
+        super::head_article::try_render(out, &super::head_article::Props { title: Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect() }, fv_head)?;
     } else {
-        super::head_note::try_render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
+        super::head_note::try_render(out, &super::head_note::Props { title: Cow::Borrowed(&*props.title), tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect() }, fv_head)?;
     }
     match props.kind {
         HeadChoiceKind::Article => {
-            super::head_article::try_render(out, &super::head_article::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
+            super::head_article::try_render(out, &super::head_article::Props { title: Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect() }, fv_head)?;
         }
         HeadChoiceKind::Note => {
-            super::head_note::try_render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| std::borrow::Cow::Borrowed(&**v)).collect() }, fv_head)?;
+            super::head_note::try_render(out, &super::head_note::Props { title: Cow::Borrowed(&*format!("{} again", props.title)), tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect() }, fv_head)?;
         }
     }
     out.push_str("</div>");

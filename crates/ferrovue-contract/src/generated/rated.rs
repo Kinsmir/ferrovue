@@ -10,7 +10,6 @@ pub const NAME: &str = "Rated";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "stars")]
     pub stars: i64,
 }
 

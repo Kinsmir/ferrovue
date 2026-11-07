@@ -10,9 +10,7 @@ pub const NAME: &str = "RowChip";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "row")]
     pub row: super::data_list::Row<'a>,
-    #[serde(rename = "first")]
     pub first: bool,
 }
 

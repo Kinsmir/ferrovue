@@ -72,15 +72,12 @@ impl ferrovue::props::Union for UnionObjectsState {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "align", with = "fv::props::union_prop")]
+    #[serde(with = "fv::props::union_prop")]
     pub align: crate::domain::Align,
-    #[serde(rename = "state")]
     pub state: UnionObjectsState,
-    #[serde(rename = "side", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub side: Option<crate::domain::Align>,
-    #[serde(rename = "words")]
     pub words: Vec<Cow<'a, str>>,
 }
 
@@ -114,9 +111,9 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(105 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
-    let s_first = super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
-    let s_chosen = super::types::Step { label: std::borrow::Cow::<str>::Owned(format!("{}!", props.label)), state: match props.state { UnionObjectsState::Todo | UnionObjectsState::Skipped => super::types::StepState::Skipped, UnionObjectsState::Done => super::types::StepState::Done }, align: props.side };
-    let s_steps = props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: std::borrow::Cow::<str>::Owned(str::to_owned(&*fv_w)), state: if fv_i as f64 == 0.0 { super::types::StepState::Todo } else { super::types::StepState::Done }, align: Some(crate::domain::Align::Right) } }).collect::<Vec<_>>();
+    let s_first = super::types::Step { label: Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
+    let s_chosen = super::types::Step { label: Cow::<str>::Owned(format!("{}!", props.label)), state: match props.state { UnionObjectsState::Todo | UnionObjectsState::Skipped => super::types::StepState::Skipped, UnionObjectsState::Done => super::types::StepState::Done }, align: props.side };
+    let s_steps = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: Cow::<str>::Owned(str::to_owned(&*fv_w)), state: if fv_i as f64 == 0.0 { super::types::StepState::Todo } else { super::types::StepState::Done }, align: Some(crate::domain::Align::Right) } }).collect::<Vec<_>>();
     let s_role = if let Some(fv_align) = matches!(props.align, crate::domain::Align::Left | crate::domain::Align::Right).then_some(fv::props::Union::as_str(props.align)) { match fv_align { "left" => "<start>", _ => "end & \"after\"" } } else { "none" };
     out.push_str("<section data-role=\"");
     fv::core::escape_into(out, s_role);
@@ -129,8 +126,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("><ol>");
     super::union_step::try_render(out, &super::union_step::Props { step: s_first.to_owned() })?;
     super::union_step::try_render(out, &super::union_step::Props { step: s_chosen.to_owned() })?;
-    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } })?;
-    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: std::borrow::Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: Cow::<str>::Borrowed(&*props.label), state: match props.state { UnionObjectsState::Todo => super::types::StepState::Todo, UnionObjectsState::Done => super::types::StepState::Done, UnionObjectsState::Skipped => super::types::StepState::Skipped }, align: props.side } })?;
+    super::union_step::try_render(out, &super::union_step::Props { step: super::types::Step { label: Cow::<str>::Borrowed("fixed"), state: super::types::StepState::Skipped, align: None } })?;
     out.push_str("<!--[-->");
     for fv_s in s_steps.iter() {
         super::union_step::try_render(out, &super::union_step::Props { step: fv_s.to_owned() })?;

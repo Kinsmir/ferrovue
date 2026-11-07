@@ -12,19 +12,14 @@ pub const NAME: &str = "CssVarsPage";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "color")]
     pub color: Cow<'a, str>,
-    #[serde(rename = "size")]
     pub size: i64,
-    #[serde(rename = "ratio")]
     pub ratio: f64,
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
-    #[serde(rename = "font")]
     pub font: Cow<'a, str>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
 }
 
@@ -65,8 +60,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(187 + 7 * props.items.len() + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len() + props.tone.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<!--[-->");
-    super::css_vars::try_render_scoped(out, &super::css_vars::Props { color: std::borrow::Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(std::borrow::Cow::Borrowed), font: std::borrow::Cow::Borrowed(&*props.font), gap: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("given")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("top", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("2"))]), fv::attrs::Attr::style([("color", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))])]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
-    super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props { tint: std::borrow::Cow::Borrowed(&*props.color), shade: std::borrow::Cow::Borrowed(&*props.font) }, &fv::attrs::Attrs::merged(&[&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
+    super::css_vars::try_render_scoped(out, &super::css_vars::Props { color: Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(Cow::Borrowed), font: Cow::Borrowed(&*props.font), gap: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("given")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("top", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("2"))]), fv::attrs::Attr::style([("color", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))])]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
+    super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props { tint: Cow::Borrowed(&*props.color), shade: Cow::Borrowed(&*props.font) }, &fv::attrs::Attrs::merged(&[&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
     if let Some(fv_tone) = props.tone.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p style=\"color:");
         fv::core::escape_into(out, fv_tone);

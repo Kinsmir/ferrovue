@@ -12,15 +12,11 @@ pub const NAME: &str = "UriParts";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "q")]
     pub q: Cow<'a, str>,
-    #[serde(rename = "path")]
     pub path: Cow<'a, str>,
-    #[serde(rename = "page")]
     pub page: i64,
-    #[serde(rename = "tag", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tag: Option<Cow<'a, str>>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -83,9 +79,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &fv::core::js_encode_uri_component(props.tag.as_deref().unwrap_or("")));
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &fv::core::js_encode_uri_component(&props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
     out.push('|');
-    fv::core::escape_into(out, &fv::core::js_encode_uri(&props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &fv::core::js_encode_uri(&props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(",")));
     out.push('|');
     fv::core::escape_into(out, &fv::core::js_encode_uri_component(&format!("{}", fv::core::Js(props.page as f64 * -1.5))));
     out.push('|');

@@ -12,9 +12,7 @@ pub const NAME: &str = "ScopedNav";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "href")]
     pub href: Cow<'a, str>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -58,9 +56,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     out.push_str(" <i data-v-f60bf031>");
     fv::core::escape_into(out, &props.href);
     out.push_str("</i>");
-    fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(&*props.label)) }, " data-v-f60bf031"))?;
+    fv_refusals.check(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(Cow::Borrowed(&*props.label)) }, " data-v-f60bf031"))?;
     out.push_str("</a>");
-    fv_refusals.check(super::scoped_link::try_render_scoped(out, &super::scoped_link::Props { to: std::borrow::Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031"))?;
+    fv_refusals.check(super::scoped_link::try_render_scoped(out, &super::scoped_link::Props { to: Cow::Borrowed(&*props.href) }, fv_route, " data-v-f60bf031"))?;
     fv_refusals.check(super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
@@ -69,7 +67,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
             out.push_str(">home ");
             fv::core::escape_into(out, &props.label);
             out.push_str("</a>");
-            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed("carded")) }, &fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id)));
+            fv_refusals.join(super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(Cow::Borrowed("carded")) }, &fv::attrs::scope_attrs("", "data-v-f60bf031", fv_slot_id)));
             true
         })),
         footer: None,

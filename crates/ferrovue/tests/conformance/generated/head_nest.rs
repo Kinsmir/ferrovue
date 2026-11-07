@@ -12,7 +12,6 @@ pub const NAME: &str = "HeadNest";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
 }
 
@@ -43,20 +42,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head)
     let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadNest.vue");
     fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
     out.push_str("<b>");
-    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-child", props.name)) }, super::head_leaf::Slots {
+    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed(&*format!("{}-child", props.name)) }, super::head_leaf::Slots {
         default: None,
     }, fv_head))?;
     {
         let _fv_later = fv_head.deferred();
-        fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-lazy", props.name)) }, super::head_leaf::Slots {
+        fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed(&*format!("{}-lazy", props.name)) }, super::head_leaf::Slots {
             default: Some(fv::render::Slot::new(&|out: &mut String| {
-                fv_refusals.join(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-slot", props.name)) }, super::head_leaf::Slots {
+                fv_refusals.join(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed(&*format!("{}-slot", props.name)) }, super::head_leaf::Slots {
                     default: None,
                 }, fv_head));
             })),
         }, fv_head))?;
     }
-    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(&*format!("{}-after", props.name)) }, super::head_leaf::Slots {
+    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed(&*format!("{}-after", props.name)) }, super::head_leaf::Slots {
         default: None,
     }, fv_head))?;
     out.push_str("</b>");

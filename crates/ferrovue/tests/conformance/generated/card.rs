@@ -12,7 +12,6 @@ pub const NAME: &str = "Card";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -42,10 +41,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores
     out.reserve(19 + props.title.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Card.vue");
     out.push_str("<article>");
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::new(&|out: &mut String| {
-            fv_refusals.join(super::badge::try_render(out, &super::badge::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_stores));
+            fv_refusals.join(super::badge::try_render(out, &super::badge::Props { title: Cow::Borrowed(&*props.title) }, fv_stores));
         })),
     }))?;
     out.push_str("</article>");

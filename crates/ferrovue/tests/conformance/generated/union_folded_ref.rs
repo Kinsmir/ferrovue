@@ -204,7 +204,6 @@ impl ferrovue::props::Union for UnionFoldedRefNone {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -239,15 +238,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(super::types::Mood::Loud), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Loud, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::QX, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Calm, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Calm, card: Some(super::types::MoodCard { mood: super::types::Mood::Loud, spare: Some(super::types::Mood::QX), note: std::borrow::Cow::<str>::Borrowed(&*props.label) }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_choice_tag::try_render(out, &super::union_choice_tag::Props { choice: super::union_choice_tag::UnionChoiceTagChoice::Loud, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_choice_tag::try_render(out, &super::union_choice_tag::Props { choice: super::union_choice_tag::UnionChoiceTagChoice::QX, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_choice_tag::try_render(out, &super::union_choice_tag::Props { choice: super::union_choice_tag::UnionChoiceTagChoice::Empty, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(super::types::Mood::Loud), label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Loud, card: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::QX, card: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Calm, card: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Calm, card: Some(super::types::MoodCard { mood: super::types::Mood::Loud, spare: Some(super::types::Mood::QX), note: Cow::<str>::Borrowed(&*props.label) }), label: Cow::Borrowed(&*props.label) })?;
+    super::union_choice_tag::try_render(out, &super::union_choice_tag::Props { choice: super::union_choice_tag::UnionChoiceTagChoice::Loud, label: Cow::Borrowed(&*props.label) })?;
+    super::union_choice_tag::try_render(out, &super::union_choice_tag::Props { choice: super::union_choice_tag::UnionChoiceTagChoice::QX, label: Cow::Borrowed(&*props.label) })?;
+    super::union_choice_tag::try_render(out, &super::union_choice_tag::Props { choice: super::union_choice_tag::UnionChoiceTagChoice::Empty, label: Cow::Borrowed(&*props.label) })?;
     out.push_str("<p data-loud=\"loud\">loud|&lt;q&gt;&amp;&quot;x&#39;||true|false|false</p></section>");
     Ok(())
 }

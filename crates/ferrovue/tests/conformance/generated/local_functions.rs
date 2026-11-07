@@ -12,11 +12,9 @@ pub const NAME: &str = "LocalFunctions";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Member<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "title", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<Cow<'a, str>>,
-    #[serde(rename = "score")]
     pub score: i64,
 }
 
@@ -37,13 +35,11 @@ impl<'a> Member<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "members")]
     pub members: Vec<Member<'a>>,
-    #[serde(rename = "lead", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lead: Option<Member<'a>>,
-    #[serde(rename = "limit")]
     pub limit: i64,
-    #[serde(rename = "unit", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unit: Option<Cow<'a, str>>,
 }
 
@@ -83,7 +79,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(92 + props.members.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + props.unit.as_deref().map_or(0, str::len));
-    let s_visible = fv::strings::js_slice_items(props.members.iter(), 0.0f64, Some(3.0f64)).map(|fv_m| { let fv_unit = props.unit.as_deref(); { let fv_parts = &[&*(if let Some(fv_title) = fv_m.title.as_deref().filter(|v| !v.is_empty()) { std::borrow::Cow::<str>::Owned(format!("{} {}", fv_title, fv_m.name)) } else { std::borrow::Cow::<str>::Borrowed(&*fv_m.name) }), &*{ let fv_unit_2 = fv_unit.unwrap_or("pts"); if fv_m.score as f64 >= props.limit as f64 { std::borrow::Cow::<str>::Owned(format!("{} {}!", fv::core::Js(fv_m.score), fv_unit_2)) } else { std::borrow::Cow::<str>::Owned(format!("{} {}", fv::core::Js(fv_m.score), fv_unit_2)) } }, if fv_m.score as f64 >= 90.0 { "A" } else { if fv_m.score as f64 >= 50.0 { "B" } else { "C" } }]; std::borrow::Cow::<str>::Owned(fv_parts.iter().map(|v| &**v).collect::<Vec<_>>().join(" · ")) } }).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_visible = fv::strings::js_slice_items(props.members.iter(), 0.0f64, Some(3.0f64)).map(|fv_m| { let fv_unit = props.unit.as_deref(); { let fv_parts = &[&*(if let Some(fv_title) = fv_m.title.as_deref().filter(|v| !v.is_empty()) { Cow::<str>::Owned(format!("{} {}", fv_title, fv_m.name)) } else { Cow::<str>::Borrowed(&*fv_m.name) }), &*{ let fv_unit_2 = fv_unit.unwrap_or("pts"); if fv_m.score as f64 >= props.limit as f64 { Cow::<str>::Owned(format!("{} {}!", fv::core::Js(fv_m.score), fv_unit_2)) } else { Cow::<str>::Owned(format!("{} {}", fv::core::Js(fv_m.score), fv_unit_2)) } }, if fv_m.score as f64 >= 90.0 { "A" } else { if fv_m.score as f64 >= 50.0 { "B" } else { "C" } }]; Cow::<str>::Owned(fv_parts.iter().map(|v| &**v).collect::<Vec<_>>().join(" · ")) } }).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     if let Some(fv_lead) = props.lead.as_ref() {
         out.push_str("<section><h2>");
         if let Some(fv_title_2) = fv_lead.title.as_deref().filter(|v| !v.is_empty()) {
@@ -104,14 +100,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<section><!----><ul><!--[-->");
     }
-    for fv_l_cow in s_visible.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)) {
+    for fv_l_cow in s_visible.iter().map(|v| Cow::<str>::Borrowed(&**v)) {
         let fv_l: &str = &fv_l_cow;
         out.push_str("<li>");
         fv::core::escape_into(out, fv_l);
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::core::escape_join(out, props.members.iter().map(|fv_m_2| std::borrow::Cow::<str>::Borrowed(if fv_m_2.score as f64 >= 90.0 { "A" } else { if fv_m_2.score as f64 >= 50.0 { "B" } else { "C" } })), "");
+    fv::core::escape_join(out, props.members.iter().map(|fv_m_2| Cow::<str>::Borrowed(if fv_m_2.score as f64 >= 90.0 { "A" } else { if fv_m_2.score as f64 >= 50.0 { "B" } else { "C" } })), "");
     out.push_str("</p></section>");
     Ok(())
 }

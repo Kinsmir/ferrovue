@@ -10,13 +10,10 @@ pub const NAME: &str = "WideChoices";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "m")]
     pub m: i64,
-    #[serde(rename = "count", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i64>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 

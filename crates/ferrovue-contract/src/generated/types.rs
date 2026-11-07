@@ -72,9 +72,8 @@ impl ferrovue::props::Union for Size {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Owner<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "email", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub email: Option<Cow<'a, str>>,
 }
 
@@ -95,9 +94,7 @@ impl<'a> Owner<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Choice<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -112,11 +109,10 @@ impl<'a> Choice<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Moment<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "at", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub at: ferrovue::date::JsDate,
-    #[serde(rename = "seen", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub seen: Vec<Option<ferrovue::date::JsDate>>,
 }
 
@@ -131,11 +127,9 @@ impl<'a> Moment<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Search<'a> {
-    #[serde(rename = "term")]
     pub term: Cow<'a, str>,
-    #[serde(rename = "page", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub page: Option<i64>,
-    #[serde(rename = "lang")]
     pub lang: Option<Cow<'a, str>>,
 }
 

@@ -12,7 +12,6 @@ pub const NAME: &str = "StockLevel";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "id")]
     pub id: Cow<'a, str>,
 }
 
@@ -54,7 +53,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("\"><p>Out of stock</p>");
     }
     if l_0.copies != 0 {
-        fv_refusals.check(super::shipping::try_render(out, &super::shipping::Props { warehouse: std::borrow::Cow::Borrowed(&*l_0.warehouse) }, fv_loads))?;
+        fv_refusals.check(super::shipping::try_render(out, &super::shipping::Props { warehouse: Cow::Borrowed(&*l_0.warehouse) }, fv_loads))?;
     } else {
         out.push_str("<!---->");
     }

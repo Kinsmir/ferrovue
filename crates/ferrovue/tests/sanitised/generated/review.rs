@@ -12,9 +12,7 @@ pub const NAME: &str = "Review";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "reader")]
     pub reader: Cow<'a, str>,
-    #[serde(rename = "body")]
     pub body: ferrovue::html::Sanitised,
 }
 

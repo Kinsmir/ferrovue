@@ -12,9 +12,7 @@ pub const NAME: &str = "UnionShade";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: super::types::Shade,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
 }
 

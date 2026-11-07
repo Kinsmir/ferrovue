@@ -28,7 +28,6 @@ component's markup in the element the client mounts on, with the props it was re
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props {
-#     #[serde(rename = "start")]
 #     pub start: i64,
 # }
 #

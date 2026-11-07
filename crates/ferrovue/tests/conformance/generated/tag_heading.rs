@@ -74,7 +74,6 @@ impl ferrovue::props::Union for TagHeadingAs {
 pub struct Props<'a> {
     #[serde(rename = "as", default, skip_serializing_if = "Option::is_none")]
     pub r#as: Option<TagHeadingAs>,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
 }
 

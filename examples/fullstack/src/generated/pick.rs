@@ -12,9 +12,7 @@ pub const NAME: &str = "Pick";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "book")]
     pub book: super::types::Book<'a>,
-    #[serde(rename = "note")]
     pub note: Cow<'a, str>,
 }
 
@@ -57,7 +55,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(")</p><blockquote>");
     fv::core::escape_into(out, &props.note);
     out.push_str("</blockquote>");
-    super::add_to_basket::try_render(out, &super::add_to_basket::Props { id: std::borrow::Cow::Borrowed(&*props.book.id), title: std::borrow::Cow::Borrowed(&*props.book.title) })?;
+    super::add_to_basket::try_render(out, &super::add_to_basket::Props { id: Cow::Borrowed(&*props.book.id), title: Cow::Borrowed(&*props.book.title) })?;
     out.push_str("</article>");
     Ok(())
 }

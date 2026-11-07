@@ -12,9 +12,7 @@ pub const NAME: &str = "HeadLater";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "site")]
     pub site: Cow<'a, str>,
-    #[serde(rename = "names")]
     pub names: Vec<Cow<'a, str>>,
 }
 
@@ -47,28 +45,28 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head)
     out.push_str("<div>");
     {
         let _fv_later = fv_head.deferred();
-        fv_refusals.check(super::head_nest::try_render(out, &super::head_nest::Props { name: std::borrow::Cow::Borrowed("a") }, fv_head))?;
+        fv_refusals.check(super::head_nest::try_render(out, &super::head_nest::Props { name: Cow::Borrowed("a") }, fv_head))?;
     }
-    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed("s1") }, super::head_leaf::Slots {
+    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed("s1") }, super::head_leaf::Slots {
         default: None,
     }, fv_head))?;
-    fv_refusals.check(super::head_nest::try_render(out, &super::head_nest::Props { name: std::borrow::Cow::Borrowed("n") }, fv_head))?;
+    fv_refusals.check(super::head_nest::try_render(out, &super::head_nest::Props { name: Cow::Borrowed("n") }, fv_head))?;
     out.push_str("<!--[-->");
     for fv_n_ref in props.names.iter() {
         let fv_n: &str = fv_n_ref;
         {
             let _fv_later = fv_head.deferred();
-            fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed(fv_n) }, super::head_leaf::Slots {
+            fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed(fv_n) }, super::head_leaf::Slots {
                 default: None,
             }, fv_head))?;
         }
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed("s2") }, super::head_leaf::Slots {
+    fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed("s2") }, super::head_leaf::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             {
                 let _fv_later = fv_head.deferred();
-                fv_refusals.join(super::head_leaf::try_render(out, &super::head_leaf::Props { name: std::borrow::Cow::Borrowed("in-slot") }, super::head_leaf::Slots {
+                fv_refusals.join(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed("in-slot") }, super::head_leaf::Slots {
                     default: None,
                 }, fv_head));
             }

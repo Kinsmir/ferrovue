@@ -12,7 +12,6 @@ pub const NAME: &str = "NarrowedRows";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Shelf<'a> {
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -27,9 +26,8 @@ impl<'a> Shelf<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "shelves")]
     pub shelves: Vec<Shelf<'a>>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -67,7 +65,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_shelf in props.shelves.iter() {
         if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {
             out.push_str("<!--[--><p><!--[-->");
-            for fv_tag_cow in fv_shelf.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv_t.is_empty()).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(format!("{}{}", fv_note, fv_t_2)).into_owned())) {
+            for fv_tag_cow in fv_shelf.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| !fv_t.is_empty()).map(|fv_t_2| Cow::<str>::Owned(Cow::<str>::Owned(format!("{}{}", fv_note, fv_t_2)).into_owned())) {
                 let fv_tag: &str = &fv_tag_cow;
                 out.push_str("<b>");
                 fv::core::escape_into(out, fv_tag);

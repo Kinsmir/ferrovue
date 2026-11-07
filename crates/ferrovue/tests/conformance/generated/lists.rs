@@ -12,11 +12,9 @@ pub const NAME: &str = "Lists";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Group<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "members")]
     pub members: Vec<Cow<'a, str>>,
-    #[serde(rename = "lead", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lead: Option<Cow<'a, str>>,
 }
 
@@ -37,11 +35,8 @@ impl<'a> Group<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "words")]
     pub words: Vec<Cow<'a, str>>,
-    #[serde(rename = "numbers")]
     pub numbers: Vec<i64>,
-    #[serde(rename = "groups")]
     pub groups: Vec<Group<'a>>,
 }
 

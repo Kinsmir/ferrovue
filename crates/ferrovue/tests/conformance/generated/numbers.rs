@@ -10,13 +10,10 @@ pub const NAME: &str = "Numbers";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "price")]
     pub price: f64,
-    #[serde(rename = "qty")]
     pub qty: i64,
-    #[serde(rename = "rate", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rate: Option<f64>,
-    #[serde(rename = "ratio")]
     pub ratio: f64,
 }
 

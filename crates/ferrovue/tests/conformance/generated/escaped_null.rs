@@ -12,9 +12,7 @@ pub const NAME: &str = "EscapedNull";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "note")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "stars")]
     pub stars: Option<i64>,
 }
 
@@ -55,7 +53,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(84 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"escaped-null\">");
-    super::null_child::try_render(out, &super::null_child::Props { value: props.note.as_deref().map(std::borrow::Cow::Borrowed), entry: None }, super::null_child::Slots {
+    super::null_child::try_render(out, &super::null_child::Props { value: props.note.as_deref().map(Cow::Borrowed), entry: None }, super::null_child::Slots {
         default: None,
     })?;
     out.push_str("<!--[--><i");

@@ -192,15 +192,11 @@ impl ferrovue::props::Union for UnionChildFixed {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "align")]
     pub align: super::types::Align,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "wide", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wide: Option<UnionChildWide>,
-    #[serde(rename = "pick")]
     pub pick: UnionChildPick,
-    #[serde(rename = "fixed")]
     pub fixed: UnionChildFixed,
 }
 

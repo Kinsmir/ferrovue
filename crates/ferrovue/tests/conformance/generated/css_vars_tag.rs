@@ -68,9 +68,7 @@ impl ferrovue::props::Union for CssVarsTagTag {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
-    #[serde(rename = "tag")]
     pub tag: CssVarsTagTag,
 }
 

@@ -12,11 +12,8 @@ pub const NAME: &str = "DataTable";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "rows")]
     pub rows: Vec<super::data_list::Row<'a>>,
-    #[serde(rename = "heading")]
     pub heading: Cow<'a, str>,
-    #[serde(rename = "compact")]
     pub compact: bool,
 }
 
@@ -45,7 +42,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(69 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DataTable.vue");
-    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: std::borrow::Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
+    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             out.push_str("<h2");
             if let Some(v) = fv_slot_props.note {

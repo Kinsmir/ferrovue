@@ -12,13 +12,9 @@ pub const NAME: &str = "Listeners";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "event")]
     pub event: Cow<'a, str>,
-    #[serde(rename = "leaves")]
     pub leaves: Vec<super::listen_leaf::Props<'a>>,
-    #[serde(rename = "tree")]
     pub tree: super::listened::Props<'a>,
 }
 
@@ -47,8 +43,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(83 + props.title.len() + props.event.len());
     out.push_str("<section>");
-    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::NONE)?;
-    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: std::borrow::Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::merged(&[&[("title", fv::attrs::Attr::str("tip"))]], ""))?;
+    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::NONE)?;
+    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::merged(&[&[("title", fv::attrs::Attr::str("tip"))]], ""))?;
     out.push_str("<!--[-->");
     for fv_l in props.leaves.iter() {
         super::listen_leaf::try_render_scoped(out, fv_l, &fv::attrs::Attrs::NONE)?;
@@ -66,10 +62,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         super::listen_leaf::try_render_scoped(out, fv_l_4, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]-->");
-    super::listen_sale::try_render(out, &super::listen_sale::Props { label: std::borrow::Cow::Borrowed(&*props.title), on_sale: None })?;
-    super::listen_sale::try_render(out, &super::listen_sale::Props { label: std::borrow::Cow::Borrowed(&*props.title), on_sale: Some(true) })?;
+    super::listen_sale::try_render(out, &super::listen_sale::Props { label: Cow::Borrowed(&*props.title), on_sale: None })?;
+    super::listen_sale::try_render(out, &super::listen_sale::Props { label: Cow::Borrowed(&*props.title), on_sale: Some(true) })?;
     super::listened::try_render(out, &props.tree)?;
-    super::listened::try_render(out, &super::listened::Props { id: std::borrow::Cow::Borrowed(&*props.title), label: std::borrow::Cow::Borrowed(&*props.title), rows: Vec::new() })?;
+    super::listened::try_render(out, &super::listened::Props { id: Cow::Borrowed(&*props.title), label: Cow::Borrowed(&*props.title), rows: Vec::new() })?;
     out.push_str("</section>");
     Ok(())
 }
