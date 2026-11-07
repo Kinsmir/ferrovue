@@ -14,6 +14,7 @@ ferrovue::__compat!(8);
 pub mod trim_button;
 pub mod trim_inline;
 pub mod trim_kept;
+pub mod trim_root;
 pub mod trim_slots;
 pub mod trim_text;
 
@@ -67,6 +68,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "TrimKept" => {
             let props: trim_kept::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             trim_kept::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "TrimRoot" => {
+            let props: trim_root::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            trim_root::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "TrimSlots" => {
             let props: trim_slots::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

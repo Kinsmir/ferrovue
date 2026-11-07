@@ -47,7 +47,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(291 + 14 * props.items.len() + 18 * props.items.len() + props.label.len() + props.name.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(292 + 14 * props.items.len() + 18 * props.items.len() + props.label.len() + props.name.len() + props.items.iter().map(|v| v.len()).sum::<usize>());
     out.push_str("<section><button type=\"button\">remove</button><p>Hello ");
     fv::core::escape_into(out, &props.name);
     out.push_str("</p><p>");
@@ -88,7 +88,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv_item_2);
         out.push_str(", <!--]-->");
     }
-    out.push_str("<!--]--></p><label>Name <input value=\"");
+    out.push_str("<!--]--></p><label> Name <input value=\"");
     fv::core::escape_into(out, &props.name);
     out.push_str("\"></label></section>");
     Ok(())

@@ -423,7 +423,13 @@ export default {
 The mode trims the whitespace at the start of an element's first child and at the end of its last
 child, when those children are text written in the template and that whitespace holds a line
 break, as the whitespace a formatter adds does. A space typed on the same line as the tag stays.
-It applies to the content of elements, of components and of `<template v-slot>`:
+It applies to the content of block and inline-block elements, of components and of
+`<template v-slot>`. An inline element, such as `<span>`, `<a>` or `<label>`, keeps Vue's one space
+at its edges: a formatter such as Prettier or oxfmt treats the whitespace there as part of the text,
+and when it breaks the element's content across lines, the line break it writes stands for that
+space. Inline-block are `<button>`, `<select>`, `<meter>`, `<progress>`, `<object>`, `<video>` and
+`<audio>`, as formatters list them, and a formatter adds and removes whitespace at their edges
+freely:
 
 | Template | `"condense"` (the default) | `"trim-edges"` |
 |---|---|---|
@@ -433,6 +439,7 @@ It applies to the content of elements, of components and of `<template v-slot>`:
 | `<MyButton>\n  remove\n</MyButton>` | ` remove ` in the slot | `remove` in the slot |
 | `<span> by </span>` | `<span> by </span>` | the same |
 | `<p>\n  text </p>` | `<p> text </p>` | `<p>text </p>` |
+| `<p>ago<span>\n  by\n</span>Ada</p>` | `<p>ago<span> by </span>Ada</p>` | the same |
 | `<p>\n  <span>by</span>\n  <a>Ada</a>\n</p>` | `<p><span>by</span><a>Ada</a></p>` | `<p><span>by</span> <a>Ada</a></p>` |
 | `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
 
@@ -444,9 +451,9 @@ and table elements, `<br>` and the elements of the page's head, and components o
 `<Teleport>`, `<KeepAlive>`, `<Suspense>`, `<Transition>`, `<TransitionGroup>` and `<ClientOnly>`,
 which render no element of their own in place, and `<slot>` and `<template>` with `v-if`,
 `v-else-if`, `v-else` or `v-for`, whose content renders in place. Vue removes the whitespace between
-the branches of a `v-if`, so the space counts after the last branch. Vue's spacing holds between the
-`<template v-slot>`s of a component, after a comment, inside `<svg>` and `<math>` and at the
-template's root. Between elements a stylesheet makes block, flex or grid items, the space does not
+the branches of a `v-if`, so the space counts after the last branch. The rule holds at the template's root,
+and across a comment, with the space before the comment where comments render. Vue's spacing holds
+between the `<template v-slot>`s of a component and inside `<svg>` and `<math>`. Between elements a stylesheet makes block, flex or grid items, the space does not
 show.
 
 The space is decided when the template compiles, from its source, so it stays when a `v-if` or
@@ -457,7 +464,8 @@ the space is the one it needs.
 
 Everything else stays as Vue condenses it:
 
-- whitespace at an edge with no line break in it, such as the spaces of `<span> by </span>`;
+- whitespace at an edge with no line break in it, such as the spaces of `<span> by </span>`, and
+  the edges of an inline element;
 - the space typed between two elements, and between text and an interpolation;
 - a value an interpolation renders, such as a prop that starts with a space;
 - the content of `<template v-if>`, `<template v-for>` and of a `<slot>`'s fallback, which render

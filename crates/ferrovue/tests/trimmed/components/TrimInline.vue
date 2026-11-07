@@ -40,6 +40,21 @@ defineProps<{ label: string; name: string }>();
         <a :href="'/r/' + label + '/'">/r/{{ label }}</a></template
       >
     </p>
+    <p class="edges">
+      ago<span>
+        by {{ name }}</span
+      >{{ label }}
+      <span v-if="label">
+        ·
+        <button>{{ label }}</button></span
+      >
+      <button>
+        remove {{ name }}
+      </button>
+      <span>{{ label }}</span>
+      <!-- between -->
+      <a>{{ name }}</a>
+    </p>
     <ul>
       <li>{{ label }}</li>
       <li>{{ name }}</li>

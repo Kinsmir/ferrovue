@@ -9,5 +9,5 @@ pub mod generated;
 ferrovue::conformance!(
     "tests/trimmed/fixtures",
     generated::render_json,
-    at_least = 15
+    at_least = 18
 );

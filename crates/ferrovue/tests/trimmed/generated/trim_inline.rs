@@ -43,7 +43,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(637 + props.label.len() + props.name.len());
+    out.reserve(767 + props.label.len() + props.name.len());
     out.push_str("<div><p><span> by </span><a>");
     fv::core::escape_into(out, &props.name);
     out.push_str("</a> <span>signed in through </span>");
@@ -112,7 +112,25 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!---->");
     }
-    out.push_str("</p><ul><li>");
+    out.push_str("</p><p class=\"edges\">ago<span> by ");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("</span>");
+    fv::core::escape_into(out, &props.label);
+    out.push(' ');
+    if !props.label.is_empty() {
+        out.push_str("<span> · <button>");
+        fv::core::escape_into(out, &props.label);
+        out.push_str("</button></span>");
+    } else {
+        out.push_str("<!---->");
+    }
+    out.push_str(" <button>remove ");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("</button> <span>");
+    fv::core::escape_into(out, &props.label);
+    out.push_str("</span> <a>");
+    fv::core::escape_into(out, &props.name);
+    out.push_str("</a></p><ul><li>");
     fv::core::escape_into(out, &props.label);
     out.push_str("</li><li>");
     fv::core::escape_into(out, &props.name);
