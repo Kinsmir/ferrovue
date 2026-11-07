@@ -68,7 +68,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(120 + 17 * props.items.len() + props.items.iter().map(|v| v.name.len()).sum::<usize>() + props.query.len());
+    out.reserve(
+        120
+        + 17 * props.items.len()
+        + props.items.iter().map(|v| v.name.len()).sum::<usize>()
+        + props.query.len()
+    );
     let s_shown = fv::strings::js_trim(&props.query);
     let s_total = props.items.len() as i64;
     let s_panels = &Vec::<Panel<'_>>::new();

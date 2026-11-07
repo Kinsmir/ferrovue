@@ -130,8 +130,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(props.text.as_deref().map_or(0, str::len) + 4);
-    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: props.n.filter(|v| *v != 0), on_text: props.text.as_deref().map(Cow::Borrowed).filter(|v| !v.is_empty()), on_flag: Some(props.flag).filter(|v| *v), on_set: Some(props.flag).filter(|v| *v), on_rate: Some(props.rate.unwrap_or(0.0f64).sqrt()).filter(|v| *v != 0.0 && !v.is_nan()), on_tone: props.tone.map(|v| match v { OnPropsRootTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsRootTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsRootTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }).filter(|v| *v != super::on_props_kid::OnPropsKidOnTone::Empty), on_req: props.flag, on_num: 7i64 })?;
+    out.reserve(
+        4
+        + props.text.as_deref().map_or(0, str::len)
+    );
+    super::on_props_kid::try_render(out, &super::on_props_kid::Props {
+        on1: props.n.filter(|v| *v != 0),
+        on_text: props.text.as_deref().map(Cow::Borrowed).filter(|v| !v.is_empty()),
+        on_flag: Some(props.flag).filter(|v| *v),
+        on_set: Some(props.flag).filter(|v| *v),
+        on_rate: Some(props.rate.unwrap_or(0.0f64).sqrt()).filter(|v| *v != 0.0 && !v.is_nan()),
+        on_tone: props.tone.map(|v| match v { OnPropsRootTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsRootTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsRootTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }).filter(|v| *v != super::on_props_kid::OnPropsKidOnTone::Empty),
+        on_req: props.flag,
+        on_num: 7i64,
+    })?;
     Ok(())
 }
 

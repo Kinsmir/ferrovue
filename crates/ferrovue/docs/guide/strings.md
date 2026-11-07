@@ -54,7 +54,10 @@ defineProps<{ name: string; id: number }>();
 #
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(26 + props.name.len());
+    out.reserve(
+        26
+        + props.name.len()
+    );
     out.push_str("<p");
     if props.name.to_uppercase().is_empty() {
         out.push_str(" title");

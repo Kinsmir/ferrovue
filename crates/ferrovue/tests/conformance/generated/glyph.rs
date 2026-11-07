@@ -45,7 +45,10 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_attrs: &fv::attrs:
     if fv_attrs.is_empty() {
         out.push_str(" class=\"glyph\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("glyph"))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[("class", fv::attrs::Attr::str("glyph"))],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push_str("><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M2 8h12\"></path></svg></span>");
     Ok(())

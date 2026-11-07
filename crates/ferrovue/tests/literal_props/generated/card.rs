@@ -35,7 +35,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(103 + 18 * props.tags.len() + props.title.len() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        103
+        + 18 * props.tags.len()
+        + props.title.len()
+        + props.owner.name.len()
+        + props.owner.email.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<article><h2>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h2><p>");
@@ -67,7 +75,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!--]--></ul><!---->");
     }
-    super::badge::try_render(out, &super::badge::Props { label: None, count: Some(props.tags.len() as i64) })?;
+    super::badge::try_render(out, &super::badge::Props {
+        label: None,
+        count: Some(props.tags.len() as i64),
+    })?;
     out.push_str("</article>");
     Ok(())
 }

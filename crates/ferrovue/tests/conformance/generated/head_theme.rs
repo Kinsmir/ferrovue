@@ -48,11 +48,21 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provi
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(44 + props.label.len());
+    out.reserve(
+        44
+        + props.label.len()
+    );
     let fv_inherited = fv_provides;
     let fv_provided_theme_key = format!("{}+head", fv_inherited.theme_key.unwrap_or("light"));
     let fv_provides = super::provides::Provides { theme_key: Some(&*fv_provided_theme_key), ..fv_inherited };
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&format!("{} in {}", props.label, fv_inherited.theme_key.unwrap_or("light")))), ("htmlAttrs", fv::head::HeadValue::object([("data-theme", fv::head::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme")), ("content", fv::head::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])]))]));
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str(&format!("{} in {}", props.label, fv_inherited.theme_key.unwrap_or("light")))),
+        ("htmlAttrs", fv::head::HeadValue::object([("data-theme", fv::head::HeadValue::str(fv_inherited.theme_key.unwrap_or("light")))])),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("theme")),
+            ("content", fv::head::HeadValue::str(fv_inherited.theme_key.unwrap_or("light"))),
+        ])])),
+    ]));
     if fv_inherited.theme_key.unwrap_or("light").is_empty() {
         out.push_str("<section data-theme>");
     } else {

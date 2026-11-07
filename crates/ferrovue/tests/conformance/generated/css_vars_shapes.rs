@@ -39,14 +39,29 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(13 + props.tone.len());
+    out.reserve(
+        13
+        + props.tone.len()
+    );
     out.push_str("<main>");
-    super::css_vars_show::try_render_scoped(out, &super::css_vars_show::Props { tone: Cow::Borrowed(&*props.tone), on: props.on }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("1"))]))], ""))?;
+    super::css_vars_show::try_render_scoped(out, &super::css_vars_show::Props {
+        tone: Cow::Borrowed(&*props.tone),
+        on: props.on,
+    }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([
+        ("left", fv::attrs::Attr::str("0")),
+        ("--own", fv::attrs::Attr::str("1")),
+    ]))], ""))?;
     super::css_vars_bound::try_render_scoped(out, &super::css_vars_bound::Props { tone: Cow::Borrowed(&*props.tone) }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))])), ("title", fv::attrs::Attr::str("t"))], ""))?;
-    super::css_vars_tag::try_render_scoped(out, &super::css_vars_tag::Props { tone: Cow::Borrowed(&*props.tone), tag: if props.on { super::css_vars_tag::CssVarsTagTag::Section } else { super::css_vars_tag::CssVarsTagTag::Div } }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("right", fv::attrs::Attr::str("0"))]))], ""))?;
+    super::css_vars_tag::try_render_scoped(out, &super::css_vars_tag::Props {
+        tone: Cow::Borrowed(&*props.tone),
+        tag: if props.on { super::css_vars_tag::CssVarsTagTag::Section } else { super::css_vars_tag::CssVarsTagTag::Div },
+    }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("right", fv::attrs::Attr::str("0"))]))], ""))?;
     super::css_vars_link::try_render_scoped(out, &super::css_vars_link::Props { tone: Cow::Borrowed(&*props.tone) }, fv_route, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("bottom", fv::attrs::Attr::str("0"))]))], ""))?;
     super::css_vars_later::try_render_scoped(out, &super::css_vars_later::Props { tone: Cow::Borrowed(&*props.tone) }, &fv::attrs::Attrs::new(&[("style", fv::attrs::Attr::style([("--later", fv::attrs::Attr::str("1"))]))], ""))?;
-    super::css_vars_branch::try_render(out, &super::css_vars_branch::Props { tone: Cow::Borrowed(&*props.tone), on: props.on })?;
+    super::css_vars_branch::try_render(out, &super::css_vars_branch::Props {
+        tone: Cow::Borrowed(&*props.tone),
+        on: props.on,
+    })?;
     out.push_str("</main>");
     Ok(())
 }

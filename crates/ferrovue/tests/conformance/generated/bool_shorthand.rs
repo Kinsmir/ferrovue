@@ -39,17 +39,65 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(11 + props.label.len());
+    out.reserve(
+        11
+        + props.label.len()
+    );
     out.push_str("<div>");
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: true, opt: None, foo_bar: None, label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: true, opt: Some(true), foo_bar: None, label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: true, opt: Some(true), foo_bar: Some(true), label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: true, opt: None, foo_bar: Some(true), label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: props.on, opt: None, foo_bar: Some(true), label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: true, opt: Some(true), foo_bar: Some(true), label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: true, opt: Some(true), foo_bar: None, label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: false, opt: None, foo_bar: None, label: Cow::Borrowed(&*props.label) })?;
-    super::bool_kid::try_render(out, &super::bool_kid::Props { flag: props.on, opt: Some(props.on), foo_bar: None, label: Cow::Borrowed(&*props.label) })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: true,
+        opt: None,
+        foo_bar: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: true,
+        opt: Some(true),
+        foo_bar: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: true,
+        opt: Some(true),
+        foo_bar: Some(true),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: true,
+        opt: None,
+        foo_bar: Some(true),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: props.on,
+        opt: None,
+        foo_bar: Some(true),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: true,
+        opt: Some(true),
+        foo_bar: Some(true),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: true,
+        opt: Some(true),
+        foo_bar: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: false,
+        opt: None,
+        foo_bar: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::bool_kid::try_render(out, &super::bool_kid::Props {
+        flag: props.on,
+        opt: Some(props.on),
+        foo_bar: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
     out.push_str("</div>");
     Ok(())
 }

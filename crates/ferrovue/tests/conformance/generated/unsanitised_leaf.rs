@@ -45,7 +45,10 @@ pub fn try_render_scoped(out: &mut String, _props: &Props, fv_attrs: &fv::attrs:
     if fv_attrs.is_empty() {
         out.push_str(" class=\"leaf\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("leaf"))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[("class", fv::attrs::Attr::str("leaf"))],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push_str(">leaf</span>");
     Ok(())

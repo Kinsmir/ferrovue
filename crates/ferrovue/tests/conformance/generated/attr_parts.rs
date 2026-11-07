@@ -52,7 +52,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(430 + props.sub.len() + props.tail.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        430
+        + props.sub.len()
+        + props.tail.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<li aria-label=\"rank ");
     fv::core::push_int(out, props.rank);
     if props.sub.is_empty() && props.tail.is_empty() {

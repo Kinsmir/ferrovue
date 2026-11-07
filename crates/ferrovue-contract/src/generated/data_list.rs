@@ -90,7 +90,14 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(68 + 9 * props.rows.len() + props.title.len() + props.rows.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>() + props.owner.name.len() + props.owner.email.as_deref().map_or(0, str::len));
+    out.reserve(
+        68
+        + 9 * props.rows.len()
+        + props.title.len()
+        + props.rows.iter().map(|v| v.label.len() + v.hint.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.owner.name.len()
+        + props.owner.email.as_deref().map_or(0, str::len)
+    );
     out.push_str("<section><h2>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h2><ul><!--[-->");

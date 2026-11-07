@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
-    out.reserve(22 + props.words.len());
+    out.reserve(
+        22
+        + props.words.len()
+    );
     if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| Cow::<str>::Owned((if props.on { Cow::<str>::Owned(fv_w.to_uppercase()) } else { Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
         out.push_str("<p title>");
     } else {

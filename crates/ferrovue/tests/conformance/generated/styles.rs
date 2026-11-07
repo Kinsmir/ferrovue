@@ -59,7 +59,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(426 + props.color.len() + props.raw.len() + props.accent.as_deref().map_or(0, str::len));
+    out.reserve(
+        426
+        + props.color.len()
+        + props.raw.len()
+        + props.accent.as_deref().map_or(0, str::len)
+    );
     out.push_str("<div style=\"");
     if !props.shown {
         out.push_str("display:none;");

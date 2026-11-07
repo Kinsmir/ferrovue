@@ -48,7 +48,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(895 + props.label.len() + props.note.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        895
+        + props.label.len()
+        + props.note.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_picked = &*props.label;
     let s_unlabelled = props.label.is_empty();
     let s_prefixed = format!("{}!", props.label).is_empty();

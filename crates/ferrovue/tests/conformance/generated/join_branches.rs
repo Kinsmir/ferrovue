@@ -52,7 +52,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(227 + props.shape.len() + props.head.len() + props.extra.len() + props.who.as_deref().map_or(0, str::len) + props.both.len());
+    out.reserve(
+        227
+        + props.shape.len()
+        + props.head.len()
+        + props.extra.len()
+        + props.who.as_deref().map_or(0, str::len)
+        + props.both.len()
+    );
     out.push_str("<div class=\"card mosaic mosaic-");
     fv::core::escape_into(out, fv::strings::js_trim_end(&props.shape));
     fv::attrs::class_into(out, true, &[&*props.extra]);

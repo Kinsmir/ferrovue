@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(168 + props.name.len());
+    out.reserve(
+        168
+        + props.name.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/LoadedDates.vue");
     let Some(l_0) = fv_loads.get(super::loaders::LoadOpened { name: String::from(&*props.name) }) else { return Ok(()); };
     let Some(l_1) = fv_loads.get(super::loaders::LoadThread { id: props.id }) else { return Ok(()); };
@@ -90,7 +93,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("</u>");
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props { replies: l_1.replies.to_owned(), depth: 0i64 }))?;
+    fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
+        replies: l_1.replies.to_owned(),
+        depth: 0i64,
+    }))?;
     out.push_str("</section>");
     fv_refusals.check(Ok(()))
 }

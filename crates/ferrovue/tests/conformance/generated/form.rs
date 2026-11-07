@@ -41,7 +41,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(339 + props.query.len() + props.size.len() + props.body.len());
+    out.reserve(
+        339
+        + props.query.len()
+        + props.size.len()
+        + props.body.len()
+    );
     let s_q = &*props.query;
     let s_ok = props.agreed;
     let s_picked = &*props.size;

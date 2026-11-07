@@ -104,7 +104,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(97 + 13 * props.items.len() + props.label.len() + props.note.as_deref().map_or(0, str::len) + 6 + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        103
+        + 13 * props.items.len()
+        + props.label.len()
+        + props.note.as_deref().map_or(0, str::len)
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_tag = match props.tag { RenamedPropsTag::Em => "em", RenamedPropsTag::Strong => "strong" };
     out.push('<');
     out.push_str(fv_tag);

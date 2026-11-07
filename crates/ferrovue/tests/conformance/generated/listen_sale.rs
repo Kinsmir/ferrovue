@@ -46,7 +46,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(29 + props.label.len());
+    out.reserve(
+        29
+        + props.label.len()
+    );
     out.push_str("<b>");
     fv::core::escape_into(out, &props.label);
     out.push_str(if props.on_sale.unwrap_or(false) { "<i> on sale</i></b>" } else { "<!----></b>" });

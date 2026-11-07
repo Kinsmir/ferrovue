@@ -169,7 +169,11 @@ compiler writes, for `TagList`:
 #
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(54 + 25 * props.tags.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        54
+        + 25 * props.tags.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<ul class=\"tags\" data-v-2f4cdd4e><!--[-->");
     for fv_t_ref in props.tags.iter() {
         let fv_t: &str = fv_t_ref;
@@ -220,7 +224,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// [`render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) {
-    out.reserve(41 + props.label.len());
+    out.reserve(
+        41
+        + props.label.len()
+    );
     out.push_str("<span class=\"tag\"");
     out.push_str(fv_attrs);
     out.push_str(" data-v-7f092129>");
@@ -352,7 +359,10 @@ more</small></template></Note>`:
 # pub struct Props<'a> { pub text: Cow<'a, str> }
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(33 + props.text.len());
+    out.reserve(
+        33
+        + props.text.len()
+    );
     super::note::render(out, &super::note::Props { count: 2i64 }, super::note::Slots {
         default: Some(fv::render::Slot::slotted(&|out: &mut String, fv_slot_id: &str| -> bool {
             out.push_str("<p");
@@ -549,7 +559,10 @@ they differ fails, and the dev server warns. With `"scopeId": "filepath"` and `"
 # pub struct Props<'a> { pub color: Cow<'a, str>, pub size: Option<i64> }
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>) {
-    out.reserve(119 + props.color.len());
+    out.reserve(
+        119
+        + props.color.len()
+    );
     out.push_str("<span class=\"swatch\" style=\"--95abae23-color:");
     if props.color.is_empty() {
         out.push(' ');

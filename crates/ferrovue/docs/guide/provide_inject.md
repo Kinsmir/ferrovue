@@ -109,7 +109,10 @@ pub struct Provides<'p> {
 #
 # /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) {
-    out.reserve(29 + props.label.len());
+    out.reserve(
+        29
+        + props.label.len()
+    );
     out.push_str("<button class=\"btn");
     fv::attrs::class_into(out, true, &[fv_provides.theme_key.unwrap_or("light")]);
     out.push_str("\">");
@@ -161,7 +164,10 @@ pub type DefaultSlot<'s> = dyn Fn(&mut String, super::provides::Provides<'_>) ->
 #
 # /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, _fv_provides: super::provides::Provides<'_>) {
-    out.reserve(27 + props.theme.len());
+    out.reserve(
+        27
+        + props.theme.len()
+    );
     let fv_provides = super::provides::Provides { theme_key: Some(&props.theme) };
     out.push_str("<nav class=\"toolbar\">");
     fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);

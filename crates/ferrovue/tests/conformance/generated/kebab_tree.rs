@@ -45,7 +45,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(118 + props.label.len());
+    out.reserve(
+        118
+        + props.label.len()
+    );
     out.push_str("<li class=\"node\"");
     out.push_str(fv_attrs);
     out.push_str(" data-v-189d3616>");
@@ -61,7 +64,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
     }
     if &*props.label == "root" {
         out.push_str("<ul data-v-189d3616>");
-        super::kebab_tree::try_render_scoped(out, &super::kebab_tree::Props { label: Cow::Borrowed("end"), children: Vec::new() }, " data-v-189d3616")?;
+        super::kebab_tree::try_render_scoped(out, &super::kebab_tree::Props {
+            label: Cow::Borrowed("end"),
+            children: Vec::new(),
+        }, " data-v-189d3616")?;
         out.push_str("</ul></li>");
     } else {
         out.push_str("<!----></li>");

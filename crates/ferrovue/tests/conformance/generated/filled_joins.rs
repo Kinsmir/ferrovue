@@ -106,7 +106,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(191 + props.a.as_deref().map_or(0, str::len) + props.b.len() + props.s.len() + props.t.len() + 3);
+    out.reserve(
+        194
+        + props.a.as_deref().map_or(0, str::len)
+        + props.b.len()
+        + props.s.len()
+        + props.t.len()
+    );
     out.push_str("<div>");
     if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) {
         out.push_str(if if props.c { !fv_a.is_empty() } else { !props.b.is_empty() } { "<p><span>shown</span><i>" } else { "<p><!----><i>" });

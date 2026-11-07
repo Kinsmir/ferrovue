@@ -51,7 +51,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(119 + 12 * props.items.len() + props.title.len() + props.base.len() + props.path.iter().map(|v| v.len()).sum::<usize>() + props.query.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        119
+        + 12 * props.items.len()
+        + props.title.len()
+        + props.base.len()
+        + props.path.iter().map(|v| v.len()).sum::<usize>()
+        + props.query.as_deref().map_or(0, str::len)
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_summary = format!("{} {}", (&*{ let fv_abs = (props.count as f64).abs(); if fv_abs >= 1000000000.0 { Cow::<str>::Owned(format!("{}B", (&*{ let fv_text = fv::core::js_to_fixed(props.count as f64 / 1000000000.0, 1); Cow::<str>::Owned((if fv_text.ends_with(".0") { Cow::<str>::Owned(fv::strings::js_slice(&fv_text, 0.0f64, Some(-2.0f64)).into_owned()) } else { Cow::<str>::Borrowed(&*fv_text) }).into_owned()) }))) } else { if fv_abs >= 1000000.0 { Cow::<str>::Owned(format!("{}M", (&*{ let fv_text_2 = fv::core::js_to_fixed(props.count as f64 / 1000000.0, 1); Cow::<str>::Owned((if fv_text_2.ends_with(".0") { Cow::<str>::Owned(fv::strings::js_slice(&fv_text_2, 0.0f64, Some(-2.0f64)).into_owned()) } else { Cow::<str>::Borrowed(&*fv_text_2) }).into_owned()) }))) } else { if fv_abs >= 1000.0 { Cow::<str>::Owned(format!("{}k", (&*{ let fv_text_3 = fv::core::js_to_fixed(props.count as f64 / 1000.0, 1); Cow::<str>::Owned((if fv_text_3.ends_with(".0") { Cow::<str>::Owned(fv::strings::js_slice(&fv_text_3, 0.0f64, Some(-2.0f64)).into_owned()) } else { Cow::<str>::Borrowed(&*fv_text_3) }).into_owned()) }))) } else { Cow::<str>::Owned(fv::core::Js(props.count).to_string()) } } } }), (if props.count as f64 == 1.0 { "view" } else { "views" }));
     let s_link = { let fv_query = props.query.as_deref(); { let fv_parts = props.path.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_p| Cow::<str>::Owned(Cow::<str>::Owned(fv::core::js_encode_uri_component(&fv_p)).into_owned())).collect::<Vec<_>>().join("/"); Cow::<str>::Owned((if let Some(fv_query_2) = fv_query { if fv_query_2.is_empty() { Cow::<str>::Owned(format!("{}/{}", props.base, fv_parts)) } else { Cow::<str>::Owned(format!("{}/{}?q={}", props.base, fv_parts, fv::core::js_encode_uri_component(fv_query_2))) } } else { Cow::<str>::Owned(format!("{}/{}", props.base, fv_parts)) }).into_owned()) } };
     out.push_str("<section><h2 title=\"");

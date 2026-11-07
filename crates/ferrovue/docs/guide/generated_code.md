@@ -164,6 +164,12 @@ Every component module has, in this order:
 `Props` has no lifetime when none of its fields borrow (a component whose props are all numbers
 and booleans has a plain `Props`), and a component with no props has an empty `Props`.
 
+The module is laid out for `git diff`. The render's `out.reserve` writes its constant on a line of
+its own and each term it adds on the next ones, so an edit of the template's markup changes the
+constant's line and the line of the markup. A child's props, the attributes and styles given to
+`attrs_into`, the classes given to `class_into` and an object given to `useHead` go one item a line
+where they do not fit in 100 columns, so a changed prop or attribute changes its own line.
+
 # `render` and its parameters
 
 `render` always takes the buffer first and the props second. After them come only the parameters
@@ -323,7 +329,10 @@ if fv_attrs.is_empty() {
     out.push_str(" class=\"badge\"");
     out.push_str(fv_attrs.ids());
 } else {
-    fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("badge"))], fv_attrs.list()], 1, fv_attrs.ids());
+    fv::attrs::attrs_into(out, &[
+        &[("class", fv::attrs::Attr::str("badge"))],
+        fv_attrs.list(),
+    ], 1, fv_attrs.ids());
 }
 #     }
 # }

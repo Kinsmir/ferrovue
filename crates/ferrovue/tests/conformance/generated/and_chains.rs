@@ -146,7 +146,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(152 + 4 + props.badge.as_ref().map_or(0, |v| v.label.len()) + props.word.as_deref().map_or(0, str::len));
+    out.reserve(
+        156
+        + props.badge.as_ref().map_or(0, |v| v.label.len())
+        + props.word.as_deref().map_or(0, str::len)
+    );
     let s_in_range = if let Some(fv_n) = props.n { fv_n as f64 > 1.0 && (fv_n as f64) < 9.0 } else { false };
     let s_color = props.tone.map(|fv_tone| match fv_tone { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" });
     out.push_str("<section");
@@ -193,7 +197,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("none");
     }
     out.push_str("</p><p class=\"");
-    fv::attrs::class_into(out, false, &[if let Some(fv_tone_4) = props.tone { match fv_tone_4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" }, "fixed"]);
+    fv::attrs::class_into(out, false, &[
+        if let Some(fv_tone_4) = props.tone { match fv_tone_4 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" } } else { "" },
+        "fixed",
+    ]);
     out.push_str("\">");
     if let Some(v) = props.tone.map(|fv_tone_5| match fv_tone_5 { AndChainsTone::Info => "blue", AndChainsTone::Warn => "amber" }) {
         fv::core::escape_into(out, v);

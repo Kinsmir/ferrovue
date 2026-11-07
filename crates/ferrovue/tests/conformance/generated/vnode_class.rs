@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(292 + props.tone.len());
+    out.reserve(
+        292
+        + props.tone.len()
+    );
     if props.on {
         out.push_str("<section><p class=\"a b");
         fv::attrs::class_into(out, true, &[if props.on { "big" } else { "" }]);

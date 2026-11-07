@@ -40,7 +40,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(368 + 35 * props.extra.len() + props.picked.len() + props.group.len() + props.extra.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        368
+        + 35 * props.extra.len()
+        + props.picked.len()
+        + props.group.len()
+        + props.extra.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_p = &*props.picked;
     out.push_str("<form><select><option value=\"\"");
     if s_p.is_empty() {

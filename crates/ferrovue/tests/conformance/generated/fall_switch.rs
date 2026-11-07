@@ -102,13 +102,16 @@ pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Ref
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(49 + 4);
+    out.reserve(53);
     if props.mode == FallSwitchMode::On {
         out.push_str("<b");
         if fv_attrs.is_empty() {
             out.push_str(" class=\"on\" title=\"own\"");
         } else {
-            fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("on")), ("title", fv::attrs::Attr::str("own"))], fv_attrs.list()], 1, "");
+            fv::attrs::attrs_into(out, &[
+                &[("class", fv::attrs::Attr::str("on")), ("title", fv::attrs::Attr::str("own"))],
+                fv_attrs.list(),
+            ], 1, "");
         }
         out.push_str(">on</b>");
     } else {

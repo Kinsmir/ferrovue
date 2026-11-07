@@ -42,7 +42,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(169 + props.url.len() + props.doc.len() + props.handler.len() + props.color.len() + props.css.len());
+    out.reserve(
+        169
+        + props.url.len()
+        + props.doc.len()
+        + props.handler.len()
+        + props.color.len()
+        + props.css.len()
+    );
     out.push_str("<section><a href=\"");
     fv::core::escape_into(out, &props.url);
     out.push_str("\">link</a><img src=\"");

@@ -47,7 +47,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(55 + 7 + props.card.as_ref().map_or(0, |v| 7 + 7 + v.note.len()) + props.label.len());
+    out.reserve(
+        62
+        + props.card.as_ref().map_or(0, |v| 7 + 7 + v.note.len())
+        + props.label.len()
+    );
     out.push_str("<b class=\"");
     fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.mood)]);
     out.push_str("\" data-mood=\"");

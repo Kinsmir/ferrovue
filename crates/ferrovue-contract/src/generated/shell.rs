@@ -52,7 +52,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 #[allow(clippy::too_many_arguments)]
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::i18n::I18n, fv_teleports: &fv::page::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(97 + props.title.len());
+    out.reserve(
+        97
+        + props.title.len()
+    );
     out.push_str("<div class=\"shell\"><nav>");
     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push_str(">Home</a></nav>");

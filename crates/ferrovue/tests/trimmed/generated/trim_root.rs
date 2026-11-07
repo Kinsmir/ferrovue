@@ -39,7 +39,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(110 + props.label.len() + props.name.len());
+    out.reserve(
+        110
+        + props.label.len()
+        + props.name.len()
+    );
     out.push_str("<!--[--><span class=\"tagline-word\">by</span> <a href=\"/u/");
     fv::core::escape_into(out, &props.name);
     out.push_str("\">");

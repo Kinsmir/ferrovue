@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(67 + props.title.len());
+    out.reserve(
+        67
+        + props.title.len()
+    );
     out.push_str("<section class=\"escaped-idioms\"><!--[-->");
     super::glyph::try_render_scoped(out, &super::glyph::Props {}, &fv::attrs::Attrs::NONE)?;
     out.push_str("<em>");

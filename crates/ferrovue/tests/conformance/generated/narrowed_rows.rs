@@ -60,7 +60,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(35 + 46 * props.shelves.len() + props.shelves.iter().map(|v| v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        35
+        + 46 * props.shelves.len()
+        + props.shelves.iter().map(|v| v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<section><!--[-->");
     for fv_shelf in props.shelves.iter() {
         if let Some(fv_note) = props.note.as_deref().filter(|v| !v.is_empty()) {

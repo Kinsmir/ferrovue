@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::St
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_stores: &super::stores::Stores<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(19 + props.title.len());
+    out.reserve(
+        19
+        + props.title.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Card.vue");
     out.push_str("<article>");
     fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {

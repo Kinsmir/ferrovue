@@ -51,7 +51,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(134 + props.when.len() + props.word.len() + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        134
+        + props.when.len()
+        + props.word.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Unread.vue");
     let s_upper = props.word.to_uppercase();
     let s_padded = std::cell::LazyCell::new(|| fv_refusals.keep(fv::strings::try_pad_start(&props.word, props.width as f64, "."), 7, 31).into_owned());
@@ -86,14 +92,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ul>");
-        fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: None, label: Some(Cow::Borrowed(&*(*s_stamp))) }, super::unread_fold::Slots {
+        fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props {
+            open: None,
+            label: Some(Cow::Borrowed(&*(*s_stamp))),
+        }, super::unread_fold::Slots {
             default: None,
         }))?;
         out.push_str("<!--]-->");
     } else {
         out.push_str("</p><p>hidden</p>");
     }
-    fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props { open: Some(props.show), label: None }, super::unread_fold::Slots {
+    fv_refusals.check(super::unread_fold::try_render(out, &super::unread_fold::Props {
+        open: Some(props.show),
+        label: None,
+    }, super::unread_fold::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<i>");
             fv::core::escape_into(out, &s_iso);

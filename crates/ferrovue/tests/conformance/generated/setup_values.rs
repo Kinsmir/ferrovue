@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(91 + props.label.len());
+    out.reserve(
+        91
+        + props.label.len()
+    );
     let fv_inherited = fv_provides;
     let s_flipped = -(props.n as f64);
     let s_negated = -(props.n as f64);

@@ -164,7 +164,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(104 + props.label.len() + 2 + 2);
+    out.reserve(
+        108
+        + props.label.len()
+    );
     if props.label.is_empty() {
         out.push_str("<section title>");
     } else {

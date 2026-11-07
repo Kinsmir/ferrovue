@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Tele
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports) -> Result<(), fv::render::Refused> {
-    out.reserve(33 + props.title.len());
+    out.reserve(
+        33
+        + props.title.len()
+    );
     out.push_str("<div class=\"host\">");
     fv::page::teleport_into(out, fv_teleports, "#modals", false, &|out: &mut String| {
         out.push_str("<h2>");

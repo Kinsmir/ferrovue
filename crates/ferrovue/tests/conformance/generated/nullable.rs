@@ -74,7 +74,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(524 + 31 * props.entries.len() + 18 * props.tags.len() + props.label.as_deref().map_or(0, str::len) + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)) + props.entries.iter().map(|v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>());
+    out.reserve(
+        524
+        + 31 * props.entries.len()
+        + 18 * props.tags.len()
+        + props.label.as_deref().map_or(0, str::len)
+        + props.entry.as_ref().map_or(0, |v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len))
+        + props.entries.iter().map(|v| v.title.len() + v.deleted_at.as_deref().map_or(0, str::len) + v.note.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Nullable.vue");
     let s_scaled = std::cell::LazyCell::new(|| props.count.map(|fv_count| fv_refusals.keep(fv::render::try_int(fv_count as f64 * 10.0), 16, 55)));
     let s_fallback = props.label.as_deref();
@@ -272,7 +280,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push_str("</p><p>unpicked|true|</p>");
-    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.label.as_deref().map(Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props {
+        value: props.label.as_deref().map(Cow::Borrowed),
+        entry: props.entry.as_ref().cloned(),
+    }, super::null_child::Slots {
         default: Some(&|out: &mut String, fv_slot_props: &super::null_child::DefaultSlotProps<'_>| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -287,10 +298,16 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         }),
     }))?;
-    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: None, entry: None }, super::null_child::Slots {
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props {
+        value: None,
+        entry: None,
+    }, super::null_child::Slots {
         default: None,
     }))?;
-    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|fv_entry_7| fv_entry_7.deleted_at.as_deref()).map(Cow::Borrowed), entry: props.entries.iter().find(|fv_e_3| fv_e_3.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props {
+        value: props.entry.as_ref().and_then(|fv_entry_7| fv_entry_7.deleted_at.as_deref()).map(Cow::Borrowed),
+        entry: props.entries.iter().find(|fv_e_3| fv_e_3.deleted_at.as_deref().is_none()).cloned(),
+    }, super::null_child::Slots {
         default: None,
     }))?;
     out.push_str("</section>");

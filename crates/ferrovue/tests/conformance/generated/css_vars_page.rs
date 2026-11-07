@@ -58,10 +58,40 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(187 + 7 * props.items.len() + props.color.len() + props.label.as_deref().map_or(0, str::len) + props.font.len() + props.tone.as_deref().map_or(0, str::len) + props.items.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        187
+        + 7 * props.items.len()
+        + props.color.len()
+        + props.label.as_deref().map_or(0, str::len)
+        + props.font.len()
+        + props.tone.as_deref().map_or(0, str::len)
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<!--[-->");
-    super::css_vars::try_render_scoped(out, &super::css_vars::Props { color: Cow::Borrowed(&*props.color), size: props.size, ratio: props.ratio, label: props.label.as_deref().map(Cow::Borrowed), font: Cow::Borrowed(&*props.font), gap: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("given")), ("style", fv::attrs::Attr::styles([fv::attrs::Attr::style([("top", fv::attrs::Attr::str("0")), ("--own", fv::attrs::Attr::str("2"))]), fv::attrs::Attr::style([("color", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))])]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
-    super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props { tint: Cow::Borrowed(&*props.color), shade: Cow::Borrowed(&*props.font) }, &fv::attrs::Attrs::merged(&[&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))]))], &[("style", fv::attrs::Attr::style([("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }), ("--d9e366c1-size", fv::attrs::Attr::Int(props.size))]))]], ""))?;
+    super::css_vars::try_render_scoped(out, &super::css_vars::Props {
+        color: Cow::Borrowed(&*props.color),
+        size: props.size,
+        ratio: props.ratio,
+        label: props.label.as_deref().map(Cow::Borrowed),
+        font: Cow::Borrowed(&*props.font),
+        gap: None,
+    }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("given")), ("style", fv::attrs::Attr::styles([
+        fv::attrs::Attr::style([
+            ("top", fv::attrs::Attr::str("0")),
+            ("--own", fv::attrs::Attr::str("2")),
+        ]),
+        fv::attrs::Attr::style([("color", props.tone.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str))]),
+    ]))], &[("style", fv::attrs::Attr::style([
+        ("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }),
+        ("--d9e366c1-size", fv::attrs::Attr::Int(props.size)),
+    ]))]], ""))?;
+    super::css_vars_root::try_render_scoped(out, &super::css_vars_root::Props {
+        tint: Cow::Borrowed(&*props.color),
+        shade: Cow::Borrowed(&*props.font),
+    }, &fv::attrs::Attrs::merged(&[&[("style", fv::attrs::Attr::style([("left", fv::attrs::Attr::str("1px"))]))], &[("style", fv::attrs::Attr::style([
+        ("--d9e366c1-tone", match props.tone.as_deref() { Some(v) => if v.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(v) }, None => fv::attrs::Attr::str("initial") }),
+        ("--d9e366c1-size", fv::attrs::Attr::Int(props.size)),
+    ]))]], ""))?;
     if let Some(fv_tone) = props.tone.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<p style=\"color:");
         fv::core::escape_into(out, fv_tone);

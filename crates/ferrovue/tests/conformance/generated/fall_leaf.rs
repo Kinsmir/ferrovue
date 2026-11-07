@@ -60,7 +60,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(86 + props.label.len() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        86
+        + props.label.len()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     out.push_str("<p");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"leaf\" id=\"own\"");
@@ -80,7 +84,19 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         out.push('"');
         out.push_str(fv_attrs.ids());
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("leaf")), ("id", fv::attrs::Attr::str("own")), ("title", props.note.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)), ("style", fv::attrs::Attr::style([("color", fv::attrs::Attr::str("blue")), ("margin", fv::attrs::Attr::str("0"))]))], fv_attrs.list(), &[("style", if props.shown.unwrap_or(true) { fv::attrs::Attr::Undefined } else { fv::attrs::Attr::style([("display", fv::attrs::Attr::str("none"))]) })]], 1, fv_attrs.ids());
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("class", fv::attrs::Attr::str("leaf")),
+                ("id", fv::attrs::Attr::str("own")),
+                ("title", props.note.as_deref().map_or(fv::attrs::Attr::Undefined, fv::attrs::Attr::str)),
+                ("style", fv::attrs::Attr::style([
+                    ("color", fv::attrs::Attr::str("blue")),
+                    ("margin", fv::attrs::Attr::str("0")),
+                ])),
+            ],
+            fv_attrs.list(),
+            &[("style", if props.shown.unwrap_or(true) { fv::attrs::Attr::Undefined } else { fv::attrs::Attr::style([("display", fv::attrs::Attr::str("none"))]) })],
+        ], 1, fv_attrs.ids());
     }
     out.push('>');
     fv::core::escape_into(out, &props.label);

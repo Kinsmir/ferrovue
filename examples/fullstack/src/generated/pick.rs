@@ -39,7 +39,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(115 + props.book.id.len() + props.book.title.len() + props.book.author.len() + props.note.len());
+    out.reserve(
+        115
+        + props.book.id.len()
+        + props.book.title.len()
+        + props.book.author.len()
+        + props.note.len()
+    );
     if props.book.id.is_empty() {
         out.push_str("<article class=\"pick\" data-id><h2>");
     } else {
@@ -55,7 +61,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str(")</p><blockquote>");
     fv::core::escape_into(out, &props.note);
     out.push_str("</blockquote>");
-    super::add_to_basket::try_render(out, &super::add_to_basket::Props { id: Cow::Borrowed(&*props.book.id), title: Cow::Borrowed(&*props.book.title) })?;
+    super::add_to_basket::try_render(out, &super::add_to_basket::Props {
+        id: Cow::Borrowed(&*props.book.id),
+        title: Cow::Borrowed(&*props.book.title),
+    })?;
     out.push_str("</article>");
     Ok(())
 }

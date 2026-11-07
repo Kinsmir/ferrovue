@@ -40,9 +40,17 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(69 + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.heading.len());
+    out.reserve(
+        69
+        + props.rows.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.heading.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DataTable.vue");
-    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: props.rows.to_owned(), title: Cow::Borrowed(&*props.heading), note: None }, super::data_list::Slots {
+    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props {
+        rows: props.rows.to_owned(),
+        title: Cow::Borrowed(&*props.heading),
+        note: None,
+    }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             out.push_str("<h2");
             if let Some(v) = fv_slot_props.note {
@@ -59,7 +67,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             let mut filled = false;
             if !props.compact {
                 filled = true;
-                fv_refusals.join(super::row_chip::try_render(out, &super::row_chip::Props { row: fv_slot_props_2.row.to_owned(), first: fv_slot_props_2.first }));
+                fv_refusals.join(super::row_chip::try_render(out, &super::row_chip::Props {
+                    row: fv_slot_props_2.row.to_owned(),
+                    first: fv_slot_props_2.first,
+                }));
             } else {
                 if !fv_slot_props_2.tags.is_empty() {
                     filled = true;

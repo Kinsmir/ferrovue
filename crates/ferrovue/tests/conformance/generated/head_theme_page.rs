@@ -47,14 +47,27 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(props.label.len() + props.theme.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        props.label.len()
+        + props.theme.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadThemePage.vue");
-    fv_head.push(fv::head::HeadValue::object([("titleTemplate", fv::head::HeadValue::str(&format!("%s | {}", props.label))), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str("theme")), ("content", fv::head::HeadValue::str("page"))])]))]));
+    fv_head.push(fv::head::HeadValue::object([
+        ("titleTemplate", fv::head::HeadValue::str(&format!("%s | {}", props.label))),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str("theme")),
+            ("content", fv::head::HeadValue::str("page")),
+        ])])),
+    ]));
     fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: props.theme.as_deref().map(Cow::Borrowed) }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
             fv_refusals.join(super::head_theme::try_render(out, &super::head_theme::Props { label: Cow::Borrowed(&*props.label) }, super::head_theme::Slots {
                 default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                    fv_refusals.join(super::head_article::try_render(out, &super::head_article::Props { title: Cow::Borrowed(&*props.label), tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect() }, fv_head));
+                    fv_refusals.join(super::head_article::try_render(out, &super::head_article::Props {
+                        title: Cow::Borrowed(&*props.label),
+                        tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect(),
+                    }, fv_head));
                     fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed(&*props.label) }, fv_provides, ""));
                     true
                 }),

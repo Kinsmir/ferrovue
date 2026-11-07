@@ -36,7 +36,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(294 + 131 * props.reviews.len() + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>());
+    out.reserve(
+        294
+        + 131 * props.reviews.len()
+        + props.reviews.iter().map(|v| v.reader.len() + v.text.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "client/components/Reviews.vue");
     if !props.reviews.is_empty() {
         out.push_str("<div class=\"review-list\" data-v-458b887c><ol data-v-458b887c><!--[-->");

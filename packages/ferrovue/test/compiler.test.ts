@@ -9,7 +9,7 @@ import { GenError, GenErrors } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
 import { type ErrorCode, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
-import { like } from "./code.ts";
+import { like, oneLine } from "./code.ts";
 
 const roots: string[] = [];
 
@@ -306,10 +306,60 @@ const props = defineProps<{ label: string; items: string[] }>();
 </script>
 <template><ul :title="label"><li v-for="i in items">{{ i }}</li></ul></template>`),
     ).get("x.rs")!;
-    const reserve = out.split("\n").find((l) => l.includes("out.reserve("))!;
+    const reserve = /out\.reserve\([^;]*;/.exec(out)![0];
     expect(reserve).toMatch(/\d+ \* props\.items\.len\(\)/);
     expect(reserve).toContain("props.label.len()");
     expect(reserve).toContain("props.items.iter().map(|v| v.len()).sum::<usize>()");
+  });
+
+  it("writes the reserve one term a line, so that a change of the template's markup changes only its constant", () => {
+    const x = (title: string) =>
+      compile(
+        island(`<script setup lang="ts">
+const props = defineProps<{ label: string; items: string[] }>();
+</script>
+<template><ul :title="label"><li v-for="i in items">{{ i }}</li></ul><h2>${title}</h2></template>`),
+      ).get("x.rs")!;
+    const before = x("Items").split("\n");
+    const after = x("Item").split("\n");
+    expect(after).toHaveLength(before.length);
+    const changed = before.flatMap((line, i) => (line === after[i] ? [] : [[line, after[i]]]));
+    expect(changed).toHaveLength(2);
+    expect(changed[0]![0]).toMatch(/^ {8}\d+$/);
+    expect(changed[1]![0]).toContain("<h2>Items</h2>");
+    expect(x("Items")).toMatch(/ {4}out\.reserve\(\n {8}\d+\n( {8}\+ [^\n]+\n)+ {4}\);\n/);
+  });
+
+  it("adds the reserve's numbers into its constant, and writes a single term on one line", () => {
+    const out = compile(island('<script setup lang="ts">\ndefineProps<{ tag: "b" | "i" }>();\n</script>\n<template><component :is="tag">x</component></template>')).get("x.rs")!;
+    expect(out).toMatch(/ {4}out\.reserve\(\d+\);\n/);
+  });
+
+  it("writes a child's props one field a line where they do not fit on one", () => {
+    const out = compile(
+      island(
+        `<script setup lang="ts">
+import Kid from "./Kid.vue";
+import P from "./P.vue";
+defineProps<{ first: string; second: string; third: string }>();
+</script>
+<template><Kid :first="first" :second="second" :third="third" /><P a="x" b="y" /></template>`,
+        {
+          P: '<script setup lang="ts">\ndefineProps<{ a: string; b: string }>();\n</script>\n<template><i>{{ a }}{{ b }}</i></template>',
+          Kid: '<script setup lang="ts">\ndefineProps<{ first: string; second: string; third: string }>();\n</script>\n<template><i>{{ first }}{{ second }}{{ third }}</i></template>',
+        },
+      ),
+    ).get("x.rs")!;
+    expect(out).toContain(
+      [
+        "    super::kid::try_render(out, &super::kid::Props {",
+        "        first: Cow::Borrowed(&*props.first),",
+        "        second: Cow::Borrowed(&*props.second),",
+        "        third: Cow::Borrowed(&*props.third),",
+        "    })?;",
+      ].join("\n"),
+    );
+    expect(out).toContain('    super::p::try_render(out, &super::p::Props { a: Cow::Borrowed("x"), b: Cow::Borrowed("y") })?;');
   });
 
   it("reserves the text of structs whose fields all have a known length without binding them", () => {
@@ -321,7 +371,7 @@ defineProps<{ one?: P; many: P[]; named: Record<string, P>; nested: S[] }>();
 </script>
 <template><div>{{ one?.a }}<i v-for="p in many">{{ p.b }}</i><b v-for="p in named">{{ p.a }}</b><s v-for="s in nested">{{ s.p?.b }}</s></div></template>`),
     ).get("x.rs")!;
-    const reserve = out.split("\n").find((l) => l.includes("out.reserve("))!;
+    const reserve = /out\.reserve\([^;]*;/.exec(out)![0];
     expect(reserve).toContain("props.one.as_ref().map_or(0, |_| 5)");
     expect(reserve).toContain("5 * props.many.len()");
     expect(reserve).toContain("props.named.iter().map(|(k, _)| k.len() + 5).sum::<usize>()");
@@ -830,7 +880,7 @@ import K from "./K.vue";
 defineProps<{ n: number; ok: boolean; tag?: string }>();
 </script>
 <template>${template}</template>`;
-      const rust = (template: string) => compile(island(parent(template), { K: kid })).get("x.rs")!;
+      const rust = (template: string) => oneLine(compile(island(parent(template), { K: kid })).get("x.rs")!);
       expect(rust(`<K :on1="n" :on-at="3" :on-ok="ok" :on-tag="tag" />`)).toContain(
         "on1: Some(props.n).filter(|v| *v != 0), on_at: 3i64, on_ok: props.ok, on_tag: props.tag.as_deref().map(Cow::Borrowed).filter(|v| !v.is_empty())",
       );
@@ -965,7 +1015,7 @@ defineProps<{ a: string }>();
       const files = compile(island(parent, { Child: headed }));
       const out = files.get("child.rs")!;
       expect(out).toContain('fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.a))]));');
-      expect(out).toContain('fv_head.push_seo_meta(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("t")), ("titleTemplate", fv::head::HeadValue::str("%s!"))]), vec![("property", "og:title", fv::head::HeadValue::str(&props.a))]);');
+      expect(oneLine(out)).toContain('fv_head.push_seo_meta(fv::head::HeadValue::object([("title", fv::head::HeadValue::str("t")), ("titleTemplate", fv::head::HeadValue::str("%s!"))]), vec![("property", "og:title", fv::head::HeadValue::str(&props.a))]);');
       expect(out.indexOf("fv_head.push(")).toBeLessThan(out.indexOf('out.push_str("<p>")'));
       expect(files.get("x.rs")).toContain("fv_head: &fv::head::Head");
     });
@@ -1965,7 +2015,7 @@ defineProps<{ at: Date; maybe: Date | null; later?: Date; made: Date }>();
       expect(x).toContain("let s_year = fv::date::js_utc_full_year(fv::date::js_time_of(&props.posted));");
       expect(x).toContain("fv::core::escape_into(out, &fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&props.posted)), 7, 31));");
       expect(x).toContain("if let Some(fv_edited) = props.edited.as_ref().map(fv::date::js_time_of) {");
-      expect(x).toContain(
+      expect(oneLine(x)).toContain(
         "&super::stamp::Props { at: fv_refusals.date(fv::date::js_time_of(&props.posted), 7, 125), maybe: props.deleted.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 141)), later: props.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 7, 158)), made: fv_refusals.date(fv::date::js_time_clip(s_year), 7, 171) }",
       );
       const chrono = generate(island(posted, { Stamp: stamp }), { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc>" });
@@ -6944,7 +6994,7 @@ const p = computed((): Pair => ({ left: { [KEY]: "l", count: 1, owner: null, tag
   });
 
   it("builds a child's prop from a literal, and from `.map()` to literals, as the child's own struct", () => {
-    const out = x("", `<V :item="{ label: name }" :items="words.map((w) => ({ label: w, n: 1 }))" /><V v-bind="{ item: { label: 'b', n }, items: [] }" />`);
+    const out = oneLine(x("", `<V :item="{ label: name }" :items="words.map((w) => ({ label: w, n: 1 }))" /><V v-bind="{ item: { label: 'b', n }, items: [] }" />`));
     expect(out).toContain("super::v::try_render(out, &super::v::Props { item: super::v::Item { label: Cow::<str>::Borrowed(&*props.name), n: None }, items: props.words.iter()");
     expect(out).toContain("super::v::Item { label: Cow::<str>::Owned(str::to_owned(&*fv_w)), n: Some(1i64) }).collect::<Vec<_>>() })?;");
     expect(out).toContain('super::v::Props { item: super::v::Item { label: Cow::<str>::Borrowed("b"), n: Some(props.n) }, items: Vec::new() }');
@@ -7784,7 +7834,7 @@ defineProps<{ tags: ("p" | "q")[]; tones: Tone[]; some?: Tone[]; none: Tone[] | 
   });
 
   it("hands each item of a list of a union to a child's prop as the enum, and the list to a child's list of the union", () => {
-    const out = rendered(
+    const out = oneLine(rendered(
       compile(
         island(
           `<script setup lang="ts">
@@ -7803,7 +7853,7 @@ defineProps<{ tone?: Tone; wide?: Tone | "hot"; all: Tone[]; some?: Tone[] }>();
           },
         ),
       ).get("x.rs")!,
-    );
+    ));
     expect(out).toContain("for fv_t_ref in props.tones.iter() {\n        let fv_t = *fv_t_ref;");
     expect(out).toContain("tone: Some(match fv_t { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }), wide: Some(match fv_t { Tone::Calm => super::y::YWide::Calm, Tone::Loud => super::y::YWide::Loud }), all: props.tones.iter().map(|&v| match v { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }).collect(), some: None");
     expect(out).toContain("all: props.some.as_deref().unwrap_or(&[]).iter().map(|&v| match v {");
@@ -8224,13 +8274,13 @@ defineProps<{ pick: Tone | "" }>();
 
     it("gives a member the constant folds to as its variant", () => {
       const out = folded(`K === "x" ? "calm" : "loud"`, `<Badge :tone="tone || 'calm'" :other="tone || undefined" />`);
-      expect(out).toContain(`tone: ${T}::Loud, other: Some(${T}::Loud)`);
+      expect(oneLine(out)).toContain(`tone: ${T}::Loud, other: Some(${T}::Loud)`);
     });
 
     it("gives the empty string the constant folds to `Empty`, and leaves it out by `||`", () => {
       const out = folded(`K === "x" ? "loud" : ""`, `<Pick :pick="tone" /><Badge :tone="tone || 'calm'" :other="tone || undefined" />`);
       expect(out).toContain("pick: super::pick::PickPick::Empty");
-      expect(out).toContain(`tone: ${T}::Calm, other: None`);
+      expect(oneLine(out)).toContain(`tone: ${T}::Calm, other: None`);
     });
 
     it("works out a comparison of the folded value with a literal", () => {
@@ -8378,7 +8428,7 @@ ${setup}
         );
         expect(out).toContain("let s_shown = fv::props::Union::as_str(props.size);");
         expect(out).toContain("let s_maybe = props.spare.map(fv::props::Union::as_str);");
-        expect(out).toContain('if s_shown == "-" { "a" } else { "" }, if s_maybe == Some("-") { "b" } else { "" }, if s_held == "-" { "c" } else { "" }');
+        expect(oneLine(out)).toContain('if s_shown == "-" { "a" } else { "" }, if s_maybe == Some("-") { "b" } else { "" }, if s_held == "-" { "c" } else { "" }');
       });
 
       it("holds the value of a function of a `.ts` file as a string of its return type", () => {
@@ -8707,7 +8757,7 @@ const props = defineProps<{ tones: Tone[]; label: string }>();
   it("hands a child's prop of the union the application's enum", () => {
     const x = generate(project(parent, { Y: child }), MAPPED).get("x.rs")!;
     expect(x).toContain("&super::y::Props { tone: props.tone, tones: None }");
-    expect(x).toContain("&super::y::Props { tone: props.other.unwrap_or(app_domain::Tone::XCool), tones: None }");
+    expect(oneLine(x)).toContain("&super::y::Props { tone: props.other.unwrap_or(app_domain::Tone::XCool), tones: None }");
     expect(x).toContain("&super::y::Props { tone: app_domain::Tone::Warm, tones: None }");
   });
 

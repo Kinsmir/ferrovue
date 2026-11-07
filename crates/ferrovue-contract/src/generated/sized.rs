@@ -100,9 +100,12 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(16 + 2 + 4);
+    out.reserve(22);
     out.push_str("<b class=\"");
-    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.size), props.tone.map(fv::props::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[
+        fv::props::Union::as_str(props.size),
+        props.tone.map(fv::props::Union::as_str).unwrap_or(""),
+    ]);
     out.push_str("\">");
     fv::core::escape_into(out, fv::props::Union::as_str(props.size));
     out.push_str("</b>");

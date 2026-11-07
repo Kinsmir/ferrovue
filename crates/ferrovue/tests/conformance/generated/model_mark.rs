@@ -48,7 +48,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(71 + props.label.len() + props.model_value.len() + props.heading.as_deref().map_or(0, str::len));
+    out.reserve(
+        71
+        + props.label.len()
+        + props.model_value.len()
+        + props.heading.as_deref().map_or(0, str::len)
+    );
     if props.label.is_empty() {
         out.push_str("<!--[--><h2 title>");
     } else {

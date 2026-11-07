@@ -57,7 +57,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(246 + 16 * props.tags.len() + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        246
+        + 16 * props.tags.len()
+        + props.title.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DatePost.vue");
     let s_valid = !fv::date::js_time_of(&props.posted).is_nan();
     let s_year = fv::date::js_utc_full_year(fv::date::js_time_of(&props.posted));
@@ -115,7 +120,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props { at: fv_refusals.date(fv::date::js_time_of(&props.posted), 22, 21), edited: props.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 38)), deleted: props.deleted.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 56)), shown: fv_refusals.date(s_shown, 22, 73) }))?;
+    fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props {
+        at: fv_refusals.date(fv::date::js_time_of(&props.posted), 22, 21),
+        edited: props.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 38)),
+        deleted: props.deleted.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 22, 56)),
+        shown: fv_refusals.date(s_shown, 22, 73),
+    }))?;
     out.push_str("</article>");
     fv_refusals.check(Ok(()))
 }

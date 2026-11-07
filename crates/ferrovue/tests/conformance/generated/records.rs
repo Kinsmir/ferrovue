@@ -64,7 +64,18 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(186 + 38 * props.counts.len() + 34 * props.labels.len() + 25 * props.scores.len() + 18 * props.groups.len() + 23 * props.counts.len() + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>() + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>() + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
+    out.reserve(
+        186
+        + 38 * props.counts.len()
+        + 34 * props.labels.len()
+        + 25 * props.scores.len()
+        + 18 * props.groups.len()
+        + 23 * props.counts.len()
+        + props.counts.iter().map(|(k, _)| k.len()).sum::<usize>()
+        + props.labels.iter().map(|(k, v)| k.len() + v.len()).sum::<usize>()
+        + props.scores.iter().map(|(k, v)| k.len() + v.by.len()).sum::<usize>()
+        + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+    );
     out.push_str("<section><ul><!--[-->");
     for (fv_i, (fv_name, fv_count_ref)) in props.counts.iter().enumerate() {
         let fv_count = *fv_count_ref;
@@ -148,7 +159,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("</p><!---->");
     }
-    super::chips::try_render(out, &super::chips::Props { chips: props.labels.keys().map(Cow::<str>::Borrowed).collect(), counts: None, marks: Some(props.counts.to_owned()) })?;
+    super::chips::try_render(out, &super::chips::Props {
+        chips: props.labels.keys().map(Cow::<str>::Borrowed).collect(),
+        counts: None,
+        marks: Some(props.counts.to_owned()),
+    })?;
     out.push_str("</section>");
     Ok(())
 }

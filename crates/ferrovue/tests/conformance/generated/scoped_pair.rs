@@ -45,7 +45,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, _fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(79 + props.term.len() + props.text.len());
+    out.reserve(
+        79
+        + props.term.len()
+        + props.text.len()
+    );
     out.push_str("<!--[--><dt data-v-32dc74d5>");
     fv::core::escape_into(out, &props.term);
     out.push_str("</dt><dd data-term=\"");

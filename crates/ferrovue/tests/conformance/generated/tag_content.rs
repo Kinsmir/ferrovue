@@ -97,7 +97,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(295 + 7 * props.items.len() + 7 * props.items.len() + props.items.len() + 9 * props.items.len() + 4 + props.items.iter().map(|v| v.len()).sum::<usize>() + props.label.len());
+    out.reserve(
+        299
+        + 7 * props.items.len()
+        + 7 * props.items.len()
+        + props.items.len()
+        + 9 * props.items.len()
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+        + props.label.len()
+    );
     let fv_tag = match props.tag { TagContentTag::Div => "div", TagContentTag::Form => "form" };
     out.push('<');
     out.push_str(fv_tag);
@@ -153,7 +161,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     for fv_i_ref_3 in props.items.iter() {
         let fv_i_3: &str = fv_i_ref_3;
-        super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: Cow::Borrowed(fv_i_3), size: None }, super::shape_square::Slots {
+        super::shape_square::try_render_scoped(out, &super::shape_square::Props {
+            label: Cow::Borrowed(fv_i_3),
+            size: None,
+        }, super::shape_square::Slots {
             default: None,
             corner: Some(fv::render::Slot::new(&|out: &mut String| {
                 out.push('c');
@@ -169,7 +180,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str(if props.on { "</ul><p>t</p>" } else { "</ul><!--v-if-->" });
-    super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
+    super::shape_square::try_render_scoped(out, &super::shape_square::Props {
+        label: Cow::Borrowed(&*props.label),
+        size: None,
+    }, super::shape_square::Slots {
         default: None,
         corner: None,
     }, &fv::attrs::Attrs::NONE)?;

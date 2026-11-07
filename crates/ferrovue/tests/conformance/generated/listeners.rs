@@ -41,10 +41,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(83 + props.title.len() + props.event.len());
+    out.reserve(
+        83
+        + props.title.len()
+        + props.event.len()
+    );
     out.push_str("<section>");
-    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::NONE)?;
-    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props { label: Cow::Borrowed(&*props.title), count: None }, &fv::attrs::Attrs::merged(&[&[("title", fv::attrs::Attr::str("tip"))]], ""))?;
+    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props {
+        label: Cow::Borrowed(&*props.title),
+        count: None,
+    }, &fv::attrs::Attrs::NONE)?;
+    super::listen_leaf::try_render_scoped(out, &super::listen_leaf::Props {
+        label: Cow::Borrowed(&*props.title),
+        count: None,
+    }, &fv::attrs::Attrs::merged(&[&[("title", fv::attrs::Attr::str("tip"))]], ""))?;
     out.push_str("<!--[-->");
     for fv_l in props.leaves.iter() {
         super::listen_leaf::try_render_scoped(out, fv_l, &fv::attrs::Attrs::NONE)?;
@@ -62,10 +72,20 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         super::listen_leaf::try_render_scoped(out, fv_l_4, &fv::attrs::Attrs::NONE)?;
     }
     out.push_str("<!--]-->");
-    super::listen_sale::try_render(out, &super::listen_sale::Props { label: Cow::Borrowed(&*props.title), on_sale: None })?;
-    super::listen_sale::try_render(out, &super::listen_sale::Props { label: Cow::Borrowed(&*props.title), on_sale: Some(true) })?;
+    super::listen_sale::try_render(out, &super::listen_sale::Props {
+        label: Cow::Borrowed(&*props.title),
+        on_sale: None,
+    })?;
+    super::listen_sale::try_render(out, &super::listen_sale::Props {
+        label: Cow::Borrowed(&*props.title),
+        on_sale: Some(true),
+    })?;
     super::listened::try_render(out, &props.tree)?;
-    super::listened::try_render(out, &super::listened::Props { id: Cow::Borrowed(&*props.title), label: Cow::Borrowed(&*props.title), rows: Vec::new() })?;
+    super::listened::try_render(out, &super::listened::Props {
+        id: Cow::Borrowed(&*props.title),
+        label: Cow::Borrowed(&*props.title),
+        rows: Vec::new(),
+    })?;
     out.push_str("</section>");
     Ok(())
 }

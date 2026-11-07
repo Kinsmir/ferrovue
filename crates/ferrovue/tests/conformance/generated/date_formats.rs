@@ -57,7 +57,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(234 + 19 * props.times.len() + props.published.len() + props.label.len());
+    out.reserve(
+        234
+        + 19 * props.times.len()
+        + props.published.len()
+        + props.label.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateFormats.vue");
     let s_made = std::cell::LazyCell::new(|| fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, props.month as f64, props.day, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 6, 38)));
     let s_json = fv::date::js_to_json(fv::date::js_time_of(&props.posted)).map(Cow::<str>::Owned);

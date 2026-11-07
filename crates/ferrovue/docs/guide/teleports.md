@@ -51,7 +51,10 @@ A component that renders a `<Teleport>`, or a child that does, takes a
 #
 /// Write the component's server render into `out`.
 pub fn render(out: &mut String, props: &Props<'_>, fv_teleports: &fv::page::Teleports) {
-    out.reserve(129 + props.title.len());
+    out.reserve(
+        129
+        + props.title.len()
+    );
     out.push_str("<div class=\"host\"><button>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</button>");

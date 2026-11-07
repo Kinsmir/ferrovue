@@ -51,12 +51,18 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(23 + props.label.len());
+    out.reserve(
+        23
+        + props.label.len()
+    );
     out.push_str("<div");
     if fv_attrs.is_empty() {
         out.push_str(" class=\"box\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("box"))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[("class", fv::attrs::Attr::str("box"))],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push('>');
     fv::render::slot_into(out, fv_slots.default, Some(&mut |out: &mut String| {

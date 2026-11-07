@@ -45,7 +45,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(37 + props.model_value.len());
+    out.reserve(
+        37
+        + props.model_value.len()
+    );
     out.push_str("<input");
     if fv_attrs.is_empty() {
         if props.model_value.is_empty() {
@@ -56,7 +59,11 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
             out.push('"');
         }
     } else {
-        fv::attrs::attrs_into(out, &[&[("maxlength", fv::attrs::Attr::str("40"))], fv_attrs.list(), &[("value", fv::attrs::Attr::str(&props.model_value))]], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[("maxlength", fv::attrs::Attr::str("40"))],
+            fv_attrs.list(),
+            &[("value", fv::attrs::Attr::str(&props.model_value))],
+        ], 1, "");
     }
     out.push('>');
     Ok(())

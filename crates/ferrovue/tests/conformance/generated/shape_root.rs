@@ -52,7 +52,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>) -> R
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(6 + props.label.len());
+    out.reserve(
+        6
+        + props.label.len()
+    );
     match props.shape {
         super::types::Shape::Circle => {
             super::shape_circle::try_render_scoped(out, &super::shape_circle::Props { label: Cow::Borrowed(&*props.label) }, super::shape_circle::Slots {
@@ -64,7 +67,10 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
             }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
         }
         super::types::Shape::Square => {
-            super::shape_square::try_render_scoped(out, &super::shape_square::Props { label: Cow::Borrowed(&*props.label), size: None }, super::shape_square::Slots {
+            super::shape_square::try_render_scoped(out, &super::shape_square::Props {
+                label: Cow::Borrowed(&*props.label),
+                size: None,
+            }, super::shape_square::Slots {
                 default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
                     let mut filled = false;
                     if fv::render::slot_into_slotted(out, fv_slots.default, "", None) { filled = true; }

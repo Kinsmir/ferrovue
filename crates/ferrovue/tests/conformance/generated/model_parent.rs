@@ -39,12 +39,23 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(19 + props.initial.len());
+    out.reserve(
+        19
+        + props.initial.len()
+    );
     let s_text = &*props.initial;
     let s_is_open = props.open;
     out.push_str("<section>");
-    super::model::try_render(out, &super::model::Props { model_value: Cow::Borrowed(s_text), open: Some(s_is_open), level: None })?;
-    super::model::try_render(out, &super::model::Props { model_value: Cow::Borrowed(s_text), open: None, level: Some(1i64) })?;
+    super::model::try_render(out, &super::model::Props {
+        model_value: Cow::Borrowed(s_text),
+        open: Some(s_is_open),
+        level: None,
+    })?;
+    super::model::try_render(out, &super::model::Props {
+        model_value: Cow::Borrowed(s_text),
+        open: None,
+        level: Some(1i64),
+    })?;
     out.push_str("</section>");
     Ok(())
 }

@@ -59,7 +59,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(330 + props.label.len() + props.tip.as_deref().map_or(0, str::len) + props.extra.len() + props.state.len() + props.id.as_deref().map_or(0, str::len));
+    out.reserve(
+        330
+        + props.label.len()
+        + props.tip.as_deref().map_or(0, str::len)
+        + props.extra.len()
+        + props.state.len()
+        + props.id.as_deref().map_or(0, str::len)
+    );
     out.push_str("<form><button type=\"button\"");
     if props.disabled {
         out.push_str(" disabled");

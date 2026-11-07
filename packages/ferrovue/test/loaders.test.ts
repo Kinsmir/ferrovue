@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { oneLine } from "./code.ts";
 import { GenError } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
 import { type ErrorCode } from "../src/errors.ts";
@@ -119,7 +120,7 @@ describe("loaders", () => {
     const out = project({ X: child, Page: page });
     expect(out.get("x.rs")).toContain("fv::core::escape_into(out, &l_0.title);");
     expect(out.get("page.rs")).toContain("pub fn try_render(out: &mut String, _props: &Props, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {");
-    expect(out.get("page.rs")).toContain('super::x::try_render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(Cow::Borrowed("n")) }, fv_loads)?;');
+    expect(oneLine(out.get("page.rs")!)).toContain('super::x::try_render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(Cow::Borrowed("n")) }, fv_loads)?;');
   });
 
   it("awaits a loader whose result holds dates, written as JsDates with a plan of where they are", () => {

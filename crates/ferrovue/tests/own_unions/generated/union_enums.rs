@@ -545,11 +545,20 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(274 + 21 * props.steps.len() + 6 + 1 + 1 + 4 + 4 + 3 + 2 + 2 + 1 + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>() + props.note.len());
+    out.reserve(
+        298
+        + 21 * props.steps.len()
+        + props.steps.iter().map(|v| v.label.len() + 7 + 6).sum::<usize>()
+        + props.note.len()
+    );
     let s_label = if props.mode == UnionEnumsMode::A { "first" } else { if props.mode == UnionEnumsMode::B { "second" } else { "third" } };
     let s_chosen = if props.level == crate::domain::Level::High { UnionEnumsChosen::A } else { match props.mode { UnionEnumsMode::A => UnionEnumsChosen::A, UnionEnumsMode::B => UnionEnumsChosen::B, UnionEnumsMode::C => UnionEnumsChosen::C } };
     out.push_str("<section class=\"");
-    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.align), fv::props::Union::as_str(props.mode), props.gap.map(fv::props::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[
+        fv::props::Union::as_str(props.align),
+        fv::props::Union::as_str(props.mode),
+        props.gap.map(fv::props::Union::as_str).unwrap_or(""),
+    ]);
     out.push_str("\" title=\"");
     fv::core::escape_into(out, fv::props::Union::as_str(props.mark));
     out.push_str("\" style=\"text-align:");
@@ -627,10 +636,22 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: Cow::Borrowed(fv::props::Union::as_str(props.mode)), wide: Some(match props.align { crate::domain::Align::Left => super::union_child::UnionChildWide::Left, crate::domain::Align::Center => super::union_child::UnionChildWide::Center, crate::domain::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { UnionEnumsChosen::A => super::union_child::UnionChildPick::A, UnionEnumsChosen::B => super::union_child::UnionChildPick::B, UnionEnumsChosen::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
+    super::union_child::try_render(out, &super::union_child::Props {
+        align: props.align,
+        text: Cow::Borrowed(fv::props::Union::as_str(props.mode)),
+        wide: Some(match props.align { crate::domain::Align::Left => super::union_child::UnionChildWide::Left, crate::domain::Align::Center => super::union_child::UnionChildWide::Center, crate::domain::Align::Right => super::union_child::UnionChildWide::Right }),
+        pick: match s_chosen { UnionEnumsChosen::A => super::union_child::UnionChildPick::A, UnionEnumsChosen::B => super::union_child::UnionChildPick::B, UnionEnumsChosen::C => super::union_child::UnionChildPick::C },
+        fixed: super::union_child::UnionChildFixed::Y,
+    })?;
     out.push_str("<!--[-->");
     for fv_s_2 in props.steps.iter() {
-        super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(crate::domain::Align::Center), text: Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
+        super::union_child::try_render(out, &super::union_child::Props {
+            align: fv_s_2.align.unwrap_or(crate::domain::Align::Center),
+            text: Cow::Borrowed(&*fv_s_2.label),
+            wide: None,
+            pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C },
+            fixed: super::union_child::UnionChildFixed::X,
+        })?;
     }
     out.push_str("<!--]--><p>");
     fv::core::escape_into(out, &props.note);

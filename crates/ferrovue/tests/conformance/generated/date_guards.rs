@@ -59,7 +59,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(285 + props.stamp.len() + props.title.len());
+    out.reserve(
+        285
+        + props.stamp.len()
+        + props.title.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateGuards.vue");
     let s_valid = !fv::date::js_time_of(&props.at).is_nan();
     let s_shown = props.edited.as_ref().map(fv::date::js_time_of).unwrap_or(fv::date::js_time_of(&props.at));

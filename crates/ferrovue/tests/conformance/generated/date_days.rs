@@ -51,7 +51,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(144 + props.by.iter().map(|(k, _)| k.len()).sum::<usize>());
+    out.reserve(
+        144
+        + props.by.iter().map(|(k, _)| k.len()).sum::<usize>()
+    );
     let s_valid = props.days.iter().map(fv::date::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).collect::<Vec<_>>();
     let s_sum = fv::strings::js_reduce(props.days.iter().map(fv::date::js_time_of), 0.0f64, |fv_total, fv_d_2| fv_total + fv::date::js_utc_date(fv_d_2));
     out.push_str("<div><!--[-->");

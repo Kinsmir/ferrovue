@@ -188,7 +188,16 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(257 + 59 * props.parts.len() + 28 * props.by_name.len() + 4 + 3 + props.note.as_deref().map_or(0, str::len) + props.replaces.as_deref().map_or(0, str::len) + props.flair.iter().map(|v| v.len()).sum::<usize>() + props.parts.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.by_name.iter().map(|(k, v)| k.len() + v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>());
+    out.reserve(
+        264
+        + 59 * props.parts.len()
+        + 28 * props.by_name.len()
+        + props.note.as_deref().map_or(0, str::len)
+        + props.replaces.as_deref().map_or(0, str::len)
+        + props.flair.iter().map(|v| v.len()).sum::<usize>()
+        + props.parts.iter().map(|v| v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.by_name.iter().map(|(k, v)| k.len() + v.label.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+    );
     if let Some(fv_replaces) = props.replaces.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<div data-replaces=\"");
         fv::core::escape_into(out, fv_replaces);
@@ -233,7 +242,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         for (fv_n, fv_part) in props.parts.iter().enumerate() {
             let fv_n = fv_n as i64;
             out.push_str("<p class=\"");
-            fv::attrs::class_into(out, false, &[if fv_n != 0 { "later" } else { "" }, if fv_n + 1 == props.parts.len() as i64 { "last" } else { "" }]);
+            fv::attrs::class_into(out, false, &[
+                if fv_n != 0 { "later" } else { "" },
+                if fv_n + 1 == props.parts.len() as i64 { "last" } else { "" },
+            ]);
             out.push_str("\" data-n=\"");
             fv::core::push_int(out, fv_n - 1);
             out.push_str("\">");

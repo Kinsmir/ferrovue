@@ -76,7 +76,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(121 + props.person.name.len() + props.person.title.as_deref().map_or(0, str::len) + props.person.city.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>() + props.people.iter().map(|v| v.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len) + v.city.as_deref().map_or(0, str::len))).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        121
+        + props.person.name.len()
+        + props.person.title.as_deref().map_or(0, str::len)
+        + props.person.city.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.people.iter().map(|v| v.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len) + v.city.as_deref().map_or(0, str::len))).sum::<usize>()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_byline = [Some(&*props.person.name), props.person.title.as_deref(), props.person.city.as_deref()].into_iter().flatten().map(Cow::<str>::Borrowed).filter(|fv_item| !fv_item.is_empty()).collect::<Vec<_>>().join(" · ");
     out.push_str("<article><h1>");
     fv::core::escape_into(out, &s_byline);

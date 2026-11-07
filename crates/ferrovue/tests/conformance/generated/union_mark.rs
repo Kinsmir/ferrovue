@@ -46,7 +46,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(23 + 10 + props.label.len());
+    out.reserve(
+        33
+        + props.label.len()
+    );
     out.push_str("<em");
     if let Some(v) = props.mark.map(fv::props::Union::as_str) {
         out.push_str(" data-mark=\"");

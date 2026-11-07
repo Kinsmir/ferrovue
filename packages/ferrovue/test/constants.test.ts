@@ -478,7 +478,7 @@ describe("constants read by a key known only when rendering", () => {
     expect(read('k: "b" | "a"', '{ a: { x: "1" } }', '<p v-if="T[k]">x</p>')).toMatch(like("if !matches!(props.k, XK::B) {"));
     expect(read('k: "a" | "b"', '{ a: { x: "1" } }', '<p v-if="T[k]">x</p>')).toMatch(like("if matches!(props.k, XK::A) {"));
     expect(read('k: "a" | "c"', '{ a: { x: "1" }, c: { x: "2" } }', '<p v-if="T[k]">{{ T[k].x }}</p>')).toMatch(like(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(7 + 1);
+    out.reserve(8);
     out.push_str("<p>");
     out.push_str(match props.k { XK::A => "1", XK::C => "2" });
     out.push_str("</p>");

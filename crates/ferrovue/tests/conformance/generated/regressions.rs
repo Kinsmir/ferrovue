@@ -59,7 +59,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(603 + props.s1.len() + props.os1.as_deref().map_or(0, str::len) + props.l2.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        603
+        + props.s1.len()
+        + props.os1.as_deref().map_or(0, str::len)
+        + props.l2.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<div><p>1e+21|100000000000000000000|9007199254740992</p><i alt=\"100000000000000000000\" id=\"1e+21\"></i><b placeholder=\"");
     fv::core::escape_into(out, &(if props.s1.starts_with("Σ") { Cow::<str>::Borrowed(&*props.s1) } else { Cow::<str>::Owned(fv::core::js_to_fixed(1.0f64, 0)) }));
     out.push_str("\"></b><p>");
@@ -155,7 +160,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &(if props.b0 { Cow::<str>::Borrowed("a") } else { Cow::<str>::Owned(fv::strings::js_char_at(&"é".to_uppercase(), 0.0f64).to_owned()) }));
     out.push_str("</p>");
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed("x"), shown: None, note: None }, &fv::attrs::Attrs::new(&[("class", if props.b0 { fv::attrs::Attr::str("a") } else { fv::attrs::Attr::Str(Cow::<str>::Owned(fv::core::Js(props.f2).to_string())) }), ("title", fv::attrs::Attr::Str(if props.b0 { Cow::<str>::Owned(fv::core::Js(props.n3).to_string()) } else { Cow::<str>::Borrowed("b") }))], ""))?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props {
+        label: Cow::Borrowed("x"),
+        shown: None,
+        note: None,
+    }, &fv::attrs::Attrs::new(&[("class", if props.b0 { fv::attrs::Attr::str("a") } else { fv::attrs::Attr::Str(Cow::<str>::Owned(fv::core::Js(props.f2).to_string())) }), ("title", fv::attrs::Attr::Str(if props.b0 { Cow::<str>::Owned(fv::core::Js(props.n3).to_string()) } else { Cow::<str>::Borrowed("b") }))], ""))?;
     super::fall_pair::try_render_scoped(out, &super::fall_pair::Props { first: Cow::Borrowed("y") }, &fv::attrs::Attrs::new(&[("class", if true { fv::attrs::Attr::Str(Cow::<str>::Owned(fv::core::Js(0.5f64).to_string())) } else { fv::attrs::Attr::str(", ") })], ""))?;
     out.push_str("<!--[-->");
     for fv_x_cow in fv::strings::js_split(&props.s1, " ").into_iter().filter(|_| !props.b0) {

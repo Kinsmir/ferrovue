@@ -55,7 +55,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(58 + props.label.len());
+    out.reserve(
+        58
+        + props.label.len()
+    );
     out.push_str("<p data-flag=\"");
     out.push_str(if props.flag { "true" } else { "false" });
     out.push_str("\" data-opt=\"");

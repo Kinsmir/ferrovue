@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(166 + props.id.len());
+    out.reserve(
+        166
+        + props.id.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "client/components/StockLevel.vue");
     let Some(l_0) = fv_loads.get(super::loaders::LoadStock { id: String::from(&*props.id) }) else { return Ok(()); };
     out.push_str("<div class=\"stock\" data-copies=\"");

@@ -55,7 +55,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(80 + props.title.len() + props.label.as_deref().map_or(0, str::len));
+    out.reserve(
+        80
+        + props.title.len()
+        + props.label.as_deref().map_or(0, str::len)
+    );
     out.push_str("<article class=\"rated\"><h3>");
     fv::core::escape_into(out, &props.title);
     out.push_str("</h3>");

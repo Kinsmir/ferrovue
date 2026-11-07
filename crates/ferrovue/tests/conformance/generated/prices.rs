@@ -40,7 +40,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) -> Result<(), fv::render::Refused> {
-    out.reserve(98 + props.total.len() + props.posted.len());
+    out.reserve(
+        98
+        + props.total.len()
+        + props.posted.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Prices.vue");
     let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
     let s_amount = if fv_i18n.locale() == "nl" { Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { Cow::<str>::Borrowed(&*s_fixed) };

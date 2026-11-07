@@ -157,7 +157,7 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(37 + 1 + 1);
+    out.reserve(39);
     out.push_str("<div>");
     match props.k {
         K::B => {

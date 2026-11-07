@@ -204,7 +204,19 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(112 + 15 * props.post.author.links.len() + 17 * props.rows.len() + props.post.title.len() + 7 + props.post.author.name.len() + props.post.author.links.iter().map(|v| v.href.len() + v.label.as_deref().map_or(0, str::len)).sum::<usize>() + props.r#box.note.as_deref().map_or(0, str::len) + props.rows.iter().map(|v| v.key.len() + 5).sum::<usize>() + props.sides.left.len() + props.sides.right.len() + 7 + props.label.len());
+    out.reserve(
+        126
+        + 15 * props.post.author.links.len()
+        + 17 * props.rows.len()
+        + props.post.title.len()
+        + props.post.author.name.len()
+        + props.post.author.links.iter().map(|v| v.href.len() + v.label.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.r#box.note.as_deref().map_or(0, str::len)
+        + props.rows.iter().map(|v| v.key.len() + 5).sum::<usize>()
+        + props.sides.left.len()
+        + props.sides.right.len()
+        + props.label.len()
+    );
     if props.post.title.is_empty() {
         out.push_str("<article title data-width=\"");
     } else {
@@ -214,7 +226,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     fv::core::push_int(out, props.r#box.width);
     out.push_str("\">");
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.mood), label: Cow::Borrowed(&*props.post.author.name) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: Some(props.mood),
+        label: Cow::Borrowed(&*props.post.author.name),
+    })?;
     out.push_str("<!--[-->");
     for fv_l in props.post.author.links.iter() {
         out.push_str("<a href=\"");

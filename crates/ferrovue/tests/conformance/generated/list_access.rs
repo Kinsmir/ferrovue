@@ -78,7 +78,14 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(378 + 17 * props.nums.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.rows.iter().map(|v| v.name.len() + v.note.as_deref().map_or(0, str::len)).sum::<usize>() + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>() + props.word.len());
+    out.reserve(
+        378
+        + 17 * props.nums.len()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.rows.iter().map(|v| v.name.len() + v.note.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.word.len()
+    );
     let s_first = props.words.first().map(|v| &**v);
     let s_last = fv::strings::js_item_at(props.words.iter(), -1.0f64).map(|v| &**v).unwrap_or("none");
     let s_chosen = props.rows.iter().filter(|fv_r| fv_r.n as f64 > 0.0).nth(usize::try_from(props.i).unwrap_or(usize::MAX));

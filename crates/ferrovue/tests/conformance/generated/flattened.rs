@@ -60,7 +60,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(154 + props.posts.iter().map(|v| v.title.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>() + props.sep.len());
+    out.reserve(
+        154
+        + props.posts.iter().map(|v| v.title.len() + v.tags.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.groups.iter().map(|(k, v)| k.len() + v.iter().map(|v| v.len()).sum::<usize>()).sum::<usize>()
+        + props.sep.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Flattened.vue");
     let s_tags = props.posts.iter().flat_map(|fv_p| fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_cells = props.deep.iter().flat_map(|v| v.iter()).collect::<Vec<_>>();

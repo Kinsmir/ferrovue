@@ -381,7 +381,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(122 + 10 + 10 + 7 + props.label.len());
+    out.reserve(
+        149
+        + props.label.len()
+    );
     let s_held = match props.mark { super::types::Mark::Amp => UnionWiderRefHeld::Amp, super::types::Mark::Bang => UnionWiderRefHeld::Bang, super::types::Mark::Hex => UnionWiderRefHeld::Hex, super::types::Mark::Tag => UnionWiderRefHeld::Tag };
     let s_picked = if props.on { match props.mark { super::types::Mark::Amp => UnionWiderRefPicked::Amp, super::types::Mark::Bang => UnionWiderRefPicked::Bang, super::types::Mark::Hex => UnionWiderRefPicked::Hex, super::types::Mark::Tag => UnionWiderRefPicked::Tag } } else { UnionWiderRefPicked::Empty };
     let s_spared = props.spare.map(|v| match v { super::types::Mark::Amp => UnionWiderRefSpared::Amp, super::types::Mark::Bang => UnionWiderRefSpared::Bang, super::types::Mark::Hex => UnionWiderRefSpared::Hex, super::types::Mark::Tag => UnionWiderRefSpared::Tag });
@@ -394,7 +397,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\"><p class=\"");
     }
-    fv::attrs::class_into(out, false, &[if s_picked == UnionWiderRefPicked::Empty { "none" } else { "" }, if s_held == UnionWiderRefHeld::Bang { "bang" } else { "" }]);
+    fv::attrs::class_into(out, false, &[
+        if s_picked == UnionWiderRefPicked::Empty { "none" } else { "" },
+        if s_held == UnionWiderRefHeld::Bang { "bang" } else { "" },
+    ]);
     out.push_str("\" data-held=\"");
     fv::core::escape_into(out, fv::props::Union::as_str(s_held));
     out.push_str("\">");
@@ -410,25 +416,43 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<i>empty</i>");
     } else {
         if let Some(fv_spared) = match s_spared { Some(UnionWiderRefSpared::Amp) => Some(super::types::Mark::Amp), Some(UnionWiderRefSpared::Bang) => Some(super::types::Mark::Bang), Some(UnionWiderRefSpared::Hex) => Some(super::types::Mark::Hex), Some(UnionWiderRefSpared::Tag) => Some(super::types::Mark::Tag), Some(UnionWiderRefSpared::Empty) | None => None } {
-            super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_spared), label: Cow::Borrowed(&*props.label) })?;
+            super::union_mark::try_render(out, &super::union_mark::Props {
+                mark: Some(fv_spared),
+                label: Cow::Borrowed(&*props.label),
+            })?;
         } else {
             out.push_str("<i>absent</i>");
         }
     }
     if let Some(fv_picked) = match s_picked { UnionWiderRefPicked::Amp => Some(super::types::Mark::Amp), UnionWiderRefPicked::Bang => Some(super::types::Mark::Bang), UnionWiderRefPicked::Hex => Some(super::types::Mark::Hex), UnionWiderRefPicked::Tag => Some(super::types::Mark::Tag), UnionWiderRefPicked::Empty => None } {
-        super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_picked), label: Cow::Borrowed(&*props.label) })?;
+        super::union_mark::try_render(out, &super::union_mark::Props {
+            mark: Some(fv_picked),
+            label: Cow::Borrowed(&*props.label),
+        })?;
     } else {
         out.push_str("<!---->");
     }
-    super::union_mark::try_render(out, &super::union_mark::Props { mark: match s_held { UnionWiderRefHeld::Amp => Some(super::types::Mark::Amp), UnionWiderRefHeld::Bang => Some(super::types::Mark::Bang), UnionWiderRefHeld::Hex => Some(super::types::Mark::Hex), UnionWiderRefHeld::Tag => Some(super::types::Mark::Tag), UnionWiderRefHeld::Empty => None }, label: Cow::Borrowed(&*format!("{}!", fv::props::Union::as_str(s_held))) })?;
+    super::union_mark::try_render(out, &super::union_mark::Props {
+        mark: match s_held { UnionWiderRefHeld::Amp => Some(super::types::Mark::Amp), UnionWiderRefHeld::Bang => Some(super::types::Mark::Bang), UnionWiderRefHeld::Hex => Some(super::types::Mark::Hex), UnionWiderRefHeld::Tag => Some(super::types::Mark::Tag), UnionWiderRefHeld::Empty => None },
+        label: Cow::Borrowed(&*format!("{}!", fv::props::Union::as_str(s_held))),
+    })?;
     if let Some(fv_kept) = match s_kept { UnionWiderRefKept::Calm => Some(super::types::Mood::Calm), UnionWiderRefKept::Loud => Some(super::types::Mood::Loud), UnionWiderRefKept::QX => Some(super::types::Mood::QX), UnionWiderRefKept::Empty => None } {
-        super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv_kept), label: Cow::Borrowed(&*props.label) })?;
+        super::union_badge::try_render(out, &super::union_badge::Props {
+            mood: Some(fv_kept),
+            label: Cow::Borrowed(&*props.label),
+        })?;
     } else {
         out.push_str("<!---->");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_chosen { UnionWiderRefChosen::Calm => Some(super::types::Mood::Calm), UnionWiderRefChosen::Loud => Some(super::types::Mood::Loud), UnionWiderRefChosen::QX => Some(super::types::Mood::QX), UnionWiderRefChosen::Empty => None }, label: Cow::Borrowed(fv::props::Union::as_str(s_chosen)) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: match s_chosen { UnionWiderRefChosen::Calm => Some(super::types::Mood::Calm), UnionWiderRefChosen::Loud => Some(super::types::Mood::Loud), UnionWiderRefChosen::QX => Some(super::types::Mood::QX), UnionWiderRefChosen::Empty => None },
+        label: Cow::Borrowed(fv::props::Union::as_str(s_chosen)),
+    })?;
     out.push_str("<b class=\"");
-    fv::attrs::class_into(out, false, &[if s_chosen == UnionWiderRefChosen::Empty { "none" } else { "" }, if s_kept == UnionWiderRefKept::Calm { "calm" } else { "" }]);
+    fv::attrs::class_into(out, false, &[
+        if s_chosen == UnionWiderRefChosen::Empty { "none" } else { "" },
+        if s_kept == UnionWiderRefKept::Calm { "calm" } else { "" },
+    ]);
     out.push_str("\">");
     fv::core::escape_into(out, fv::props::Union::as_str(s_kept));
     out.push(' ');

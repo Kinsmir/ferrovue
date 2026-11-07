@@ -38,7 +38,12 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(213 + fv::html::TrustedHtml::trusted_html(&props.cell).len() + fv::html::TrustedHtml::trusted_html(&props.label).len() + fv::html::TrustedHtml::trusted_html(&props.formula).len());
+    out.reserve(
+        213
+        + fv::html::TrustedHtml::trusted_html(&props.cell).len()
+        + fv::html::TrustedHtml::trusted_html(&props.label).len()
+        + fv::html::TrustedHtml::trusted_html(&props.formula).len()
+    );
     out.push_str("<figure><table><tbody><tr><th>Cell</th><td>");
     fv::html::trusted_into(out, &props.cell);
     out.push_str("</td></tr></tbody></table><svg viewBox=\"0 0 200 40\"><foreignObject width=\"200\" height=\"40\">");

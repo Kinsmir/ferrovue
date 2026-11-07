@@ -101,7 +101,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(74 + props.tone.len() + 7);
+    out.reserve(
+        81
+        + props.tone.len()
+    );
     let fv_tag = match props.tag { CssVarsTagTag::Div => "div", CssVarsTagTag::Section => "section" };
     out.push('<');
     out.push_str(fv_tag);
@@ -114,7 +117,11 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
         }
         out.push_str(";\"");
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("tag"))], fv_attrs.list(), &[("style", fv::attrs::Attr::style([("--9b79108a-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[("class", fv::attrs::Attr::str("tag"))],
+            fv_attrs.list(),
+            &[("style", fv::attrs::Attr::style([("--9b79108a-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))],
+        ], 1, "");
     }
     out.push_str(" data-v-9b79108a>");
     fv::core::escape_into(out, &props.tone);

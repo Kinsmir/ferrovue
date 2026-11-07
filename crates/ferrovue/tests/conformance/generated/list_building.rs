@@ -66,7 +66,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(328 + props.words.iter().map(|v| v.len()).sum::<usize>() + props.rows.iter().map(|v| v.name.len() + v.tag.as_deref().map_or(0, str::len)).sum::<usize>() + props.word.len());
+    out.reserve(
+        328
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.rows.iter().map(|v| v.name.len() + v.tag.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.word.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ListBuilding.vue");
     let s_total = std::cell::LazyCell::new(|| fv::strings::js_reduce(props.rows.iter(), 0i64, |fv_t, fv_r| fv_refusals.keep(fv::render::try_int(fv_t as f64 + fv_r.n as f64), 13, 58)));
     let s_by_name = fv::strings::js_sorted(props.rows.iter(), |fv_a, fv_b| fv::strings::js_cmp(&fv_a.name, &fv_b.name)).collect::<Vec<_>>();

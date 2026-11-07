@@ -100,7 +100,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(67 + 5 + 7 + props.label.len());
+    out.reserve(
+        79
+        + props.label.len()
+    );
     out.push_str("<!--[--><p title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\" data-half=\"half\">half|huge|zero|");
@@ -112,7 +115,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, (match props.size { LookupKeysSize::Sm => Some("shout"), LookupKeysSize::Lg | LookupKeysSize::N => None }).unwrap_or("-"));
     out.push_str("</p>");
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud | super::types::Mood::QX => super::types::Mood::Calm }), label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props {
+        mood: Some(match props.mood { super::types::Mood::Calm => super::types::Mood::Loud, super::types::Mood::Loud | super::types::Mood::QX => super::types::Mood::Calm }),
+        label: Cow::Borrowed(&*props.label),
+    })?;
     out.push_str("<!--]-->");
     Ok(())
 }

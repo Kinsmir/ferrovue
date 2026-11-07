@@ -59,7 +59,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(118 + props.words.iter().map(|v| v.len()).sum::<usize>() + props.s.len() + props.rows.iter().map(|v| v.name.len()).sum::<usize>() + props.target.len());
+    out.reserve(
+        118
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.s.len()
+        + props.rows.iter().map(|v| v.name.len()).sum::<usize>()
+        + props.target.len()
+    );
     let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv_sum += fv_r.score as f64; } fv_sum };
     let s_mean = { let mut fv_sum_2: f64 = 0.0f64; let mut fv_count: f64 = 0.0f64; for fv_r_2 in props.rows.iter() { fv_sum_2 += fv_r_2.score as f64 * props.ratio; fv_count += 1.0; } if fv_count == 0.0 { Cow::<str>::Borrowed("none") } else { Cow::<str>::Owned(fv::core::js_to_fixed(fv_sum_2 / fv_count, 2)) } };
     let s_best = { let fv_top = f64::NEG_INFINITY; { let fv_low = f64::INFINITY; { let mut fv_top_2: f64 = fv_top; let mut fv_who: String = String::new(); let mut fv_low_2: f64 = fv_low; for fv_r_3 in props.rows.iter() { if fv_r_3.score as f64 > fv_top_2 { if (fv_r_3.score as f64) < fv_low_2 { fv_top_2 = fv_r_3.score as f64; fv_who = String::from(&*fv_r_3.name); fv_low_2 = fv_r_3.score as f64; } else { fv_top_2 = fv_r_3.score as f64; fv_who = String::from(&*fv_r_3.name); } } else { if (fv_r_3.score as f64) < fv_low_2 { fv_low_2 = fv_r_3.score as f64; } } } Cow::<str>::Owned(format!("{}:{}/{}", fv_who, fv::core::Js(fv_top_2), fv::core::Js(fv_low_2))) } } };

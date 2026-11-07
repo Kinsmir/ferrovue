@@ -38,9 +38,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(7 + props.name.len());
+    out.reserve(
+        7
+        + props.name.len()
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/HeadNest.vue");
-    fv_head.push(fv::head::HeadValue::object([("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
+    fv_head.push(fv::head::HeadValue::object([
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str(&props.name)),
+            ("content", fv::head::HeadValue::str(&props.name)),
+        ])])),
+        ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))])),
+    ]));
     out.push_str("<b>");
     fv_refusals.check(super::head_leaf::try_render(out, &super::head_leaf::Props { name: Cow::Borrowed(&*format!("{}-child", props.name)) }, super::head_leaf::Slots {
         default: None,

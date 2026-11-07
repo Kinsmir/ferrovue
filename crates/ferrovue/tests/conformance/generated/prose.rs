@@ -47,7 +47,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(65 + fv::html::TrustedHtml::trusted_html(&props.body).len() + props.aside.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()) + props.caption.len());
+    out.reserve(
+        65
+        + fv::html::TrustedHtml::trusted_html(&props.body).len()
+        + props.aside.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())
+        + props.caption.len()
+    );
     out.push_str("<article><div class=\"body\">");
     fv::html::trusted_into(out, &props.body);
     out.push_str("</div><aside>");

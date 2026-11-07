@@ -49,7 +49,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(46 + 7 * props.items.len() + props.title.len() + props.items.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        46
+        + 7 * props.items.len()
+        + props.title.len()
+        + props.items.iter().map(|v| v.len()).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+    );
     super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed(&*props.title) }, super::frame::Slots {
         head: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;

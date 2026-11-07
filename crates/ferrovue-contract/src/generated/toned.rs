@@ -59,9 +59,12 @@ pub fn render(out: &mut String, props: &Props) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(16 + 6 + 6);
+    out.reserve(28);
     out.push_str("<i class=\"");
-    fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.tone), props.other.map(fv::props::Union::as_str).unwrap_or("")]);
+    fv::attrs::class_into(out, false, &[
+        fv::props::Union::as_str(props.tone),
+        props.other.map(fv::props::Union::as_str).unwrap_or(""),
+    ]);
     out.push_str("\">");
     out.push_str(if props.tone == crate::domain::Tone::Warm { "w" } else { "c" });
     out.push_str("</i>");

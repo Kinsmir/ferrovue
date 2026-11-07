@@ -48,7 +48,12 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(94 + props.term.len() + props.query.term.len() + props.query.lang.as_deref().map_or(0, str::len));
+    out.reserve(
+        94
+        + props.term.len()
+        + props.query.term.len()
+        + props.query.lang.as_deref().map_or(0, str::len)
+    );
     let l_0 = fv_loads.get(super::loaders::LoadHits { query: super::loaders::LoadHitsQuery { exact: Some(props.exact.unwrap_or(false)), lang: None, page: props.page, term: String::from(&*props.term) } });
     let l_1 = fv_loads.get(super::loaders::LoadTotal { query: super::loaders::LoadTotalQuery { exact: props.query.exact, lang: props.query.lang.as_deref().map(String::from), page: props.query.page, term: String::from(&*props.query.term) }, scale: None });
     let (Some(l_0), Some(l_1)) = (l_0, l_1) else { return Ok(()); };

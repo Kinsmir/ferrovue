@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { GenError, GenErrors } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
-import { like } from "./code.ts";
+import { like, oneLine } from "./code.ts";
 
 const roots: string[] = [];
 
@@ -48,6 +48,7 @@ defineProps<{ s: string; d: string; k: "a" | "b"; o?: "a" | "b"; xs: string[]; y
 
 const lines = (template: string, script = PROPS, files: Record<string, string> = {}) =>
   render(script, template, files)
+    .replace(/\n {4}out\.reserve\(\n[\s\S]*?\n {4}\);/, "\n    out.reserve();")
     .split("\n")
     .slice(1, -2)
     .map((line) => line.trim())
@@ -812,9 +813,9 @@ describe("values built from object literals", () => {
 
   it("chooses between a built struct of another component and an optional one, or none", () => {
     const out = render(BUILT_SCRIPT, '<V :item="b ? it : base()" /><V :item="b ? undefined : base()" /><V :sub="b ? base().sub : { v: s }" />', BUILT_V);
-    expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: if props.b { props.it.as_ref().cloned() } else { Some(${ITEM_BUILT}) }, sub: None })?;`));
-    expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: if props.b { None } else { Some(${ITEM_BUILT}) }, sub: None })?;`));
-    expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: None, sub: Some(if props.b { (${ITEM_BUILT}).sub } else { super::v::Sub { v: Cow::<str>::Borrowed(&*props.s) } }) })?;`));
+    expect(oneLine(out)).toMatch(like(`super::v::try_render(out, &super::v::Props { item: if props.b { props.it.as_ref().cloned() } else { Some(${ITEM_BUILT}) }, sub: None })?;`));
+    expect(oneLine(out)).toMatch(like(`super::v::try_render(out, &super::v::Props { item: if props.b { None } else { Some(${ITEM_BUILT}) }, sub: None })?;`));
+    expect(oneLine(out)).toMatch(like(`super::v::try_render(out, &super::v::Props { item: None, sub: Some(if props.b { (${ITEM_BUILT}).sub } else { super::v::Sub { v: Cow::<str>::Borrowed(&*props.s) } }) })?;`));
   });
 
   it("reads a field typed as a union of string literals through its `as_str()`, and compares its variants", () => {

@@ -39,7 +39,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(52 + props.label.len());
+    out.reserve(
+        52
+        + props.label.len()
+    );
     out.push_str("<div>");
     super::trim_button::try_render(out, &super::trim_button::Props { kind: Cow::Borrowed("a") }, super::trim_button::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {

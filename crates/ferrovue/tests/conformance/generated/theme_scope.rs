@@ -61,7 +61,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(50 + props.theme.as_deref().map_or(0, str::len));
+    out.reserve(
+        50
+        + props.theme.as_deref().map_or(0, str::len)
+    );
     let fv_inherited = fv_provides;
     let s_mine = props.theme.as_deref().map(Cow::<str>::Borrowed).unwrap_or(Cow::<str>::Owned(format!("{}-inverse", fv_inherited.theme_key.unwrap_or("light"))));
     let fv_provides = super::provides::Provides { theme_key: Some(&s_mine), tone: Some("scoped"), ..fv_inherited };
@@ -75,7 +78,13 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_
             out.push('"');
         }
     } else {
-        fv::attrs::attrs_into(out, &[&[("class", fv::attrs::Attr::str("scope")), ("data-outer", fv::attrs::Attr::str(fv_inherited.theme_key.unwrap_or("light")))], fv_attrs.list()], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("class", fv::attrs::Attr::str("scope")),
+                ("data-outer", fv::attrs::Attr::str(fv_inherited.theme_key.unwrap_or("light"))),
+            ],
+            fv_attrs.list(),
+        ], 1, "");
     }
     out.push('>');
     fv::render::scoped_slot_into(out, fv_slots.default.map(|f| move |out: &mut String, _: &()| f(out, fv_provides)).as_ref(), &(), None);

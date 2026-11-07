@@ -45,7 +45,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(86 + props.label.len());
+    out.reserve(
+        86
+        + props.label.len()
+    );
     out.push_str("<li class=\"node\"");
     out.push_str(fv_attrs);
     out.push_str(" data-v-c34199e4>");

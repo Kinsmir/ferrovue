@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(94 + props.warehouse.len());
+    out.reserve(
+        94
+        + props.warehouse.len()
+    );
     let Some(l_0) = fv_loads.get(super::loaders::LoadWarehouse { code: String::from(&*props.warehouse) }) else { return Ok(()); };
     if let Some(fv_from) = l_0.as_ref() {
         out.push_str("<p class=\"shipping\">Ships from ");

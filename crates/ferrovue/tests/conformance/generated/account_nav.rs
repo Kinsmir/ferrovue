@@ -38,7 +38,10 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Route<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(210 + props.order.len());
+    out.reserve(
+        210
+        + props.order.len()
+    );
     out.push_str("<nav>");
     {
         let fv_link = {

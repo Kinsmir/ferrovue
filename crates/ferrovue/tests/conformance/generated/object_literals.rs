@@ -85,7 +85,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(70 + props.name.len() + props.words.iter().map(|v| v.len()).sum::<usize>() + props.note.as_deref().map_or(0, str::len) + props.owner.as_deref().map_or(0, str::len));
+    out.reserve(
+        70
+        + props.name.len()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.note.as_deref().map_or(0, str::len)
+        + props.owner.as_deref().map_or(0, str::len)
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/ObjectLiterals.vue");
     let s_summary = if props.count as f64 > 0.0 { Summary { heading: Cow::<str>::Borrowed(&*props.name), size: props.count, extra: None, hint: None } } else { Summary { heading: Cow::<str>::Borrowed("empty"), size: 0i64, hint: props.note.as_deref().map(Cow::<str>::Borrowed), extra: props.owner.as_deref().map(Cow::<str>::Borrowed) } };
     let s_tile = super::types::Tile { title: Cow::<str>::Borrowed(&*props.name), count: props.count, note: props.note.as_deref().map(Cow::<str>::Borrowed), owner: props.owner.as_deref().map(Cow::<str>::Borrowed), tags: props.words.iter().map(|v| Cow::Borrowed(&**v)).collect(), badge: if props.count as f64 > 2.0 { Some(super::types::TileBadge { label: Cow::<str>::Owned(format!("{}+", fv::core::Js(props.count))), tone: Cow::<str>::Borrowed("many") }) } else { None } };

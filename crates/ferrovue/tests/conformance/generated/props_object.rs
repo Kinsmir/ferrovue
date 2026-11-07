@@ -69,7 +69,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(125 + 9 * props.tags.as_deref().unwrap_or(&[]).len() + props.label.len() + props.tone.as_deref().map_or(0, str::len) + props.note.as_deref().map_or(0, str::len));
+    out.reserve(
+        125
+        + 9 * props.tags.as_deref().unwrap_or(&[]).len()
+        + props.label.len()
+        + props.tone.as_deref().map_or(0, str::len)
+        + props.note.as_deref().map_or(0, str::len)
+    );
     let s_loud = props.label.to_uppercase();
     if props.label.is_empty() {
         out.push_str("<article title");

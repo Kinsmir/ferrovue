@@ -44,7 +44,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the attributes a parent passes beyond the props, and the scope ids it hands the root.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, _fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(40 + props.first.len());
+    out.reserve(
+        40
+        + props.first.len()
+    );
     out.push_str("<!--[--><dt>");
     fv::core::escape_into(out, &props.first);
     out.push_str("</dt><dd>second</dd><!--]-->");

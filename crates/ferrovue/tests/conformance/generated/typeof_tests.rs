@@ -86,7 +86,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(210 + props.label.as_deref().map_or(0, str::len) + props.nick.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>() + props.owner.as_ref().map_or(0, |v| v.name.len()));
+    out.reserve(
+        210
+        + props.label.as_deref().map_or(0, str::len)
+        + props.nick.as_deref().map_or(0, str::len)
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+        + props.owner.as_ref().map_or(0, |v| v.name.len())
+    );
     let s_kind = if props.label.as_deref().is_some() { "string" } else { "undefined" };
     let s_sized = if let Some(fv_size) = props.size { fv_size as f64 * 2.0 } else { -1.0f64 };
     if (if props.label.as_deref().is_some() { "string" } else { "undefined" }).is_empty() {

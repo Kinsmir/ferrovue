@@ -42,7 +42,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(122 + props.note.len() + props.label.len() + props.model_value.len());
+    out.reserve(
+        122
+        + props.note.len()
+        + props.label.len()
+        + props.model_value.len()
+    );
     out.push_str("<div class=\"field\"><textarea placeholder=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\">");

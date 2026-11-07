@@ -48,7 +48,10 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(121 + 7 + 10 + 7 + props.label.len());
+    out.reserve(
+        145
+        + props.label.len()
+    );
     let s_shown = fv::props::Union::as_str(props.mood);
     let s_spared = props.spare.map(fv::props::Union::as_str);
     if props.label.is_empty() {
@@ -58,7 +61,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\"><p class=\"");
     }
-    fv::attrs::class_into(out, false, &[if fv::props::Union::as_str(props.mood) == "-" { "dash" } else { "" }, if fv::props::Union::as_str(props.mood) == "calm" { "calm" } else { "" }, if fv::props::Union::as_str(props.mark) != "-" { "other" } else { "" }]);
+    fv::attrs::class_into(out, false, &[
+        if fv::props::Union::as_str(props.mood) == "-" { "dash" } else { "" },
+        if fv::props::Union::as_str(props.mood) == "calm" { "calm" } else { "" },
+        if fv::props::Union::as_str(props.mark) != "-" { "other" } else { "" },
+    ]);
     out.push_str("\" data-mood=\"");
     fv::core::escape_into(out, s_shown);
     out.push_str("\">");
@@ -69,7 +76,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, fv::props::Union::as_str(props.mood));
     out.push_str(if fv::props::Union::as_str(props.mood) == "-" { "</p><i>dash</i>" } else { "</p><!---->" });
     out.push_str(if s_shown == &*props.label { "<b>same</b><em class=\"" } else { "<!----><em class=\"" });
-    fv::attrs::class_into(out, false, &[if s_spared.is_none() { "none" } else { "" }, if s_spared == Some("-") { "dash" } else { "" }]);
+    fv::attrs::class_into(out, false, &[
+        if s_spared.is_none() { "none" } else { "" },
+        if s_spared == Some("-") { "dash" } else { "" },
+    ]);
     out.push_str("\">");
     if let Some(v) = s_spared {
         fv::core::escape_into(out, v);

@@ -56,7 +56,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(50 + props.swatches.iter().map(|v| v.name.len() + 9).sum::<usize>() + 9 * props.hues.len() + 9 + props.label.len());
+    out.reserve(
+        59
+        + props.swatches.iter().map(|v| v.name.len() + 9).sum::<usize>()
+        + 9 * props.hues.len()
+        + props.label.len()
+    );
     let s_bright = props.hues.iter().copied().filter(|fv_h| *fv_h != super::types::Hue::Green).collect::<Vec<_>>();
     let s_named = props.swatches.iter().filter(|fv_s| !fv_s.name.is_empty()).map(|fv_s_2| fv_s_2.hue).collect::<Vec<_>>();
     if props.label.is_empty() {
@@ -66,12 +71,42 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.swatches.iter().map(|fv_s_3| fv_s_3.hue).collect(), extra: None, label: Cow::Borrowed(&*props.label) })?;
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.to_vec(), extra: Some(props.hues.iter().copied().enumerate().filter(|fv_entry| { let fv_h_2 = &fv_entry.1; let fv_i = fv_entry.0 as i64; fv_i as f64 > 0.0 || *fv_h_2 == super::types::Hue::Red }).map(|(_, v)| v).collect()), label: Cow::Borrowed(&*props.label) })?;
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_bright.to_vec(), extra: Some(s_named.to_vec()), label: Cow::Borrowed(&*props.label) })?;
-    super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: vec![props.hue, super::types::Hue::Green], extra: Some(Vec::new()), label: Cow::Borrowed(&*props.label) })?;
-    super::union_hue_set::try_render(out, &super::union_hue_set::Props { set: super::types::HueSet { hues: vec![props.hue, super::types::Hue::Red, props.hue], note: Cow::<str>::Borrowed(&*props.label) }, label: Cow::Borrowed(&*props.label) })?;
-    super::union_hue_set::try_render(out, &super::union_hue_set::Props { set: super::types::HueSet { hues: props.swatches.iter().map(|fv_s_4| fv_s_4.hue).collect(), note: Cow::<str>::Owned(format!("{}", fv::core::Js(s_bright.len() as i64))) }, label: Cow::Borrowed(&*props.label) })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props {
+        hue: None,
+        wide: None,
+        hues: props.swatches.iter().map(|fv_s_3| fv_s_3.hue).collect(),
+        extra: None,
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props {
+        hue: None,
+        wide: None,
+        hues: props.hues.to_vec(),
+        extra: Some(props.hues.iter().copied().enumerate().filter(|fv_entry| { let fv_h_2 = &fv_entry.1; let fv_i = fv_entry.0 as i64; fv_i as f64 > 0.0 || *fv_h_2 == super::types::Hue::Red }).map(|(_, v)| v).collect()),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props {
+        hue: None,
+        wide: None,
+        hues: s_bright.to_vec(),
+        extra: Some(s_named.to_vec()),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_list_item::try_render(out, &super::union_list_item::Props {
+        hue: None,
+        wide: None,
+        hues: vec![props.hue, super::types::Hue::Green],
+        extra: Some(Vec::new()),
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_hue_set::try_render(out, &super::union_hue_set::Props {
+        set: super::types::HueSet { hues: vec![props.hue, super::types::Hue::Red, props.hue], note: Cow::<str>::Borrowed(&*props.label) },
+        label: Cow::Borrowed(&*props.label),
+    })?;
+    super::union_hue_set::try_render(out, &super::union_hue_set::Props {
+        set: super::types::HueSet { hues: props.swatches.iter().map(|fv_s_4| fv_s_4.hue).collect(), note: Cow::<str>::Owned(format!("{}", fv::core::Js(s_bright.len() as i64))) },
+        label: Cow::Borrowed(&*props.label),
+    })?;
     out.push_str("<!--[-->");
     for fv_h_ref in s_bright.iter() {
         let fv_h_3 = *fv_h_ref;

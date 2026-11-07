@@ -109,7 +109,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(105 + props.label.len() + 6 + 7 + 6 + props.words.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        124
+        + props.label.len()
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+    );
     let s_first = super::types::Step { label: Cow::<str>::Borrowed(&*props.label), state: super::types::StepState::Done, align: Some(props.align) };
     let s_chosen = super::types::Step { label: Cow::<str>::Owned(format!("{}!", props.label)), state: match props.state { UnionObjectsState::Todo | UnionObjectsState::Skipped => super::types::StepState::Skipped, UnionObjectsState::Done => super::types::StepState::Done }, align: props.side };
     let s_steps = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_i, fv_w)| { let fv_i = fv_i as i64; super::types::Step { label: Cow::<str>::Owned(str::to_owned(&*fv_w)), state: if fv_i as f64 == 0.0 { super::types::StepState::Todo } else { super::types::StepState::Done }, align: Some(super::types::Align::Right) } }).collect::<Vec<_>>();

@@ -40,7 +40,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(137 + 7 * props.lines.len() + props.hint.len() + props.lines.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        137
+        + 7 * props.lines.len()
+        + props.hint.len()
+        + props.lines.iter().map(|v| v.len()).sum::<usize>()
+    );
     if props.editing {
         if props.hint.is_empty() {
             out.push_str("<textarea placeholder");

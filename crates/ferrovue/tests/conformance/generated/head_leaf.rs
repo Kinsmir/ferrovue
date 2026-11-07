@@ -45,8 +45,18 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head:
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(7 + props.name.len());
-    fv_head.push(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&props.name)), ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([("name", fv::head::HeadValue::str(&props.name)), ("content", fv::head::HeadValue::str(&props.name))])])), ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))]))]));
+    out.reserve(
+        7
+        + props.name.len()
+    );
+    fv_head.push(fv::head::HeadValue::object([
+        ("title", fv::head::HeadValue::str(&props.name)),
+        ("meta", fv::head::HeadValue::array([fv::head::HeadValue::object([
+            ("name", fv::head::HeadValue::str(&props.name)),
+            ("content", fv::head::HeadValue::str(&props.name)),
+        ])])),
+        ("bodyAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str(&props.name))])),
+    ]));
     out.push_str("<i>");
     fv::core::escape_into(out, &props.name);
     fv::render::slot_into(out, fv_slots.default, None);

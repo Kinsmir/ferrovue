@@ -51,7 +51,14 @@ pub fn try_render_scoped(out: &mut String, props: &Props, fv_attrs: &fv::attrs::
             out.push_str(" checked");
         }
     } else {
-        fv::attrs::attrs_into(out, &[&[("type", fv::attrs::Attr::str("checkbox")), ("checked", fv::attrs::Attr::Bool(props.model_value))], fv_attrs.list(), &[("checked", fv::attrs::Attr::Bool(props.model_value))]], 1, "");
+        fv::attrs::attrs_into(out, &[
+            &[
+                ("type", fv::attrs::Attr::str("checkbox")),
+                ("checked", fv::attrs::Attr::Bool(props.model_value)),
+            ],
+            fv_attrs.list(),
+            &[("checked", fv::attrs::Attr::Bool(props.model_value))],
+        ], 1, "");
     }
     out.push('>');
     Ok(())

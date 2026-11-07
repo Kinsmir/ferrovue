@@ -44,7 +44,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 /// [`try_render`], with the scope ids a parent hands the root: ` data-v-…` each.
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
-    out.reserve(29 + props.note.len());
+    out.reserve(
+        29
+        + props.note.len()
+    );
     out.push_str("<small class=\"quiet\"");
     out.push_str(fv_attrs);
     out.push('>');

@@ -47,7 +47,12 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(319 + props.href.len() + props.id.len() + props.title.as_deref().map_or(0, str::len));
+    out.reserve(
+        319
+        + props.href.len()
+        + props.id.len()
+        + props.title.as_deref().map_or(0, str::len)
+    );
     out.push_str("<div><svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 10 10\"><defs><circle id=\"dot\" r=\"1\"></circle></defs><use xlink:href=\"#dot\"></use><use xlink:href=\"#");
     fv::core::escape_into(out, &props.id);
     out.push_str("\"></use><a xlink:href=\"");

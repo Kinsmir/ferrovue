@@ -114,7 +114,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(23 + 5 + props.labels.left.len() + props.labels.right.len());
+    out.reserve(
+        28
+        + props.labels.left.len()
+        + props.labels.right.len()
+    );
     if (if props.side != Side::None { match props.side { Side::None | Side::Left => std::ops::Deref::deref(&props.labels.left), Side::Right => std::ops::Deref::deref(&props.labels.right) } } else { "none" }).is_empty() {
         out.push_str("<p title>");
     } else {

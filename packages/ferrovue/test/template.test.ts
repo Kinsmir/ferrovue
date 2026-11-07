@@ -69,7 +69,10 @@ describe("content Vue renders from virtual nodes", () => {
 
   it("keeps a bound style that hides by a test of its own", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? { color: a } : { display: 'none' }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(50 + 1 + props.a.len());
+    out.reserve(
+        51
+        + props.a.len()
+    );
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -92,7 +95,10 @@ describe("content Vue renders from virtual nodes", () => {
 
   it("keeps a bound style whose hidden branch holds more than display", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? null : { display: 'none', color: a }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(50 + 1 + props.a.len());
+    out.reserve(
+        51
+        + props.a.len()
+    );
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -115,7 +121,10 @@ describe("content Vue renders from virtual nodes", () => {
 
   it("keeps a bound style whose hidden branch sets another property to none", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? null : { color: 'none' }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(41 + 1 + props.a.len());
+    out.reserve(
+        42
+        + props.a.len()
+    );
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -133,7 +142,10 @@ describe("content Vue renders from virtual nodes", () => {
 
   it("keeps a bound style whose hidden branch shows the element otherwise", () => {
     expect(render(sfc(`tag: "b" | "i"; on: boolean; a: string`, `<component :is="tag"><span :style="on ? null : { display: 'block' }">x</span></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(44 + 1 + props.a.len());
+    out.reserve(
+        45
+        + props.a.len()
+    );
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -176,7 +188,10 @@ describe("content Vue renders from virtual nodes", () => {
 
   it("keeps a selected option bound to a call with no arguments", () => {
     expect(render(sfc(`tag: "b" | "i"; label: string`, `<component :is="tag"><select><option :selected="label.trim()">x</option></select></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(51 + 1 + props.label.len());
+    out.reserve(
+        52
+        + props.label.len()
+    );
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -192,7 +207,7 @@ describe("content Vue renders from virtual nodes", () => {
     expect(render(sfc(`tag: "b" | "i"`, `<component :is="tag"><input type="checkbox" v-model="on"></component>`, `import { ref } from "vue";
 const on = ref(false);
 `))).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(30 + 1);
+    out.reserve(31);
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -206,7 +221,7 @@ const on = ref(false);
 
   it("lowercases the names of static attributes, keeps their values, and writes an empty value as the bare name, except for class", () => {
     expect(render(sfc(`tag: "b" | "i"`, `<component :is="tag"><i title="a B" data-Q class="" DATA-y="" id="">x</i></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(53 + 1);
+    out.reserve(54);
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -220,7 +235,7 @@ const on = ref(false);
 
   it("keeps markup inside comments as it is", () => {
     expect(render(sfc(`tag: "b" | "i"`, `<component :is="tag"><i>x<!-- a <i X=""> --><!-- b --><!-- <b Z=""> --></i></component>`))).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(61 + 1);
+    out.reserve(62);
     let fv_tag = match props.tag { XTag::B => "b", XTag::I => "i" };
     out.push('<');
     out.push_str(fv_tag);
@@ -281,7 +296,10 @@ const on = ref(false);
   it("writes a slot's content of an interpolation between comments as filled", () => {
     expect(render(sfc("a: string", `<C tag="b"><!-- c -->{{ a }}<!-- e --></C>`, `import C from "./C.vue";
 `), { C: sfc(`tag: "b" | "i"`, `<component :is="tag"><slot /></component>`) })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(20 + props.a.len());
+    out.reserve(
+        20
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props { tag: super::c::CTag::B }, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -345,7 +363,10 @@ describe("v-html", () => {
   it("writes a TrustedHtml prop that may be absent", () => {
     expect(render(sfc("h?: TrustedHtml", `<div v-html="h"></div>`, `import type { TrustedHtml } from "ferrovue/types";
 `), {}, { trustedHtml: "ferrovue::html::Sanitised" })).toBe(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
-    out.reserve(11 + props.h.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len()));
+    out.reserve(
+        11
+        + props.h.as_ref().map_or(0, |v| fv::html::TrustedHtml::trusted_html(v).len())
+    );
     out.push_str("<div>");
     if let Some(html) = props.h.as_ref() {
         fv::html::trusted_into(out, html);
@@ -419,7 +440,10 @@ describe("slot content whose emptiness is decided at run time", () => {
   it("takes a dash before an interpolation as content", () => {
     expect(render(sfc("a: string", "<C>-{{ a }}<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(11 + props.a.len());
+    out.reserve(
+        11
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push('-');
@@ -435,7 +459,10 @@ describe("slot content whose emptiness is decided at run time", () => {
   it("tests a chunk where a dash meets an interpolation after a comment", () => {
     expect(render(sfc("a: string", "<C><!-- c -->-{{ a }}<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(21 + props.a.len());
+    out.reserve(
+        21
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -455,7 +482,10 @@ describe("slot content whose emptiness is decided at run time", () => {
   it("tests a chunk where an interpolation meets a dash before a comment", () => {
     expect(render(sfc("a: string", "<C><!-- c -->{{ a }}-<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(21 + props.a.len());
+    out.reserve(
+        21
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -475,7 +505,10 @@ describe("slot content whose emptiness is decided at run time", () => {
   it("tests a chunk of whitespace and an interpolation between comments", () => {
     expect(render(sfc("a: string", "<C><!-- c --> {{ a }} <!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(22 + props.a.len());
+    out.reserve(
+        22
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -495,7 +528,10 @@ describe("slot content whose emptiness is decided at run time", () => {
   it("tests a chunk with a bound attribute and an interpolation between comments", () => {
     expect(render(sfc("on: boolean; a: string", `<C><!-- c --><input :checked="on">{{ a }}<!-- e --></C>`, `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(35 + props.a.len());
+    out.reserve(
+        35
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -519,7 +555,10 @@ describe("slot content whose emptiness is decided at run time", () => {
   it("takes text before an interpolation between comments as content", () => {
     expect(render(sfc("a: string", "<C><!-- c -->x{{ a }}<!-- e --></C>", `import C from "./C.vue";
 `), { C: sfc("", "<div><slot>fallback</slot></div>") })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(21 + props.a.len());
+    out.reserve(
+        21
+        + props.a.len()
+    );
     super::c::try_render(out, &super::c::Props {}, super::c::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str("<!-- c -->x");
@@ -633,7 +672,10 @@ describe("components and directives resolved by name", () => {
   it("takes a client-only directive on an element with no content in slot content", () => {
     const box = sfc("", "<section><slot /></section>");
     expect(render(sfc("n: string", `<div><Box><b v-foo :title="n" /></Box></div>`, `import Box from "./Box.vue";\n`), { Box: box }, { clientDirectives: ["foo"] })).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(33 + props.n.len());
+    out.reserve(
+        33
+        + props.n.len()
+    );
     out.push_str("<div>");
     super::r#box::try_render(out, &super::r#box::Props {}, super::r#box::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
@@ -681,7 +723,10 @@ describe("components and directives resolved by name", () => {
 describe("v-if", () => {
   it("leaves out the comment where Vue does, in a TransitionGroup", () => {
     expect(render(sfc("on: boolean; a?: string", `<TransitionGroup tag="ul"><li v-if="on" key="1">x</li><li v-if="a" key="2">{{ a }}</li><li v-if="!a" key="3">no</li><li v-if="false" key="4">f</li><li v-if="a && on" key="5">{{ a }}</li><li v-if="a && false" key="6">f</li></TransitionGroup>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(48 + props.a.as_deref().map_or(0, str::len));
+    out.reserve(
+        48
+        + props.a.as_deref().map_or(0, str::len)
+    );
     out.push_str("<ul>");
     if props.on {
         out.push_str("<li>x</li>");
@@ -707,7 +752,11 @@ describe("v-if", () => {
 
   it("writes the branch a value that is always truthy takes, unless the test is a logical expression or a negation", () => {
     expect(render(sfc("on: boolean; xs?: string[]; ys: string[]; a?: string", `<div><b v-if="on ? 'a' : 'b'">1</b><b v-if="xs ?? ys">2</b><b v-if="typeof a">3</b></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(56 + props.ys.iter().map(|v| v.len()).sum::<usize>() + props.a.as_deref().map_or(0, str::len));
+    out.reserve(
+        56
+        + props.ys.iter().map(|v| v.len()).sum::<usize>()
+        + props.a.as_deref().map_or(0, str::len)
+    );
     out.push_str("<div><b>1</b><b>2</b><b>3</b></div>");
     Ok(())
 }
@@ -716,7 +765,10 @@ describe("v-if", () => {
 
   it("translates a negated test as a condition", () => {
     expect(render(sfc("a?: string; n?: number", `<div><b v-if="!(a && n)">x</b></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(26 + props.a.as_deref().map_or(0, str::len));
+    out.reserve(
+        26
+        + props.a.as_deref().map_or(0, str::len)
+    );
     out.push_str(if !(if props.a.as_deref().is_some_and(|v| !v.is_empty()) { props.n.is_some_and(|v| v != 0) } else { false }) { "<div><b>x</b></div>" } else { "<div><!----></div>" });
     Ok(())
 }
@@ -725,7 +777,10 @@ describe("v-if", () => {
 
   it("drops a known true part of a test that narrows", () => {
     expect(render(sfc("a?: string", `<div><p v-if="a && true">{{ a }}</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(25 + props.a.as_deref().map_or(0, str::len));
+    out.reserve(
+        25
+        + props.a.as_deref().map_or(0, str::len)
+    );
     if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("<div><p>");
         fv::core::escape_into(out, fv_a);
@@ -749,7 +804,10 @@ describe("v-if", () => {
 
   it("translates each test once", () => {
     expect(render(sfc("on: boolean; a?: string", `<div><p v-if="on && (a ? a.length : 0) > 1">y</p><p v-if="(a ? a.length : 0) > 1 || on">z</p><p v-if="a && (on || a.length > 2)">w</p></div>`))).toBe(`pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(56 + props.a.as_deref().map_or(0, str::len));
+    out.reserve(
+        56
+        + props.a.as_deref().map_or(0, str::len)
+    );
     out.push_str(if props.on && (if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_a) } else { 0i64 }) as f64 > 1.0 { "<div><p>y</p>" } else { "<div><!---->" });
     out.push_str(if (if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_a_2) } else { 0i64 }) as f64 > 1.0 || props.on { "<p>z</p>" } else { "<!---->" });
     if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) && (props.on || fv::strings::js_length(fv_a_3) > 2) {

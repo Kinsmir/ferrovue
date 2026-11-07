@@ -149,7 +149,15 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(124 + props.author.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len)) + 2 + props.note.as_deref().map_or(0, str::len) + props.words.iter().map(|v| v.len()).sum::<usize>() + props.authors.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>() + props.lead.name.len() + props.lead.title.as_deref().map_or(0, str::len));
+    out.reserve(
+        126
+        + props.author.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len))
+        + props.note.as_deref().map_or(0, str::len)
+        + props.words.iter().map(|v| v.len()).sum::<usize>()
+        + props.authors.iter().map(|v| v.name.len() + v.title.as_deref().map_or(0, str::len)).sum::<usize>()
+        + props.lead.name.len()
+        + props.lead.title.as_deref().map_or(0, str::len)
+    );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Statements.vue");
     let s_greeting = if let Some(fv_author) = props.author.as_ref() { { let fv_name = fv::strings::js_trim(&fv_author.name); if fv_name.is_empty() { Cow::<str>::Borrowed("Unnamed") } else { { let fv_title = fv_author.title.as_deref(); if let Some(fv_title_2) = fv_title.filter(|v| !v.is_empty()) { Cow::<str>::Owned(format!("{} {}", fv_title_2, fv_name)) } else { Cow::<str>::Borrowed(fv_name) } } } } } else { Cow::<str>::Borrowed("Anonymous") };
     let s_label = if props.size == StatementsSize::Sm { Cow::<str>::Borrowed("small") } else { if props.size == StatementsSize::Md || props.size == StatementsSize::Lg { { let fv_upper = fv::props::Union::as_str(props.size).to_uppercase(); Cow::<str>::Owned(format!("large {}", fv_upper)) } } else { Cow::<str>::Borrowed("unknown") } };

@@ -39,7 +39,11 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
-    out.reserve(15 + props.title.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        15
+        + props.title.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     fv_head.push_seo_meta(fv::head::HeadValue::object([("title", fv::head::HeadValue::str(&format!("Note: {}", props.title)))]), vec![("name", "description", fv::head::HeadValue::str(&props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(" / "))), ("property", "og:title", fv::head::HeadValue::str(&props.title))]);
     out.push_str("<aside>");
     fv::core::escape_into(out, &props.title);

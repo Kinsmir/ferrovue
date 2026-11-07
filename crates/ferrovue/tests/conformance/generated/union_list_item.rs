@@ -127,7 +127,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(54 + 9 + 9 + 9 * props.hues.len() + props.label.len());
+    out.reserve(
+        72
+        + 9 * props.hues.len()
+        + props.label.len()
+    );
     out.push_str("<span");
     if let Some(v) = props.hue.map(fv::props::Union::as_str) {
         out.push_str(" data-hue=\"");

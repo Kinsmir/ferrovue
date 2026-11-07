@@ -62,15 +62,31 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 ///
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
-    out.reserve(30 + 7 + props.label.len() + props.tags.iter().map(|v| v.len()).sum::<usize>());
+    out.reserve(
+        37
+        + props.label.len()
+        + props.tags.iter().map(|v| v.len()).sum::<usize>()
+    );
     out.push_str("<section data-on=\"");
     out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push_str("\">");
     fv::core::escape_into(out, &props.label);
     if props.on.unwrap_or(false) {
-        super::imported_props::try_render(out, &super::imported_props::Props { title: Cow::Borrowed(&*props.label), count: None, mood: props.mood, tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect(), note: None })?;
+        super::imported_props::try_render(out, &super::imported_props::Props {
+            title: Cow::Borrowed(&*props.label),
+            count: None,
+            mood: props.mood,
+            tags: props.tags.iter().map(|v| Cow::Borrowed(&**v)).collect(),
+            note: None,
+        })?;
     } else {
-        super::imported_props::try_render(out, &super::imported_props::Props { title: Cow::Borrowed(&*format!("{}!", props.label)), count: Some(props.tags.len() as i64), mood: props.mood, tags: Vec::new(), note: Some(Cow::Borrowed(&*props.label)) })?;
+        super::imported_props::try_render(out, &super::imported_props::Props {
+            title: Cow::Borrowed(&*format!("{}!", props.label)),
+            count: Some(props.tags.len() as i64),
+            mood: props.mood,
+            tags: Vec::new(),
+            note: Some(Cow::Borrowed(&*props.label)),
+        })?;
     }
     out.push_str("</section>");
     Ok(())
