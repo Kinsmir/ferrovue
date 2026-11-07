@@ -7014,7 +7014,7 @@ describe("constant lookups", () => {
       '<i :class="PAD[size]">{{ PAD[size] }}</i>',
     );
     expect(out).toContain("fv::attrs::class_into(out, false, &[match props.size { Size::Sm => \"p-1\", Size::Md => \"p-2\", Size::Lg => \"p-4\" }]);");
-    expect(out).toContain('fv::core::escape_into(out, match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg => "p-4" });');
+    expect(out).toContain('out.push_str(match props.size { Size::Sm => "p-1", Size::Md => "p-2", Size::Lg => "p-4" });');
   });
 
   it("matches every variant of a key's enum, whatever the `??` default and however the values group", () => {
@@ -7058,7 +7058,7 @@ describe("constant lookups", () => {
       '<i :style="{ color: THEME[tone].fg }">{{ THEME[Tone.Warn].fg }}</i><b v-for="b in badges">{{ THEME[b.tone].weight }}</b>',
       { "theme.ts": 'export enum Tone { Info = "info", Warn = "warn" }\nexport const THEME: Record<Tone, { fg: string; weight: number }> = { [Tone.Info]: { fg: "navy", weight: 400 }, [Tone.Warn]: { fg: "red", weight: 700.5 } };\n' },
     );
-    expect(out).toContain('fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "red" });');
+    expect(out).toContain('out.push_str(match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "red" });');
     expect(out).toContain("red</i>");
     expect(out).toContain('fv::core::push_number(out, match fv_b.tone { super::types::Tone::Info => 400.0f64, super::types::Tone::Warn => 700.5f64 });');
   });
@@ -7087,9 +7087,9 @@ describe("constant lookups", () => {
       'import { computed } from "vue";\nconst props = defineProps<{ level: 1 | 2; on: boolean }>();\nconst NAMES = { 1: "one", 2: "two", x: "ex" };\nconst PAD = { a: "p-1", b: "p-2" };\nconst pick = computed(() => (props.on ? "a" : "b"));',
       "<i>{{ NAMES[level] }} {{ PAD[on ? 'b' : 'a'] }} {{ PAD[pick] }}</i>",
     );
-    expect(out).toContain('fv::core::escape_into(out, match props.level { 1 => "one", _ => "two" });');
+    expect(out).toContain('out.push_str(match props.level { 1 => "one", _ => "two" });');
     expect(out).toContain('out.push_str(if props.on { "p-2" } else { "p-1" });');
-    expect(out).toContain('fv::core::escape_into(out, match s_pick { "a" => "p-1", _ => "p-2" });');
+    expect(out).toContain('out.push_str(match s_pick { "a" => "p-1", _ => "p-2" });');
   });
 
   it("reads `undefined` for the keys an object lacks, narrowed with `??`, `?.` and `v-if`", () => {
@@ -7809,7 +7809,7 @@ defineProps<{ tone?: Tone; wide?: Tone | "hot"; all: Tone[]; some?: Tone[] }>();
     expect(out).toContain("all: props.some.as_deref().unwrap_or(&[]).iter().map(|&v| match v {");
     expect(out).toContain("some: props.some.as_ref().map(|v| v.iter().map(|&v| match v {");
     expect(out).toContain("tone: fv_t_2.map(|v| match v { Tone::Calm => super::y::Tone::Calm, Tone::Loud => super::y::Tone::Loud }), wide: None, all: Vec::new()");
-    expect(out).toContain("fv::core::escape_into(out, match fv_t_3 { Tone::Calm => \"Calm\", Tone::Loud => \"Loud\" });");
+    expect(out).toContain("out.push_str(match fv_t_3 { Tone::Calm => \"Calm\", Tone::Loud => \"Loud\" });");
     expect(out).not.toContain("_ =>");
     expect(out).not.toContain("parse");
   });

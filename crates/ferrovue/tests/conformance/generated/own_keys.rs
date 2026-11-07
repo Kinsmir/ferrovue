@@ -77,7 +77,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</p><b title=\"");
         fv::core::escape_into(out, fv_role_4);
         out.push_str("\">");
-        fv::core::escape_into(out, match fv_role_4 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" });
+        out.push_str(match fv_role_4 { "7" => "is-seven", "mod" => "is-mod", _ => "is-admin" });
         out.push_str("</b></section>");
     } else {
         out.push_str("</p><b>");

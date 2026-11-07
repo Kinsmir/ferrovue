@@ -1235,12 +1235,12 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
     expect(out).not.toContain("_ =>");
     expect(out).toMatch(like("t: match s_tone { XTone::Calm | XTone::Empty => super::t::TT::Loud, XTone::Loud => super::t::TT::Quiet, XTone::Quiet => super::t::TT::Calm }"));
     expect(out).toMatch(like("t: if props.on { super::t::TT::Quiet } else { super::t::TT::Calm }"));
-    expect(out).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud | XTone::Empty => "p-2", XTone::Quiet => "p-3" });'));
+    expect(out).toMatch(like('out.push_str(match s_tone { XTone::Calm => "p-1", XTone::Loud | XTone::Empty => "p-2", XTone::Quiet => "p-3" });'));
   });
 
   it("reads a table by a key built with `||` from an enum and a literal outside it, and refuses one built with a `string`", () => {
     const tones = 'import { ref } from "vue";\ntype Tone = "calm" | "loud" | "quiet";\nconst props = defineProps<{ start?: Tone; s: string }>();\nconst tone = ref<Tone | "">(props.start ?? "");\nconst PAD = { calm: "p-1", loud: "p-2", quiet: "p-3", other: "p-4" } as const;';
-    expect(render(tones, "{{ PAD[tone || 'other'] }}")).toMatch(like('fv::core::escape_into(out, match s_tone { XTone::Calm => "p-1", XTone::Loud => "p-2", XTone::Quiet => "p-3", XTone::Empty => "p-4" });'));
+    expect(render(tones, "{{ PAD[tone || 'other'] }}")).toMatch(like('out.push_str(match s_tone { XTone::Calm => "p-1", XTone::Loud => "p-2", XTone::Quiet => "p-3", XTone::Empty => "p-4" });'));
     expect(refusals(tones, "{{ PAD[tone || s] }}")).toEqual([expect.stringMatching(/^FV0222 `PAD` read by a key that is a `string`/)]);
   });
 
@@ -1249,26 +1249,26 @@ describe("strings of a union chosen by `??` and `?:` for a child's union prop", 
 
     it("matches over the variants of the union the key is tested by, converting a branch that is a value of another union", () => {
       expect(render(keys, "<p>{{ TB[k === 'a' ? j : 'b'] }}</p>")).toMatch(like(
-        'fv::core::escape_into(out, match match props.k { XK::A => match props.j { XJ::A => XK::A, XJ::B => XK::B, XJ::C => XK::C }, XK::B | XK::C => XK::B } { XK::A => "A", XK::B => "B", XK::C => "C" });',
+        'out.push_str(match match props.k { XK::A => match props.j { XJ::A => XK::A, XJ::B => XK::B, XJ::C => XK::C }, XK::B | XK::C => XK::B } { XK::A => "A", XK::B => "B", XK::C => "C" });',
       ));
       expect(render(keys, "<p>{{ TB[o === 'a' ? j : 'b'] }}</p>")).toMatch(like(
-        'fv::core::escape_into(out, match match props.o { Some(XO::A) => match props.j { XJ::A => XO::A, XJ::B => XO::B, XJ::C => XO::C }, Some(XO::B) | Some(XO::C) | None => XO::B } { XO::A => "A", XO::B => "B", XO::C => "C" });',
+        'out.push_str(match match props.o { Some(XO::A) => match props.j { XJ::A => XO::A, XJ::B => XO::B, XJ::C => XO::C }, Some(XO::B) | Some(XO::C) | None => XO::B } { XO::A => "A", XO::B => "B", XO::C => "C" });',
       ));
     });
 
     it("reads a branch that is itself a `?:` over a union through its own `match`, and a branch that is a value of the union by its string", () => {
-      expect(render(keys, "<p>{{ TB[on ? (k === 'a' ? 'b' : 'c') : 'a'] }}</p>")).toMatch(like('fv::core::escape_into(out, if props.on { match props.k { XK::A => "B", XK::B | XK::C => "C" } } else { "A" });'));
+      expect(render(keys, "<p>{{ TB[on ? (k === 'a' ? 'b' : 'c') : 'a'] }}</p>")).toMatch(like('out.push_str(if props.on { match props.k { XK::A => "B", XK::B | XK::C => "C" } } else { "A" });'));
       const out = render(keys, "<p>{{ TB[on ? k : 'a'] }}|{{ TB[on ? 'a' : k] }}</p>");
-      expect(out).toMatch(like('fv::core::escape_into(out, match if props.on { fv::props::Union::as_str(props.k) } else { "a" } { "a" => "A", "b" => "B", _ => "C" });'));
-      expect(out).toMatch(like('fv::core::escape_into(out, match if props.on { "a" } else { fv::props::Union::as_str(props.k) } { "a" => "A", "b" => "B", _ => "C" });'));
+      expect(out).toMatch(like('out.push_str(match if props.on { fv::props::Union::as_str(props.k) } else { "a" } { "a" => "A", "b" => "B", _ => "C" });'));
+      expect(out).toMatch(like('out.push_str(match if props.on { "a" } else { fv::props::Union::as_str(props.k) } { "a" => "A", "b" => "B", _ => "C" });'));
       expect(render(`${keys}\nconst NEXT = { a: "b", b: "c", c: "a" } as const;`, "<p>{{ TB[on ? NEXT[k] : 'a'] }}</p>")).toMatch(like(
-        'fv::core::escape_into(out, match if props.on { match props.k { XK::A => "b", XK::B => "c", XK::C => "a" } } else { "a" } { "b" => "B", "c" => "C", _ => "A" });',
+        'out.push_str(match if props.on { match props.k { XK::A => "b", XK::B => "c", XK::C => "a" } } else { "a" } { "b" => "B", "c" => "C", _ => "A" });',
       ));
     });
 
     it("reads the key by its string where a branch reads a field only the members the `?:` keeps have", () => {
       expect(render(keys, "<p>{{ pick !== 'calm' ? TB[pick === 'loud' ? 'a' : pair[pick]] : '' }}</p>")).toMatch(like(
-        'fv::core::escape_into(out, if props.pick != Tone::Calm { match if props.pick == Tone::Loud { "a" } else { std::ops::Deref::deref(&props.pair.quiet) } { "a" => "A", _ => "C" } } else { "" });',
+        'out.push_str(if props.pick != Tone::Calm { match if props.pick == Tone::Loud { "a" } else { std::ops::Deref::deref(&props.pair.quiet) } { "a" => "A", _ => "C" } } else { "" });',
       ));
     });
 

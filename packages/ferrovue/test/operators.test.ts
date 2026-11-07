@@ -740,7 +740,7 @@ describe("`?:`", () => {
     const script = `${PROPS}\nconst T = { x: "one", y: "two" } as const;`;
     expect(lines('<p>{{ T[(b ? "x" : (c ? "y" : undefined)) ?? "x"] }}</p>', script)).toMatch(like([
       'out.push_str("<p>");',
-      'fv::core::escape_into(out, match (if props.b { Some("x") } else { if props.c.unwrap_or(false) { Some("y") } else { None } }).unwrap_or("x") { "x" => "one", _ => "two" });',
+      'out.push_str(match (if props.b { Some("x") } else { if props.c.unwrap_or(false) { Some("y") } else { None } }).unwrap_or("x") { "x" => "one", _ => "two" });',
       'out.push_str("</p>");',
     ].join("\n"), true));
     expect(refusals(PROPS, '<p>{{ encodeURIComponent((b ? String(n) : os)?.slice(0, 1) ?? "") }}</p>')).toEqual([

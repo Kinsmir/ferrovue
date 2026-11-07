@@ -356,7 +356,7 @@ describe("constant `Map`s", () => {
   it("matches a key of a union of literals, a string and an integer", () => {
     const out = render(`defineProps<{ k: "a" | "z"; j: "a" | "b"; n: 1 | 3; s: string; i: number }>();\n${M}`, "<p>{{ M.get(k) }}|{{ M.get(j) }}|{{ M.has(k) }}|{{ M.has(j) }}|{{ M.get(n) }}|{{ M.get(s) }}|{{ M.has(s) }}|{{ M.get(i) }}|{{ M.has(i) }}|{{ M.get(String(1)) }}</p>");
     expect(out).toMatch(like('if let Some(v) = match props.k { XK::A => Some("A"), XK::Z => None } {'));
-    expect(out).toMatch(like('fv::core::escape_into(out, match props.j { XJ::A => "A", XJ::B => "B" });'));
+    expect(out).toMatch(like('out.push_str(match props.j { XJ::A => "A", XJ::B => "B" });'));
     expect(out).toMatch(like('out.push_str(if matches!(props.k, XK::A) { "true" } else { "false" });\n    out.push_str("|true|");'));
     expect(out).toMatch(like('if let Some(v) = match props.n { 1 => Some("one"), _ => None } {'));
     expect(out).toMatch(like('if let Some(v) = match &*props.s { "a" => Some("A"), "b" => Some("B"), _ => None } {'));
@@ -408,7 +408,7 @@ describe("constant objects", () => {
     );
     expect(out).toMatch(like('let s_c = match props.k { XK::A => "ax", XK::B => "bx" };'));
     expect(out).toMatch(like('out.push_str("|ax|bx|two|ax|ax|");'));
-    expect(out).toMatch(like('fv::core::escape_into(out, match props.s { XS::A => "ax", XS::B => "bx" });'));
+    expect(out).toMatch(like('out.push_str(match props.s { XS::A => "ax", XS::B => "bx" });'));
   });
 
   it("reads a field by a key a `.ts` file's constant holds", () => {
@@ -480,7 +480,7 @@ describe("constants read by a key known only when rendering", () => {
     expect(read('k: "a" | "c"', '{ a: { x: "1" }, c: { x: "2" } }', '<p v-if="T[k]">{{ T[k].x }}</p>')).toMatch(like(`pub fn try_render(out: &mut String, props: &Props) -> Result<(), fv::render::Refused> {
     out.reserve(7 + 1);
     out.push_str("<p>");
-    fv::core::escape_into(out, match props.k { XK::A => "1", XK::C => "2" });
+    out.push_str(match props.k { XK::A => "1", XK::C => "2" });
     out.push_str("</p>");
     Ok(())
 }

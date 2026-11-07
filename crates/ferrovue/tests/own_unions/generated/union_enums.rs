@@ -579,17 +579,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</");
     out.push_str(fv_tag);
     out.push_str("><p>");
-    fv::core::escape_into(out, match props.align { crate::domain::Align::Left => "L", crate::domain::Align::Center => "C", crate::domain::Align::Right => "R" });
+    out.push_str(match props.align { crate::domain::Align::Left => "L", crate::domain::Align::Center => "C", crate::domain::Align::Right => "R" });
     out.push(' ');
     fv::core::push_number(out, match props.other.unwrap_or(UnionEnumsOther::C) { UnionEnumsOther::A => 1.0f64, UnionEnumsOther::B => 2.5f64, UnionEnumsOther::C => -3.0f64 });
     out.push(' ');
     fv::core::push_number(out, match props.mode { UnionEnumsMode::A => 1.0f64, UnionEnumsMode::B => 2.5f64, UnionEnumsMode::C => -3.0f64 });
     out.push(' ');
-    fv::core::escape_into(out, match props.size.unwrap_or(UnionEnumsSize::Lg) { UnionEnumsSize::Sm => "small", UnionEnumsSize::Lg => "large" });
+    out.push_str(match props.size.unwrap_or(UnionEnumsSize::Lg) { UnionEnumsSize::Sm => "small", UnionEnumsSize::Lg => "large" });
     out.push(' ');
     fv::core::escape_into(out, s_label);
     out.push(' ');
-    fv::core::escape_into(out, match props.mark { UnionEnumsMark::B => "bold", UnionEnumsMark::Q => "quote", UnionEnumsMark::AB => "amp" });
+    out.push_str(match props.mark { UnionEnumsMark::B => "bold", UnionEnumsMark::Q => "quote", UnionEnumsMark::AB => "amp" });
     out.push_str("</p>");
     if props.mode == UnionEnumsMode::A {
         out.push_str("<b>is a</b>");
