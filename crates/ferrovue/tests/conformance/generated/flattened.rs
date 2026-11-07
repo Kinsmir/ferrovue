@@ -68,7 +68,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         + props.sep.len()
     );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Flattened.vue");
-    let s_tags = props.posts.iter().flat_map(|fv_p| fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_tags = props.posts.iter().flat_map(|fv_p| fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).collect::<Vec<_>>();
     let s_cells = props.deep.iter().flat_map(|v| v.iter()).collect::<Vec<_>>();
     out.push_str("<!--[--><p>");
     fv::core::escape_join_ints(out, props.matrix.iter().flat_map(|v| v.iter().copied()), &props.sep);

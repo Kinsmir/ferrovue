@@ -55,13 +55,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(81);
     out.push_str("<section><p>");
-    fv::core::push_int(out, (if let Some(fv_words) = props.words.as_ref() { fv_words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["none"].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);
+    fv::core::push_int(out, (if let Some(fv_words) = props.words.as_ref() { fv_words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["none"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }).len() as i64);
     out.push('|');
-    fv::core::escape_join(out, if let Some(fv_words_2) = props.words.as_ref() { fv_words_2.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["a<b", "c&d"].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }, "-");
+    fv::core::escape_join(out, if let Some(fv_words_2) = props.words.as_ref() { fv_words_2.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["a<b", "c&d"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }, "-");
     out.push('|');
     fv::core::push_int(out, (if let Some(fv_counts) = props.counts.as_ref() { fv_counts.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);
     out.push_str("</p><ul><!--[-->");
-    for fv_w_cow in (if let Some(fv_words_3) = props.words.as_ref() { fv_words_3.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["first", "second"].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter() {
+    for fv_w_cow in (if let Some(fv_words_3) = props.words.as_ref() { fv_words_3.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["first", "second"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }).into_iter() {
         let fv_w: &str = &fv_w_cow;
         out.push_str("<li>");
         fv::core::escape_into(out, fv_w);

@@ -75,9 +75,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Arrays.vue");
     let s_cheap = props.items.iter().filter(|fv_i| fv_i.price < 10.0).collect::<Vec<_>>();
-    let s_labels = props.items.iter().map(|fv_i_2| Cow::<str>::Owned(fv_i_2.label.to_uppercase())).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_labels = props.items.iter().map(|fv_i_2| Cow::<str>::Owned(fv_i_2.label.to_uppercase())).collect::<Vec<_>>();
     let s_found = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w| fv::strings::js_length(fv_w) > 3).map(|v| Cow::<str>::Owned(v.into_owned()));
-    let s_shown = if props.min as f64 > 2.0 { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 1).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() };
+    let s_shown = if props.min as f64 > 2.0 { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 1).collect::<Vec<_>>() } else { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() };
     out.push_str("<section><ul><!--[-->");
     for (fv_i_3, fv_item) in props.items.iter().filter(|fv_x| fv_x.id as f64 >= props.min as f64).enumerate() {
         let fv_i_3 = fv_i_3 as i64;
@@ -156,7 +156,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_join(out, s_shown.iter().map(|v| Cow::<str>::Borrowed(&**v)), "/");
     out.push_str("|<!--[-->");
-    for fv_w_cow in (if props.min as f64 > 0.0 { fv::strings::js_slice_items(props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)), 0.0f64, Some(2.0f64)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter() {
+    for fv_w_cow in (if props.min as f64 > 0.0 { fv::strings::js_slice_items(props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)), 0.0f64, Some(2.0f64)).collect::<Vec<_>>() } else { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }).into_iter() {
         let fv_w_9: &str = &fv_w_cow;
         out.push_str("<i>");
         fv::core::escape_into(out, fv_w_9);

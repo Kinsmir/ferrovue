@@ -791,6 +791,20 @@ let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv
 # assert_eq!(s_total, 5.0);
 ```
 
+A list of strings a local holds keeps each string borrowed where it comes from the props, a string
+literal or a `<script setup>` binding, which all live as long as the render, so building it copies
+no text. A string taken from a value the list's own expression makes, such as a `const` inside a
+`computed`'s body, is copied into the list, since that value is gone once the expression ends.
+
+```rust
+# use std::borrow::Cow;
+# struct Props<'a> { words: Vec<Cow<'a, str>> }
+# let props = Props { words: vec![Cow::Owned("a".into()), Cow::Owned("long".into())] };
+// const long = computed(() => props.words.filter((w) => w.length > 2));
+let s_long = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w| fv_w.len() > 2).collect::<Vec<_>>();
+# assert!(matches!(s_long[..], [Cow::Borrowed("long")]));
+```
+
 A render tests only what can go either way. It writes no test of the empty string for a value
 a `v-if` or `|| undefined` has found present, or for a union with no `""` member, and it writes an
 attribute bound to `test ? "literal" : undefined` as the literal inside `if test`. A `v-for` index

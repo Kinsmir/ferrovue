@@ -85,7 +85,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_chained = props.item.as_ref().map(|fv_item_4| &fv_item_4.children).map(|v| &v[..]).unwrap_or(&[]);
     let s_tags = props.item.as_ref().and_then(|fv_item_5| fv_item_5.tags.as_ref()).map(|v| &v[..]).unwrap_or(&[]);
     let s_nested = if props.flag { &props.others[..] } else { if let Some(fv_item_6) = props.item.as_ref() { &fv_item_6.children[..] } else { &[] } };
-    let s_labels = if props.flag { props.others.iter().map(|fv_o| Cow::<str>::Borrowed(&fv_o.label)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() };
+    let s_labels = if props.flag { props.others.iter().map(|fv_o| Cow::<str>::Borrowed(&fv_o.label)).collect::<Vec<_>>() } else { Vec::new() };
     out.push_str("<section><h2>");
     fv::core::escape_into(out, &props.label);
     out.push_str("</h2><ul><!--[-->");
@@ -163,7 +163,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</i>");
     }
     out.push_str("<!--]--><!--[-->");
-    for fv_t_cow in (if props.flag { ["x", &*props.label].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).into_iter() {
+    for fv_t_cow in (if props.flag { ["x", &*props.label].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() } else { Vec::new() }).into_iter() {
         let fv_t_2: &str = &fv_t_cow;
         out.push_str("<b>");
         fv::core::escape_into(out, fv_t_2);
