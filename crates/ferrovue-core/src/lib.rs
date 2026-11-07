@@ -28,44 +28,76 @@
 /// assert_eq!(out, "<p>&lt;a href=&quot;x&quot;&gt;Tom &amp; &#39;Jerry&#39;&lt;/a&gt;");
 /// ```
 pub fn escape_into(out: &mut String, s: &str) {
-    if !needs_escape(s.as_bytes()) {
-        out.push_str(s);
-        return;
+    match next_special(s.as_bytes(), 0) {
+        None => out.push_str(s),
+        Some(i) => escape_from(out, s, i),
     }
+}
+
+#[inline(never)]
+fn escape_from(out: &mut String, s: &str, mut i: usize) {
+    let bytes = s.as_bytes();
     let mut last = 0;
-    for (i, b) in s.bytes().enumerate() {
-        let rep = match b {
+    loop {
+        let rep = match bytes[i] {
             b'"' => "&quot;",
             b'&' => "&amp;",
             b'\'' => "&#39;",
             b'<' => "&lt;",
-            b'>' => "&gt;",
-            _ => continue,
+            _ => "&gt;",
         };
         out.push_str(&s[last..i]);
         out.push_str(rep);
         last = i + 1;
+        match next_special(bytes, last) {
+            Some(next) => i = next,
+            None => break,
+        }
     }
     out.push_str(&s[last..]);
 }
 
-fn needs_escape(s: &[u8]) -> bool {
-    const ONES: u64 = u64::from_ne_bytes([0x01; 8]);
-    const TOPS: u64 = u64::from_ne_bytes([0x80; 8]);
+fn is_special(b: u8) -> bool {
+    matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>')
+}
+
+#[inline(always)]
+fn next_special(s: &[u8], from: usize) -> Option<usize> {
+    const ONES: u64 = u64::from_le_bytes([0x01; 8]);
+    const TOPS: u64 = u64::from_le_bytes([0x80; 8]);
     let special = |word: u64| {
         let zero = |c: u8| {
             let t = word ^ (ONES * u64::from(c));
             t.wrapping_sub(ONES) & !t & TOPS
         };
-        (zero(b'"') | zero(b'&') | zero(b'\'') | zero(b'<') | zero(b'>')) != 0
+        zero(b'"') | zero(b'&') | zero(b'\'') | zero(b'<') | zero(b'>')
     };
-    let Some(last) = s.last_chunk::<8>() else {
-        return s
-            .iter()
-            .any(|b| matches!(b, b'"' | b'&' | b'\'' | b'<' | b'>'));
+    let rest = s.get(from..)?;
+    let Some(last) = rest.last_chunk::<8>() else {
+        return rest.iter().position(|&b| is_special(b)).map(|i| from + i);
     };
-    let (words, _) = s.as_chunks::<8>();
-    words.iter().any(|w| special(u64::from_ne_bytes(*w))) || special(u64::from_ne_bytes(*last))
+    let (words, _) = rest.as_chunks::<8>();
+    let (pairs, odd) = words.as_chunks::<2>();
+    for (n, pair) in pairs.iter().enumerate() {
+        let a = special(u64::from_le_bytes(pair[0]));
+        let b = special(u64::from_le_bytes(pair[1]));
+        if a | b != 0 {
+            let bit = if a != 0 {
+                a.trailing_zeros()
+            } else {
+                64 + b.trailing_zeros()
+            };
+            return Some(from + n * 16 + (bit / 8) as usize);
+        }
+    }
+    if let Some(word) = odd.first() {
+        let found = special(u64::from_le_bytes(*word));
+        if found != 0 {
+            return Some(from + (words.len() - 1) * 8 + (found.trailing_zeros() / 8) as usize);
+        }
+    }
+    let found = special(u64::from_le_bytes(*last));
+    (found != 0).then(|| from + rest.len() - 8 + (found.trailing_zeros() / 8) as usize)
 }
 
 const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
