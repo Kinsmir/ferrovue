@@ -932,7 +932,7 @@ describe("whitespace", () => {
     expect(pushed(render(sfc("", "<button>\n  remove\n</button>"), {}, { whitespace: "condense" }))).toBe("<button> remove </button>");
     expect(pushed(trimmed("<button>\n  remove\n</button>"))).toBe("<button>remove</button>");
     expect(pushed(trimmed("<p>\n  <span>x</span>\n  tail\n</p>"))).toBe("<p><span>x</span> tail</p>");
-    expect(pushed(trimmed("<p><b>\n a\n</b> <i>b</i></p>"))).toBe("<p><b>a</b> <i>b</i></p>");
+    expect(pushed(trimmed("<div><p>\n a\n</p> <i>b</i></div>"))).toBe("<div><p>a</p> <i>b</i></div>");
   });
 
   it("trims edge whitespace that holds a line break, and keeps a space typed on the tag's line", () => {
@@ -954,7 +954,23 @@ describe("whitespace", () => {
     expect(pushed(trimmed("<div>\n  <div>a</div>\n  <span>b</span>\n  <p>c</p>\n</div>"))).toBe("<div><div>a</div><span>b</span><p>c</p></div>");
     expect(pushed(trimmed("<p>a<br>\n<span>b</span></p>"))).toBe("<p>a<br><span>b</span></p>");
     expect(pushed(trimmed("<p><svg><path d=\"a\"/>\n<path d=\"b\"/></svg></p>"))).toBe('<p><svg><path d=\\"a\\"></path><path d=\\"b\\"></path></svg></p>');
-    expect(pushed(trimmed("<span>a</span>\n<span>b</span>"))).toBe("<!--[--><span>a</span><span>b</span><!--]-->");
+    expect(pushed(trimmed("<span>a</span>\n<span>b</span>"))).toBe("<!--[--><span>a</span> <span>b</span><!--]-->");
+    expect(pushed(trimmed("<div>a</div>\n<span>b</span>"))).toBe("<!--[--><div>a</div><span>b</span><!--]-->");
+    const root = compileTemplate({ source: "<span>a</span>\n<span>b</span>", filename: "a.vue", id: "a", ssr: true, compilerOptions: { nodeTransforms: [trimEdges] } });
+    expect(root.code).toContain("<span>a</span> <span>b</span>");
+  });
+
+  it("keeps Vue's one space at an inline element's line-break edges, and trims block and inline-block elements with `trim-edges`", () => {
+    expect(pushed(trimmed("<p>ago<span>\n  by\n</span>alice</p>"))).toBe("<p>ago<span> by </span>alice</p>");
+    expect(pushed(trimmed("<p><button>\n  remove\n</button></p>"))).toBe("<p><button>remove</button></p>");
+    expect(pushed(trimmed("<p><span>\n  ·\n  <button>x</button></span\n></p>"))).toBe("<p><span> · <button>x</button></span></p>");
+    for (const tag of ["audio", "button", "meter", "object", "progress", "select", "video", "li", "td"]) {
+      expect(pushed(trimmed(`<div><${tag}>\n  a\n</${tag}></div>`)), tag).toContain(`<${tag}>a</${tag}>`);
+    }
+    for (const tag of ["a", "b", "label", "time"]) {
+      expect(pushed(trimmed(`<div><${tag}>\n  a\n</${tag}></div>`)), tag).toContain(`<${tag}> a </${tag}>`);
+    }
+    expect(pushed(trimmed('<div><svg><text>\n  a\n</text></svg></div>'))).toContain("<text>a</text>");
   });
 
   it("counts a component as inline, and keeps Vue's spacing around built-ins, comments and `v-if` branches with `trim-edges`", () => {
@@ -966,7 +982,9 @@ describe("whitespace", () => {
       expect(code, tag).not.toContain("</span> ");
       expect(code, tag).not.toMatch(/> <span>c/);
     }
-    expect(pushed(trimmed("<p>\n  <span>a</span><!-- c -->\n  <span>b</span>\n</p>"))).toBe("<p><span>a</span><!-- c --><span>b</span></p>");
+    expect(pushed(trimmed("<p>\n  <span>a</span><!-- c -->\n  <span>b</span>\n</p>"))).toBe("<p><span>a</span> <!-- c --><span>b</span></p>");
+    expect(pushed(trimmed("<p><span>a</span><!-- c --><span>b</span></p>"))).toBe("<p><span>a</span><!-- c --><span>b</span></p>");
+    expect(pushed(render(sfc("", "<p><span>a</span>\n<!-- c -->\n<a>b</a></p>"), {}, { whitespace: "trim-edges", comments: false }))).toBe("<p><span>a</span> <a>b</a></p>");
     expect(pushed(trimmed('<p>\n  <time>t</time>\n  <template v-if="true"><b>b</b></template>\n  <template v-for="i in 2" :key="i"><i>i</i></template>\n</p>'))).toBe("<p><time>t</time> <b>b</b> <!--[--><i>i</i><!--]--></p>");
     expect(pushed(trimmed("<p>\n  <span>a</span>\n  <slot />\n</p>"))).toBe("<p><span>a</span> </p>");
     const named = compileTemplate({ source: "<Child>\n  <template #a><b>a</b></template>\n  <template #b><i>b</i></template>\n</Child>", filename: "a.vue", id: "a", ssr: true, compilerOptions: { nodeTransforms: [trimEdges] } });
@@ -982,12 +1000,12 @@ describe("whitespace", () => {
     expect(pushed(trimmed('<p><template v-if="true"> a </template></p>'))).toContain("<!--[--> a <!--]-->");
     expect(pushed(trimmed("<div><slot> fallback </slot></div>"))).toContain(" fallback ");
     expect(pushed(trimmed("<div><pre> a <b> b </b> </pre><textarea> c </textarea></div>"))).toBe("<div><pre> a <b> b </b> </pre><textarea> c </textarea></div>");
-    expect(pushed(trimmed('<div v-pre title="v-pre"><b> {{ a }} </b></div>'))).toBe("<div title=\\\"v-pre\\\"><b> {{ a }} </b></div>");
-    expect(pushed(trimmed('<div title="v-pre"><b>\n a\n</b></div>'))).toBe("<div title=\\\"v-pre\\\"><b>a</b></div>");
+    expect(pushed(trimmed('<div v-pre title="v-pre"><p> {{ a }} </p></div>'))).toBe("<div title=\\\"v-pre\\\"><p> {{ a }} </p></div>");
+    expect(pushed(trimmed('<div title="v-pre"><p>\n a\n</p></div>'))).toBe("<div title=\\\"v-pre\\\"><p>a</p></div>");
     for (const style of ["white-space: pre", "color: red; white-space:pre-line !important", "WHITE-SPACE: break-spaces;"]) {
-      expect(pushed(trimmed(`<div style="${style}"><b>\n a\n</b></div>`)), style).toContain("<b> a </b>");
+      expect(pushed(trimmed(`<div style="${style}"><p>\n a\n</p></div>`)), style).toContain("<p> a </p>");
     }
-    expect(pushed(trimmed('<div style="white-space: preserve"><b>\n a\n</b></div>'))).toContain("<b>a</b>");
+    expect(pushed(trimmed('<div style="white-space: preserve"><p>\n a\n</p></div>'))).toContain("<p>a</p>");
   });
 
   it("trims the content a component and `<template v-slot>` hand a child", () => {

@@ -8,6 +8,11 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+### Fixed
+
+- `"whitespace": "trim-edges"` and `trimEdges` keep Vue's one space at a line-break edge of an inline element such as `<span>`, and space inline elements at a template's root and across a comment; 0.15.1 trimmed those edges and left those line breaks without a space.
+  See the [`generated_code`](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace) guide.
+
 ## [0.15.1] - 2026-11-07
 
 ### Fixed

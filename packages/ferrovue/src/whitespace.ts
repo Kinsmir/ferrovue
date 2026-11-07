@@ -12,12 +12,14 @@ interface TemplateNode {
   content?: unknown;
   props?: { type: number; name: string; value?: { content: string } }[];
   children?: TemplateNode[];
+  source?: string;
   loc: { source: string; start: Position; end: Position };
 }
 
 const ROOT = 0;
 const ELEMENT = 1;
 const TEXT = 2;
+const COMMENT = 3;
 const PLAIN = 0;
 const COMPONENT = 1;
 const SLOT = 2;
@@ -36,6 +38,8 @@ const SPACELESS_TAGS = new Set(
     .join(" ")
     .split(" "),
 );
+const INLINE_BLOCK_TAGS = new Set(["audio", "button", "meter", "object", "progress", "select", "video"]);
+const COMMENTS = /<!--[\s\S]*?(?:-->|$)/g;
 const KEPT_TAGS = new Set(["pre", "textarea"]);
 const PRE_STYLE = /(?:^|;)\s*white-space\s*:\s*(?:pre|pre-wrap|pre-line|break-spaces)\s*(?:!important\s*)?(?:;|$)/i;
 const OPEN_TAG = /^<[^\s/>]+(?:[^"'>]|"[^"]*"|'[^']*')*/;
@@ -54,7 +58,11 @@ function keeps(el: TemplateNode): boolean {
 }
 
 function trims(el: TemplateNode): boolean {
-  if (el.tagType === PLAIN || el.tagType === COMPONENT) return true;
+  if (el.tagType === PLAIN) {
+    const tag = el.tag!.toLowerCase();
+    return el.ns !== HTML || SPACELESS_TAGS.has(tag) || INLINE_BLOCK_TAGS.has(tag);
+  }
+  if (el.tagType === COMPONENT) return true;
   return el.tagType === TEMPLATE && el.props!.some((p) => p.type === 7 && p.name === "slot");
 }
 
@@ -81,43 +89,51 @@ function inline(node: TemplateNode): boolean {
   return (node.ns === HTML || tag === "svg" || tag === "math") && !SPACELESS_TAGS.has(tag);
 }
 
-function spaceInline(el: TemplateNode): void {
-  if (el.ns !== HTML) return;
-  const children = el.children!;
+function spaceInline(node: TemplateNode, source: string, start: number): void {
+  const children = node.children!;
   const spaced: TemplateNode[] = [];
-  children.forEach((child, i) => {
-    const prev = children[i - 1];
+  let prev: TemplateNode | undefined;
+  let after = 0;
+  children.forEach((child) => {
+    if (child.type === COMMENT) {
+      spaced.push(child);
+      return;
+    }
     if (prev !== undefined && inline(prev) && inline(child)) {
-      const start = el.loc.start.offset;
-      const gap = el.loc.source.slice(prev.loc.end.offset - start, child.loc.start.offset - start);
-      if (BLANK.test(gap) && LINE_BREAK.test(gap)) spaced.push({ type: TEXT, content: " ", loc: { source: gap, start: prev.loc.end, end: child.loc.start } });
+      const gap = source.slice(prev.loc.end.offset - start, child.loc.start.offset - start).replace(COMMENTS, "");
+      if (BLANK.test(gap) && LINE_BREAK.test(gap)) spaced.splice(after, 0, { type: TEXT, content: " ", loc: { source: gap, start: prev.loc.end, end: child.loc.start } });
     }
     spaced.push(child);
+    prev = child;
+    after = spaced.length;
   });
-  el.children = spaced;
+  node.children = spaced;
 }
 
 function walk(node: TemplateNode): void {
   for (const child of node.children ?? []) {
     if (child.type !== ELEMENT || keeps(child)) continue;
     if (trims(child)) trimChildren(child);
-    spaceInline(child);
+    if (child.ns === HTML) spaceInline(child, child.loc.source, child.loc.start.offset);
     walk(child);
   }
 }
 
 /** A node transform for `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms` that
- * trims the whitespace at the start and end of an element's text, where it meets the element's
- * tags, when that whitespace holds a line break, as `"whitespace": "trim-edges"` makes ferrovue's
- * Rust render it. A space typed on the same line as the tag stays. A line break between two
- * inline elements, components, `<slot>`s or `<template>`s, such as `<span>` and `<a>`, renders as
- * one space, as a formatter reads it.
- * It trims the content of elements, components and `<template v-slot>`, and leaves `<pre>`, `<textarea>`, `v-pre` and an
- * element whose `style` sets `white-space: pre`, `pre-wrap`, `pre-line` or `break-spaces` as they
- * are, with everything inside them. */
+ * trims the whitespace at the start and end of a block or inline-block element's text, where it
+ * meets the element's tags, when that whitespace holds a line break, as `"whitespace": "trim-edges"`
+ * makes ferrovue's Rust render it. An inline element's edges keep Vue's one space, and a space
+ * typed on the same line as the tag stays. A line break between two inline elements, components,
+ * `<slot>`s or `<template>`s, such as `<span>` and `<a>`, renders as one space, as a formatter
+ * reads it, also at the template's root and across a comment.
+ * It trims the content of block and inline-block elements, components and `<template v-slot>`, and
+ * leaves `<pre>`, `<textarea>`, `v-pre` and an element whose `style` sets `white-space: pre`,
+ * `pre-wrap`, `pre-line` or `break-spaces` as they are, with everything inside them. */
 export function trimEdges(node: object): void {
   const n = node as TemplateNode;
-  if (n.type === ROOT) walk(n);
+  if (n.type !== ROOT) return;
+  spaceInline(n, n.source ?? n.loc.source, n.source === undefined ? n.loc.start.offset : 0);
+  walk(n);
 }
 
 Object.defineProperty(trimEdges, MARK, { value: "trim-edges" });
