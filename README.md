@@ -311,7 +311,8 @@ The crate's guide, `ferrovue::guide` on docs.rs, covers each topic in depth:
   from a Node server that renders with Vue, and the
   [support policy](https://docs.rs/ferrovue/latest/ferrovue/guide/support/index.html): supported
   versions, fixes, deprecations and where to report a problem
-- Upgrading a project [from 0.13 to 0.14](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_14/index.html),
+- Upgrading a project [from 0.15 to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html),
+  [from 0.13 to 0.14](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_14/index.html),
   [from 0.12 to 0.13](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_13/index.html),
   [from 0.11 to 0.12](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_12/index.html),
   [from 0.10 to 0.11](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_11/index.html),

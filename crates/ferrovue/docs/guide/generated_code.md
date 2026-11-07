@@ -129,6 +129,7 @@ Version 8 writes the anchor of each `<RouterLink>` with one call of a helper the
 the 0.14 crate supports versions 6 to 8. Version 9 writes the string a list's `.join()` builds
 straight into the page with helpers the 0.15 crate lacks; the 0.16 crate supports versions 6 to 9.
 The upgrade pages,
+[`upgrading_to_0_16`](crate::guide::upgrading_to_0_16),
 [`upgrading_to_0_14`](crate::guide::upgrading_to_0_14),
 [`upgrading_to_0_13`](crate::guide::upgrading_to_0_13),
 [`upgrading_to_0_12`](crate::guide::upgrading_to_0_12),
