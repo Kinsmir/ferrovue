@@ -96,6 +96,16 @@ export function sectionProblems(notes: string, version: string): string[] {
   return problems;
 }
 
+/** The line each version's notes open with, saying whether the release changes what pages render. */
+const RENDERED_OUTPUT = /^Rendered output: \S/;
+
+/** What is wrong with the first line of a version's notes: it says whether the release changes
+ * rendered output, as `Rendered output: unchanged.` or `Rendered output: changes for …`. */
+export function renderedOutputProblems(notes: string, version: string): string[] {
+  if (RENDERED_OUTPUT.test(notes.split("\n")[0] ?? "")) return [];
+  return [`CHANGELOG.md's ${version} opens with no "Rendered output:" line: say whether the release changes what pages render, "Rendered output: unchanged." or "Rendered output: changes for …", for which constructs`];
+}
+
 /** A link reference at the changelog's foot: `[0.6.0]: https://…/compare/v0.5.0...v0.6.0`. */
 const LINK = /^\[([^\]]+)\]:\s*(\S+)\s*$/;
 const UNRELEASED_LINK = /^\[Unreleased\]:\s*(\S+)\/compare\/(v[^.\s]\S*?)\.\.\.HEAD\s*$/m;
@@ -115,7 +125,7 @@ export function releaseChangelog(changelog: string, version: string, date: strin
   const unreleased = changelogNotes(changelog, "Unreleased");
   if (unreleased === null) throw new Error("CHANGELOG.md has no [Unreleased] section");
   if (!unreleased) throw new Error("CHANGELOG.md's [Unreleased] section is empty: a release ships a change users can notice, so add its entry first");
-  const problems = sectionProblems(unreleased, "Unreleased");
+  const problems = [...renderedOutputProblems(unreleased, "Unreleased"), ...sectionProblems(unreleased, "Unreleased")];
   if (problems.length) throw new Error(problems.join("\n"));
   return releaseLinks(changelog.replace("## [Unreleased]", `## [Unreleased]\n\n## [${version}] - ${date}`), version);
 }
@@ -206,7 +216,7 @@ export function checkRelease(tag: string, files: ReleaseFiles): string[] {
   }
   const notes = changelogNotes(files.changelog, version);
   if (!notes) problems.push(`CHANGELOG.md has no notes for ${version}`);
-  else problems.push(...sectionProblems(notes, version));
+  else problems.push(...renderedOutputProblems(notes, version), ...sectionProblems(notes, version));
   const links = files.changelog.split("\n").filter((l) => LINK.test(l));
   if (links.length && !links.some((l) => l.startsWith(`[${version}]:`))) problems.push(`CHANGELOG.md has no link for ${version}: \`release.ts bump\` writes it`);
   return problems;

@@ -170,7 +170,8 @@ site/                        the VitePress site at kinsmir.github.io/ferrovue: `
    `[Unreleased]` when users can notice the change, following
    [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/): an entry of at most two lines
    that links the guide page holding the detail (edit the entry about the same thing when there is
-   one). Tests, CI, lint, the fuzzer and contributor docs get no entry. If it changes what generated code looks like or adds to the runtime, update the
+   one), and update the `Rendered output:` line that opens the section when the change alters the
+   HTML a component renders. Tests, CI, lint, the fuzzer and contributor docs get no entry. If it changes what generated code looks like or adds to the runtime, update the
    crate's guide too (`crates/ferrovue/docs/`, published on docs.rs as `ferrovue::guide`): its
    examples copy generated code, and `cargo test --doc -p ferrovue --all-features` compiles and
    runs every one of them, those for optional features included. An example that shows generated
