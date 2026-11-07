@@ -421,8 +421,9 @@ export default {
 ```
 
 The mode trims the whitespace at the start of an element's first child and at the end of its last
-child, when those children are text written in the template. It applies to the content of
-elements, of components and of `<template v-slot>`:
+child, when those children are text written in the template and that whitespace holds a line
+break, as the whitespace a formatter adds does. A space typed on the same line as the tag stays.
+It applies to the content of elements, of components and of `<template v-slot>`:
 
 | Template | `"condense"` (the default) | `"trim-edges"` |
 |---|---|---|
@@ -430,10 +431,13 @@ elements, of components and of `<template v-slot>`:
 | `<p>\n  Hello {{ name }}\n</p>` | `<p> Hello Ada</p>` | `<p>Hello Ada</p>` |
 | `<p>\n  <span>x</span>\n  tail\n</p>` | `<p><span>x</span> tail </p>` | `<p><span>x</span> tail</p>` |
 | `<MyButton>\n  remove\n</MyButton>` | ` remove ` in the slot | `remove` in the slot |
+| `<span> by </span>` | `<span> by </span>` | the same |
+| `<p>\n  text </p>` | `<p> text </p>` | `<p>text </p>` |
 | `<p><b>a</b> <i>b</i></p>` | `<p><b>a</b> <i>b</i></p>` | the same |
 
 Everything else stays as Vue condenses it:
 
+- whitespace at an edge with no line break in it, such as the spaces of `<span> by </span>`;
 - the space between two elements, and between text and an interpolation;
 - a value an interpolation renders, such as a prop that starts with a space;
 - the content of `<template v-if>`, `<template v-for>` and of a `<slot>`'s fallback, which render
@@ -443,7 +447,8 @@ Everything else stays as Vue condenses it:
   An element styled that way from a stylesheet takes the same `white-space` in its `style`
   attribute to keep its text.
 
-A `&nbsp;` is text: it stays at an edge.
+A `&nbsp;` is text: it stays at an edge. So does whitespace written as a character reference, such
+as `&#10;`.
 
 The Vite plugin checks that plugin-vue and `ferrovue.config.json` agree, as it does for comments:
 a build fails when one trims and the other does not, and the dev server warns. It finds `trimEdges`

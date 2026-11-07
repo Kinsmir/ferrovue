@@ -16,6 +16,7 @@ const COMPONENT = 1;
 const TEMPLATE = 3;
 const LEADING = /^[ \t\n\f\r]+/;
 const TRAILING = /[ \t\n\f\r]+$/;
+const LINE_BREAK = /[\n\r]/;
 const KEPT_TAGS = new Set(["pre", "textarea"]);
 const PRE_STYLE = /(?:^|;)\s*white-space\s*:\s*(?:pre|pre-wrap|pre-line|break-spaces)\s*(?:!important\s*)?(?:;|$)/i;
 const OPEN_TAG = /^<[^\s/>]+(?:[^"'>]|"[^"]*"|'[^']*')*/;
@@ -36,12 +37,16 @@ function trims(el: TemplateNode): boolean {
   return el.tagType === TEMPLATE && el.props!.some((p) => p.type === 7 && p.name === "slot");
 }
 
+function breaks(text: TemplateNode, edge: RegExp): boolean {
+  return LINE_BREAK.test(edge.exec(text.loc.source)?.[0] ?? "");
+}
+
 function trimChildren(el: TemplateNode): void {
   const children = el.children!;
   const first = children[0];
-  if (first?.type === TEXT) first.content = (first.content as string).replace(LEADING, "");
+  if (first?.type === TEXT && breaks(first, LEADING)) first.content = (first.content as string).replace(LEADING, "");
   const last = children.at(-1);
-  if (last?.type === TEXT) last.content = (last.content as string).replace(TRAILING, "");
+  if (last?.type === TEXT && breaks(last, TRAILING)) last.content = (last.content as string).replace(TRAILING, "");
   el.children = children.filter((c) => c.type !== TEXT || c.content !== "");
 }
 
@@ -55,7 +60,8 @@ function walk(node: TemplateNode): void {
 
 /** A node transform for `@vitejs/plugin-vue`'s `template.compilerOptions.nodeTransforms` that
  * trims the whitespace at the start and end of an element's text, where it meets the element's
- * tags, as `"whitespace": "trim-edges"` makes ferrovue's Rust render it. It trims the content of
+ * tags, when that whitespace holds a line break, as `"whitespace": "trim-edges"` makes ferrovue's
+ * Rust render it. A space typed on the same line as the tag stays. It trims the content of
  * elements, components and `<template v-slot>`, and leaves `<pre>`, `<textarea>`, `v-pre` and an
  * element whose `style` sets `white-space: pre`, `pre-wrap`, `pre-line` or `break-spaces` as they
  * are, with everything inside them. */
