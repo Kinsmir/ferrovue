@@ -12,11 +12,8 @@ pub const NAME: &str = "HeadServer";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "theme")]
     pub theme: Cow<'a, str>,
-    #[serde(rename = "rank")]
     pub rank: i64,
 }
 

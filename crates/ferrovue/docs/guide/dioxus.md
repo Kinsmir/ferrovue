@@ -110,9 +110,7 @@ attribute, and Vue mounts on the element's content and leaves the element itself
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "label")]
 #     pub label: Cow<'a, str>,
-#     #[serde(rename = "start")]
 #     pub start: i64,
 # }
 #

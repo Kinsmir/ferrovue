@@ -10,13 +10,9 @@ pub const NAME: &str = "NumberIncludes";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "nums")]
     pub nums: Vec<i64>,
-    #[serde(rename = "prices")]
     pub prices: Vec<f64>,
-    #[serde(rename = "qty")]
     pub qty: i64,
-    #[serde(rename = "ratio")]
     pub ratio: f64,
 }
 

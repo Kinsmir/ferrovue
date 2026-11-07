@@ -12,9 +12,7 @@ pub const NAME: &str = "VnodeClass";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
 }
 

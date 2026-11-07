@@ -12,13 +12,10 @@ pub const NAME: &str = "Enumerated";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "mode")]
     pub mode: Cow<'a, str>,
-    #[serde(rename = "maybe")]
     pub maybe: Option<Cow<'a, str>>,
-    #[serde(rename = "spell", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spell: Option<Cow<'a, str>>,
 }
 

@@ -102,7 +102,6 @@ compiler writes, for `TagList`:
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "label")]
 #     pub label: Cow<'a, str>,
 # }
 #
@@ -156,7 +155,6 @@ compiler writes, for `TagList`:
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "tags")]
 #     pub tags: Vec<Cow<'a, str>>,
 # }
 #
@@ -176,7 +174,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
     for fv_t_ref in props.tags.iter() {
         let fv_t: &str = fv_t_ref;
         out.push_str("<li data-v-2f4cdd4e>");
-        super::tag::render_scoped(out, &super::tag::Props { label: std::borrow::Cow::Borrowed(fv_t) }, " data-v-2f4cdd4e");
+        super::tag::render_scoped(out, &super::tag::Props { label: Cow::Borrowed(fv_t) }, " data-v-2f4cdd4e");
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
@@ -407,7 +405,6 @@ id, ` data-v-…-s` with its leading space, and may write it onto the elements t
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props {
-#     #[serde(rename = "count")]
 #     pub count: i64,
 # }
 #

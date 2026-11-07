@@ -12,13 +12,11 @@ pub const NAME: &str = "Hollow";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "pad", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pad: Option<Cow<'a, str>>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 
@@ -60,7 +58,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(231 + 7 * props.tags.len() + 39 * props.tags.len() + props.note.as_deref().map_or(0, str::len) + props.pad.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.len()).sum::<usize>());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Hollow.vue");
     out.push_str("<div>");
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("lead") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("lead") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -70,7 +68,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             }
             out.push_str("<!--[-->");
             filled |= !fv::render::is_comment(&out[fv_chunk..]);
-            for fv_t_cow in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
+            for fv_t_cow in props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
                 let fv_t: &str = &fv_t_cow;
                 filled = true;
                 out.push_str("<footer>");
@@ -81,7 +79,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("trail") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("trail") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -102,7 +100,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("alone") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("alone") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -114,7 +112,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("branch") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("branch") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -135,7 +133,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("nested") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("nested") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
@@ -164,7 +162,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("spaced") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("spaced") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             out.push_str(if props.on { "<b>x</b> " } else { "<!----> " });
@@ -174,13 +172,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             out.push_str(if !props.on { " <i>y</i>" } else { " <!---->" });
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("blank") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("blank") }, super::frame::Slots {
         head: None,
         default: Some(fv::render::Slot::new(&|out: &mut String| {
             fv_refusals.join(super::blank::try_render(out, &super::blank::Props { show: props.on }));
         })),
     }))?;
-    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: std::borrow::Cow::Borrowed("named") }, super::frame::Slots {
+    fv_refusals.check(super::frame::try_render(out, &super::frame::Props { title: Cow::Borrowed("named") }, super::frame::Slots {
         head: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -189,7 +187,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             }
             out.push_str("<!--[-->");
             filled |= !fv::render::is_comment(&out[fv_chunk..]);
-            for fv_t_cow_2 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.on) {
+            for fv_t_cow_2 in props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|_| props.on) {
                 let fv_t_3: &str = &fv_t_cow_2;
                 filled = true;
                 out.push_str("<em>");
@@ -220,7 +218,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: std::borrow::Cow::Borrowed("scoped"), note: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, super::data_list::Slots {
+    fv_refusals.check(super::data_list::try_render(out, &super::data_list::Props { rows: Vec::new(), title: Cow::Borrowed("scoped"), note: props.note.as_deref().map(Cow::Borrowed) }, super::data_list::Slots {
         header: Some(&|out: &mut String, fv_slot_props: &super::data_list::HeaderSlotProps<'_>| -> bool {
             let mut filled = false;
             if props.on {
@@ -238,7 +236,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
                 out.push_str("<!---->");
             }
             out.push_str("<!--[-->");
-            for fv_t_cow_3 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| fv_slot_props.note.is_some_and(|v| !v.is_empty())) {
+            for fv_t_cow_3 in props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|_| fv_slot_props.note.is_some_and(|v| !v.is_empty())) {
                 let fv_t_4: &str = &fv_t_cow_3;
                 filled = true;
                 out.push_str("<s>");
@@ -252,7 +250,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         empty: None,
         default: None,
     }))?;
-    fv_refusals.check(super::forward::try_render(out, &super::forward::Props { title: std::borrow::Cow::Borrowed("forwarded") }, super::forward::Slots {
+    fv_refusals.check(super::forward::try_render(out, &super::forward::Props { title: Cow::Borrowed("forwarded") }, super::forward::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -261,7 +259,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             }
             out.push_str("<!--[-->");
             filled |= !fv::render::is_comment(&out[fv_chunk..]);
-            for fv_t_cow_4 in props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
+            for fv_t_cow_4 in props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|_| props.note.as_deref().is_some_and(|v| !v.is_empty())) {
                 let fv_t_5: &str = &fv_t_cow_4;
                 filled = true;
                 out.push_str("<u>");
@@ -272,7 +270,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             filled
         })),
     }))?;
-    fv_refusals.check(super::forward::try_render(out, &super::forward::Props { title: std::borrow::Cow::Borrowed("forwarded-branch") }, super::forward::Slots {
+    fv_refusals.check(super::forward::try_render(out, &super::forward::Props { title: Cow::Borrowed("forwarded-branch") }, super::forward::Slots {
         default: Some(fv::render::Slot::markup(&|out: &mut String| -> bool {
             let mut filled = false;
             if props.on {

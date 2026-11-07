@@ -257,11 +257,10 @@ builds:
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "posted", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub posted: ferrovue::date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<ferrovue::date::JsDate>,
 }
 #
@@ -561,11 +560,8 @@ The generated `render` computes the amount and the date with the runtime's twins
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "cents")]
 #     pub cents: i64,
-#     #[serde(rename = "total")]
 #     pub total: Cow<'a, str>,
-#     #[serde(rename = "posted")]
 #     pub posted: Cow<'a, str>,
 # }
 #
@@ -580,7 +576,7 @@ The generated `render` computes the amount and the date with the runtime's twins
 pub fn render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n) {
     out.reserve(98 + props.total.len() + props.posted.len());
     let s_fixed = fv::core::js_to_fixed(props.cents as f64 / 100.0, 2);
-    let s_amount = if fv_i18n.locale() == "nl" { std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_fixed) };
+    let s_amount = if fv_i18n.locale() == "nl" { Cow::<str>::Owned(fv::strings::js_replace(&s_fixed, ".", ",").into_owned()) } else { Cow::<str>::Borrowed(&*s_fixed) };
     out.push_str("<section");
     if fv_i18n.locale().is_empty() {
         out.push_str(" lang");

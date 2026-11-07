@@ -12,19 +12,12 @@ pub const NAME: &str = "Nullable";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Option<Cow<'a, str>>,
-    #[serde(rename = "count")]
     pub count: Option<i64>,
-    #[serde(rename = "ratio")]
     pub ratio: Option<f64>,
-    #[serde(rename = "on")]
     pub on: Option<bool>,
-    #[serde(rename = "entry")]
     pub entry: Option<super::types::Entry<'a>>,
-    #[serde(rename = "entries")]
     pub entries: Vec<super::types::Entry<'a>>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Option<Cow<'a, str>>>,
 }
 
@@ -279,7 +272,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push_str("</p><p>unpicked|true|</p>");
-    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.label.as_deref().map(std::borrow::Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.label.as_deref().map(Cow::Borrowed), entry: props.entry.as_ref().cloned() }, super::null_child::Slots {
         default: Some(&|out: &mut String, fv_slot_props: &super::null_child::DefaultSlotProps<'_>| -> bool {
             let mut filled = false;
             let fv_chunk = out.len();
@@ -297,7 +290,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: None, entry: None }, super::null_child::Slots {
         default: None,
     }))?;
-    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|fv_entry_7| fv_entry_7.deleted_at.as_deref()).map(std::borrow::Cow::Borrowed), entry: props.entries.iter().find(|fv_e_3| fv_e_3.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
+    fv_refusals.check(super::null_child::try_render(out, &super::null_child::Props { value: props.entry.as_ref().and_then(|fv_entry_7| fv_entry_7.deleted_at.as_deref()).map(Cow::Borrowed), entry: props.entries.iter().find(|fv_e_3| fv_e_3.deleted_at.as_deref().is_none()).cloned() }, super::null_child::Slots {
         default: None,
     }))?;
     out.push_str("</section>");

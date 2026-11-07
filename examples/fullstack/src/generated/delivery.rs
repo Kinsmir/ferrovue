@@ -12,9 +12,7 @@ pub const NAME: &str = "Delivery";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "ordered")]
     pub ordered: Cow<'a, str>,
-    #[serde(rename = "days")]
     pub days: i64,
 }
 

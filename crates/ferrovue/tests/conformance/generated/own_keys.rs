@@ -12,13 +12,9 @@ pub const NAME: &str = "OwnKeys";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "role")]
     pub role: Cow<'a, str>,
-    #[serde(rename = "size")]
     pub size: Cow<'a, str>,
-    #[serde(rename = "code")]
     pub code: i64,
-    #[serde(rename = "scores")]
     pub scores: ferrovue::props::Record<'a, i64>,
 }
 

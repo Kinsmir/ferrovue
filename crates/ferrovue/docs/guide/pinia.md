@@ -44,11 +44,8 @@ Actions are client-only.
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Stores<'a> {
-    #[serde(rename = "cart")]
     pub cart: CartState<'a>,
-    #[serde(rename = "counter")]
     pub counter: CounterState<'a>,
-    #[serde(rename = "prefs")]
     pub prefs: PrefsState<'a>,
 }
 # let stores = Stores {
@@ -105,9 +102,8 @@ assert_eq!(
 # #[cfg_attr(test, derive(Default, serde::Deserialize))]
 # #[cfg_attr(test, serde(default))]
 # pub struct Tag<'a> {
-#     #[serde(rename = "name")]
 #     pub name: Cow<'a, str>,
-#     #[serde(rename = "color", default, skip_serializing_if = "Option::is_none")]
+#     #[serde(default, skip_serializing_if = "Option::is_none")]
 #     pub color: Option<Cow<'a, str>>,
 # }
 #
@@ -130,15 +126,11 @@ assert_eq!(
 # #[cfg_attr(test, derive(Default, serde::Deserialize))]
 # #[cfg_attr(test, serde(default))]
 # pub struct PrefsState<'a> {
-#     #[serde(rename = "density")]
 #     pub density: Cow<'a, str>,
-#     #[serde(rename = "wide")]
 #     pub wide: bool,
-#     #[serde(rename = "count")]
 #     pub count: i64,
-#     #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+#     #[serde(default, skip_serializing_if = "Option::is_none")]
 #     pub label: Option<Cow<'a, str>>,
-#     #[serde(rename = "tags")]
 #     pub tags: Vec<Tag<'a>>,
 # }
 #
@@ -158,7 +150,6 @@ assert_eq!(
 # // A real project's `Stores` has a field for every store.
 # #[derive(Debug, Clone, serde::Serialize)]
 # pub struct Stores<'a> {
-#     #[serde(rename = "prefs")]
 #     pub prefs: PrefsState<'a>,
 # }
 # impl<'a> Stores<'a> {
@@ -182,7 +173,6 @@ assert_eq!(
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "title")]
 #     pub title: Cow<'a, str>,
 # }
 #

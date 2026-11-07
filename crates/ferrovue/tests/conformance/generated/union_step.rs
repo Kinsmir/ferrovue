@@ -10,7 +10,6 @@ pub const NAME: &str = "UnionStep";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "step")]
     pub step: super::types::Step<'a>,
 }
 

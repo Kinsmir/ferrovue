@@ -12,7 +12,7 @@ pub const NAME: &str = "ScopedRoot";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
 }
 
@@ -53,9 +53,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) -> Result<(), fv::render::Refused> {
     out.reserve(props.label.as_deref().map_or(0, str::len));
     if let Some(fv_label) = props.label.as_deref().filter(|v| !v.is_empty()) {
-        super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(std::borrow::Cow::Borrowed(fv_label)) }, &fv::attrs::scope_attrs(fv_attrs, "data-v-0f2ffa15", ""))?;
+        super::scoped_leaf::try_render_scoped(out, &super::scoped_leaf::Props { label: Some(Cow::Borrowed(fv_label)) }, &fv::attrs::scope_attrs(fv_attrs, "data-v-0f2ffa15", ""))?;
     } else {
-        super::quiet_leaf::try_render_scoped(out, &super::quiet_leaf::Props { note: std::borrow::Cow::Borrowed("quiet") }, " data-v-0f2ffa15")?;
+        super::quiet_leaf::try_render_scoped(out, &super::quiet_leaf::Props { note: Cow::Borrowed("quiet") }, " data-v-0f2ffa15")?;
     }
     Ok(())
 }

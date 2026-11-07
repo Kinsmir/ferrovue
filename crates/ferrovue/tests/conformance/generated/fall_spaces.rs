@@ -12,7 +12,6 @@ pub const NAME: &str = "FallSpaces";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "to")]
     pub to: Cow<'a, str>,
 }
 

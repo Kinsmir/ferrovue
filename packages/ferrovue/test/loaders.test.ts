@@ -119,7 +119,7 @@ describe("loaders", () => {
     const out = project({ X: child, Page: page });
     expect(out.get("x.rs")).toContain("fv::core::escape_into(out, &l_0.title);");
     expect(out.get("page.rs")).toContain("pub fn try_render(out: &mut String, _props: &Props, fv_loads: &fv::loaders::Loads<'_>) -> Result<(), fv::render::Refused> {");
-    expect(out.get("page.rs")).toContain('super::x::try_render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(std::borrow::Cow::Borrowed("n")) }, fv_loads)?;');
+    expect(out.get("page.rs")).toContain('super::x::try_render(out, &super::x::Props { id: 2i64, lang: None, nick: Some(Cow::Borrowed("n")) }, fv_loads)?;');
   });
 
   it("awaits a loader whose result holds dates, written as JsDates with a plan of where they are", () => {
@@ -130,9 +130,9 @@ describe("loaders", () => {
     expect(loaders).toContain('    type Output = Vec<super::types::Stamp<\'static>>;\n    const DATES: &\'static str = "[[{\\"at\\":1,\\"seen\\":[1],\\"by\\":{\\"*\\":1}}]]";');
     expect(loaders).toContain('    type Output = Option<Vec<fv::date::JsDate>>;\n    const DATES: &\'static str = "[[1]]";');
     const types = out.get("types.rs")!;
-    expect(types).toContain('    #[serde(rename = "at", with = "fv::date::date_prop")]\n    pub at: ferrovue::date::JsDate,');
-    expect(types).toContain('    #[serde(rename = "seen", with = "fv::date::dates_in")]\n    pub seen: Vec<Option<ferrovue::date::JsDate>>,');
-    expect(types).toContain('    #[serde(rename = "by", with = "fv::date::dates_in")]\n    pub by: ferrovue::props::Record<\'a, ferrovue::date::JsDate>,');
+    expect(types).toContain('    #[serde(with = "fv::date::date_prop")]\n    pub at: ferrovue::date::JsDate,');
+    expect(types).toContain('    #[serde(with = "fv::date::dates_in")]\n    pub seen: Vec<Option<ferrovue::date::JsDate>>,');
+    expect(types).toContain('    #[serde(with = "fv::date::dates_in")]\n    pub by: ferrovue::props::Record<\'a, ferrovue::date::JsDate>,');
     const x = out.get("x.rs")!;
     expect(x).toContain("fv::core::push_number(out, fv::date::js_time_of(l_0));");
     expect(x).toContain("fv_refusals.keep(fv::date::try_to_iso_string(fv::date::js_time_of(&fv_s.at)), 8, 64)");

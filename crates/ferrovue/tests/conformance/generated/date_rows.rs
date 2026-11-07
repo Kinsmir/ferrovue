@@ -12,17 +12,16 @@ pub const NAME: &str = "DateRows";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Row<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "at", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub at: ferrovue::date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
+    #[serde(default, with = "fv::date::opt_date_prop")]
     pub deleted: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "marks", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub marks: Vec<ferrovue::date::JsDate>,
-    #[serde(rename = "seen", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub seen: Vec<Option<ferrovue::date::JsDate>>,
     #[serde(rename = "byName", with = "fv::date::dates_in")]
     pub by_name: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
@@ -51,15 +50,13 @@ impl<'a> Row<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "rows")]
     pub rows: Vec<Row<'a>>,
-    #[serde(rename = "days", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub days: Vec<ferrovue::date::JsDate>,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none", with = "fv::date::dates_in")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::dates_in")]
     pub maybe: Option<Vec<ferrovue::date::JsDate>>,
-    #[serde(rename = "stamps", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub stamps: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
-    #[serde(rename = "lead")]
     pub lead: Option<Row<'a>>,
 }
 
@@ -162,7 +159,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<!--]--></ul><ol><!--[-->");
         for fv_seen in fv_row.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)) {
             out.push_str("<li>");
-            fv::core::escape_into(out, &(if let Some(fv_seen_2) = fv_seen { std::borrow::Cow::<str>::Owned(fv::core::Js(fv::date::js_utc_full_year(fv_seen_2)).to_string()) } else { std::borrow::Cow::<str>::Borrowed("unseen") }));
+            fv::core::escape_into(out, &(if let Some(fv_seen_2) = fv_seen { Cow::<str>::Owned(fv::core::Js(fv::date::js_utc_full_year(fv_seen_2)).to_string()) } else { Cow::<str>::Borrowed("unseen") }));
             out.push_str("</li>");
         }
         out.push_str("<!--]--></ol><dl><!--[-->");

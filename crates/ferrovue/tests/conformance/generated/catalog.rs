@@ -12,11 +12,10 @@ pub const NAME: &str = "Catalog";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: super::types::Volume,
-    #[serde(rename = "rank", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rank: Option<i64>,
-    #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<Cow<'a, str>>,
 }
 

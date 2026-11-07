@@ -12,13 +12,10 @@ pub const NAME: &str = "LoadedAll";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "term")]
     pub term: Cow<'a, str>,
-    #[serde(rename = "page")]
     pub page: i64,
-    #[serde(rename = "exact", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exact: Option<bool>,
-    #[serde(rename = "query")]
     pub query: super::types::Query<'a>,
 }
 

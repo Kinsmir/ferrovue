@@ -12,7 +12,7 @@ pub const NAME: &str = "FallRoot";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "text", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<Cow<'a, str>>,
 }
 
@@ -52,7 +52,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.text.as_deref().map_or(0, str::len));
-    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: std::borrow::Cow::Borrowed(props.text.as_deref().unwrap_or("rooted")), shown: Some(true), note: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("via")), ("data-via", fv::attrs::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
+    super::fall_leaf::try_render_scoped(out, &super::fall_leaf::Props { label: Cow::Borrowed(props.text.as_deref().unwrap_or("rooted")), shown: Some(true), note: None }, &fv::attrs::Attrs::merged(&[&[("class", fv::attrs::Attr::str("via")), ("data-via", fv::attrs::Attr::str("root"))], fv_attrs.list()], fv_attrs.ids()))?;
     Ok(())
 }
 

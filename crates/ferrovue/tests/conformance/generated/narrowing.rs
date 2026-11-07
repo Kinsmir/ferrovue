@@ -12,15 +12,15 @@ pub const NAME: &str = "Narrowing";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
-    #[serde(rename = "count", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i64>,
-    #[serde(rename = "ratio", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ratio: Option<f64>,
-    #[serde(rename = "on", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on: Option<bool>,
-    #[serde(rename = "user", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub user: Option<super::types::User<'a>>,
 }
 
@@ -135,7 +135,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     fv::core::push_number(out, if let Some(fv_count_2) = props.count { fv_count_2 as f64 / 4.0 } else { -1.0f64 });
     out.push('|');
-    fv::core::escape_into(out, &(if let Some(fv_count_3) = props.count { std::borrow::Cow::<str>::Owned(fv::core::Js(fv_count_3 as f64 - 1.0).to_string()) } else { std::borrow::Cow::<str>::Borrowed("none") }));
+    fv::core::escape_into(out, &(if let Some(fv_count_3) = props.count { Cow::<str>::Owned(fv::core::Js(fv_count_3 as f64 - 1.0).to_string()) } else { Cow::<str>::Borrowed("none") }));
     out.push_str("</p><p>");
     fv::core::push_int(out, if let Some(fv_label_3) = props.label.as_deref().filter(|v| !v.is_empty()) { fv::strings::js_length(fv_label_3) } else { 0i64 });
     out.push('|');
@@ -153,7 +153,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if props.on.unwrap_or(false) { "true" } else { "false" });
     out.push_str("</p><p");
-    if let Some(v) = props.label.as_deref().map(|fv_label_6| std::borrow::Cow::<str>::Owned(format!("{}!", fv_label_6))).as_deref() {
+    if let Some(v) = props.label.as_deref().map(|fv_label_6| Cow::<str>::Owned(format!("{}!", fv_label_6))).as_deref() {
         out.push_str(" title=\"");
         fv::core::escape_into(out, v);
         out.push('"');

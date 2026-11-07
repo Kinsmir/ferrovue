@@ -12,11 +12,8 @@ pub const NAME: &str = "DirectedEmpty";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "id")]
     pub id: Cow<'a, str>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
 }
 

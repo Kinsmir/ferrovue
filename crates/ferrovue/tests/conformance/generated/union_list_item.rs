@@ -76,15 +76,13 @@ impl ferrovue::props::Union for UnionListItemWide {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "hue", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hue: Option<super::types::Hue>,
-    #[serde(rename = "wide", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub wide: Option<UnionListItemWide>,
-    #[serde(rename = "hues")]
     pub hues: Vec<super::types::Hue>,
-    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra: Option<Vec<super::types::Hue>>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -148,9 +146,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    fv::core::escape_join(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
+    fv::core::escape_join(out, props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
     out.push(' ');
-    fv::core::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref().map(|fv_extra| std::borrow::Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(std::borrow::Cow::<str>::Borrowed("-")));
+    fv::core::escape_into(out, &props.extra.as_ref().map(|v| v.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref().map(|fv_extra| Cow::<str>::Owned(fv_extra.iter().map(|v| &**v).collect::<Vec<_>>().join("+"))).unwrap_or(Cow::<str>::Borrowed("-")));
     out.push_str("</span>");
     Ok(())
 }

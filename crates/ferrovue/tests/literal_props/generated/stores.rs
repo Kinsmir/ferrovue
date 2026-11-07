@@ -8,11 +8,8 @@
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct TallyState {
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "open")]
     pub open: bool,
-    #[serde(rename = "best")]
     pub best: Option<i64>,
 }
 
@@ -21,6 +18,5 @@ pub struct TallyState {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Stores {
-    #[serde(rename = "tally")]
     pub tally: TallyState,
 }

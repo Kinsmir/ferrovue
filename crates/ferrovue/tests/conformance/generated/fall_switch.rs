@@ -70,7 +70,6 @@ impl ferrovue::props::Union for FallSwitchMode {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "mode")]
     pub mode: FallSwitchMode,
 }
 

@@ -130,9 +130,7 @@ impl ferrovue::props::Union for PickedTag {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "k")]
     pub k: K,
-    #[serde(rename = "tag")]
     pub tag: PickedTag,
 }
 

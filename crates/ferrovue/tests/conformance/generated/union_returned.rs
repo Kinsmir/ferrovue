@@ -12,13 +12,10 @@ pub const NAME: &str = "UnionReturned";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "mark")]
     pub mark: super::types::Mark,
-    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spare: Option<super::types::Mood>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

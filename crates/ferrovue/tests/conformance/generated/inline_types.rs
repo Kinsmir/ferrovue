@@ -68,11 +68,9 @@ impl ferrovue::props::Union for Side {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct InlineTypesBox<'a> {
-    #[serde(rename = "width")]
     pub width: i64,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "inner")]
     pub inner: InlineTypesBoxInner,
 }
 
@@ -93,7 +91,6 @@ impl<'a> InlineTypesBox<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct InlineTypesBoxInner {
-    #[serde(rename = "on")]
     pub on: bool,
 }
 
@@ -108,9 +105,7 @@ impl InlineTypesBoxInner {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct InlineTypesRows<'a> {
-    #[serde(rename = "key")]
     pub key: Cow<'a, str>,
-    #[serde(rename = "side")]
     pub side: Side,
 }
 
@@ -125,9 +120,7 @@ impl<'a> InlineTypesRows<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct InlineTypesSides<'a> {
-    #[serde(rename = "left")]
     pub left: Cow<'a, str>,
-    #[serde(rename = "right")]
     pub right: Cow<'a, str>,
 }
 
@@ -142,9 +135,9 @@ impl<'a> InlineTypesSides<'a> {
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct InlineTypesLimits {
-    #[serde(rename = "left", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub left: Option<i64>,
-    #[serde(rename = "right", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub right: Option<i64>,
 }
 
@@ -171,19 +164,14 @@ impl InlineTypesLimits {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "post")]
     pub post: super::types::Placed<'a>,
     #[serde(rename = "box")]
     pub r#box: InlineTypesBox<'a>,
-    #[serde(rename = "rows")]
     pub rows: Vec<InlineTypesRows<'a>>,
-    #[serde(rename = "sides")]
     pub sides: InlineTypesSides<'a>,
-    #[serde(rename = "limits", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limits: Option<InlineTypesLimits>,
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -226,7 +214,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     fv::core::push_int(out, props.r#box.width);
     out.push_str("\">");
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.mood), label: std::borrow::Cow::Borrowed(&*props.post.author.name) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(props.mood), label: Cow::Borrowed(&*props.post.author.name) })?;
     out.push_str("<!--[-->");
     for fv_l in props.post.author.links.iter() {
         out.push_str("<a href=\"");

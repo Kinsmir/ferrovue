@@ -157,11 +157,12 @@ may be `undefined` or `null`, in an `Option`. Strings are appended to in place. 
 generated code of `leader`:
 
 ```rust
+# use std::borrow::Cow;
 # use ferrovue as fv;
-# struct Row<'a> { name: std::borrow::Cow<'a, str>, score: i64 }
+# struct Row<'a> { name: Cow<'a, str>, score: i64 }
 # struct Props<'a> { rows: Vec<Row<'a>> }
 # let props = Props { rows: vec![Row { name: "Ann".into(), score: 7 }, Row { name: "Bo".into(), score: 9 }] };
-let s_leader = { let mut fv_best: f64 = -1.0f64; let mut fv_name: String = String::from("nobody"); for fv_r in props.rows.iter() { if fv_r.score as f64 <= fv_best {} else { fv_best = fv_r.score as f64; fv_name = String::from(&*fv_r.name); } } std::borrow::Cow::<str>::Owned(format!("{} ({})", fv_name, fv::core::Js(fv_best))) };
+let s_leader = { let mut fv_best: f64 = -1.0f64; let mut fv_name: String = String::from("nobody"); for fv_r in props.rows.iter() { if fv_r.score as f64 <= fv_best {} else { fv_best = fv_r.score as f64; fv_name = String::from(&*fv_r.name); } } Cow::<str>::Owned(format!("{} ({})", fv_name, fv::core::Js(fv_best))) };
 # assert_eq!(s_leader, "Bo (9)");
 ```
 
@@ -297,7 +298,7 @@ out are `None`, as an explicit `undefined` is. This is the generated code of `me
 # struct Message<'a> { title: Cow<'a, str>, body: Cow<'a, str>, code: Option<i64> }
 # struct Props { code: i64 }
 # let props = Props { code: 500 };
-let s_message = if props.code as f64 == 404.0 { Message { title: std::borrow::Cow::<str>::Borrowed("Missing"), body: std::borrow::Cow::<str>::Borrowed("Gone."), code: None } } else { Message { title: std::borrow::Cow::<str>::Borrowed("Error"), body: std::borrow::Cow::<str>::Borrowed("Retry."), code: Some(props.code) } };
+let s_message = if props.code as f64 == 404.0 { Message { title: Cow::<str>::Borrowed("Missing"), body: Cow::<str>::Borrowed("Gone."), code: None } } else { Message { title: Cow::<str>::Borrowed("Error"), body: Cow::<str>::Borrowed("Retry."), code: Some(props.code) } };
 # assert_eq!(s_message.title, "Error");
 # assert_eq!(s_message.body, "Retry.");
 # assert_eq!(s_message.code, Some(500));

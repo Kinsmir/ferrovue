@@ -68,19 +68,14 @@ impl ferrovue::props::Union for UnionListSizes {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "hues")]
     pub hues: Vec<super::types::Hue>,
-    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra: Option<Vec<super::types::Hue>>,
-    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spare: Option<Vec<super::types::Hue>>,
-    #[serde(rename = "holes")]
     pub holes: Vec<Option<super::types::Hue>>,
-    #[serde(rename = "named")]
     pub named: ferrovue::props::Record<'a, Cow<'a, str>>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "sizes")]
     pub sizes: Vec<UnionListSizes>,
 }
 
@@ -125,26 +120,26 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--[--><p title=\"");
     fv::core::escape_into(out, &props.label);
     out.push_str("\" data-hues=\"");
-    fv::core::escape_join(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
+    fv::core::escape_join(out, props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
     out.push_str("\" data-sizes=\"");
-    fv::core::escape_join(out, props.sizes.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
+    fv::core::escape_join(out, props.sizes.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
     out.push_str("\">");
-    fv::core::escape_join(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), " / ");
+    fv::core::escape_join(out, props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), " / ");
     out.push(' ');
     fv::core::push_int(out, props.hues.len() as i64);
     out.push(' ');
-    out.push_str(if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_item| *fv_item == *"red") { "true" } else { "false" });
+    out.push_str(if props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_item| *fv_item == *"red") { "true" } else { "false" });
     out.push(' ');
-    fv::core::push_int(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).position(|fv_item_2| *fv_item_2 == *"green").map_or(-1, |i| i as i64));
+    fv::core::push_int(out, props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).position(|fv_item_2| *fv_item_2 == *"green").map_or(-1, |i| i as i64));
     out.push_str("</p><!--[-->");
     for (fv_i, fv_h_ref) in props.hues.iter().enumerate() {
         let fv_h_2 = *fv_h_ref;
         let fv_i = fv_i as i64;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(fv_h_2), wide: Some(match fv_h_2 { super::types::Hue::Red => super::union_list_item::UnionListItemWide::Red, super::types::Hue::Green => super::union_list_item::UnionListItemWide::Green, super::types::Hue::BHue => super::union_list_item::UnionListItemWide::BHue }), hues: props.hues.to_vec(), extra: None, label: std::borrow::Cow::Borrowed(&*format!("{} {}", props.label, fv::core::Js(fv_i))) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(fv_h_2), wide: Some(match fv_h_2 { super::types::Hue::Red => super::union_list_item::UnionListItemWide::Red, super::types::Hue::Green => super::union_list_item::UnionListItemWide::Green, super::types::Hue::BHue => super::union_list_item::UnionListItemWide::BHue }), hues: props.hues.to_vec(), extra: None, label: Cow::Borrowed(&*format!("{} {}", props.label, fv::core::Js(fv_i))) }))?;
     }
     out.push_str("<!--]-->");
-    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_warm.to_vec(), extra: props.extra.as_ref().map(|v| v.to_vec()), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
-    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.to_vec(), extra: Some(props.spare.as_deref().unwrap_or(&[]).to_vec()), label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: s_warm.to_vec(), extra: props.extra.as_ref().map(|v| v.to_vec()), label: Cow::Borrowed(&*props.label) }))?;
+    fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: None, wide: None, hues: props.hues.to_vec(), extra: Some(props.spare.as_deref().unwrap_or(&[]).to_vec()), label: Cow::Borrowed(&*props.label) }))?;
     out.push_str("<!--[-->");
     for fv_h_ref_2 in props.extra.as_deref().unwrap_or(&[]).iter() {
         let fv_h_3 = *fv_h_ref_2;
@@ -171,17 +166,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--><!--[-->");
     for fv_h_ref_5 in props.holes.iter() {
         let fv_h_6 = *fv_h_ref_5;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: fv_h_6, wide: None, hues: Vec::new(), extra: None, label: std::borrow::Cow::Borrowed(&*props.label) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: fv_h_6, wide: None, hues: Vec::new(), extra: None, label: Cow::Borrowed(&*props.label) }))?;
     }
     out.push_str("<!--]--><!--[-->");
     for (fv_k, fv_h_ref_6) in props.named.iter() {
         let fv_h_7: &str = fv_h_ref_6;
-        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(match fv_h_7.parse::<super::types::Hue>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::render::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 57); super::types::Hue::Red } }), wide: None, hues: Vec::new(), extra: None, label: std::borrow::Cow::Borrowed(fv_k) }))?;
+        fv_refusals.check(super::union_list_item::try_render(out, &super::union_list_item::Props { hue: Some(match fv_h_7.parse::<super::types::Hue>() { Ok(fv_u) => fv_u, Err(fv_e) => { fv_refusals.keep(Err::<(), _>(fv::render::Refused::new("FV0518", format!("{fv_e}: the template needs one of them here, and Vue would write the string itself: check the value before rendering"))), 24, 57); super::types::Hue::Red } }), wide: None, hues: Vec::new(), extra: None, label: Cow::Borrowed(fv_k) }))?;
     }
     out.push_str("<!--]--><q title=\"");
     fv::core::escape_join(out, props.holes.iter().map(|v| v.map(fv::props::Union::as_str)).map(|v| v.unwrap_or("")), ",");
     out.push_str("\">");
-    fv::core::escape_join(out, props.sizes.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
+    fv::core::escape_join(out, props.sizes.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
     out.push_str("</q><!--[-->");
     for fv_s_ref in props.sizes.iter() {
         let fv_s = *fv_s_ref;
@@ -191,7 +186,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, fv::props::Union::as_str(fv_s));
         out.push_str("</em>");
     }
-    if let Some(fv_extra) = props.extra.as_ref().map(|v| v.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref() {
+    if let Some(fv_extra) = props.extra.as_ref().map(|v| v.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>()).as_deref() {
         out.push_str("<!--]--><span>");
         fv::core::push_int(out, fv_extra.len() as i64);
         out.push(' ');
@@ -200,9 +195,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("<!--]--><!---->");
     }
-    if props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_h_8| &*fv_h_8 == "red") {
+    if props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).any(|fv_h_8| &*fv_h_8 == "red") {
         out.push_str("<u>");
-        fv::core::escape_join(out, props.hues.iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).filter(|fv_h_9| &**fv_h_9 != "red"), "|");
+        fv::core::escape_join(out, props.hues.iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).filter(|fv_h_9| &**fv_h_9 != "red"), "|");
         out.push_str("</u><!--]-->");
     } else {
         out.push_str("<!----><!--]-->");

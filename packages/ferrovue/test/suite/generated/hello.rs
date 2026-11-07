@@ -12,9 +12,7 @@ pub const NAME: &str = "Hello";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "count")]
     pub count: i64,
 }
 

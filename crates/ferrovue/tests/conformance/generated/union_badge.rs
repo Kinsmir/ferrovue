@@ -12,9 +12,8 @@ pub const NAME: &str = "UnionBadge";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "mood", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mood: Option<super::types::Mood>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

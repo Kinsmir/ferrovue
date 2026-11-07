@@ -24,9 +24,9 @@ fn tone_gives_each_member_its_literal() {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "tone", with = "fv::props::union_prop")]
+    #[serde(with = "fv::props::union_prop")]
     pub tone: crate::domain::Tone,
-    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::props::union_prop")]
     pub other: Option<crate::domain::Tone>,
 }
 

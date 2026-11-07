@@ -12,17 +12,13 @@ pub const NAME: &str = "AttrObjects";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "ratio")]
     pub ratio: f64,
-    #[serde(rename = "limit", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub limit: Option<i64>,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maybe: Option<Cow<'a, str>>,
-    #[serde(rename = "css")]
     pub css: Cow<'a, str>,
 }
 

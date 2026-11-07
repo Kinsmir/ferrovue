@@ -70,13 +70,10 @@ impl ferrovue::props::Union for K {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "k")]
     pub k: K,
-    #[serde(rename = "m", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub m: Option<K>,
-    #[serde(rename = "tone")]
     pub tone: super::types::Tone,
-    #[serde(rename = "level")]
     pub level: i64,
 }
 

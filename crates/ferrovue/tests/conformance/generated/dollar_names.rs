@@ -14,7 +14,6 @@ pub const NAME: &str = "DollarNames";
 pub struct Meta<'a> {
     #[serde(rename = "$tag")]
     pub tag_2: Cow<'a, str>,
-    #[serde(rename = "tag")]
     pub tag: Cow<'a, str>,
     #[serde(rename = "count$")]
     pub count: i64,
@@ -33,7 +32,6 @@ impl<'a> Meta<'a> {
 pub struct Entry<'a> {
     #[serde(rename = "$meta")]
     pub meta: Meta<'a>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -48,13 +46,10 @@ impl<'a> Entry<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
     #[serde(rename = "price$")]
     pub price: i64,
-    #[serde(rename = "entry")]
     pub entry: Entry<'a>,
-    #[serde(rename = "rows")]
     pub rows: Vec<Entry<'a>>,
 }
 
@@ -102,7 +97,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, s_label);
     out.push('|');
-    fv::core::escape_into(out, &{ let fv_loud = props.title.to_uppercase(); std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_loud, fv::core::Js(props.price))) });
+    fv::core::escape_into(out, &{ let fv_loud = props.title.to_uppercase(); Cow::<str>::Owned(format!("{}:{}", fv_loud, fv::core::Js(props.price))) });
     out.push_str("</h2><p>");
     fv::core::escape_into(out, &props.entry.meta.tag_2);
     out.push('|');

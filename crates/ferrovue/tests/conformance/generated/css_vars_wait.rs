@@ -12,7 +12,6 @@ pub const NAME: &str = "CssVarsWait";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
 }
 
@@ -40,7 +39,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(props.tone.len());
-    super::css_vars_leaf::try_render_scoped(out, &super::css_vars_leaf::Props { tint: std::borrow::Cow::Borrowed(&*props.tone), width: None }, super::css_vars_leaf::Slots {
+    super::css_vars_leaf::try_render_scoped(out, &super::css_vars_leaf::Props { tint: Cow::Borrowed(&*props.tone), width: None }, super::css_vars_leaf::Slots {
         default: None,
     }, &fv::attrs::Attrs::merged(&[&[("style", fv::attrs::Attr::style([("--f85200bc-tone", if props.tone.is_empty() { fv::attrs::Attr::str(" ") } else { fv::attrs::Attr::str(&props.tone) })]))]], ""))?;
     Ok(())

@@ -124,13 +124,9 @@ impl ferrovue::props::Union for ThemedChoiceTag {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "kind")]
     pub kind: ThemedChoiceKind,
-    #[serde(rename = "tag")]
     pub tag: ThemedChoiceTag,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "theme")]
     pub theme: Cow<'a, str>,
 }
 
@@ -165,42 +161,42 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provi
     if props.kind == ThemedChoiceKind::Scope {
         fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
             default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*format!("{} in scope", props.label)) }, fv_provides, ""));
+                fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed(&*format!("{} in scope", props.label)) }, fv_provides, ""));
                 true
             }),
         }, fv_provides, &fv::attrs::Attrs::new(&[("label", fv::attrs::Attr::str(&props.label))], "")))?;
     } else {
-        fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
+        fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
     }
     if props.kind == ThemedChoiceKind::Scope {
-        fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: Some(std::borrow::Cow::Borrowed("dark")) }, super::theme_scope::Slots {
+        fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: Some(Cow::Borrowed("dark")) }, super::theme_scope::Slots {
             default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-                fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""));
+                fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("slotted") }, fv_provides, ""));
                 true
             }),
         }, fv_provides, &fv::attrs::Attrs::NONE))?;
     } else {
         out.push_str("<p theme=\"dark\">");
-        fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("slotted") }, fv_provides, ""))?;
+        fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("slotted") }, fv_provides, ""))?;
         out.push_str("</p>");
     }
     let fv_tag = match props.tag { ThemedChoiceTag::Div => "div", ThemedChoiceTag::Aside => "aside" };
     out.push('<');
     out.push_str(fv_tag);
     out.push_str(" class=\"frame\">");
-    fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
+    fv_refusals.check(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed(&*props.label) }, fv_provides, ""))?;
     fv_refusals.check(super::theme_scope::try_render_scoped(out, &super::theme_scope::Props { theme: None }, super::theme_scope::Slots {
         default: Some(&|out: &mut String, fv_provides: super::provides::Provides<'_>| -> bool {
-            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("deep") }, fv_provides, ""));
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("deep") }, fv_provides, ""));
             true
         }),
     }, fv_provides, &fv::attrs::Attrs::NONE))?;
     out.push_str("</");
     out.push_str(fv_tag);
     out.push('>');
-    fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: std::borrow::Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
+    fv_refusals.check(super::tag_heading::try_render_scoped(out, &super::tag_heading::Props { r#as: Some(super::tag_heading::TagHeadingAs::H3), text: Cow::Borrowed(&*props.label) }, super::tag_heading::Slots {
         default: Some(fv::render::Slot::new(&|out: &mut String| {
-            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed("heading") }, fv_provides, ""));
+            fv_refusals.join(super::themed_button::try_render_scoped(out, &super::themed_button::Props { label: Cow::Borrowed("heading") }, fv_provides, ""));
         })),
     }, &fv::attrs::Attrs::NONE))?;
     out.push_str("</section>");

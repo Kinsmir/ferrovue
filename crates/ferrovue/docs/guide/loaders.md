@@ -217,9 +217,8 @@ assert_eq!(
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "slug")]
 #     pub slug: Cow<'a, str>,
-#     #[serde(rename = "lang", default, skip_serializing_if = "Option::is_none")]
+#     #[serde(default, skip_serializing_if = "Option::is_none")]
 #     pub lang: Option<Cow<'a, str>>,
 # }
 #
@@ -251,7 +250,7 @@ assert_eq!(
 #         out.push_str("</li>");
 #     }
 #     out.push_str("<!--]--></ul>");
-#     super::view_count::render(out, &super::view_count::Props { slug: std::borrow::Cow::Borrowed(&*props.slug) }, fv_loads);
+#     super::view_count::render(out, &super::view_count::Props { slug: Cow::Borrowed(&*props.slug) }, fv_loads);
 #     out.push_str("</article>");
 # }
 #
@@ -276,7 +275,6 @@ assert_eq!(
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Props<'a> {
-#     #[serde(rename = "slug")]
 #     pub slug: Cow<'a, str>,
 # }
 #
@@ -317,9 +315,7 @@ assert_eq!(
 # #[derive(Debug, Clone, serde::Serialize)]
 # #[cfg_attr(test, derive(serde::Deserialize))]
 # pub struct Post<'a> {
-#     #[serde(rename = "title")]
 #     pub title: Cow<'a, str>,
-#     #[serde(rename = "tags")]
 #     pub tags: Vec<Cow<'a, str>>,
 # }
 #

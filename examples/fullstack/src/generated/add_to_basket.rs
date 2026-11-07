@@ -12,9 +12,7 @@ pub const NAME: &str = "AddToBasket";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "id")]
     pub id: Cow<'a, str>,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 

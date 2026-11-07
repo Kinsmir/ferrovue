@@ -254,9 +254,9 @@ describe("`??`", () => {
   it("falls back from an optional list to an array literal as `?:` does", () => {
     expect(lines("<b>{{ (ys ?? ['q']).length }}|{{ (zs ?? ['q', 'r']).join('-') }}|{{ (ns ?? [1, 2]).length }}</b>")).toMatch(like([
       'out.push_str("<b>");',
-      "fv::core::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
+      "fv::core::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
       "out.push('|');",
-      'fv::core::escape_join(out, if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }, "-");',
+      'fv::core::escape_join(out, if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }, "-");',
       "out.push('|');",
       "fv::core::push_int(out, (if let Some(n3) = props.ns.as_ref() { n3.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);",
       'out.push_str("</b>");',
@@ -270,7 +270,7 @@ describe("`??`", () => {
       "out.push('|');",
       "fv::core::escape_into(out, props.os.as_deref().unwrap_or(fv::strings::js_trim(&props.s)));",
       "out.push('|');",
-      'fv::core::escape_into(out, &props.os.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("a{}", props.s))));',
+      'fv::core::escape_into(out, &props.os.as_deref().map(Cow::<str>::Borrowed).unwrap_or(Cow::<str>::Owned(format!("a{}", props.s))));',
       "out.push('|');",
       "if let Some(v) = props.os.as_deref().or(props.nl.as_deref()) {",
       "fv::core::escape_into(out, v);",
@@ -323,13 +323,13 @@ describe("`??`", () => {
 
   it("falls back from a value built from object literals, building the fallback only where it may panic", () => {
     expect(render(`${ITEM}function base(): Item { return { label: "b" }; }`, '<V :item="one() ?? base()" />', V)).toMatch(like(
-      '(if props.on { Some(super::v::Item { label: std::borrow::Cow::<str>::Borrowed("a"), n: None }) } else { None }).unwrap_or(super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: None })',
+      '(if props.on { Some(super::v::Item { label: Cow::<str>::Borrowed("a"), n: None }) } else { None }).unwrap_or(super::v::Item { label: Cow::<str>::Borrowed("b"), n: None })',
     ));
     expect(render(`${ITEM}function base(): Item { return { label: props.s.repeat(2) }; }`, '<V :item="one() ?? base()" />', V)).toMatch(like(
-      ".unwrap_or_else(|| super::v::Item { label: std::borrow::Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&props.s, 2.0f64), 5, 41)), n: None })",
+      ".unwrap_or_else(|| super::v::Item { label: Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&props.s, 2.0f64), 5, 41)), n: None })",
     ));
     expect(render(`${ITEM}function base(): Item { return { label: "b" }; }`, '<V :item="it ?? base()" />', V)).toMatch(like(
-      'item: props.it.as_ref().cloned().unwrap_or(super::v::Item { label: std::borrow::Cow::<str>::Borrowed("b"), n: None })',
+      'item: props.it.as_ref().cloned().unwrap_or(super::v::Item { label: Cow::<str>::Borrowed("b"), n: None })',
     ));
   });
 
@@ -538,14 +538,14 @@ describe("`?:`", () => {
   it("types the empty array literal a test known when compiling chooses by the branch it leaves", () => {
     expect(lines('<i v-for="v in (true ? [] : xs)">{{ v }}</i><b v-for="v in (false ? xs : [])">{{ v }}</b>')).toMatch(like([
       'out.push_str("<!--[--><!--[-->");',
-      "for v_ref in <&[std::borrow::Cow<str>]>::default().iter() {",
+      "for v_ref in <&[Cow<str>]>::default().iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<i>");',
       "fv::core::escape_into(out, v);",
       'out.push_str("</i>");',
       "}",
       'out.push_str("<!--]--><!--[-->");',
-      "for v_ref in <&[std::borrow::Cow<str>]>::default().iter() {",
+      "for v_ref in <&[Cow<str>]>::default().iter() {",
       "let v: &str = v_ref;",
       'out.push_str("<b>");',
       "fv::core::escape_into(out, v);",
@@ -592,9 +592,9 @@ describe("`?:`", () => {
     ].join("\n"), true));
     expect(lines("<b>{{ (b ? ['a'] : []).length }}|{{ (b ? [] : xs.slice(1)).length }}</b>")).toMatch(like([
       'out.push_str("<b>");',
-      'fv::core::push_int(out, (if props.b { ["a"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).len() as i64);',
+      'fv::core::push_int(out, (if props.b { ["a"].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() }).len() as i64);',
       "out.push('|');",
-      "fv::core::push_int(out, (if props.b { Vec::new() } else { fv::strings::js_slice_items(props.xs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
+      "fv::core::push_int(out, (if props.b { Vec::new() } else { fv::strings::js_slice_items(props.xs.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
       'out.push_str("</b>");',
     ].join("\n"), true));
   });
@@ -686,7 +686,7 @@ describe("`?:`", () => {
       "fv::core::escape_into(out, v);",
       "}",
       "out.push('|');",
-      'if let Some(v) = (if props.b { props.os.as_deref().map(std::borrow::Cow::<str>::Borrowed) } else { props.m.map(|n4| std::borrow::Cow::<str>::Owned(format!("{}", fv::core::Js(n4)))) }).as_deref() {',
+      'if let Some(v) = (if props.b { props.os.as_deref().map(Cow::<str>::Borrowed) } else { props.m.map(|n4| Cow::<str>::Owned(format!("{}", fv::core::Js(n4)))) }).as_deref() {',
       "fv::core::escape_into(out, v);",
       "}",
       'out.push_str("</p>");',
@@ -776,8 +776,8 @@ interface R { t: string; k: number; m?: number; w: R2; l: string[]; rs: R2[] }
 const props = defineProps<{ s: string; b: boolean; n: number; m?: number; xs: string[]; r: R; it?: Item }>();
 function one(): R { return { t: props.s, k: props.n, w: { v: props.s }, l: [props.s], rs: [] }; }
 function base(): Item { return { label: props.s, sub: { v: props.s }, subs: [] }; }`;
-const BUILT = "(R { t: std::borrow::Cow::<str>::Borrowed(&*props.s), k: props.n, w: R2 { v: std::borrow::Cow::<str>::Borrowed(&*props.s) }, l: Vec::from([std::borrow::Cow::<str>::Borrowed(&*props.s)]), rs: Vec::new(), m: None })";
-const ITEM_BUILT = "super::v::Item { label: std::borrow::Cow::<str>::Borrowed(&*props.s), sub: super::v::Sub { v: std::borrow::Cow::<str>::Borrowed(&*props.s) }, subs: Vec::new() }";
+const BUILT = "(R { t: Cow::<str>::Borrowed(&*props.s), k: props.n, w: R2 { v: Cow::<str>::Borrowed(&*props.s) }, l: Vec::from([Cow::<str>::Borrowed(&*props.s)]), rs: Vec::new(), m: None })";
+const ITEM_BUILT = "super::v::Item { label: Cow::<str>::Borrowed(&*props.s), sub: super::v::Sub { v: Cow::<str>::Borrowed(&*props.s) }, subs: Vec::new() }";
 
 describe("values built from object literals", () => {
   it("chooses between a built value's field and a value of its type", () => {
@@ -793,7 +793,7 @@ describe("values built from object literals", () => {
       "out.push('|');",
       `fv::core::push_int(out, (if props.b { ${BUILT}.l } else { Vec::new() }).len() as i64);`,
       "out.push('|');",
-      `fv::core::push_int(out, (if props.b { ${BUILT}.l } else { props.xs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);`,
+      `fv::core::push_int(out, (if props.b { ${BUILT}.l } else { props.xs.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_x| !fv_x.is_empty()).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);`,
       'out.push_str("</p>");',
     ].join("\n"), true));
   });
@@ -814,12 +814,12 @@ describe("values built from object literals", () => {
     const out = render(BUILT_SCRIPT, '<V :item="b ? it : base()" /><V :item="b ? undefined : base()" /><V :sub="b ? base().sub : { v: s }" />', BUILT_V);
     expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: if props.b { props.it.as_ref().cloned() } else { Some(${ITEM_BUILT}) }, sub: None })?;`));
     expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: if props.b { None } else { Some(${ITEM_BUILT}) }, sub: None })?;`));
-    expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: None, sub: Some(if props.b { (${ITEM_BUILT}).sub } else { super::v::Sub { v: std::borrow::Cow::<str>::Borrowed(&*props.s) } }) })?;`));
+    expect(out).toMatch(like(`super::v::try_render(out, &super::v::Props { item: None, sub: Some(if props.b { (${ITEM_BUILT}).sub } else { super::v::Sub { v: Cow::<str>::Borrowed(&*props.s) } }) })?;`));
   });
 
   it("reads a field typed as a union of string literals through its `as_str()`, and compares its variants", () => {
     const script = 'interface R { t: string; e: "a" | "b"; o?: "x" | "y" }\nconst props = defineProps<{ s: string; o?: "x" | "y" }>();\nfunction one(): R { return { t: props.s, e: "a", o: props.o }; }';
-    const built = "(R { t: std::borrow::Cow::<str>::Borrowed(&*props.s), e: RE::A, o: props.o.map(|v| match v { XO::X => RO::X, XO::Y => RO::Y }) })";
+    const built = "(R { t: Cow::<str>::Borrowed(&*props.s), e: RE::A, o: props.o.map(|v| match v { XO::X => RO::X, XO::Y => RO::Y }) })";
     expect(lines('<p>{{ one().e }}|{{ one().e === "a" }}|{{ one().o ?? "none" }}|{{ one().o === "y" }}</p>', script)).toMatch(like([
       'out.push_str("<p>");',
       `fv::core::escape_into(out, fv::props::Union::as_str(${built}.e));`,

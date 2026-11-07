@@ -10,7 +10,6 @@ pub const NAME: &str = "BooksId";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "book")]
     pub book: super::types::Book<'a>,
 }
 

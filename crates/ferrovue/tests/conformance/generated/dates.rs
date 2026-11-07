@@ -12,15 +12,11 @@ pub const NAME: &str = "Dates";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "published")]
     pub published: Cow<'a, str>,
-    #[serde(rename = "updated", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub updated: Option<Cow<'a, str>>,
-    #[serde(rename = "at")]
     pub at: i64,
-    #[serde(rename = "offset")]
     pub offset: f64,
-    #[serde(rename = "days")]
     pub days: Vec<Cow<'a, str>>,
 }
 

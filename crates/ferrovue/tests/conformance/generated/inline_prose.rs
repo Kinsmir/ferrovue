@@ -12,11 +12,9 @@ pub const NAME: &str = "InlineProse";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "lead")]
     pub lead: ferrovue::html::InlineHtml,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<ferrovue::html::InlineHtml>,
-    #[serde(rename = "caption")]
     pub caption: Cow<'a, str>,
 }
 

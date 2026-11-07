@@ -12,7 +12,7 @@ pub const NAME: &str = "ScopedQuirks";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -47,7 +47,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(42 + props.note.as_deref().map_or(0, str::len));
     out.push_str("<div class=\"quirks\" data-v-a3eec79a>");
-    super::scoped_root::try_render_scoped(out, &super::scoped_root::Props { label: props.note.as_deref().map(std::borrow::Cow::Borrowed) }, " data-v-a3eec79a")?;
+    super::scoped_root::try_render_scoped(out, &super::scoped_root::Props { label: props.note.as_deref().map(Cow::Borrowed) }, " data-v-a3eec79a")?;
     super::scoped_card::try_render_scoped(out, &super::scoped_card::Props { tone: None }, super::scoped_card::Slots {
         title: None,
         default: None,

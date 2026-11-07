@@ -12,11 +12,9 @@ pub const NAME: &str = "SvgXlink";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "href")]
     pub href: Cow<'a, str>,
-    #[serde(rename = "id")]
     pub id: Cow<'a, str>,
-    #[serde(rename = "title", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<Cow<'a, str>>,
 }
 

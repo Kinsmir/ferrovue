@@ -12,7 +12,6 @@ pub const NAME: &str = "TrimButton";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "kind")]
     pub kind: Cow<'a, str>,
 }
 

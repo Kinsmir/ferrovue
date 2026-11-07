@@ -789,11 +789,9 @@ impl ferrovue::props::Union for MoodChoice {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Choice<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "hint", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hint: Option<Cow<'a, str>>,
 }
 
@@ -814,15 +812,13 @@ impl<'a> Choice<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Reply<'a> {
-    #[serde(rename = "author")]
     pub author: Cow<'a, str>,
-    #[serde(rename = "at", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub at: ferrovue::date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "removed", default, with = "fv::date::opt_date_prop")]
+    #[serde(default, with = "fv::date::opt_date_prop")]
     pub removed: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "replies")]
     pub replies: Vec<Reply<'a>>,
 }
 
@@ -849,15 +845,13 @@ impl<'a> Reply<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Thread<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "opened", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub opened: ferrovue::date::JsDate,
-    #[serde(rename = "replies")]
     pub replies: Vec<Reply<'a>>,
-    #[serde(rename = "pinned", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub pinned: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
-    #[serde(rename = "seen", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub seen: Vec<Option<ferrovue::date::JsDate>>,
 }
 
@@ -872,9 +866,7 @@ impl<'a> Thread<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct TabsState<'a> {
-    #[serde(rename = "active")]
     pub active: Cow<'a, str>,
-    #[serde(rename = "count")]
     pub count: i64,
 }
 
@@ -889,13 +881,10 @@ impl<'a> TabsState<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Look<'a> {
-    #[serde(rename = "size")]
     pub size: Cow<'a, str>,
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "count")]
     pub count: i64,
 }
 
@@ -916,15 +905,12 @@ impl<'a> Look<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct ImportedCardProps<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "count", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i64>,
-    #[serde(rename = "mood")]
     pub mood: Mood,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -951,9 +937,8 @@ impl<'a> ImportedCardProps<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct ImportedBase<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub on: Option<bool>,
 }
 
@@ -974,11 +959,9 @@ impl<'a> ImportedBase<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct MoodCard<'a> {
-    #[serde(rename = "mood")]
     pub mood: Mood,
-    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spare: Option<Mood>,
-    #[serde(rename = "note")]
     pub note: Cow<'a, str>,
 }
 
@@ -999,13 +982,9 @@ impl<'a> MoodCard<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Placed<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "mood")]
     pub mood: Mood,
-    #[serde(rename = "author")]
     pub author: PlacedAuthor<'a>,
-    #[serde(rename = "counts")]
     pub counts: PlacedCounts,
 }
 
@@ -1020,9 +999,7 @@ impl<'a> Placed<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct PlacedAuthor<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "links")]
     pub links: Vec<PlacedAuthorLinks<'a>>,
 }
 
@@ -1037,9 +1014,8 @@ impl<'a> PlacedAuthor<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct PlacedAuthorLinks<'a> {
-    #[serde(rename = "href")]
     pub href: Cow<'a, str>,
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
 }
 
@@ -1060,9 +1036,7 @@ impl<'a> PlacedAuthorLinks<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct PlacedCounts {
-    #[serde(rename = "seen")]
     pub seen: i64,
-    #[serde(rename = "liked")]
     pub liked: i64,
 }
 
@@ -1077,9 +1051,8 @@ impl PlacedCounts {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Author<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "bio", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bio: Option<Cow<'a, str>>,
 }
 
@@ -1100,11 +1073,8 @@ impl<'a> Author<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Article<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "author")]
     pub author: Option<Author<'a>>,
 }
 
@@ -1125,13 +1095,10 @@ impl<'a> Article<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Ranking<'a> {
-    #[serde(rename = "scores")]
     pub scores: ferrovue::props::Record<'a, i64>,
-    #[serde(rename = "best", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub best: Option<i64>,
-    #[serde(rename = "worst")]
     pub worst: Option<i64>,
-    #[serde(rename = "open")]
     pub open: Option<bool>,
 }
 
@@ -1164,13 +1131,10 @@ impl<'a> Ranking<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Query<'a> {
-    #[serde(rename = "term")]
     pub term: Cow<'a, str>,
-    #[serde(rename = "page")]
     pub page: i64,
-    #[serde(rename = "exact", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exact: Option<bool>,
-    #[serde(rename = "lang")]
     pub lang: Option<Cow<'a, str>>,
 }
 
@@ -1197,9 +1161,7 @@ impl<'a> Query<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Role<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "admin")]
     pub admin: bool,
 }
 
@@ -1214,15 +1176,12 @@ impl<'a> Role<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct User<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "avatar", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub avatar: Option<Cow<'a, str>>,
-    #[serde(rename = "roles")]
     pub roles: Vec<Role<'a>>,
-    #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<Size>,
 }
 
@@ -1249,9 +1208,8 @@ impl<'a> User<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Badge<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
 }
 
@@ -1272,13 +1230,11 @@ impl<'a> Badge<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Entry<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
     #[serde(rename = "deletedAt")]
     pub deleted_at: Option<Cow<'a, str>>,
-    #[serde(rename = "score")]
     pub score: Option<i64>,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
 }
 
@@ -1311,9 +1267,7 @@ impl<'a> Entry<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct TileBadge<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
 }
 
@@ -1328,17 +1282,13 @@ impl<'a> TileBadge<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Tile<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "owner")]
     pub owner: Option<Cow<'a, str>>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "badge", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub badge: Option<TileBadge<'a>>,
 }
 
@@ -1371,13 +1321,9 @@ impl<'a> Tile<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct TileRow<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "href")]
     pub href: Cow<'a, str>,
-    #[serde(rename = "first")]
     pub first: bool,
 }
 
@@ -1404,11 +1350,8 @@ impl<'a> Span<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Booking<'a> {
-    #[serde(rename = "span")]
     pub span: Span<'a>,
-    #[serde(rename = "seats")]
     pub seats: BookingSeats,
-    #[serde(rename = "tagged")]
     pub tagged: BookingTagged<'a>,
 }
 
@@ -1447,11 +1390,9 @@ impl<'a> BookingTagged<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Step<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "state")]
     pub state: StepState,
-    #[serde(rename = "align", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub align: Option<Align>,
 }
 
@@ -1472,9 +1413,7 @@ impl<'a> Step<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct HueSet<'a> {
-    #[serde(rename = "hues")]
     pub hues: Vec<Hue>,
-    #[serde(rename = "note")]
     pub note: Cow<'a, str>,
 }
 
@@ -1489,13 +1428,9 @@ impl<'a> HueSet<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct SortsItem<'a> {
-    #[serde(rename = "key")]
     pub key: Cow<'a, str>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "desc")]
     pub desc: bool,
-    #[serde(rename = "badge")]
     pub badge: Option<Cow<'a, str>>,
 }
 

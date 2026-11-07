@@ -68,7 +68,6 @@ impl ferrovue::props::Union for AndChainsTone {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Badge<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -83,15 +82,14 @@ impl<'a> Badge<'a> {
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub n: Option<i64>,
-    #[serde(rename = "m")]
     pub m: Option<i64>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<AndChainsTone>,
-    #[serde(rename = "badge", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub badge: Option<Badge<'a>>,
-    #[serde(rename = "word", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub word: Option<Cow<'a, str>>,
 }
 
@@ -173,7 +171,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</p><p>");
     fv::core::push_number(out, if let Some(fv_n_4) = props.n { if fv_n_4 as f64 > 1.0 { fv_n_4 as f64 * 2.0 } else { 0.0f64 } } else { 0.0f64 });
     out.push('|');
-    fv::core::escape_into(out, &(if let Some(fv_n_5) = props.n { if (fv_n_5 as f64) < 0.0 { std::borrow::Cow::<str>::Borrowed("bad") } else { std::borrow::Cow::<str>::Owned(fv::core::js_to_fixed(fv_n_5 as f64, 1)) } } else { std::borrow::Cow::<str>::Borrowed("bad") }));
+    fv::core::escape_into(out, &(if let Some(fv_n_5) = props.n { if (fv_n_5 as f64) < 0.0 { Cow::<str>::Borrowed("bad") } else { Cow::<str>::Owned(fv::core::js_to_fixed(fv_n_5 as f64, 1)) } } else { Cow::<str>::Borrowed("bad") }));
     out.push('|');
     out.push_str(if (if let Some(fv_n_6) = props.n { fv_n_6 as f64 > 0.0 && (fv_n_6 as f64) < 5.0 } else { false }) || props.n == Some(0i64) { "true" } else { "false" });
     out.push_str("</p><p>");

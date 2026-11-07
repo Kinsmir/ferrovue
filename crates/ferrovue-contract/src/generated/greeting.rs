@@ -12,9 +12,8 @@ pub const NAME: &str = "Greeting";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "unread", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unread: Option<i64>,
     #[serde(rename = "showHead", default, skip_serializing_if = "Option::is_none")]
     pub show_head: Option<bool>,

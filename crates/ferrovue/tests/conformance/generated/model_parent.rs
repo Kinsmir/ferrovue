@@ -12,9 +12,7 @@ pub const NAME: &str = "ModelParent";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "initial")]
     pub initial: Cow<'a, str>,
-    #[serde(rename = "open")]
     pub open: bool,
 }
 
@@ -45,8 +43,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_text = &*props.initial;
     let s_is_open = props.open;
     out.push_str("<section>");
-    super::model::try_render(out, &super::model::Props { model_value: std::borrow::Cow::Borrowed(s_text), open: Some(s_is_open), level: None })?;
-    super::model::try_render(out, &super::model::Props { model_value: std::borrow::Cow::Borrowed(s_text), open: None, level: Some(1i64) })?;
+    super::model::try_render(out, &super::model::Props { model_value: Cow::Borrowed(s_text), open: Some(s_is_open), level: None })?;
+    super::model::try_render(out, &super::model::Props { model_value: Cow::Borrowed(s_text), open: None, level: Some(1i64) })?;
     out.push_str("</section>");
     Ok(())
 }

@@ -10,9 +10,7 @@ pub const NAME: &str = "Meter";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "value")]
     pub value: f64,
-    #[serde(rename = "max")]
     pub max: f64,
 }
 

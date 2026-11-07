@@ -12,11 +12,8 @@ pub const NAME: &str = "Listened";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "id")]
     pub id: Cow<'a, str>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "rows")]
     pub rows: Vec<Props<'a>>,
 }
 

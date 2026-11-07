@@ -12,9 +12,8 @@ pub const NAME: &str = "FallBinds";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "cls", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cls: Option<Cow<'a, str>>,
-    #[serde(rename = "css")]
     pub css: Cow<'a, str>,
 }
 

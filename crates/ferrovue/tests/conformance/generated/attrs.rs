@@ -12,21 +12,15 @@ pub const NAME: &str = "Attrs";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "disabled")]
     pub disabled: bool,
-    #[serde(rename = "hidden")]
     pub hidden: bool,
-    #[serde(rename = "tabindex")]
     pub tabindex: i64,
-    #[serde(rename = "tip", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tip: Option<Cow<'a, str>>,
-    #[serde(rename = "extra")]
     pub extra: Cow<'a, str>,
-    #[serde(rename = "state")]
     pub state: Cow<'a, str>,
-    #[serde(rename = "id", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<Cow<'a, str>>,
 }
 

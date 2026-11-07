@@ -12,15 +12,11 @@ pub const NAME: &str = "BoundObject";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "tip", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tip: Option<Cow<'a, str>>,
-    #[serde(rename = "tone")]
     pub tone: Cow<'a, str>,
 }
 

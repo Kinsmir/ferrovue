@@ -124,9 +124,7 @@ impl ferrovue::props::Union for Mark {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Part<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 
@@ -141,21 +139,15 @@ impl<'a> Part<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "kind")]
     pub kind: Kind,
-    #[serde(rename = "mark")]
     pub mark: Mark,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<Cow<'a, str>>,
-    #[serde(rename = "replaces", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub replaces: Option<Cow<'a, str>>,
-    #[serde(rename = "eager")]
     pub eager: bool,
-    #[serde(rename = "collapsed")]
     pub collapsed: bool,
-    #[serde(rename = "flair")]
     pub flair: Vec<Cow<'a, str>>,
-    #[serde(rename = "parts")]
     pub parts: Vec<Part<'a>>,
     #[serde(rename = "byName")]
     pub by_name: ferrovue::props::Record<'a, Part<'a>>,

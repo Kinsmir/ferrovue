@@ -10,9 +10,7 @@ use std::borrow::Cow;
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct BasketState<'a> {
-    #[serde(rename = "owner")]
     pub owner: Cow<'a, str>,
-    #[serde(rename = "ids")]
     pub ids: Vec<Cow<'a, str>>,
 }
 
@@ -28,7 +26,6 @@ impl<'a> BasketState<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Stores<'a> {
-    #[serde(rename = "basket")]
     pub basket: BasketState<'a>,
 }
 

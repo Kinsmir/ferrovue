@@ -136,7 +136,6 @@ impl ferrovue::props::Union for UnionLogicChoice {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Mix {
-    #[serde(rename = "tones")]
     pub tones: Vec<Tone>,
 }
 
@@ -151,15 +150,11 @@ impl Mix {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "pick", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pick: Option<Tone>,
-    #[serde(rename = "other")]
     pub other: Tone,
-    #[serde(rename = "choice")]
     pub choice: UnionLogicChoice,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 
@@ -198,13 +193,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("</i><i>");
     out.push_str(if props.other != Tone::Calm && matches!(props.other, Tone::Loud) { "true" } else { "false" });
     out.push_str("</i>");
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match props.choice { UnionLogicChoice::Calm | UnionLogicChoice::Empty => super::narrowed_tone::Tone::Calm, UnionLogicChoice::Loud => super::narrowed_tone::Tone::Loud, UnionLogicChoice::AB => super::narrowed_tone::Tone::AB }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(props.pick.map(|v| match v { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }).unwrap_or(match props.other { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB })), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(if props.on { match props.choice { UnionLogicChoice::Calm => super::narrowed_tone::Tone::Calm, UnionLogicChoice::Loud => super::narrowed_tone::Tone::Loud, UnionLogicChoice::AB | UnionLogicChoice::Empty => super::narrowed_tone::Tone::AB } } else { super::narrowed_tone::Tone::Loud }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if props.on { props.pick.map(|v| match v { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }) } else { None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if props.on { Some(match props.other { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }) } else { None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(match props.choice { UnionLogicChoice::Calm | UnionLogicChoice::Empty => super::narrowed_tone::Tone::Calm, UnionLogicChoice::Loud => super::narrowed_tone::Tone::Loud, UnionLogicChoice::AB => super::narrowed_tone::Tone::AB }), label: Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(props.pick.map(|v| match v { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }).unwrap_or(match props.other { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB })), label: Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: Some(if props.on { match props.choice { UnionLogicChoice::Calm => super::narrowed_tone::Tone::Calm, UnionLogicChoice::Loud => super::narrowed_tone::Tone::Loud, UnionLogicChoice::AB | UnionLogicChoice::Empty => super::narrowed_tone::Tone::AB } } else { super::narrowed_tone::Tone::Loud }), label: Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if props.on { props.pick.map(|v| match v { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }) } else { None }, label: Cow::Borrowed(&*props.label) })?;
+    super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if props.on { Some(match props.other { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }) } else { None }, label: Cow::Borrowed(&*props.label) })?;
     out.push_str("<i>");
-    fv::core::escape_join(out, ((Mix { tones: vec![props.other, Tone::Calm] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
+    fv::core::escape_join(out, ((Mix { tones: vec![props.other, Tone::Calm] }).tones).iter().map(|v| Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
     out.push_str("</i></section>");
     Ok(())
 }

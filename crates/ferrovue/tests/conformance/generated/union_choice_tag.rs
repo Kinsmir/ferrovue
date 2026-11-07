@@ -76,9 +76,7 @@ impl ferrovue::props::Union for UnionChoiceTagChoice {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "choice")]
     pub choice: UnionChoiceTagChoice,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 

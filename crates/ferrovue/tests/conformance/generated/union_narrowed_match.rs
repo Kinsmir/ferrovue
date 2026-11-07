@@ -76,9 +76,8 @@ impl ferrovue::props::Union for UnionNarrowedMatchMood {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "start", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start: Option<super::types::Mood>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -120,14 +119,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, &props.label);
         out.push_str("\">");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm | UnionNarrowedMatchMood::Empty => None, UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX) }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm | UnionNarrowedMatchMood::Empty => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud => super::types::Mood::Loud, UnionNarrowedMatchMood::QX => super::types::Mood::QX }, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud | UnionNarrowedMatchMood::Empty => super::types::Mood::Loud, UnionNarrowedMatchMood::QX => super::types::Mood::QX }, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud => super::types::Mood::Loud, UnionNarrowedMatchMood::QX | UnionNarrowedMatchMood::Empty => super::types::Mood::QX }, card: Some(super::types::MoodCard { mood: match s_mood { UnionNarrowedMatchMood::Calm => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud | UnionNarrowedMatchMood::Empty => super::types::Mood::Loud, UnionNarrowedMatchMood::QX => super::types::Mood::QX }, spare: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, note: std::borrow::Cow::<str>::Borrowed(&*props.label) }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, label: Cow::Borrowed(&*props.label) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm | UnionNarrowedMatchMood::Empty => None, UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX) }, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm | UnionNarrowedMatchMood::Empty => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud => super::types::Mood::Loud, UnionNarrowedMatchMood::QX => super::types::Mood::QX }, card: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud | UnionNarrowedMatchMood::Empty => super::types::Mood::Loud, UnionNarrowedMatchMood::QX => super::types::Mood::QX }, card: None, label: Cow::Borrowed(&*props.label) })?;
+    super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: match s_mood { UnionNarrowedMatchMood::Calm => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud => super::types::Mood::Loud, UnionNarrowedMatchMood::QX | UnionNarrowedMatchMood::Empty => super::types::Mood::QX }, card: Some(super::types::MoodCard { mood: match s_mood { UnionNarrowedMatchMood::Calm => super::types::Mood::Calm, UnionNarrowedMatchMood::Loud | UnionNarrowedMatchMood::Empty => super::types::Mood::Loud, UnionNarrowedMatchMood::QX => super::types::Mood::QX }, spare: match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None }, note: Cow::<str>::Borrowed(&*props.label) }), label: Cow::Borrowed(&*props.label) })?;
     if let Some(fv_mood) = match s_mood { UnionNarrowedMatchMood::Calm => Some(super::types::Mood::Calm), UnionNarrowedMatchMood::Loud => Some(super::types::Mood::Loud), UnionNarrowedMatchMood::QX => Some(super::types::Mood::QX), UnionNarrowedMatchMood::Empty => None } {
-        super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood, card: Some(super::types::MoodCard { mood: fv_mood, spare: Some(fv_mood), note: std::borrow::Cow::<str>::Owned(format!("{}!", fv::props::Union::as_str(s_mood))) }), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood, card: Some(super::types::MoodCard { mood: fv_mood, spare: Some(fv_mood), note: Cow::<str>::Owned(format!("{}!", fv::props::Union::as_str(s_mood))) }), label: Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<i>");
         fv::core::escape_into(out, &props.label);
@@ -137,21 +136,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<i>empty</i>");
     } else if let Some(fv_mood_2) = match s_mood { UnionNarrowedMatchMood::Calm => Some(None), UnionNarrowedMatchMood::Loud => Some(Some(super::types::Mood::QX)), UnionNarrowedMatchMood::QX => Some(Some(super::types::Mood::Calm)), UnionNarrowedMatchMood::Empty => None } {
         if s_mood == UnionNarrowedMatchMood::Calm {
-            super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Calm, card: None, label: std::borrow::Cow::Borrowed("calm") })?;
+            super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: super::types::Mood::Calm, card: None, label: Cow::Borrowed("calm") })?;
         } else if let Some(fv_mood_3) = fv_mood_2 {
-            super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood_3, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+            super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood_3, card: None, label: Cow::Borrowed(&*props.label) })?;
         }
     }
     if let Some(fv_mood_4) = match s_mood { UnionNarrowedMatchMood::Calm => Some(Some(super::types::Mood::Calm)), UnionNarrowedMatchMood::Loud => None, UnionNarrowedMatchMood::QX => Some(Some(super::types::Mood::QX)), UnionNarrowedMatchMood::Empty => Some(None) } {
         out.push_str("<!--[-->");
-        super::union_badge::try_render(out, &super::union_badge::Props { mood: fv_mood_4, label: std::borrow::Cow::Borrowed(fv::props::Union::as_str(s_mood)) })?;
-        super::union_badge::try_render(out, &super::union_badge::Props { mood: fv_mood_4, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        super::union_badge::try_render(out, &super::union_badge::Props { mood: fv_mood_4, label: Cow::Borrowed(fv::props::Union::as_str(s_mood)) })?;
+        super::union_badge::try_render(out, &super::union_badge::Props { mood: fv_mood_4, label: Cow::Borrowed(&*props.label) })?;
         out.push_str("<!--]-->");
     } else {
         out.push_str("<!---->");
     }
     if !props.label.is_empty() && let Some(fv_mood_5) = match s_mood { UnionNarrowedMatchMood::Calm => Some(None), UnionNarrowedMatchMood::Loud => Some(Some(super::types::Mood::Loud)), UnionNarrowedMatchMood::QX => Some(Some(super::types::Mood::QX)), UnionNarrowedMatchMood::Empty => None } && let Some(fv_mood_6) = fv_mood_5 {
-        super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood_6, card: None, label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        super::union_mood_card::try_render(out, &super::union_mood_card::Props { mood: fv_mood_6, card: None, label: Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<!---->");
     }

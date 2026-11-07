@@ -12,9 +12,8 @@ pub const NAME: &str = "Loaded";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "slug")]
     pub slug: Cow<'a, str>,
-    #[serde(rename = "lang", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lang: Option<Cow<'a, str>>,
 }
 
@@ -74,8 +73,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul>");
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 1i64, drafts: None }, fv_loads)?;
-    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: std::borrow::Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 > 1) }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: Cow::Borrowed(&*props.slug), page: 1i64, drafts: None }, fv_loads)?;
+    super::loaded_comments::try_render(out, &super::loaded_comments::Props { article: Cow::Borrowed(&*props.slug), page: 2i64, drafts: Some(l_0.tags.len() as i64 > 1) }, fv_loads)?;
     out.push_str("</article>");
     Ok(())
 }

@@ -12,11 +12,9 @@ pub const NAME: &str = "Prose";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "body")]
     pub body: crate::Sanitised,
-    #[serde(rename = "aside", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub aside: Option<crate::Sanitised>,
-    #[serde(rename = "caption")]
     pub caption: Cow<'a, str>,
 }
 

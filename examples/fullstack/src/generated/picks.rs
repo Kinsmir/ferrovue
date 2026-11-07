@@ -12,11 +12,8 @@ pub const NAME: &str = "Picks";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "shop")]
     pub shop: Cow<'a, str>,
-    #[serde(rename = "featured")]
     pub featured: super::types::Book<'a>,
-    #[serde(rename = "books")]
     pub books: Vec<super::types::Book<'a>>,
 }
 
@@ -77,7 +74,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
     out.push_str("</main><aside class=\"reviews\"><h2>Readers on ");
     fv::core::escape_into(out, &props.featured.title);
     out.push_str("</h2>");
-    super::stock_level::try_render(out, &super::stock_level::Props { id: std::borrow::Cow::Borrowed(&*props.featured.id) }, fv_loads)?;
+    super::stock_level::try_render(out, &super::stock_level::Props { id: Cow::Borrowed(&*props.featured.id) }, fv_loads)?;
     fv::render::slot_into(out, fv_slots.reviews, Some(&mut |out: &mut String| {
         out.push_str("<p>Loading reviews…</p>");
     }));

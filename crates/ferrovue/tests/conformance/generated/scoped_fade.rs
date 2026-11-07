@@ -10,7 +10,6 @@ pub const NAME: &str = "ScopedFade";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "open")]
     pub open: bool,
 }
 

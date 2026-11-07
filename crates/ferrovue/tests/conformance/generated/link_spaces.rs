@@ -12,11 +12,9 @@ pub const NAME: &str = "LinkSpaces";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "to")]
     pub to: Cow<'a, str>,
-    #[serde(rename = "own")]
     pub own: Cow<'a, str>,
-    #[serde(rename = "tone", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tone: Option<Cow<'a, str>>,
 }
 
@@ -67,8 +65,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     out.push_str(">g</a>");
     fv::attrs::link_open(out, &fv_route.link(&props.to), "page", "a&quot;&lt;b&gt;", "a&quot;&lt;b&gt;  &amp; &#39; x=", &[], false);
     out.push_str(">h</a>");
-    super::fall_spaces::try_render_scoped(out, &super::fall_spaces::Props { to: std::borrow::Cow::Borrowed(&*props.to) }, fv_route, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str(&props.own))], ""))?;
-    super::fall_spaces::try_render_scoped(out, &super::fall_spaces::Props { to: std::borrow::Cow::Borrowed(&*props.to) }, fv_route, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[&*props.own])))], ""))?;
+    super::fall_spaces::try_render_scoped(out, &super::fall_spaces::Props { to: Cow::Borrowed(&*props.to) }, fv_route, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str(&props.own))], ""))?;
+    super::fall_spaces::try_render_scoped(out, &super::fall_spaces::Props { to: Cow::Borrowed(&*props.to) }, fv_route, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::from(fv::attrs::class_names(&[&*props.own])))], ""))?;
     out.push_str("</nav>");
     Ok(())
 }

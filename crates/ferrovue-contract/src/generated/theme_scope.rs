@@ -12,7 +12,6 @@ pub const NAME: &str = "ThemeScope";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "theme")]
     pub theme: Cow<'a, str>,
 }
 

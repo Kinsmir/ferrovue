@@ -12,13 +12,9 @@ pub const NAME: &str = "Plurals";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "amount")]
     pub amount: f64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 

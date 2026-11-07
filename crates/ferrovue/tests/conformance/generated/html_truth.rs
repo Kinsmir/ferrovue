@@ -10,13 +10,11 @@ pub const NAME: &str = "HtmlTruth";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "content", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub content: Option<crate::Sanitised>,
-    #[serde(rename = "body")]
     pub body: crate::Sanitised,
-    #[serde(rename = "note", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<ferrovue::html::InlineHtml>,
-    #[serde(rename = "lead")]
     pub lead: ferrovue::html::InlineHtml,
 }
 

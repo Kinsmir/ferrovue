@@ -12,9 +12,7 @@ pub const NAME: &str = "Records";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Score<'a> {
-    #[serde(rename = "points")]
     pub points: i64,
-    #[serde(rename = "by")]
     pub by: Cow<'a, str>,
 }
 
@@ -29,15 +27,11 @@ impl<'a> Score<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "counts")]
     pub counts: ferrovue::props::Record<'a, i64>,
-    #[serde(rename = "labels")]
     pub labels: ferrovue::props::Record<'a, Cow<'a, str>>,
-    #[serde(rename = "scores")]
     pub scores: ferrovue::props::Record<'a, Score<'a>>,
-    #[serde(rename = "groups")]
     pub groups: ferrovue::props::Record<'a, Vec<Cow<'a, str>>>,
-    #[serde(rename = "extra", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extra: Option<ferrovue::props::Record<'a, bool>>,
 }
 
@@ -115,11 +109,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str(")</p>");
     }
     out.push_str("<!--]--><p>");
-    fv::core::escape_join(out, props.counts.keys().map(std::borrow::Cow::<str>::Borrowed), ",");
+    fv::core::escape_join(out, props.counts.keys().map(Cow::<str>::Borrowed), ",");
     out.push('|');
     fv::core::push_int(out, props.counts.values().copied().filter(|fv_c| *fv_c as f64 > 1.0).count() as i64);
     out.push('|');
-    fv::core::escape_join(out, props.labels.values().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), " ");
+    fv::core::escape_join(out, props.labels.values().map(|v| Cow::<str>::Borrowed(&**v)), " ");
     out.push('|');
     fv::core::push_int(out, props.scores.keys().count() as i64);
     out.push_str("</p><ol><!--[-->");
@@ -137,9 +131,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--></ol><p>");
     fv::core::push_int(out, props.labels.len() as i64);
     out.push('|');
-    fv::core::escape_join(out, props.scores.values().map(|fv_s| std::borrow::Cow::<str>::Borrowed(&fv_s.by)), "/");
+    fv::core::escape_join(out, props.scores.values().map(|fv_s| Cow::<str>::Borrowed(&fv_s.by)), "/");
     out.push('|');
-    out.push_str(if props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).any(|fv_item| *fv_item == *"a") { "true" } else { "false" });
+    out.push_str(if props.labels.keys().map(Cow::<str>::Borrowed).any(|fv_item| *fv_item == *"a") { "true" } else { "false" });
     if let Some(fv_extra) = props.extra.as_ref() {
         out.push_str("</p><!--[-->");
         for (fv_flag, fv_on_ref) in fv_extra.iter() {
@@ -154,7 +148,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("</p><!---->");
     }
-    super::chips::try_render(out, &super::chips::Props { chips: props.labels.keys().map(std::borrow::Cow::<str>::Borrowed).collect(), counts: None, marks: Some(props.counts.to_owned()) })?;
+    super::chips::try_render(out, &super::chips::Props { chips: props.labels.keys().map(Cow::<str>::Borrowed).collect(), counts: None, marks: Some(props.counts.to_owned()) })?;
     out.push_str("</section>");
     Ok(())
 }

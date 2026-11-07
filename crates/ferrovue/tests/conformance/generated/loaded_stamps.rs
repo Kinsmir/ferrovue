@@ -10,7 +10,6 @@ pub const NAME: &str = "LoadedStamps";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "year")]
     pub year: i64,
 }
 

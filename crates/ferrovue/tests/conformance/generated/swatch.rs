@@ -12,9 +12,8 @@ pub const NAME: &str = "Swatch";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<Cow<'a, str>>,
 }
 
@@ -48,9 +47,9 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_provides: super::provides:
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_provides: super::provides::Provides<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(94 + props.label.len() + props.size.as_deref().map_or(0, str::len));
-    let fv_default_look = super::types::Look { size: std::borrow::Cow::Borrowed(props.size.as_deref().unwrap_or("md")), tone: std::borrow::Cow::Borrowed("plain"), note: None, count: 0i64 };
-    let fv_default_made = super::types::Look { size: std::borrow::Cow::Borrowed("lg"), tone: std::borrow::Cow::Borrowed(&*props.label), note: Some(std::borrow::Cow::Borrowed("made")), count: 1i64 };
-    let fv_default_named = super::types::Look { size: std::borrow::Cow::Borrowed("sm"), tone: std::borrow::Cow::Borrowed(&*format!("{}!", props.label)), note: None, count: 2i64 };
+    let fv_default_look = super::types::Look { size: Cow::Borrowed(props.size.as_deref().unwrap_or("md")), tone: Cow::Borrowed("plain"), note: None, count: 0i64 };
+    let fv_default_made = super::types::Look { size: Cow::Borrowed("lg"), tone: Cow::Borrowed(&*props.label), note: Some(Cow::Borrowed("made")), count: 1i64 };
+    let fv_default_named = super::types::Look { size: Cow::Borrowed("sm"), tone: Cow::Borrowed(&*format!("{}!", props.label)), note: None, count: 2i64 };
     let s_summary = format!("{}/{}", fv_provides.look_key.unwrap_or(&fv_default_look).size, fv_provides.look_key.unwrap_or(&fv_default_look).tone);
     out.push_str("<span class=\"swatch swatch-");
     fv::core::escape_into(out, fv::strings::js_trim_end(&fv_provides.look_key.unwrap_or(&fv_default_look).size));

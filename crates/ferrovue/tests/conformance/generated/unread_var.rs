@@ -12,11 +12,8 @@ pub const NAME: &str = "UnreadVar";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "show")]
     pub show: bool,
-    #[serde(rename = "word")]
     pub word: Cow<'a, str>,
-    #[serde(rename = "width")]
     pub width: i64,
 }
 

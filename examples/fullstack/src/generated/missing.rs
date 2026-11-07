@@ -12,7 +12,6 @@ pub const NAME: &str = "Missing";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "path")]
     pub path: Cow<'a, str>,
 }
 

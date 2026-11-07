@@ -836,13 +836,15 @@ why; the diff of `instructions.json` shows the cost.
 card with conditionals, a loop and a default slot; a table with a bound style; a form with bound
 attributes; a group that renders the three components before it; and a layout with named slots
 around the group before it, so components nest the way pages, layouts and widgets do. ferrovue
-writes about 45,000 lines of Rust from them. The script times three steps:
+writes about 50,000 lines and 2.0 MB of Rust from them. The script times three steps and
+measures that Rust:
 
 | Step | This machine | Budget |
 |---|---|---|
 | `ferrovue` (the CLI, run from source on Node) writing the 500 modules | 1.1 s | 10 s |
 | `cargo build` of the generated crate, dev profile | 4.4 s | 60 s |
 | `cargo build --release` of the generated crate | 7.1 s | 90 s |
+| The Rust ferrovue writes | 2.0 MB | 3 MB |
 
 "This machine" is the one the README's Performance section names. Each build compiles the
 generated crate alone, from clean and with `CARGO_INCREMENTAL=0`: its dependencies are built before
@@ -853,9 +855,11 @@ times between runs, and a busy laptop shows the same spread. The budgets sit nea
 machine's times, about four times a runner's, so they catch a step that grows by an order of
 magnitude, such as a quadratic pass in the compiler or generated code that sends type checking or
 monomorphisation out of bounds, and let ordinary noise pass. A step over its budget is timed once
-more and fails only if both runs are over. The **Performance budgets** job writes the times to the
-run's summary, where slower drift shows across runs without failing one. The budgets are the
-`BUDGETS` constant at the top of the script; raise one only with a measurement that shows why.
+more and fails only if both runs are over. The size is the same on every runner and fails on the
+first run over its budget. The **Performance budgets** job writes the times and the lines and bytes
+of Rust to the run's summary, where slower drift shows across runs without failing one. The budgets
+are the `BUDGETS` and `SIZE_BUDGET` constants at the top of the script; raise one only with a
+measurement that shows why.
 
 ## Investigating a construct
 

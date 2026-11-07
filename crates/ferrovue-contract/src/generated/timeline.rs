@@ -10,11 +10,10 @@ pub const NAME: &str = "Timeline";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "moments")]
     pub moments: Vec<super::types::Moment<'a>>,
-    #[serde(rename = "days", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub days: Vec<ferrovue::date::JsDate>,
-    #[serde(rename = "by", with = "fv::date::dates_in")]
+    #[serde(with = "fv::date::dates_in")]
     pub by: ferrovue::props::Record<'a, ferrovue::date::JsDate>,
 }
 

@@ -68,17 +68,12 @@ impl ferrovue::props::Union for Mark {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "a", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub a: Option<Cow<'a, str>>,
-    #[serde(rename = "b")]
     pub b: Cow<'a, str>,
-    #[serde(rename = "c")]
     pub c: bool,
-    #[serde(rename = "s")]
     pub s: Cow<'a, str>,
-    #[serde(rename = "t")]
     pub t: Cow<'a, str>,
-    #[serde(rename = "m")]
     pub m: Mark,
 }
 

@@ -10,9 +10,8 @@ pub const NAME: &str = "Counter";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props {
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "step", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub step: Option<i64>,
 }
 

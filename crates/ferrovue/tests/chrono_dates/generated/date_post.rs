@@ -12,15 +12,13 @@ pub const NAME: &str = "DatePost";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "posted", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub posted: chrono::DateTime<chrono::Utc>,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "deleted", default, with = "fv::date::opt_date_prop")]
+    #[serde(default, with = "fv::date::opt_date_prop")]
     pub deleted: Option<chrono::DateTime<chrono::Utc>>,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
 }
 

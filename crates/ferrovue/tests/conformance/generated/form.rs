@@ -12,13 +12,9 @@ pub const NAME: &str = "Form";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "query")]
     pub query: Cow<'a, str>,
-    #[serde(rename = "agreed")]
     pub agreed: bool,
-    #[serde(rename = "size")]
     pub size: Cow<'a, str>,
-    #[serde(rename = "body")]
     pub body: Cow<'a, str>,
 }
 

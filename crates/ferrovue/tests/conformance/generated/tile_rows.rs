@@ -10,7 +10,6 @@ pub const NAME: &str = "TileRows";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "rows")]
     pub rows: Vec<super::types::TileRow<'a>>,
 }
 

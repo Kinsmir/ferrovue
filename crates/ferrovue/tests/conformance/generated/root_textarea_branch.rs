@@ -12,11 +12,8 @@ pub const NAME: &str = "RootTextareaBranch";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "editing")]
     pub editing: bool,
-    #[serde(rename = "hint")]
     pub hint: Cow<'a, str>,
-    #[serde(rename = "lines")]
     pub lines: Vec<Cow<'a, str>>,
 }
 

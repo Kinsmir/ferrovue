@@ -12,9 +12,7 @@ pub const NAME: &str = "NullChild";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "value")]
     pub value: Option<Cow<'a, str>>,
-    #[serde(rename = "entry")]
     pub entry: Option<super::types::Entry<'a>>,
 }
 

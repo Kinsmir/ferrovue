@@ -12,13 +12,9 @@ pub const NAME: &str = "Joined";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tags")]
     pub tags: Vec<Cow<'a, str>>,
-    #[serde(rename = "counts")]
     pub counts: Vec<i64>,
-    #[serde(rename = "ratios")]
     pub ratios: Vec<f64>,
-    #[serde(rename = "sep")]
     pub sep: Cow<'a, str>,
 }
 

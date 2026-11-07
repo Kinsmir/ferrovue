@@ -72,17 +72,11 @@ impl ferrovue::props::Union for OnPropsTone {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "flag")]
     pub flag: bool,
-    #[serde(rename = "r")]
     pub r: f64,
-    #[serde(rename = "tone")]
     pub tone: OnPropsTone,
-    #[serde(rename = "bare")]
     pub bare: super::on_props_bare::Props<'a>,
 }
 
@@ -111,8 +105,8 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(19 + props.text.len() + 4);
     out.push_str("<section>");
-    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: Some(props.n), on_text: Some(std::borrow::Cow::Borrowed(&*props.text)), on_flag: Some(props.flag), on_set: Some(props.flag), on_rate: Some(props.r.sqrt()), on_tone: Some(match props.tone { OnPropsTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }), on_req: props.flag, on_num: props.n })?;
-    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: Some(props.n).filter(|v| *v != 0), on_text: Some(std::borrow::Cow::Borrowed(&*props.text)).filter(|v| !v.is_empty()), on_flag: Some(props.flag).filter(|v| *v), on_set: Some(props.flag).filter(|v| *v), on_rate: Some(-props.r).filter(|v| *v != 0.0 && !v.is_nan()), on_tone: Some(match props.tone { OnPropsTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }).filter(|v| *v != super::on_props_kid::OnPropsKidOnTone::Empty), on_req: props.flag, on_num: 3i64 })?;
+    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: Some(props.n), on_text: Some(Cow::Borrowed(&*props.text)), on_flag: Some(props.flag), on_set: Some(props.flag), on_rate: Some(props.r.sqrt()), on_tone: Some(match props.tone { OnPropsTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }), on_req: props.flag, on_num: props.n })?;
+    super::on_props_kid::try_render(out, &super::on_props_kid::Props { on1: Some(props.n).filter(|v| *v != 0), on_text: Some(Cow::Borrowed(&*props.text)).filter(|v| !v.is_empty()), on_flag: Some(props.flag).filter(|v| *v), on_set: Some(props.flag).filter(|v| *v), on_rate: Some(-props.r).filter(|v| *v != 0.0 && !v.is_nan()), on_tone: Some(match props.tone { OnPropsTone::Empty => super::on_props_kid::OnPropsKidOnTone::Empty, OnPropsTone::Warm => super::on_props_kid::OnPropsKidOnTone::Warm, OnPropsTone::Cold => super::on_props_kid::OnPropsKidOnTone::Cold }).filter(|v| *v != super::on_props_kid::OnPropsKidOnTone::Empty), on_req: props.flag, on_num: 3i64 })?;
     super::on_props_bare::try_render(out, &props.bare)?;
     super::on_props_bare::try_render(out, &{ let mut fv_merged = props.bare.clone(); fv_merged.on1 = fv_merged.on1.filter(|v| *v != 0); fv_merged.on_label = fv_merged.on_label.filter(|v| !v.is_empty()); fv_merged.on_shown = fv_merged.on_shown.filter(|v| *v); fv_merged })?;
     out.push_str("</section>");

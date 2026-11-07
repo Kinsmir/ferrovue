@@ -12,9 +12,7 @@ pub const NAME: &str = "KebabTree";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "children")]
     pub children: Vec<Props<'a>>,
 }
 
@@ -63,7 +61,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &str) ->
     }
     if &*props.label == "root" {
         out.push_str("<ul data-v-189d3616>");
-        super::kebab_tree::try_render_scoped(out, &super::kebab_tree::Props { label: std::borrow::Cow::Borrowed("end"), children: Vec::new() }, " data-v-189d3616")?;
+        super::kebab_tree::try_render_scoped(out, &super::kebab_tree::Props { label: Cow::Borrowed("end"), children: Vec::new() }, " data-v-189d3616")?;
         out.push_str("</ul></li>");
     } else {
         out.push_str("<!----></li>");

@@ -12,15 +12,11 @@ pub const NAME: &str = "StringSearch";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "part")]
     pub part: Cow<'a, str>,
-    #[serde(rename = "at")]
     pub at: i64,
-    #[serde(rename = "limit")]
     pub limit: i64,
-    #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<i64>,
 }
 
@@ -54,7 +50,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(277 + props.text.len() + props.part.len());
-    let s_first_two = fv::strings::js_split_limit(&props.text, " ", 2.0f64).into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_first_two = fv::strings::js_split_limit(&props.text, " ", 2.0f64).into_iter().map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_tail = fv::strings::js_substr(&props.text, -(props.at as f64), None).into_owned();
     let s_codes = &[fv::strings::js_char_code_at(&props.text, 0.0f64), fv::strings::js_char_code_at(&props.text, props.at as f64)];
     out.push_str("<section data-from=\"");
@@ -92,7 +88,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split_limit(&props.text, " ", props.limit as f64).len() as i64);
     out.push('|');
-    fv::core::escape_join(out, s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), "+");
+    fv::core::escape_join(out, s_first_two.iter().map(|v| Cow::<str>::Borrowed(&**v)), "+");
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split_limit(&props.text, &props.part, -1.0f64).len() as i64);
     out.push('|');

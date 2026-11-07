@@ -12,15 +12,10 @@ pub const NAME: &str = "Unsanitised";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "url")]
     pub url: Cow<'a, str>,
-    #[serde(rename = "doc")]
     pub doc: Cow<'a, str>,
-    #[serde(rename = "handler")]
     pub handler: Cow<'a, str>,
-    #[serde(rename = "color")]
     pub color: Cow<'a, str>,
-    #[serde(rename = "css")]
     pub css: Cow<'a, str>,
 }
 

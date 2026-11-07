@@ -480,27 +480,19 @@ impl ferrovue::props::Union for UnionEnumsChosen {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "align")]
     pub align: super::types::Align,
-    #[serde(rename = "mode")]
     pub mode: UnionEnumsMode,
-    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub other: Option<UnionEnumsOther>,
-    #[serde(rename = "level")]
     pub level: super::types::Level,
-    #[serde(rename = "gap", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gap: Option<UnionEnumsGap>,
-    #[serde(rename = "mark")]
     pub mark: UnionEnumsMark,
-    #[serde(rename = "tag")]
     pub tag: UnionEnumsTag,
-    #[serde(rename = "size", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<UnionEnumsSize>,
-    #[serde(rename = "picked")]
     pub picked: Option<UnionEnumsPicked>,
-    #[serde(rename = "steps")]
     pub steps: Vec<super::types::Step<'a>>,
-    #[serde(rename = "note")]
     pub note: Cow<'a, str>,
 }
 
@@ -633,10 +625,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ol>");
-    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.mode)), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { UnionEnumsChosen::A => super::union_child::UnionChildPick::A, UnionEnumsChosen::B => super::union_child::UnionChildPick::B, UnionEnumsChosen::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
+    super::union_child::try_render(out, &super::union_child::Props { align: props.align, text: Cow::Borrowed(fv::props::Union::as_str(props.mode)), wide: Some(match props.align { super::types::Align::Left => super::union_child::UnionChildWide::Left, super::types::Align::Center => super::union_child::UnionChildWide::Center, super::types::Align::Right => super::union_child::UnionChildWide::Right }), pick: match s_chosen { UnionEnumsChosen::A => super::union_child::UnionChildPick::A, UnionEnumsChosen::B => super::union_child::UnionChildPick::B, UnionEnumsChosen::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::Y })?;
     out.push_str("<!--[-->");
     for fv_s_2 in props.steps.iter() {
-        super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(super::types::Align::Center), text: std::borrow::Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
+        super::union_child::try_render(out, &super::union_child::Props { align: fv_s_2.align.unwrap_or(super::types::Align::Center), text: Cow::Borrowed(&*fv_s_2.label), wide: None, pick: match props.other.unwrap_or(UnionEnumsOther::B) { UnionEnumsOther::A => super::union_child::UnionChildPick::A, UnionEnumsOther::B => super::union_child::UnionChildPick::B, UnionEnumsOther::C => super::union_child::UnionChildPick::C }, fixed: super::union_child::UnionChildFixed::X })?;
     }
     out.push_str("<!--]--><p>");
     fv::core::escape_into(out, &props.note);

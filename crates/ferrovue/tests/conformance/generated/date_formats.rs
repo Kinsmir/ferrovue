@@ -12,23 +12,17 @@ pub const NAME: &str = "DateFormats";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "posted", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub posted: ferrovue::date::JsDate,
-    #[serde(rename = "due", with = "fv::date::date_prop")]
+    #[serde(with = "fv::date::date_prop")]
     pub due: ferrovue::date::JsDate,
-    #[serde(rename = "edited", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub edited: Option<ferrovue::date::JsDate>,
-    #[serde(rename = "published")]
     pub published: Cow<'a, str>,
-    #[serde(rename = "year")]
     pub year: i64,
-    #[serde(rename = "month")]
     pub month: i64,
-    #[serde(rename = "day")]
     pub day: f64,
-    #[serde(rename = "times")]
     pub times: Vec<i64>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -66,7 +60,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(234 + 19 * props.times.len() + props.published.len() + props.label.len());
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateFormats.vue");
     let s_made = std::cell::LazyCell::new(|| fv::date::js_time_clip(fv_refusals.keep(fv::date::try_date_utc(props.year as f64, props.month as f64, props.day, 0.0f64, 0.0f64, 0.0f64, 0.0f64), 6, 38)));
-    let s_json = fv::date::js_to_json(fv::date::js_time_of(&props.posted)).map(std::borrow::Cow::<str>::Owned);
+    let s_json = fv::date::js_to_json(fv::date::js_time_of(&props.posted)).map(Cow::<str>::Owned);
     let s_early = fv::date::js_time_of(&props.posted) < fv::date::js_time_of(&props.due);
     out.push_str("<article><h2>");
     fv::core::escape_into(out, &props.label);
@@ -94,7 +88,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &fv::date::js_json_date(fv_refusals.keep(fv::date::try_date_parse(&props.published), 15, 97)));
     out.push('|');
-    fv::core::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    fv::core::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
     if fv::date::js_to_json(fv::date::js_time_of(&props.due)).as_deref().is_none() {
         out.push_str("</p><p>due is invalid</p><p>");
     } else {
@@ -137,7 +131,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("\">");
         fv::core::escape_into(out, &fv::date::js_to_utc_string(fv::date::js_time_clip(fv_t as f64)));
         out.push('|');
-        fv::core::escape_into(out, &fv::date::js_to_json(fv::date::js_time_clip(fv_t as f64)).map(std::borrow::Cow::<str>::Owned).unwrap_or(std::borrow::Cow::<str>::Borrowed("invalid")));
+        fv::core::escape_into(out, &fv::date::js_to_json(fv::date::js_time_clip(fv_t as f64)).map(Cow::<str>::Owned).unwrap_or(Cow::<str>::Borrowed("invalid")));
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul></article>");

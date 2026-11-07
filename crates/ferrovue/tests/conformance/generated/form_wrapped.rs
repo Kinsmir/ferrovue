@@ -12,13 +12,10 @@ pub const NAME: &str = "FormWrapped";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "note")]
     pub note: Cow<'a, str>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
     #[serde(rename = "modelValue")]
     pub model_value: Cow<'a, str>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 

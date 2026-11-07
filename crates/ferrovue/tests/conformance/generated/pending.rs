@@ -12,9 +12,7 @@ pub const NAME: &str = "Pending";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Row<'a> {
-    #[serde(rename = "id")]
     pub id: i64,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
 }
 
@@ -29,7 +27,6 @@ impl<'a> Row<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -59,7 +56,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(102 + props.title.len());
     let s_rows = &Vec::<Row<'_>>::new();
     let s_users = &Vec::<super::types::User<'_>>::new();
-    let s_names = &Vec::<std::borrow::Cow<str>>::new();
+    let s_names = &Vec::<Cow<str>>::new();
     let s_shown = s_names.iter().map(|v| &**v).collect::<Vec<_>>().join(", ");
     out.push_str("<section><h2>");
     fv::core::escape_into(out, &props.title);

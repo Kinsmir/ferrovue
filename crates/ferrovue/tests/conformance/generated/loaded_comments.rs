@@ -12,11 +12,9 @@ pub const NAME: &str = "LoadedComments";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "article")]
     pub article: Cow<'a, str>,
-    #[serde(rename = "page")]
     pub page: i64,
-    #[serde(rename = "drafts", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub drafts: Option<bool>,
 }
 
@@ -71,9 +69,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     fv::core::push_int(out, l_0.len() as i64);
     out.push_str(" on page ");
     fv::core::push_int(out, props.page);
-    if l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::strings::js_length(&fv_c) > 6) {
+    if l_0.iter().map(|v| Cow::<str>::Borrowed(&**v)).any(|fv_c| fv::strings::js_length(&fv_c) > 6) {
         out.push_str("</footer><ol><!--[-->");
-        for fv_c_cow in fv::strings::js_sorted(l_0.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::strings::js_length(fv_c_2) > 6), |a, b| fv::strings::js_cmp(a, b)) {
+        for fv_c_cow in fv::strings::js_sorted(l_0.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_c_2| fv::strings::js_length(fv_c_2) > 6), |a, b| fv::strings::js_cmp(a, b)) {
             let fv_c_3: &str = &fv_c_cow;
             out.push_str("<li>");
             fv::core::escape_into(out, fv_c_3);

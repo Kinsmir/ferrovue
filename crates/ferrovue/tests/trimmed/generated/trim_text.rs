@@ -12,13 +12,9 @@ pub const NAME: &str = "TrimText";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "items")]
     pub items: Vec<Cow<'a, str>>,
-    #[serde(rename = "on")]
     pub on: bool,
 }
 

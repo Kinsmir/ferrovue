@@ -12,7 +12,6 @@ pub const NAME: &str = "Shell";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
 }
 
@@ -58,10 +57,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push_str(">Home</a></nav>");
     super::cart_badge::try_render(out, &super::cart_badge::Props {}, fv_stores)?;
-    super::translated::try_render(out, &super::translated::Props { name: std::borrow::Cow::Borrowed(&*props.title) }, fv_i18n)?;
-    super::modal::try_render(out, &super::modal::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_teleports)?;
-    super::themed_button::try_render(out, &super::themed_button::Props { label: std::borrow::Cow::Borrowed(&*props.title) }, fv_provides)?;
-    super::head_note::try_render(out, &super::head_note::Props { title: std::borrow::Cow::Borrowed(&*props.title) }, fv_head)?;
+    super::translated::try_render(out, &super::translated::Props { name: Cow::Borrowed(&*props.title) }, fv_i18n)?;
+    super::modal::try_render(out, &super::modal::Props { title: Cow::Borrowed(&*props.title) }, fv_teleports)?;
+    super::themed_button::try_render(out, &super::themed_button::Props { label: Cow::Borrowed(&*props.title) }, fv_provides)?;
+    super::head_note::try_render(out, &super::head_note::Props { title: Cow::Borrowed(&*props.title) }, fv_head)?;
     out.push_str("<main>");
     fv_slots.router_view.render_to(out);
     out.push_str("</main>");

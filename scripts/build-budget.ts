@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +12,9 @@ export const COMPONENTS = 500;
 
 /** The most each step may take, in seconds, on a shared CI runner. */
 export const BUDGETS = { compiler: 10, dev: 60, release: 90 } as const;
+
+/** The most bytes of Rust ferrovue may write for the synthetic project. */
+export const SIZE_BUDGET = 3_000_000;
 
 type Step = keyof typeof BUDGETS;
 
@@ -110,6 +113,19 @@ export function writeProject(dir: string, count: number): void {
   copyFileSync(join(ROOT, "Cargo.lock"), join(dir, "Cargo.lock"));
 }
 
+/** The lines and bytes of the Rust files in `dir`. */
+export function generatedSize(dir: string): { lines: number; bytes: number } {
+  let lines = 0;
+  let bytes = 0;
+  for (const file of readdirSync(dir)) {
+    if (!file.endsWith(".rs")) continue;
+    const text = readFileSync(join(dir, file));
+    bytes += text.length;
+    lines += text.filter((b) => b === 10).length;
+  }
+  return { lines, bytes };
+}
+
 function seconds(run: () => void): number {
   const start = process.hrtime.bigint();
   run();
@@ -149,17 +165,21 @@ function main(): number {
     if (measured > BUDGETS[step]) measured = Math.min(measured, measure(step));
     return { step, measured, budget: BUDGETS[step], over: measured > BUDGETS[step] };
   });
+  const size = generatedSize(join(PROJECT, "src/generated"));
+  const big = size.bytes > SIZE_BUDGET;
   const table = [
-    "| Step | Time | Budget |",
+    "| Step | Measured | Budget |",
     "|---|---|---|",
     ...rows.map((r) => `| ${LABELS[r.step]} | ${r.measured.toFixed(2)} s | ${r.budget} s${r.over ? " (over)" : ""} |`),
+    `| Rust ferrovue writes | ${size.lines.toLocaleString("en")} lines, ${size.bytes.toLocaleString("en")} bytes | ${SIZE_BUDGET.toLocaleString("en")} bytes${big ? " (over)" : ""} |`,
   ].join("\n");
   console.log(table);
   const summary = process.env["GITHUB_STEP_SUMMARY"];
   if (summary) appendFileSync(summary, `### Build-time budgets\n\n${table}\n`);
   const over = rows.filter((r) => r.over);
   for (const r of over) console.error(`error: ${LABELS[r.step]} took ${r.measured.toFixed(2)} s twice, over its budget of ${r.budget} s`);
-  return over.length ? 1 : 0;
+  if (big) console.error(`error: ferrovue wrote ${size.bytes} bytes of Rust, over its budget of ${SIZE_BUDGET}`);
+  return over.length || big ? 1 : 0;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) process.exit(main());

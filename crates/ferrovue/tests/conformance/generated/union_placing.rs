@@ -10,9 +10,7 @@ pub const NAME: &str = "UnionPlacing";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Place {
-    #[serde(rename = "align")]
     pub align: super::types::Align,
-    #[serde(rename = "shade")]
     pub shade: super::types::Shade,
 }
 
@@ -27,9 +25,8 @@ impl Place {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Slot {
-    #[serde(rename = "place", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub place: Option<Place>,
-    #[serde(rename = "align")]
     pub align: super::types::Align,
 }
 
@@ -50,15 +47,11 @@ impl Slot {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "place", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub place: Option<Place>,
-    #[serde(rename = "places")]
     pub places: Vec<Place>,
-    #[serde(rename = "named")]
     pub named: ferrovue::props::Record<'a, Place>,
-    #[serde(rename = "slot")]
     pub slot: Slot,
-    #[serde(rename = "slots")]
     pub slots: Vec<Slot>,
 }
 

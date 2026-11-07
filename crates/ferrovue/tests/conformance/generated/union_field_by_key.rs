@@ -72,9 +72,7 @@ impl ferrovue::props::Union for Side {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct UnionFieldByKeyLabels<'a> {
-    #[serde(rename = "left")]
     pub left: Cow<'a, str>,
-    #[serde(rename = "right")]
     pub right: Cow<'a, str>,
 }
 
@@ -89,9 +87,7 @@ impl<'a> UnionFieldByKeyLabels<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "side")]
     pub side: Side,
-    #[serde(rename = "labels")]
     pub labels: UnionFieldByKeyLabels<'a>,
 }
 

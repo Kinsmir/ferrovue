@@ -10,9 +10,7 @@ use std::borrow::Cow;
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Line<'a> {
-    #[serde(rename = "sku")]
     pub sku: Cow<'a, str>,
-    #[serde(rename = "qty")]
     pub qty: i64,
 }
 
@@ -28,11 +26,9 @@ impl<'a> Line<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct CartState<'a> {
-    #[serde(rename = "lines")]
     pub lines: Vec<Line<'a>>,
-    #[serde(rename = "coupon", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub coupon: Option<Cow<'a, str>>,
-    #[serde(rename = "owner")]
     pub owner: Cow<'a, str>,
 }
 
@@ -54,15 +50,11 @@ impl<'a> CartState<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct CounterState<'a> {
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "step")]
     pub step: f64,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "history")]
     pub history: Vec<i64>,
-    #[serde(rename = "owner", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<Cow<'a, str>>,
 }
 
@@ -84,9 +76,8 @@ impl<'a> CounterState<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Tag<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "color", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<Cow<'a, str>>,
 }
 
@@ -108,15 +99,11 @@ impl<'a> Tag<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct PrefsState<'a> {
-    #[serde(rename = "density")]
     pub density: Cow<'a, str>,
-    #[serde(rename = "wide")]
     pub wide: bool,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "label", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'a, str>>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Tag<'a>>,
 }
 
@@ -138,9 +125,7 @@ impl<'a> PrefsState<'a> {
 #[cfg_attr(test, derive(serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct SessionState<'a> {
-    #[serde(rename = "user")]
     pub user: Option<Cow<'a, str>>,
-    #[serde(rename = "visits")]
     pub visits: Option<i64>,
 }
 
@@ -168,13 +153,9 @@ impl<'a> SessionState<'a> {
 #[cfg_attr(test, derive(Default, serde::Deserialize))]
 #[cfg_attr(test, serde(default))]
 pub struct Stores<'a> {
-    #[serde(rename = "cart")]
     pub cart: CartState<'a>,
-    #[serde(rename = "counter")]
     pub counter: CounterState<'a>,
-    #[serde(rename = "prefs")]
     pub prefs: PrefsState<'a>,
-    #[serde(rename = "session")]
     pub session: SessionState<'a>,
 }
 

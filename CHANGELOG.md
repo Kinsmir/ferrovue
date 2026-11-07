@@ -20,6 +20,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
   [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 - Generated code is version 9, which writes a list's `.join()` into the page item by item with helpers the 0.15 crate lacks, so renders that join run up to 25% fewer instructions; the 0.16 crate builds versions 6 to 8 too.
   [The version check](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-version-check).
+- Generated code writes `std::borrow::Cow` as `Cow`, and a field's `#[serde(rename)]` only where its JSON key differs from its name, which makes the generated Rust about 3% smaller.
+  [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 
 ## [0.15.2] - 2026-11-07
 

@@ -12,15 +12,12 @@ pub const NAME: &str = "UnionTypes";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "tone")]
     pub tone: super::types::Shade,
-    #[serde(rename = "other", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub other: Option<super::types::Shade>,
-    #[serde(rename = "picked")]
     pub picked: Option<super::types::Shade>,
-    #[serde(rename = "fallback", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fallback: Option<super::types::Shade>,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -115,9 +112,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::escape_into(out, s_loud);
     out.push_str("</s>");
-    super::union_shade::try_render(out, &super::union_shade::Props { tone: props.tone, text: std::borrow::Cow::Borrowed(&*props.label) })?;
-    super::union_shade::try_render(out, &super::union_shade::Props { tone: s_chosen, text: std::borrow::Cow::Borrowed(fv::props::Union::as_str(props.tone)) })?;
-    super::union_shade::try_render(out, &super::union_shade::Props { tone: props.other.unwrap_or(super::types::Shade::Warm), text: std::borrow::Cow::Borrowed("fixed") })?;
+    super::union_shade::try_render(out, &super::union_shade::Props { tone: props.tone, text: Cow::Borrowed(&*props.label) })?;
+    super::union_shade::try_render(out, &super::union_shade::Props { tone: s_chosen, text: Cow::Borrowed(fv::props::Union::as_str(props.tone)) })?;
+    super::union_shade::try_render(out, &super::union_shade::Props { tone: props.other.unwrap_or(super::types::Shade::Warm), text: Cow::Borrowed("fixed") })?;
     out.push_str("</section>");
     Ok(())
 }

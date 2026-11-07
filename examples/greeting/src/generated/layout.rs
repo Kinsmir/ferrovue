@@ -12,7 +12,6 @@ pub const NAME: &str = "Layout";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "user")]
     pub user: Cow<'a, str>,
 }
 

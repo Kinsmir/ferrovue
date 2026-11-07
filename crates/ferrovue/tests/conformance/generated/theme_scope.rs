@@ -12,7 +12,7 @@ pub const NAME: &str = "ThemeScope";
 #[derive(Debug, Clone, Default, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "theme", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub theme: Option<Cow<'a, str>>,
 }
 
@@ -63,7 +63,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_p
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_provides: super::provides::Provides<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(50 + props.theme.as_deref().map_or(0, str::len));
     let fv_inherited = fv_provides;
-    let s_mine = props.theme.as_deref().map(std::borrow::Cow::<str>::Borrowed).unwrap_or(std::borrow::Cow::<str>::Owned(format!("{}-inverse", fv_inherited.theme_key.unwrap_or("light"))));
+    let s_mine = props.theme.as_deref().map(Cow::<str>::Borrowed).unwrap_or(Cow::<str>::Owned(format!("{}-inverse", fv_inherited.theme_key.unwrap_or("light"))));
     let fv_provides = super::provides::Provides { theme_key: Some(&s_mine), tone: Some("scoped"), ..fv_inherited };
     out.push_str("<div");
     if fv_attrs.is_empty() {

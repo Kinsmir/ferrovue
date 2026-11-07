@@ -12,21 +12,14 @@ pub const NAME: &str = "JoinBranches";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "shape")]
     pub shape: Cow<'a, str>,
-    #[serde(rename = "head")]
     pub head: Cow<'a, str>,
-    #[serde(rename = "bar")]
     pub bar: i64,
-    #[serde(rename = "count")]
     pub count: i64,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "extra")]
     pub extra: Cow<'a, str>,
-    #[serde(rename = "who", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub who: Option<Cow<'a, str>>,
-    #[serde(rename = "both")]
     pub both: Cow<'a, str>,
 }
 
@@ -82,7 +75,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     if out.len() != fv_class_2 { out.push(' '); }
     fv::core::escape_into(out, fv::strings::js_trim_start(&props.head));
     out.push_str("-head");
-    fv::attrs::class_into(out, true, &[&*(if props.on { std::borrow::Cow::<str>::Borrowed("lit") } else { std::borrow::Cow::<str>::Owned(format!("{}{}", props.extra, props.shape)) })]);
+    fv::attrs::class_into(out, true, &[&*(if props.on { Cow::<str>::Borrowed("lit") } else { Cow::<str>::Owned(format!("{}{}", props.extra, props.shape)) })]);
     if let Some(fv_who) = props.who.as_deref().filter(|v| !v.is_empty()) {
         out.push_str("\">hi ");
         fv::core::escape_into(out, fv_who);

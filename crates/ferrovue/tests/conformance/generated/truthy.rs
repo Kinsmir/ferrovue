@@ -12,11 +12,9 @@ pub const NAME: &str = "Truthy";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Person<'a> {
-    #[serde(rename = "name")]
     pub name: Cow<'a, str>,
-    #[serde(rename = "title", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<Cow<'a, str>>,
-    #[serde(rename = "city")]
     pub city: Option<Cow<'a, str>>,
 }
 
@@ -43,21 +41,13 @@ impl<'a> Person<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "person")]
     pub person: Person<'a>,
-    #[serde(rename = "tags")]
     pub tags: Vec<Option<Cow<'a, str>>>,
-    #[serde(rename = "counts")]
     pub counts: Vec<Option<i64>>,
-    #[serde(rename = "ratios")]
     pub ratios: Vec<f64>,
-    #[serde(rename = "people")]
     pub people: Vec<Option<Person<'a>>>,
-    #[serde(rename = "words")]
     pub words: Vec<Cow<'a, str>>,
-    #[serde(rename = "flags")]
     pub flags: Vec<bool>,
-    #[serde(rename = "urgent")]
     pub urgent: bool,
 }
 
@@ -87,13 +77,13 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(121 + props.person.name.len() + props.person.title.as_deref().map_or(0, str::len) + props.person.city.as_deref().map_or(0, str::len) + props.tags.iter().map(|v| v.as_deref().map_or(0, str::len)).sum::<usize>() + props.people.iter().map(|v| v.as_ref().map_or(0, |v| v.name.len() + v.title.as_deref().map_or(0, str::len) + v.city.as_deref().map_or(0, str::len))).sum::<usize>() + props.words.iter().map(|v| v.len()).sum::<usize>());
-    let s_byline = [Some(&*props.person.name), props.person.title.as_deref(), props.person.city.as_deref()].into_iter().flatten().map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item| !fv_item.is_empty()).collect::<Vec<_>>().join(" · ");
+    let s_byline = [Some(&*props.person.name), props.person.title.as_deref(), props.person.city.as_deref()].into_iter().flatten().map(Cow::<str>::Borrowed).filter(|fv_item| !fv_item.is_empty()).collect::<Vec<_>>().join(" · ");
     out.push_str("<article><h1>");
     fv::core::escape_into(out, &s_byline);
     out.push_str("</h1><p>");
-    fv::core::escape_join(out, [props.person.title.as_deref(), if props.urgent { Some("urgent") } else { None }, Some("draft")].into_iter().flatten().map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item_2| !fv_item_2.is_empty()), ", ");
+    fv::core::escape_join(out, [props.person.title.as_deref(), if props.urgent { Some("urgent") } else { None }, Some("draft")].into_iter().flatten().map(Cow::<str>::Borrowed).filter(|fv_item_2| !fv_item_2.is_empty()), ", ");
     out.push_str("</p><ul><!--[-->");
-    for (fv_i, fv_t_cow) in props.tags.iter().filter_map(|v| v.as_deref()).map(std::borrow::Cow::<str>::Borrowed).filter(|fv_item_3| !fv_item_3.is_empty()).enumerate() {
+    for (fv_i, fv_t_cow) in props.tags.iter().filter_map(|v| v.as_deref()).map(Cow::<str>::Borrowed).filter(|fv_item_3| !fv_item_3.is_empty()).enumerate() {
         let fv_t: &str = &fv_t_cow;
         let fv_i = fv_i as i64;
         out.push_str("<li data-i=\"");
@@ -109,21 +99,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.people.iter().filter_map(|v| v.as_ref()).count() as i64);
     out.push_str("</p><p>");
-    fv::core::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_item_6| !fv_item_6.is_empty()).count() as i64);
+    fv::core::push_int(out, props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_item_6| !fv_item_6.is_empty()).count() as i64);
     out.push('|');
-    out.push_str(if props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).any(|fv_item_7| !fv_item_7.is_empty()) { "true" } else { "false" });
+    out.push_str(if props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).any(|fv_item_7| !fv_item_7.is_empty()) { "true" } else { "false" });
     out.push('|');
-    out.push_str(if props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).all(|fv_item_8| !fv_item_8.is_empty()) { "true" } else { "false" });
+    out.push_str(if props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).all(|fv_item_8| !fv_item_8.is_empty()) { "true" } else { "false" });
     out.push('|');
-    fv::core::push_int(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).position(|fv_item_9| !fv_item_9.is_empty()).map_or(-1, |i| i as i64));
+    fv::core::push_int(out, props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).position(|fv_item_9| !fv_item_9.is_empty()).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::core::escape_into(out, &props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).find(|fv_item_10| !fv_item_10.is_empty()).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("none")));
+    fv::core::escape_into(out, &props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_item_10| !fv_item_10.is_empty()).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("none")));
     out.push_str("</p><p>");
     fv::core::push_int(out, props.flags.iter().copied().filter(|fv_item_11| *fv_item_11).count() as i64);
     out.push('/');
     fv::core::push_int(out, props.flags.len() as i64);
     out.push('|');
-    fv::core::escape_join(out, props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_item_12| !fv_item_12.is_empty()).map(|v| if v { "true" } else { "false" }), ",");
+    fv::core::escape_join(out, props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_item_12| !fv_item_12.is_empty()).map(|v| if v { "true" } else { "false" }), ",");
     out.push('|');
     out.push_str(if props.person.title.as_deref().is_some_and(|v| !v.is_empty()) { "true" } else { "false" });
     out.push('|');

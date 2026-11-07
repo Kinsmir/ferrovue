@@ -14,9 +14,9 @@ pub const NAME: &str = "Model";
 pub struct Props<'a> {
     #[serde(rename = "modelValue")]
     pub model_value: Cow<'a, str>,
-    #[serde(rename = "open", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub open: Option<bool>,
-    #[serde(rename = "level", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub level: Option<i64>,
 }
 

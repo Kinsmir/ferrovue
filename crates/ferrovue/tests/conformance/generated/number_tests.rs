@@ -12,15 +12,12 @@ pub const NAME: &str = "NumberTests";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "x")]
     pub x: f64,
-    #[serde(rename = "maybe", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maybe: Option<f64>,
-    #[serde(rename = "count", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i64>,
-    #[serde(rename = "inputs")]
     pub inputs: Vec<Cow<'a, str>>,
 }
 
@@ -60,7 +57,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(254 + 37 * props.inputs.len() + props.inputs.iter().map(|v| v.len()).sum::<usize>());
-    let s_parsed = props.inputs.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).collect::<Vec<_>>();
+    let s_parsed = props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s| fv::strings::js_number(&fv_s)).collect::<Vec<_>>();
     let s_finite = (props.x / props.n as f64).is_finite();
     let s_kept = s_parsed.iter().copied().filter(|fv_v| !fv_v.is_nan() && fv_v.is_finite()).collect::<Vec<_>>();
     out.push_str("<section><p>false|true|true|");

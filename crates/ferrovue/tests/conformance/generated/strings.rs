@@ -12,17 +12,12 @@ pub const NAME: &str = "Strings";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "other")]
     pub other: Cow<'a, str>,
-    #[serde(rename = "sep")]
     pub sep: Cow<'a, str>,
-    #[serde(rename = "n")]
     pub n: i64,
-    #[serde(rename = "width")]
     pub width: i64,
-    #[serde(rename = "fill", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fill: Option<Cow<'a, str>>,
 }
 
@@ -58,9 +53,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.reserve(213 + props.text.len() + props.other.len() + props.sep.len() + props.fill.as_deref().map_or(0, str::len));
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Strings.vue");
     let s_initial = fv::strings::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
-    let s_words = fv::strings::js_split(&props.text, " ").into_iter().map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_words = fv::strings::js_split(&props.text, " ").into_iter().map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
     let s_short = fv::strings::js_slice(&props.text, 0.0f64, Some(3.0f64)).into_owned();
-    let s_last = fv::strings::js_at(&props.text.to_uppercase(), -1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()));
+    let s_last = fv::strings::js_at(&props.text.to_uppercase(), -1.0f64).map(|v| Cow::<str>::Owned(v.to_owned()));
     out.push_str("<section><p>");
     fv::core::escape_into(out, &fv::strings::js_slice(&props.text, 0.0f64, Some(5.0f64)));
     out.push('|');
@@ -112,7 +107,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_join(out, fv::strings::js_split(&props.text, ","), " / ");
     out.push('|');
-    fv::core::escape_join(out, s_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 2), "+");
+    fv::core::escape_join(out, s_words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 2), "+");
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split(&props.text, &props.sep).len() as i64);
     out.push_str("</p><p>");
@@ -152,17 +147,17 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, s_last.as_deref().unwrap_or("-"));
     out.push('|');
-    if let Some(v) = (if props.n as f64 > 1.0 { fv::strings::js_at(&props.text.to_uppercase(), 1.0f64).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) } else { None }).as_deref() {
+    if let Some(v) = (if props.n as f64 > 1.0 { fv::strings::js_at(&props.text.to_uppercase(), 1.0f64).map(|v| Cow::<str>::Owned(v.to_owned())) } else { None }).as_deref() {
         fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape_into(out, &(if fv::strings::js_length(&s_short) < 3 { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { std::borrow::Cow::<str>::Borrowed(&*s_short) }));
+    fv::core::escape_into(out, &(if fv::strings::js_length(&s_short) < 3 { Cow::<str>::Owned(fv::strings::js_pad_end(&s_short, 3.0f64, "_").into_owned()) } else { Cow::<str>::Borrowed(&*s_short) }));
     out.push_str(if &*fv::strings::js_slice(&props.text, 0.0f64, Some(1.0f64)) == "a" { "</p><b>starts with a</b><p>" } else { "</p><!----><p>" });
-    fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_slice(&props.text, 1.0f64, None).to_lowercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(fv::strings::js_slice(&props.text, 1.0f64, None).to_lowercase()); if !a.is_empty() { a } else { Cow::<str>::Borrowed("-") } });
     out.push('|');
-    fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed(&*props.sep) } });
+    fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(fv::strings::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { Cow::<str>::Borrowed(&*props.sep) } });
     out.push('|');
-    fv::core::escape_into(out, &{ let a = std::borrow::Cow::<str>::Owned(format!("{}a", fv::strings::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).unwrap_or(std::borrow::Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { std::borrow::Cow::<str>::Borrowed("-") } });
+    fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(format!("{}a", fv::strings::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { Cow::<str>::Borrowed("-") } });
     out.push_str("</p></section>");
     fv_refusals.check(Ok(()))
 }

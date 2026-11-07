@@ -12,9 +12,8 @@ pub const NAME: &str = "DataList";
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Row<'a> {
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
-    #[serde(rename = "hint", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hint: Option<Cow<'a, str>>,
 }
 
@@ -35,11 +34,8 @@ impl<'a> Row<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "rows")]
     pub rows: Vec<Row<'a>>,
-    #[serde(rename = "owner")]
     pub owner: super::types::Owner<'a>,
 }
 

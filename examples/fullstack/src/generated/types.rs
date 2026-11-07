@@ -12,13 +12,9 @@ use ferrovue as fv;
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Book<'a> {
-    #[serde(rename = "id")]
     pub id: Cow<'a, str>,
-    #[serde(rename = "title")]
     pub title: Cow<'a, str>,
-    #[serde(rename = "author")]
     pub author: Cow<'a, str>,
-    #[serde(rename = "year")]
     pub year: i64,
 }
 
@@ -33,13 +29,10 @@ impl<'a> Book<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Review<'a> {
-    #[serde(rename = "reader")]
     pub reader: Cow<'a, str>,
-    #[serde(rename = "stars")]
     pub stars: i64,
-    #[serde(rename = "text")]
     pub text: Cow<'a, str>,
-    #[serde(rename = "posted", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub posted: Option<ferrovue::date::JsDate>,
 }
 
@@ -60,11 +53,9 @@ impl<'a> Review<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Stock<'a> {
-    #[serde(rename = "copies")]
     pub copies: i64,
-    #[serde(rename = "warehouse")]
     pub warehouse: Cow<'a, str>,
-    #[serde(rename = "counted", default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
+    #[serde(default, skip_serializing_if = "Option::is_none", with = "fv::date::opt_date_prop")]
     pub counted: Option<ferrovue::date::JsDate>,
 }
 
@@ -85,9 +76,7 @@ impl<'a> Stock<'a> {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Warehouse<'a> {
-    #[serde(rename = "city")]
     pub city: Cow<'a, str>,
-    #[serde(rename = "days")]
     pub days: i64,
 }
 

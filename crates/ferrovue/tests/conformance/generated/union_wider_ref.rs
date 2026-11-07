@@ -344,15 +344,11 @@ impl ferrovue::props::Union for UnionWiderRefChosen {
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct Props<'a> {
-    #[serde(rename = "mark")]
     pub mark: super::types::Mark,
-    #[serde(rename = "spare", default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub spare: Option<super::types::Mark>,
-    #[serde(rename = "mood")]
     pub mood: super::types::Mood,
-    #[serde(rename = "on")]
     pub on: bool,
-    #[serde(rename = "label")]
     pub label: Cow<'a, str>,
 }
 
@@ -414,23 +410,23 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<i>empty</i>");
     } else {
         if let Some(fv_spared) = match s_spared { Some(UnionWiderRefSpared::Amp) => Some(super::types::Mark::Amp), Some(UnionWiderRefSpared::Bang) => Some(super::types::Mark::Bang), Some(UnionWiderRefSpared::Hex) => Some(super::types::Mark::Hex), Some(UnionWiderRefSpared::Tag) => Some(super::types::Mark::Tag), Some(UnionWiderRefSpared::Empty) | None => None } {
-            super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_spared), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+            super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_spared), label: Cow::Borrowed(&*props.label) })?;
         } else {
             out.push_str("<i>absent</i>");
         }
     }
     if let Some(fv_picked) = match s_picked { UnionWiderRefPicked::Amp => Some(super::types::Mark::Amp), UnionWiderRefPicked::Bang => Some(super::types::Mark::Bang), UnionWiderRefPicked::Hex => Some(super::types::Mark::Hex), UnionWiderRefPicked::Tag => Some(super::types::Mark::Tag), UnionWiderRefPicked::Empty => None } {
-        super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_picked), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        super::union_mark::try_render(out, &super::union_mark::Props { mark: Some(fv_picked), label: Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<!---->");
     }
-    super::union_mark::try_render(out, &super::union_mark::Props { mark: match s_held { UnionWiderRefHeld::Amp => Some(super::types::Mark::Amp), UnionWiderRefHeld::Bang => Some(super::types::Mark::Bang), UnionWiderRefHeld::Hex => Some(super::types::Mark::Hex), UnionWiderRefHeld::Tag => Some(super::types::Mark::Tag), UnionWiderRefHeld::Empty => None }, label: std::borrow::Cow::Borrowed(&*format!("{}!", fv::props::Union::as_str(s_held))) })?;
+    super::union_mark::try_render(out, &super::union_mark::Props { mark: match s_held { UnionWiderRefHeld::Amp => Some(super::types::Mark::Amp), UnionWiderRefHeld::Bang => Some(super::types::Mark::Bang), UnionWiderRefHeld::Hex => Some(super::types::Mark::Hex), UnionWiderRefHeld::Tag => Some(super::types::Mark::Tag), UnionWiderRefHeld::Empty => None }, label: Cow::Borrowed(&*format!("{}!", fv::props::Union::as_str(s_held))) })?;
     if let Some(fv_kept) = match s_kept { UnionWiderRefKept::Calm => Some(super::types::Mood::Calm), UnionWiderRefKept::Loud => Some(super::types::Mood::Loud), UnionWiderRefKept::QX => Some(super::types::Mood::QX), UnionWiderRefKept::Empty => None } {
-        super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv_kept), label: std::borrow::Cow::Borrowed(&*props.label) })?;
+        super::union_badge::try_render(out, &super::union_badge::Props { mood: Some(fv_kept), label: Cow::Borrowed(&*props.label) })?;
     } else {
         out.push_str("<!---->");
     }
-    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_chosen { UnionWiderRefChosen::Calm => Some(super::types::Mood::Calm), UnionWiderRefChosen::Loud => Some(super::types::Mood::Loud), UnionWiderRefChosen::QX => Some(super::types::Mood::QX), UnionWiderRefChosen::Empty => None }, label: std::borrow::Cow::Borrowed(fv::props::Union::as_str(s_chosen)) })?;
+    super::union_badge::try_render(out, &super::union_badge::Props { mood: match s_chosen { UnionWiderRefChosen::Calm => Some(super::types::Mood::Calm), UnionWiderRefChosen::Loud => Some(super::types::Mood::Loud), UnionWiderRefChosen::QX => Some(super::types::Mood::QX), UnionWiderRefChosen::Empty => None }, label: Cow::Borrowed(fv::props::Union::as_str(s_chosen)) })?;
     out.push_str("<b class=\"");
     fv::attrs::class_into(out, false, &[if s_chosen == UnionWiderRefChosen::Empty { "none" } else { "" }, if s_kept == UnionWiderRefKept::Calm { "calm" } else { "" }]);
     out.push_str("\">");
