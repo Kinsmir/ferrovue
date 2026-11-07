@@ -148,7 +148,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     } else {
         out.push_str("|<!----></p><p>");
     }
-    fv::core::escape_into(out, if let Some(fv_side_2) = props.side { if fv_side_2 != super::types::Align::Right { match fv_side_2 { super::types::Align::Left => "l", super::types::Align::Center | super::types::Align::Right => "c" } } else { "x" } } else { "x" });
+    out.push_str(if let Some(fv_side_2) = props.side { if fv_side_2 != super::types::Align::Right { match fv_side_2 { super::types::Align::Left => "l", super::types::Align::Center | super::types::Align::Right => "c" } } else { "x" } } else { "x" });
     out.push('|');
     out.push_str(if props.state != UnionObjectsState::Todo && props.state != UnionObjectsState::Done { "true" } else { "false" });
     out.push('|');

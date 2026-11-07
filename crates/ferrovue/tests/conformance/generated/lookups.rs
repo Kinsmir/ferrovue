@@ -81,7 +81,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\" style=\"color:");
     fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "navy", super::types::Tone::Warn => "<b>\"&amp;'", super::types::Tone::Danger => "white" });
     out.push_str(";background:");
-    fv::core::escape_into(out, match props.tone { super::types::Tone::Info => "#eef", super::types::Tone::Warn => "#ffd", super::types::Tone::Danger => "#a00" });
+    out.push_str(match props.tone { super::types::Tone::Info => "#eef", super::types::Tone::Warn => "#ffd", super::types::Tone::Danger => "#a00" });
     out.push_str(";width:");
     fv::core::push_number(out, match props.size { super::types::Size::Sm => 8.0f64, super::types::Size::Md => 12.5f64, super::types::Size::Lg => 16.0f64 });
     out.push_str("px;\"><h2 title=\"");
@@ -112,7 +112,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</p><p class=\"");
         fv::attrs::class_into(out, false, &[fv::props::Union::as_str(props.kind.unwrap_or(super::types::Kind::Note))]);
         out.push_str("\">");
-        fv::core::escape_into(out, match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
+        out.push_str(match props.kind.unwrap_or(super::types::Kind::Note) { super::types::Kind::Note => "ℹ", super::types::Kind::Tip | super::types::Kind::Alert => "★" });
         out.push_str("</p>");
     } else {
         out.push_str("</p><p>no icon</p>");

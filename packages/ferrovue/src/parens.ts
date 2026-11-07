@@ -230,11 +230,57 @@ export function ifElse(code: string): { test: string; yes: string; no: string } 
   return { test: code.slice(3, open - 1), yes: code.slice(open + 2, close - 1), no: code.slice(close + 9, -2) };
 }
 
+function matchValues(code: string): string[] | null {
+  if (!code.startsWith("match ")) return null;
+  let body = -1;
+  for (let i = 6; i < code.length; i++) {
+    const ch = code[i]!;
+    if (ch === '"' || ch === "'") i = literalEnd(code, i);
+    else if (ch === "(" || ch === "[" || ch === "{") {
+      const end = closing(code, i);
+      if (end < 0) return null;
+      if (ch === "{" && end === code.length - 1) {
+        body = i;
+        break;
+      }
+      i = end;
+    }
+  }
+  if (body < 0) return null;
+  const values: string[] = [];
+  let start = body + 1;
+  let arrow = -1;
+  const arm = (end: number): boolean => {
+    const text = code.slice(start, end).trim();
+    if (text === "") return arrow < 0;
+    if (arrow < 0) return false;
+    values.push(code.slice(arrow + 2, end).trim());
+    return true;
+  };
+  for (let i = body + 1; i < code.length - 1; i++) {
+    const ch = code[i]!;
+    if (ch === '"' || ch === "'") i = literalEnd(code, i);
+    else if (ch === "(" || ch === "[" || ch === "{") {
+      i = closing(code, i);
+      if (i < 0) return null;
+    } else if (ch === "=" && code[i + 1] === ">" && arrow < 0) arrow = i++;
+    else if (ch === ",") {
+      if (!arm(i)) return null;
+      start = i + 1;
+      arrow = -1;
+    }
+  }
+  if (!arm(code.length - 1)) return null;
+  return values.length > 0 ? values : null;
+}
+
 /** Whether the string `code` gives is one of string literals that hold no character HTML escapes,
- * as `if on { "yes" } else { "no" }` is. */
+ * as `if on { "yes" } else { "no" }` and `match size { Size::Sm => "small", _ => "large" }` are. */
 export function escapeFree(code: string): boolean {
   const branches = ifElse(code);
   if (branches) return escapeFree(branches.yes) && escapeFree(branches.no);
+  const values = matchValues(code);
+  if (values) return values.every(escapeFree);
   return /^"(?:[^"\\&<>']|\\[\\nrt])*"$/.test(code);
 }
 
