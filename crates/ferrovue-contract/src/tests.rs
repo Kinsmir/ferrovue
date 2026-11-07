@@ -15,9 +15,9 @@ use ferrovue::{
 
 use crate::domain::Tone;
 use crate::generated::{
-    blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, modal,
-    picker, posted, provides, rated, render_json, route_table, scored, shell, sized, stamped,
-    stores, theme_scope, themed_button, timeline, toned, translated, twins, types,
+    blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, joined,
+    modal, picker, posted, provides, rated, render_json, route_table, scored, shell, sized,
+    stamped, stores, theme_scope, themed_button, timeline, toned, translated, twins, types,
 };
 
 const _: fn(&mut String, &sized::Props) = sized::render;
@@ -628,4 +628,18 @@ fn html_and_a_page_return_the_refusal_and_write_nothing() {
         .try_fill([Part::new(posted::NAME, posted::html(&refusing))])
         .unwrap_err();
     assert_eq!(refused.code(), "FV1811");
+}
+
+#[test]
+fn a_list_joined_into_the_page_is_escaped() {
+    let props = joined::Props::new(["<a>", "b&c"], vec![1, -2], vec![0.5, -0.0], " & ");
+    assert_eq!(
+        render(|out| joined::render(out, &props)),
+        r#"<p title="&lt;a&gt; &amp; b&amp;c">&lt;a&gt; &amp; b&amp;c|1, -2|0.5,0</p>"#
+    );
+    let empty = joined::Props::new(Vec::<String>::new(), Vec::new(), Vec::new(), ",");
+    assert_eq!(
+        render(|out| joined::render(out, &empty)),
+        r#"<p title>||</p>"#
+    );
 }

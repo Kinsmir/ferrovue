@@ -128,7 +128,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push('|');
     if props.on {
-        fv::core::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
+        fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");
     } else {
         fv::core::push_number(out, props.price);
     }

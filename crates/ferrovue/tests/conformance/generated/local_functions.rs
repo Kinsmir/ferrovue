@@ -111,7 +111,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</li>");
     }
     out.push_str("<!--]--></ul><p>");
-    fv::core::escape_into(out, &props.members.iter().map(|fv_m_2| std::borrow::Cow::<str>::Borrowed(if fv_m_2.score as f64 >= 90.0 { "A" } else { if fv_m_2.score as f64 >= 50.0 { "B" } else { "C" } })).collect::<Vec<_>>().join(""));
+    fv::core::escape_join(out, props.members.iter().map(|fv_m_2| std::borrow::Cow::<str>::Borrowed(if fv_m_2.score as f64 >= 90.0 { "A" } else { if fv_m_2.score as f64 >= 50.0 { "B" } else { "C" } })), "");
     out.push_str("</p></section>");
     Ok(())
 }

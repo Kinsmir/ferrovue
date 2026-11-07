@@ -135,23 +135,23 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push_str("|undefined|null|[undefined]</p><p>");
-    fv::core::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.nums.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_ints(out, props.nums.iter().copied(), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.fracs.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_numbers(out, props.fracs.iter().copied(), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.flags.iter().copied().map(|v| if v { "true" } else { "false" }).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.flags.iter().copied().map(|v| if v { "true" } else { "false" }), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.names.iter().map(|v| v.as_deref().unwrap_or("")).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.names.iter().map(|v| v.as_deref().unwrap_or("")), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.marks.iter().map(|v| v.map_or_else(String::new, |v| fv::core::Js(v).to_string())).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.marks.iter().map(|v| v.map_or_else(String::new, |v| fv::core::Js(v).to_string())), ",");
     out.push_str("|</p><p>");
-    fv::core::escape_into(out, &props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_t_2.to_uppercase()).into_owned())).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_t_2| std::borrow::Cow::<str>::Owned(std::borrow::Cow::<str>::Owned(fv_t_2.to_uppercase()).into_owned())), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.nums.iter().copied().map(|fv_n| fv_n as f64 / 2.0).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_numbers(out, props.nums.iter().copied().map(|fv_n| fv_n as f64 / 2.0), ",");
     out.push_str("|(");
-    fv::core::escape_into(out, &fv::strings::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, fv::strings::js_slice_items(props.tags.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), 1.0f64, None), ",");
     out.push_str(")|");
     fv::core::escape_into(out, &s_kept);
     out.push('|');
@@ -167,7 +167,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, props.label.as_deref().unwrap_or("none"));
     out.push('|');
-    fv::core::escape_into(out, &props.tags.iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::core::escape_join(out, props.tags.iter().map(|v| &**v), "+");
     out.push_str("</p></section>");
     Ok(())
 }

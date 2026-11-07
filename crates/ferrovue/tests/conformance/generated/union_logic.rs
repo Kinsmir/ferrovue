@@ -204,7 +204,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if props.on { props.pick.map(|v| match v { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }) } else { None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     super::narrowed_tone::try_render(out, &super::narrowed_tone::Props { tone: if props.on { Some(match props.other { Tone::Calm => super::narrowed_tone::Tone::Calm, Tone::Loud => super::narrowed_tone::Tone::Loud, Tone::AB => super::narrowed_tone::Tone::AB }) } else { None }, label: std::borrow::Cow::Borrowed(&*props.label) })?;
     out.push_str("<i>");
-    fv::core::escape_into(out, &((Mix { tones: vec![props.other, Tone::Calm] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, ((Mix { tones: vec![props.other, Tone::Calm] }).tones).iter().map(|v| std::borrow::Cow::<str>::Borrowed(fv::props::Union::as_str(*v))), ",");
     out.push_str("</i></section>");
     Ok(())
 }

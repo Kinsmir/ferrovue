@@ -135,11 +135,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<!--]--><p>");
     fv::core::escape_into(out, &s_sheet.head.text);
     out.push('|');
-    fv::core::escape_into(out, &s_sheet.names.iter().map(|v| &**v).collect::<Vec<_>>().join("+"));
+    fv::core::escape_join(out, s_sheet.names.iter().map(|v| &**v), "+");
     out.push('|');
     fv::core::push_int(out, s_listed.len() as i64);
     out.push('|');
-    fv::core::escape_into(out, &s_listed.iter().map(|fv_l_2| std::borrow::Cow::<str>::Borrowed(&fv_l_2.text)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, s_listed.iter().map(|fv_l_2| std::borrow::Cow::<str>::Borrowed(&fv_l_2.text)), ",");
     out.push_str("</p><!--[-->");
     for fv_l_3 in props.words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|fv_w| Line { text: std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()), size: fv::strings::js_length(&fv_w), tag: (if fv_w.is_empty() { None } else { Some(&*fv_w) }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())), mark: (if fv::strings::js_length(&fv_w) > 3 { Some("long") } else { None }).map(|v| std::borrow::Cow::<str>::Owned(v.to_owned())) }).collect::<Vec<_>>().iter() {
         out.push_str("<p>");

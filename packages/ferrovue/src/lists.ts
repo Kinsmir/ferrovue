@@ -1,4 +1,4 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, BOOL, enumOf, fail, FLOAT, INT, isAscii, isTuple, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
+import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, BOOL, enumOf, fail, FLOAT, INT, isAscii, isTuple, joinedVal, joinTy, literalTy, opt, rustStr, sameTy, STR, strTy, UNDEF } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumItemVal, enumListVal } from "./enums.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
@@ -10,7 +10,7 @@ import { cond, unbound } from "./narrowing.ts";
 import { localTy } from "./rust.ts";
 import { lookupStruct } from "./typescript.ts";
 import { asF64, isNumber } from "./numbers.ts";
-import { asCow, isTemporary, lonely, loneOf, meet, writesAscii, yieldsCow } from "./strings.ts";
+import { asCow, isTemporary, lonely, meet, writesAscii, yieldsCow } from "./strings.ts";
 import { atom, bare, binary, enclosed, operand, strArg, UNARY } from "./parens.ts";
 import { expressionBodied } from "./blocks.ts";
 
@@ -883,8 +883,10 @@ function computedListMethod(s: Scope, target: Val, method: string, args: N[], n:
     if (sep.ty.k !== "str") fail(s.comp, "FV0802", "`.join()` takes a string", args[0]);
     const parted = /^"[^"]/.test(sep.code);
     if (of.k === "str" && target.lone && (!parted || sep.lone)) fail(s.comp, "FV0706", lonely("`.join()` with no literal separator"), n);
-    const each = of.k === "str" ? "" : of.k === "bool" ? `.map(|v| if v { "true" } else { "false" })` : ".map(|v| fv::core::Js(v).to_string())";
-    return { code: `&*${items(target)}${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...(target.lone || sep.lone ? { lone: true } : {}) };
+    const ty = strTy(writesAscii(target.ty) && isAscii(sep.ty));
+    const lone = Boolean(target.lone || sep.lone);
+    if (of.k === "bool") return joinedVal(`${items(target)}.map(|v| if v { "true" } else { "false" })`, "str", strArg(sep.code), ty, lone);
+    return joinedVal(items(target), of.k === "int" || of.k === "float" ? of.k : "str", strArg(sep.code), ty, lone);
   }
   return null;
 }
@@ -918,6 +920,7 @@ function inPlaceIncludes(s: Scope, target: Val, of: Ty, arg: N): Val {
 function inPlaceJoin(s: Scope, target: Val, of: Ty, args: N[]): Val {
   const sep: Val = args.length ? expr(s, args[0]) : { code: '","', ty: STR };
   if (sep.ty.k !== "str") fail(s.comp, "FV0802", "`.join()` takes a string", args[0]);
-  const each = of.k === "str" ? `${atom(target.code)}.iter().map(|v| &**v)` : `${atom(target.code)}.iter().map(|v| fv::core::Js(*v).to_string())`;
-  return { code: `&*${each}.collect::<Vec<_>>().join(${strArg(sep.code)})`, ty: strTy(writesAscii(target.ty) && isAscii(sep.ty)), ...loneOf(sep) };
+  const ty = strTy(writesAscii(target.ty) && isAscii(sep.ty));
+  if (of.k === "str") return joinedVal(`${atom(target.code)}.iter().map(|v| &**v)`, "str", strArg(sep.code), ty, Boolean(sep.lone));
+  return joinedVal(`${atom(target.code)}.iter().copied()`, "int", strArg(sep.code), ty, Boolean(sep.lone));
 }

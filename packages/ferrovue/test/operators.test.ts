@@ -256,7 +256,7 @@ describe("`??`", () => {
       'out.push_str("<b>");',
       "fv::core::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);",
       "out.push('|');",
-      'fv::core::escape_into(out, &(if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().collect::<Vec<_>>().join("-"));',
+      'fv::core::escape_join(out, if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }, "-");',
       "out.push('|');",
       "fv::core::push_int(out, (if let Some(n3) = props.ns.as_ref() { n3.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);",
       'out.push_str("</b>");',

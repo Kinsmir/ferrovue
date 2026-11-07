@@ -103,9 +103,19 @@ export interface Val {
   /** For a string known to hold no character HTML escapes, as the digits `.toFixed()` writes, the
    * Rust expression it holds while `code` is it. */
   plain?: string;
+  /** For the string `.join()` builds, its items as an iterator of strings, integers or numbers
+   * and its separator, while `code` is `of`. */
+  joined?: { of: string; items: string; sep: string; each: "str" | "int" | "float" };
   /** For an integer computed as an `i64`, a bound on its magnitude, at most 2⁵³, within which
    * `i64` and `f64` arithmetic give the same value. */
   upTo?: number;
+}
+
+/** The string `items.join(sep)` builds, whose items are strings, or integers or numbers written as
+ * JavaScript writes them. */
+export function joinedVal(items: string, each: "str" | "int" | "float", sep: string, ty: Ty, lone: boolean): Val {
+  const code = `&*${items}${each === "str" ? "" : ".map(|v| fv::core::Js(v).to_string())"}.collect::<Vec<_>>().join(${sep})`;
+  return { code, ty, joined: { of: code, items, sep, each }, ...(lone ? { lone: true } : {}) };
 }
 
 export const STR: Ty = { k: "str" };

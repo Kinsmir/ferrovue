@@ -178,7 +178,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\">");
     fv::core::escape_into(out, &props.nested.0.name);
     out.push(' ');
-    fv::core::escape_into(out, &props.nested.0.tags.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+    fv::core::escape_join(out, props.nested.0.tags.iter().map(|v| &**v), ", ");
     if let Some(fv_extra) = props.extra.as_ref() {
         out.push_str("</p><b>");
         fv::core::escape_into(out, &fv_extra.0);

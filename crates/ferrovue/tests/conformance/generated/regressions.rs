@@ -96,7 +96,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\"></ul><b class=\"");
     fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(true, &*props.l2.iter().map(|v| &**v).collect::<Vec<_>>().join("-")), (true, &*props.l2.iter().map(|v| &**v).collect::<Vec<_>>().join("-"))])]);
     out.push_str("\"></b><ol class=\"");
-    fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(true, "on"), (true, &*props.l4.iter().map(|v| fv::core::Js(*v).to_string()).collect::<Vec<_>>().join(", "))])]);
+    fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(true, "on"), (true, &*props.l4.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(", "))])]);
     out.push_str("\"></ol><li class=\"");
     fv::attrs::class_into(out, false, &[&*fv::attrs::class_object(&[(true, fv::strings::js_trim_end(&props.s1)), (!props.s1.is_empty(), { let a = &*props.s1; if !a.is_empty() { a } else { &props.s1 } })])]);
     out.push_str("\"></li><a class=\"");
@@ -149,15 +149,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<u></u>");
     }
     out.push_str("<!--]--><p>");
-    fv::core::escape_into(out, &fv::strings::js_split(&props.s1, ",").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned(fv::strings::js_substring(&fv_w_2, 1.0f64, None).into_owned())).collect::<Vec<_>>().join(", "));
+    fv::core::escape_join(out, fv::strings::js_split(&props.s1, ",").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned(fv::strings::js_substring(&fv_w_2, 1.0f64, None).into_owned())), ", ");
     out.push('|');
     fv::core::escape_into(out, &(if props.b0 { std::borrow::Cow::<str>::Owned(fv::strings::js_replace(&fv::core::js_to_fixed(0.5f64, 1), ".", ",").into_owned()) } else { std::borrow::Cow::<str>::Borrowed("-") }));
     out.push('|');
     fv::core::escape_into(out, &(if props.b0 { std::borrow::Cow::<str>::Borrowed("-") } else { std::borrow::Cow::<str>::Owned(fv::strings::js_pad_start(&format!("px{}n=", fv::core::Js(props.f2)), 9.0f64, "·").into_owned()) }));
     out.push('|');
-    fv::core::escape_into(out, &props.l2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_j, _)| { let fv_j = fv_j as i64; -(fv_j as f64) }).map(|fv_z| 42.0 / fv_z).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_numbers(out, props.l2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).enumerate().map(|(fv_j, _)| { let fv_j = fv_j as i64; -(fv_j as f64) }).map(|fv_z| 42.0 / fv_z), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.l2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_3| fv::strings::js_split(&props.s1, " ").into_iter().map(|_| std::borrow::Cow::<str>::Owned(fv_w_3.to_string())).any(|_| props.b0)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.l2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).filter(|fv_w_3| fv::strings::js_split(&props.s1, " ").into_iter().map(|_| std::borrow::Cow::<str>::Owned(fv_w_3.to_string())).any(|_| props.b0)), ",");
     out.push('|');
     fv::core::escape_into(out, &(if props.b0 { std::borrow::Cow::<str>::Borrowed("a") } else { std::borrow::Cow::<str>::Owned(fv::strings::js_char_at(&"é".to_uppercase(), 0.0f64).to_owned()) }));
     out.push_str("</p>");

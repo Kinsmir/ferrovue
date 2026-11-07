@@ -128,7 +128,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</b>");
     }
     out.push_str("<!--]--><s>");
-    fv::core::escape_into(out, &[props.n as f64, props.f].iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join("/"));
+    fv::core::escape_join_numbers(out, [props.n as f64, props.f].iter().copied(), "/");
     out.push('|');
     out.push_str(if [2.0f64, 0.25f64].iter().copied().any(|fv_item| fv_item == props.f || (fv_item.is_nan() && props.f.is_nan())) { "true" } else { "false" });
     out.push_str("</s><!--]-->");

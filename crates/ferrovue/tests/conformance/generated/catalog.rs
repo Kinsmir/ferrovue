@@ -107,7 +107,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str(if fv_s_2.badge.as_deref().is_some() { "<!----></li>" } else { "<b>plain</b></li>" });
     }
     out.push_str("<!--]--></ol><small>");
-    fv::core::escape_into(out, &[1.0f64, 2.5f64, -3.0f64].iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(" / "));
+    fv::core::escape_join_numbers(out, [1.0f64, 2.5f64, -3.0f64].iter().copied(), " / ");
     out.push(' ');
     fv::core::push_int(out, ["sm", "md", "lg"].len() as i64);
     out.push_str("</small></section>");

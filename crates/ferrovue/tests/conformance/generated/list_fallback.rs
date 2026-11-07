@@ -57,7 +57,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("<section><p>");
     fv::core::push_int(out, (if let Some(fv_words) = props.words.as_ref() { fv_words.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["none"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).len() as i64);
     out.push('|');
-    fv::core::escape_into(out, &(if let Some(fv_words_2) = props.words.as_ref() { fv_words_2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["a<b", "c&d"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }).into_iter().collect::<Vec<_>>().join("-"));
+    fv::core::escape_join(out, if let Some(fv_words_2) = props.words.as_ref() { fv_words_2.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["a<b", "c&d"].iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).map(|v| std::borrow::Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() }, "-");
     out.push('|');
     fv::core::push_int(out, (if let Some(fv_counts) = props.counts.as_ref() { fv_counts.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);
     out.push_str("</p><ul><!--[-->");

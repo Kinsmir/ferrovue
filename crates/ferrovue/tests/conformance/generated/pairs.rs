@@ -70,7 +70,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_named = props.labels.iter().filter(|fv_item| fv_item.0 != &*props.word && !fv_item.1.is_empty()).collect::<Vec<_>>();
     let s_best = { let fv_top = fv::strings::js_item_at(s_ranked.iter().copied(), 0.0f64); if let Some(fv_top_2) = fv_top { std::borrow::Cow::<str>::Owned(format!("{}:{}", fv_top_2.0, fv::core::Js(*fv_top_2.1))) } else { std::borrow::Cow::<str>::Borrowed("none") } };
     out.push_str("<!--[--><p>");
-    fv::core::escape_into(out, &props.scores.iter().map(|fv_item_2| std::borrow::Cow::<str>::Owned(format!("{}={}", fv_item_2.0, fv::core::Js(*fv_item_2.1)))).collect::<Vec<_>>().join(";"));
+    fv::core::escape_join(out, props.scores.iter().map(|fv_item_2| std::borrow::Cow::<str>::Owned(format!("{}={}", fv_item_2.0, fv::core::Js(*fv_item_2.1)))), ";");
     out.push('|');
     fv::core::push_int(out, props.scores.len() as i64);
     out.push('|');
@@ -88,27 +88,27 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, props.labels.iter().collect::<Vec<_>>().into_iter().rev().find(|fv_item_9| fv::strings::js_length(fv_item_9.1) > 1).map(|fv_value_2| fv_value_2.0).unwrap_or("-"));
     out.push('|');
-    fv::core::escape_into(out, &props.labels.iter().map(|fv_pair| std::borrow::Cow::<str>::Owned(format!("{}{}{}", fv_pair.0, fv::core::Js(2i64), fv_pair.1))).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.labels.iter().map(|fv_pair| std::borrow::Cow::<str>::Owned(format!("{}{}{}", fv_pair.0, fv::core::Js(2i64), fv_pair.1))), ",");
     out.push('|');
     if let Some(v) = fv::strings::js_item_at(props.labels.iter(), -1.0f64).map(|fv_value_3| fv_value_3.0) {
         fv::core::escape_into(out, v);
     }
     out.push('|');
-    fv::core::escape_into(out, &fv::strings::js_slice_items(props.labels.iter(), 1.0f64, None).map(|fv_item_10| std::borrow::Cow::<str>::Borrowed(fv_item_10.0)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, fv::strings::js_slice_items(props.labels.iter(), 1.0f64, None).map(|fv_item_10| std::borrow::Cow::<str>::Borrowed(fv_item_10.0)), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.labels.iter().collect::<Vec<_>>().into_iter().rev().map(|fv_item_11| std::borrow::Cow::<str>::Borrowed(fv_item_11.1)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.labels.iter().collect::<Vec<_>>().into_iter().rev().map(|fv_item_11| std::borrow::Cow::<str>::Borrowed(fv_item_11.1)), ",");
     out.push_str("</p><p>");
     fv::core::escape_into(out, &s_best);
     out.push('|');
-    fv::core::escape_into(out, &s_ranked.iter().copied().map(|fv_item_12| std::borrow::Cow::<str>::Borrowed(fv_item_12.0)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, s_ranked.iter().copied().map(|fv_item_12| std::borrow::Cow::<str>::Borrowed(fv_item_12.0)), ",");
     out.push('|');
     fv::core::push_int(out, s_named.iter().copied().count() as i64);
     out.push('|');
-    fv::core::escape_into(out, &s_named.iter().copied().map(|fv_item_13| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_13.0, fv_item_13.1))).collect::<Vec<_>>().join("+"));
+    fv::core::escape_join(out, s_named.iter().copied().map(|fv_item_13| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_13.0, fv_item_13.1))), "+");
     out.push('|');
-    fv::core::escape_into(out, &props.seats.iter().map(|fv_item_14| std::borrow::Cow::<str>::Borrowed(fv_item_14.0)).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.seats.iter().map(|fv_item_14| std::borrow::Cow::<str>::Borrowed(fv_item_14.0)), ",");
     out.push('|');
-    fv::core::escape_into(out, &props.seats.iter().map(|fv_item_15| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_15.1.row, fv::core::Js(fv_item_15.1.n)))).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, props.seats.iter().map(|fv_item_15| std::borrow::Cow::<str>::Owned(format!("{}{}", fv_item_15.1.row, fv::core::Js(fv_item_15.1.n)))), ",");
     out.push_str("</p><ul><!--[-->");
     for (fv_i, fv_item_16) in fv::strings::js_sorted(props.labels.iter(), |fv_pair_2, fv_pair_3| fv::strings::js_cmp(fv_pair_2.0, fv_pair_3.0)).enumerate() {
         let fv_i = fv_i as i64;
@@ -133,7 +133,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<li>");
         fv::core::escape_into(out, fv_item_18.0);
         out.push_str(": ");
-        fv::core::escape_into(out, &fv_item_18.1.iter().map(|v| &**v).collect::<Vec<_>>().join(", "));
+        fv::core::escape_join(out, fv_item_18.1.iter().map(|v| &**v), ", ");
         out.push_str(" (");
         fv::core::push_int(out, fv_item_18.1.len() as i64);
         out.push_str(")</li>");

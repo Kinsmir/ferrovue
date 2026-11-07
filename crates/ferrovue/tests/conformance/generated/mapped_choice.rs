@@ -46,10 +46,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
         out.push_str("<p title>");
     } else {
         out.push_str("<p title=\"");
-        fv::core::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-"));
+        fv::core::escape_join(out, fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_w.to_uppercase()) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w) }).into_owned())), "-");
         out.push_str("\">");
     }
-    fv::core::escape_into(out, &fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())).collect::<Vec<_>>().join("|"));
+    fv::core::escape_join(out, fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w_2| std::borrow::Cow::<str>::Owned((if props.on { std::borrow::Cow::<str>::Owned(fv_i18n.t("common.app", &fv::i18n::Args::new())) } else { std::borrow::Cow::<str>::Borrowed(&*fv_w_2) }).into_owned())), "|");
     out.push_str("</p>");
     Ok(())
 }

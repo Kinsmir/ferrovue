@@ -66,7 +66,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
         out.push_str("</p>");
     }
     out.push_str("<!--]--><footer title=\"");
-    fv::core::escape_into(out, &l_0.iter().map(|v| &**v).collect::<Vec<_>>().join(" / "));
+    fv::core::escape_join(out, l_0.iter().map(|v| &**v), " / ");
     out.push_str("\">");
     fv::core::push_int(out, l_0.len() as i64);
     out.push_str(" on page ");

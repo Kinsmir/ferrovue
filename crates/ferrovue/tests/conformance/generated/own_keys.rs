@@ -58,7 +58,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if matches!(props.code, 7) { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &["7", "mod", "admin"].iter().map(|v| &**v).collect::<Vec<_>>().join(","));
+    fv::core::escape_join(out, ["7", "mod", "admin"].iter().map(|v| &**v), ",");
     out.push('|');
     out.push_str(if ["7", "mod", "admin"].iter().any(|v| **v == *props.role) { "true" } else { "false" });
     out.push('|');

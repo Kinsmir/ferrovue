@@ -92,11 +92,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split_limit(&props.text, " ", props.limit as f64).len() as i64);
     out.push('|');
-    fv::core::escape_into(out, &s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>().join("+"));
+    fv::core::escape_join(out, s_first_two.iter().map(|v| std::borrow::Cow::<str>::Borrowed(&**v)), "+");
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split_limit(&props.text, &props.part, -1.0f64).len() as i64);
     out.push('|');
-    fv::core::escape_into(out, &fv::strings::js_split_limit(&props.text, ",", 4294967297.0f64).into_iter().collect::<Vec<_>>().join(";"));
+    fv::core::escape_join(out, fv::strings::js_split_limit(&props.text, ",", 4294967297.0f64), ";");
     out.push('|');
     fv::core::push_int(out, fv::strings::js_split_limit(&props.text, ",", 0.0f64).len() as i64);
     out.push_str("</p><p>");
@@ -155,7 +155,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if fv::strings::js_code_point_at(&props.text, 99.0f64).is_none() { "true" } else { "false" });
     out.push('|');
-    fv::core::escape_into(out, &s_codes.iter().copied().map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(","));
+    fv::core::escape_join_numbers(out, s_codes.iter().copied(), ",");
     out.push_str("</p><ul><!--[-->");
     for fv_w_cow in fv::strings::js_split_limit(&props.text, " ", props.limit as f64).into_iter() {
         let fv_w: &str = &fv_w_cow;
