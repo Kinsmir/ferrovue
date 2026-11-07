@@ -120,7 +120,7 @@ export function renderDiff(project: string, against: string, tests?: readonly st
   const suites = tests?.length ? [...tests] : conformanceTests(cwd);
   if (!suites.length) throw new Error(`no test file under ${cwd} calls \`conformanceSuite\`: name the one that runs the conformance suite with \`--test\``);
   const vitest = join(dirname(createRequire(join(cwd, "package.json")).resolve("vitest/package.json")), "vitest.mjs");
-  const scratch = mkdtempSync(join(tmpdir(), "ferrovue-diff-"));
+  const scratch = realpathSync.native(mkdtempSync(join(tmpdir(), "ferrovue-diff-")));
   const tree = join(scratch, "tree");
   try {
     git(top, "worktree", "add", "--detach", tree, commit);
