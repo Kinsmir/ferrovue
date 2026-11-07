@@ -8,6 +8,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-11-07
+
 ### Fixed
 
 - `"whitespace": "trim-edges"` and `trimEdges` keep Vue's one space at a line-break edge of an inline element such as `<span>`, and space inline elements at a template's root and across a comment; 0.15.1 trimmed those edges and left those line breaks without a space.
@@ -779,7 +781,8 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - `.length` of a string counts UTF-16 code units (`ferrovue::js_length`), where it counted bytes.
 - Slot content made only of comments is dropped when the slot has no fallback, as Vue drops it.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.15.2...HEAD
+[0.15.2]: https://github.com/Kinsmir/ferrovue/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/Kinsmir/ferrovue/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/Kinsmir/ferrovue/compare/v0.14.1...v0.15.0
 [0.14.1]: https://github.com/Kinsmir/ferrovue/compare/v0.14.0...v0.14.1

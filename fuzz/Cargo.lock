@@ -42,7 +42,7 @@ dependencies = [
 
 [[package]]
 name = "ferrovue"
-version = "0.15.1"
+version = "0.15.2"
 dependencies = [
  "ferrovue-core",
  "serde",
@@ -51,7 +51,7 @@ dependencies = [
 
 [[package]]
 name = "ferrovue-core"
-version = "0.15.1"
+version = "0.15.2"
 
 [[package]]
 name = "ferrovue-fuzz"
