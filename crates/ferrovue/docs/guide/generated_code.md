@@ -436,6 +436,23 @@ export default {
 A build without ferrovue's Vite plugin, such as a Vitest config with plugin-vue alone, adds the
 transform itself: `vue({ template: { compilerOptions: { nodeTransforms: [trimEdges] } } })`.
 
+Each place a formatter writes a line break, and what the mode renders there:
+
+| The formatter writes | `"trim-edges"` renders | Why |
+|---|---|---|
+| `<p>\n  Some text\n</p>` | `<p>Some text</p>` | a block element's edges: a formatter adds and removes whitespace there freely |
+| `<button>\n  Remove\n</button>` | `<button>Remove</button>` | an inline-block element's edges, the same |
+| `<p>ago<span>\n  by\n</span>Ada</p>` | `<p>ago<span> by </span>Ada</p>` | an inline element's edges: the line break stands for the space typed there |
+| `<p>\n  <span>by</span>\n  <a>Ada</a>\n</p>` | `<p><span>by</span> <a>Ada</a></p>` | between two inline elements, a line break reads as a space |
+| `<div>\n  <div>a</div>\n  <div>b</div>\n</div>` | `<div><div>a</div><div>b</div></div>` | between block elements, no space shows, and Vue drops it |
+| `<span>by</span>\n<a>Ada</a>` at the template's root | `<span>by</span> <a>Ada</a>` | the root's children render in place, as an element's do |
+| `<span>by</span>\n<!-- note -->\n<a>Ada</a>` | `<span>by</span> <a>Ada</a>`, or `<span>by</span> <!-- note --><a>Ada</a>` with comments | the line breaks around a comment read as one space |
+| `<b>a</b>\n<i v-if="no">x</i>\n<a>z</a>` | `<b>a</b> <!----> <a>z</a>` | the space is decided from the source, so it stays beside a `v-if` that renders nothing; the browser collapses the two |
+| `<a>one</a\n><a>two</a>` | `<a>one</a><a>two</a>` | hugged tags: no space is meant, as for elements a class makes `inline-block` |
+| `<pre>`, `<textarea>`, `v-pre`, a static `style` with a preserving `white-space`, or a class of `preserveWhitespace` | as Vue condenses it | the text is shown as written, so it is left with everything inside it |
+
+The paragraphs below give each rule in full.
+
 The mode trims the whitespace at the start of an element's first child and at the end of its last
 child, when those children are text written in the template and that whitespace holds a line
 break, as the whitespace a formatter adds does. A space typed on the same line as the tag stays.
