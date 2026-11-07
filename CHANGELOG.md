@@ -19,7 +19,7 @@ The notes of 0.1.0 to 0.11.0 as first written, with more detail, are in
 - `escape_into` escapes in one pass, copying the runs between the characters it replaces eight bytes at a time; the bench renders run up to 9% fewer instructions.
   [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
 - Generated code is version 9, which writes a list's `.join()` into the page item by item with helpers the 0.15 crate lacks, so renders that join run up to 25% fewer instructions; the 0.16 crate builds versions 6 to 8 too.
-  [The version check](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-version-check).
+  [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#2-generate-every-component-again).
 - Generated code writes `std::borrow::Cow` as `Cow`, and a field's `#[serde(rename)]` only where its JSON key differs from its name, which makes the generated Rust about 3% smaller.
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 
