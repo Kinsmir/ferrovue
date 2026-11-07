@@ -493,7 +493,8 @@ The space is decided when the template compiles, from its source, so it stays wh
 `v-for` beside it renders nothing. With only the first of two `<template v-if>`s on lines of their
 own rendering, the text ends in two spaces. The browser collapses them, so nothing shows, and they
 are in the server's HTML and in `textContent`, as in HTML written by hand. Where the branch renders,
-the space is the one it needs.
+the space is the one it needs. The compiler warns (FV0429) at a `v-if` with no `v-else` that has a
+line break on both sides; hugging the tags on one side renders one space.
 
 Everything else stays as Vue condenses it:
 
@@ -524,14 +525,18 @@ A class counts by its exact name, variants included, so `md:whitespace-pre` is a
 A `:class` expression counts when a string or object key in it names a listed class, whether or not
 it applies at render, so `:class="{ 'whitespace-pre-line': open }"` keeps the text in both states.
 A class the element gets from a prop, or from a parent through its attributes, is not seen: write
-the class in the template, or the `white-space` in the `style` attribute.
+the class in the template, or the `white-space` in the `style` attribute. A class named as Tailwind
+names its `white-space` utilities, such as `whitespace-pre-line`, and left out of the list warns
+(FV0428).
 
 The mode reads tag names and sees no stylesheet, for `white-space` as for `display`. An element a
 class makes block, flex or grid, such as `<span class="block">`, still counts as inline, and a line
 break between it and its neighbour renders as a space. CSS discards whitespace next to a block box
 and between flex and grid items, so that space does not show. Between elements a class makes
 `inline-block`, written on lines of their own with no space meant between them, it shows as a gap:
-hug their tags, `</a\n><a>`, as a formatter writes them where no space is meant.
+hug their tags, `</a\n><a>`, as a formatter writes them where no space is meant. Name those classes
+in `"inlineBlockClasses"`, and the compiler warns (FV0427) at each line break it renders as a space
+beside such an element.
 
 A `&nbsp;` is text: it stays at an edge. So does whitespace written as a character reference, such
 as `&#10;`.

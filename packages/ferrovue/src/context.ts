@@ -117,6 +117,9 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
     keys(p, "preserveWhitespace", shape.preserveWhitespace);
     if (!Array.isArray(p.classes) || !p.classes.every((c) => typeof c === "string" && c !== "" && !/\s/.test(c))) wrong("preserveWhitespace.classes", "an array of class names, each without whitespace");
   }
+  if (raw.inlineBlockClasses !== undefined && (!Array.isArray(raw.inlineBlockClasses) || !raw.inlineBlockClasses.every((c) => typeof c === "string" && c !== "" && !/\s/.test(c)))) {
+    wrong("inlineBlockClasses", "an array of class names, each without whitespace");
+  }
   if (raw.cssModules !== undefined) {
     const m = raw.cssModules;
     if (!isObject(m)) return wrong("cssModules", "an object: `{ generateScopedName, hashPrefix?, context? }`");
@@ -225,6 +228,9 @@ export const ctx = {
   comments: false,
   whitespace: "condense" as WhitespaceMode,
   preservedClasses: [] as readonly string[],
+  inlineBlockClasses: [] as readonly string[],
+  warn: ((): void => {}) as (warning: GenError) => void,
+  warned: new Set<string>(),
   clientDirectives: new Set<string>(),
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),

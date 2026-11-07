@@ -428,6 +428,18 @@ export const ERRORS = {
     title: "`v-model` on an `<input>` whose `type` is bound",
     detail: "With a bound `type`, Vue's server renderer chooses as it renders what `v-model` writes: `checked` for a checkbox or a radio button, `value` for any other type, each by its own comparison with the model. The compiler translates `v-model` on an `<input>` of a literal `type`. Write the `type` as a literal, or write one `<input>` for each type under `v-if` and `v-else-if`.",
   },
+  FV0427: {
+    title: "Line break between elements a class makes `inline-block`",
+    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\\n><a>`, as a formatter writes them where no space is meant, or write the space on one line where it is.",
+  },
+  FV0428: {
+    title: "Class that sets a preserving `white-space`, not listed in `preserveWhitespace`",
+    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: a class named as Tailwind names its `white-space` utilities (`whitespace-pre`, `whitespace-pre-wrap`, `whitespace-pre-line`, `whitespace-break-spaces`, with any variant) shows the line breaks the mode trims. List it in `preserveWhitespace.classes`, so the element keeps its text.",
+  },
+  FV0429: {
+    title: "Line breaks on both sides of a `v-if` that may render nothing",
+    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line breaks before and after a `v-if` with no `v-else` each render as a space, so when no branch renders the text holds two spaces. The browser shows one, and `textContent` and the server's HTML hold both. Hug the tags on one side of the `v-if` to render one.",
+  },
 
   FV0501: {
     title: "Child component that is not among the compiled components",

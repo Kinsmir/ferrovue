@@ -89,6 +89,7 @@ export const CONFIG_SCHEMA: Schema = {
     isProduction: { type: "boolean", default: true },
     comments: { type: "boolean" },
     whitespace: { type: "string", enum: ["condense", "trim-edges"], default: "condense" },
+    inlineBlockClasses: { type: "array", items: STRING },
     preserveWhitespace: { type: "object", properties: { classes: { type: "array", items: STRING } }, required: ["classes"], additionalProperties: false },
     cssModules: {
       type: "object",

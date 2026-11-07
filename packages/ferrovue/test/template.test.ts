@@ -1047,6 +1047,34 @@ describe("whitespace", () => {
     expect(compiled(trimEdges)).toContain('<p class="keep">a</p><p>b</p>');
   });
 
+  it("warns where `trim-edges` still renders what a formatter did not mean", () => {
+    const warned = (template: string, config: Record<string, unknown> = {}): string[] => {
+      const warnings: GenError[] = [];
+      generate(project(sfc("on: boolean", template), {}), { components: "components", out: "out", whitespace: "trim-edges", ...config }, new Map(), { warn: (w) => warnings.push(w) });
+      return warnings.map((w) => `${w.code} ${w.at?.line}:${w.at?.column} ${w.what}`);
+    };
+    const boxes = { inlineBlockClasses: ["btn"] };
+    expect(warned('<p>\n  <a class="btn">One</a>\n  <a class="btn">Two</a>\n</p>', boxes)).toEqual([
+      "FV0427 6:3 the line break between `<a>` and `<a>` renders as a space, which shows as a gap beside `<a>`, whose class makes it `inline-block`: hug the tags, `</a\\n><a>`, where no space is meant",
+    ]);
+    expect(warned('<p>\n  <a class="btn">One</a\n  ><a class="btn">Two</a>\n</p>', boxes)).toEqual([]);
+    expect(warned('<p>\n  <a class="btn">One</a> <a class="btn">Two</a>\n</p>', boxes)).toEqual([]);
+    expect(warned('<p>\n  <a class="x">One</a>\n  <a>Two</a>\n</p>', boxes)).toEqual([]);
+    expect(warned('<p>\n  <a class="btn">One</a>\n  <a>Two</a>\n</p>')).toEqual([]);
+    expect(warned('<div class="md:whitespace-pre-line">\n  a\n</div>')).toEqual([
+      "FV0428 4:11 `md:whitespace-pre-line` sets a preserving `white-space` in Tailwind, and `trim-edges` trims the text of `<div>` all the same: list it in `preserveWhitespace.classes` in ferrovue.config.json",
+    ]);
+    expect(warned('<div class="whitespace-pre-line">\n  a\n</div>', { preserveWhitespace: { classes: ["whitespace-pre-line"] } })).toEqual([]);
+    expect(warned('<div class="whitespace-normal">\n  a\n</div>')).toEqual([]);
+    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([
+      "FV0429 6:3 the line breaks before and after this `v-if` both render as a space, so the text holds two spaces when no branch renders: hug the tags on one side, `</b\\n><i v-if>`, to render one",
+    ]);
+    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <i v-else>y</i>\n  <a>z</a>\n</p>')).toEqual([]);
+    expect(warned('<p>\n  <b>a</b\n  ><i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([]);
+    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n</p>')).toEqual([]);
+    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>', { whitespace: "condense" })).toEqual([]);
+  });
+
   it("trims the content a component and `<template v-slot>` hand a child", () => {
     const child = `<template><i><slot /><slot name="n" /></i></template>`;
     expect(pushed(trimmed("<Child>\n  remove\n</Child>", { Child: child }))).toContain("remove");

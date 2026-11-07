@@ -81,7 +81,7 @@ defineProps<{ name: string }>();
 }
 
 function check(config: Config, showDiff = false): number {
-  const want = generate(root, config);
+  const want = generate(root, config, new Map(), { warn });
   const dir = join(root, config.out);
   let have: string[] = [];
   try {
@@ -125,7 +125,7 @@ function check(config: Config, showDiff = false): number {
 }
 
 function once(config: Config): void {
-  const { files, changed, removed } = write(root, config);
+  const { files, changed, removed } = write(root, config, { warn });
   if (json) return emit({ out: config.out, files, changed, removed });
   const what = changed.length || removed.length ? `${changed.length} changed, ${removed.length} removed` : "nothing changed";
   console.log(`${config.out}: ${files.length} files, ${what}`);

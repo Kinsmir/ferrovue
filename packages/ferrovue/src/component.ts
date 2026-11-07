@@ -15,6 +15,8 @@ import { asyncChildren } from "./script.ts";
 import { declareConsts } from "./constants.ts";
 import { resolveImport } from "./resolve.ts";
 import { trimEdges } from "./whitespace.ts";
+import type { TemplateNode } from "./whitespace-rules.ts";
+import { whitespaceWarnings } from "./whitespace-warnings.ts";
 
 function vueErrorNode(err: unknown, within?: { line: number; column: number }): N {
   const loc = (err as { loc?: { start: { line: number; column: number } } }).loc;
@@ -410,6 +412,16 @@ export function readComponent(file: string, root: string, name = basename(file, 
     const inner = kids(wrapper);
     const lone = inner.length === 1 && inner[0].type === 1 && (inner[0].tagType === 0 || inner[0].tagType === 1) && !inner[0].props.some((p: N) => p.type === 7 && ["if", "else-if", "else", "for"].includes(p.name));
     if (!lone) comp.attrsDropped = { type: "VueTemplate", loc: { start: { line: wrapper.loc.start.line, column: wrapper.loc.start.column - 1 } }, __fv: "source" };
+  }
+  if (ctx.whitespace === "trim-edges" && descriptor.template.ast) {
+    const options = { classes: new Set(ctx.preservedClasses), inlineBlock: new Set(ctx.inlineBlockClasses) };
+    for (const w of whitespaceWarnings(descriptor.template.ast as unknown as TemplateNode, options)) {
+      const { line, column } = w.node.loc.start;
+      const key = `${w.code}:${comp.file}:${line}:${column}`;
+      if (ctx.warned.has(key)) continue;
+      ctx.warned.add(key);
+      ctx.warn(new GenError(w.code, `${comp.file}:${line}:${column}: ${w.message}`, { file: comp.file, line, column }, w.message));
+    }
   }
   comp.templateAst = descriptor.template.ast;
   const start = descriptor.template.loc.start;

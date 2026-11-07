@@ -520,3 +520,13 @@ it("matches its errors with the VS Code problem matchers the quick start gives",
   const [locale] = matched(run().stderr);
   expect(locale).toMatchObject({ kind: "file", code: "FV1401", file: "locales/en.json" });
 });
+
+it("prints a template's whitespace warnings and still writes the modules", () => {
+  writeFileSync(join(root, "ferrovue.config.json"), JSON.stringify({ components: "components", out: "src/generated", whitespace: "trim-edges" }));
+  writeFileSync(join(root, "components", "Hello.vue"), `<script setup lang="ts">\ndefineProps<{ on: boolean }>();\n</script>\n<template>\n  <p>\n    <b>a</b>\n    <i v-if="on">x</i>\n    <a>z</a>\n  </p>\n</template>`);
+  const r = run();
+  expect(r.status).toBe(0);
+  expect(r.stderr).toMatch(/FV0429/);
+  expect(r.stderr).toMatch(/components\/Hello\.vue:7:5/);
+  expect(existsSync(join(root, "src/generated/hello.rs"))).toBe(true);
+});

@@ -125,6 +125,10 @@ export interface Config {
      * `:class` expression, names one keeps its text and everything inside it. */
     classes: string[];
   };
+  /** The classes a stylesheet makes `inline-block`, such as a button class on `<a>`: with
+   * `"whitespace": "trim-edges"`, a line break written between such an element and an inline
+   * neighbour warns (FV0427), as it renders as a space that shows as a gap. */
+  inlineBlockClasses?: string[];
   /** CSS modules (`<style module>`): how Vite's `css.modules` names their classes, which ferrovue
    * computes as postcss-modules does. Without it, `<style module>` is refused. */
   cssModules?: {

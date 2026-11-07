@@ -19,6 +19,7 @@ export function isGenerated(file: string): boolean;
 // @public
 export interface ResolveOptions {
     aliases?: readonly Alias[];
+    warn?: (warning: GenError) => void;
 }
 
 // @public (undocumented)
