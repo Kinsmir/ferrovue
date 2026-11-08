@@ -1,5 +1,5 @@
 import { escapeHtml } from "@vue/shared";
-import { rustStr } from "./model.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { closing, enclosed, ifElse, literalEnd } from "./parens.ts";
 import { unquote } from "./strings.ts";
 
