@@ -579,6 +579,7 @@ mod tests {
         {
             let Ok(chunk) = chunk;
             sent.push(String::from_utf8(chunk.to_vec()).expect("UTF-8"));
+            assert!(sent.len() < 100, "the stream ends");
         }
         sent
     }
@@ -749,6 +750,7 @@ mod tests {
                 match Pin::new(&mut stream).poll_next(&mut cx) {
                     Poll::Ready(Some(Ok(chunk))) => {
                         sent.push_str(std::str::from_utf8(&chunk).expect("UTF-8"));
+                        assert!(sent.len() <= want.len(), "the stream ends");
                     }
                     Poll::Ready(None) => break,
                     Poll::Pending => {
@@ -807,7 +809,7 @@ mod tests {
             .into_response();
         assert_eq!(response.headers()["content-type"], TEXT_HTML);
         assert_eq!(response.body().size_hint().exact(), None);
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        let body = axum::body::to_bytes(response.into_body(), 1 << 16)
             .await
             .expect("a body");
         assert_eq!(
@@ -842,7 +844,7 @@ mod tests {
         let response = greet(Path("<Ada>".to_owned())).await.into_response();
         assert_eq!(response.status(), 200);
         assert_eq!(response.headers()["content-type"], TEXT_HTML);
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        let body = axum::body::to_bytes(response.into_body(), 1 << 16)
             .await
             .expect("a body");
         assert_eq!(
