@@ -51,6 +51,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [The page head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
 - A `<RouterLink>` with a string `to` is resolved and written straight into the page, allocating nothing; the `small` bench render runs 55% fewer instructions.
   [How links are written](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#how-links-are-written).
+- `Js<f64>`'s `Display` lays out the digits on the stack, so `Js(x).to_string()` allocates once.
+  [Numbers](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html).
 
 ## [0.15.2] - 2026-11-07
 

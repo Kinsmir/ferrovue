@@ -141,6 +141,12 @@ fn push_decimal(out: &mut String, n: u64) {
     }
 }
 
+fn write_decimal(out: &mut impl std::fmt::Write, n: u64) -> std::fmt::Result {
+    let mut buf = [0; 20];
+    let start = decimal(&mut buf, n);
+    out.write_str(std::str::from_utf8(&buf[start..]).expect("ASCII digits"))
+}
+
 /// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
 ///
 /// Exact within ±(2⁵³ − 1); beyond that it is written as JavaScript writes the rounded number.
@@ -230,51 +236,54 @@ impl std::fmt::Write for Short {
 /// assert_eq!(written(f64::NAN), "NaN");
 /// ```
 pub fn push_number(out: &mut String, x: f64) {
-    use std::fmt::Write;
+    let _ = write_number(out, x);
+}
+
+fn write_number(out: &mut impl std::fmt::Write, x: f64) -> std::fmt::Result {
     if x.is_nan() {
-        out.push_str("NaN");
-        return;
+        return out.write_str("NaN");
     }
     if x == 0.0 {
-        out.push('0');
-        return;
+        return out.write_char('0');
     }
     if x.is_infinite() {
-        out.push_str(if x < 0.0 { "-Infinity" } else { "Infinity" });
-        return;
+        return out.write_str(if x < 0.0 { "-Infinity" } else { "Infinity" });
     }
     if x < 0.0 {
-        out.push('-');
+        out.write_char('-')?;
     }
     let x = x.abs();
     if x.fract() == 0.0 && x <= MAX_SAFE_INTEGER as f64 {
-        push_decimal(out, x as u64);
-        return;
+        return write_decimal(out, x as u64);
     }
     let (digits, exp) = shortest_digits(x);
     let digits = digits.as_str();
     let k = digits.len() as i32;
     let n = exp + 1;
     if k <= n && n <= 21 {
-        out.push_str(digits);
-        out.extend(std::iter::repeat_n('0', (n - k) as usize));
+        out.write_str(digits)?;
+        write_zeros(out, (n - k) as usize)
     } else if 0 < n && n <= 21 {
-        out.push_str(&digits[..n as usize]);
-        out.push('.');
-        out.push_str(&digits[n as usize..]);
+        out.write_str(&digits[..n as usize])?;
+        out.write_char('.')?;
+        out.write_str(&digits[n as usize..])
     } else if -6 < n && n <= 0 {
-        out.push_str("0.");
-        out.extend(std::iter::repeat_n('0', (-n) as usize));
-        out.push_str(digits);
+        out.write_str("0.")?;
+        write_zeros(out, (-n) as usize)?;
+        out.write_str(digits)
     } else {
-        out.push_str(&digits[..1]);
+        out.write_str(&digits[..1])?;
         if k > 1 {
-            out.push('.');
-            out.push_str(&digits[1..]);
+            out.write_char('.')?;
+            out.write_str(&digits[1..])?;
         }
         let e = n - 1;
-        let _ = write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs());
+        write!(out, "e{}{}", if e < 0 { '-' } else { '+' }, e.abs())
     }
+}
+
+fn write_zeros(out: &mut impl std::fmt::Write, n: usize) -> std::fmt::Result {
+    (0..n).try_for_each(|_| out.write_char('0'))
 }
 
 fn shortest_digits(x: f64) -> (Short, i32) {
@@ -701,9 +710,9 @@ impl std::fmt::Display for Js<i64> {
 
 impl std::fmt::Display for Js<f64> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut s = String::new();
-        push_number(&mut s, self.0);
-        f.write_str(&s)
+        let mut s = Short::new();
+        write_number(&mut s, self.0)?;
+        f.write_str(s.as_str())
     }
 }
 
