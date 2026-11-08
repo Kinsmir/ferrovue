@@ -43,7 +43,7 @@ const props = defineProps<{ rows: Row[]; tags: Tag[]; plains: Plain[] }>();
         expect(x).toContain("tag: props.rows.first().and_then(|fv_value| fv_value.best.as_ref()).map(|v| v.borrowed())");
         expect(x).toContain("tag: fv_r.tags.first().map(|v| v.borrowed())");
         expect(x).toContain("plains: props.plains.to_vec()");
-        expect(x).toContain("rows: props.rows.to_owned()");
+        expect(x).toContain("rows: props.rows.iter().map(|v| v.borrowed()).collect()");
         expect(x).not.toMatch(/tags: [^,]*\.to_owned\(\)/);
         const shared = out.get("types.rs")!;
         expect(shared).toContain(`impl<'a> Tag<'a> {
@@ -56,8 +56,38 @@ const props = defineProps<{ rows: Row[]; tags: Tag[]; plains: Plain[] }>();
         }
     }
 }`);
-        expect(shared).not.toContain("impl<'a> Row<'a> {\n    #[doc(hidden)]");
+        expect(shared).toContain("            dict: self.dict.borrowed_with(|v| *v),\n");
         expect(shared).not.toContain("impl Plain {\n    #[doc(hidden)]");
+      });
+
+      it("clones within the borrowed copy a field of a type the project names, and the whole struct where that type borrows", () => {
+        const held = `export interface Note { title: string; body: TrustedHtml; at: Date; marks: Record<string, Note[]> }`;
+        const holder = `<script setup lang="ts">
+import type { Note } from "../types";
+defineProps<{ note: Note }>();
+</script>
+<template><b>{{ note.title }}</b></template>`;
+        const notes = `<script setup lang="ts">
+import type { Note } from "../types";
+import Child from "./Child.vue";
+defineProps<{ notes: Note[] }>();
+</script>
+<template><Child v-for="(n, i) in notes" :key="i" :note="n" /></template>`;
+        const made = (config: object): Map<string, string> => generate(withTypes(island(notes, { Child: holder }), `import type { TrustedHtml } from "ferrovue/types";\n${held}`), { ...CONFIG, ...config });
+        const own = made({ dateType: "crate::When", trustedHtml: "crate::Safe" });
+        expect(oneLine(own.get("x.rs")!)).toContain("note: fv_n.borrowed()");
+        expect(own.get("types.rs")).toContain("    #[doc(hidden)]\n    // A type the project names may be `Copy`.\n    #[allow(clippy::clone_on_copy)]\n    pub fn borrowed(&self) -> Note<'_> {\n");
+        expect(own.get("types.rs")).toContain(`        Note {
+            title: Cow::Borrowed(&*self.title),
+            body: Clone::clone(&self.body),
+            at: Clone::clone(&self.at),
+            marks: self.marks.borrowed_with(|v| v.iter().map(|v| v.borrowed()).collect()),
+        }`);
+        for (const config of [{ dateType: "crate::When<'a>", trustedHtml: "crate::Safe" }, { dateType: "crate::When", trustedHtml: "crate::Safe<'a>" }]) {
+          const out = made(config);
+          expect(oneLine(out.get("x.rs")!), JSON.stringify(config)).toContain("note: fv_n.to_owned()");
+          expect(out.get("types.rs"), JSON.stringify(config)).not.toContain("borrowed");
+        }
       });
 
       it("writes no borrowed copy for a struct no child is handed", () => {

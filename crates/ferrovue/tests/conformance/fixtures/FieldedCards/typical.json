@@ -1,0 +1,7 @@
+{
+  "lead": { "title": "Lead", "body": "<p>Hello <em>there</em></p>", "counts": { "b": 2, "10": 1, "a": 3 }, "labels": { "x": "one", "2": "two" } },
+  "cards": [
+    { "title": "First", "body": "<b>1</b>", "counts": { "n": 0 }, "labels": { "k": "v" } },
+    { "title": "Second", "body": "", "counts": {}, "labels": {} }
+  ]
+}

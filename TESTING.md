@@ -212,6 +212,7 @@ A fixture is a JSON object of props plus optional keys:
 | `OptionalChains` | Optional chains that go on past `?.`: string methods and `.length` (`s?.trim().length`, `s?.toUpperCase()`, `s?.split(",").length`), list methods and indices (`tags?.[1]`, `tags?.at(-1)?.toUpperCase()`, `tags?.filter(…).length`, `tags?.map(…).join()`), fields of fields and of optional fields (`user?.profile?.site?.length`), numbers (`count?.toFixed(2)`), dates (`when?.getTime()`, `when?.toUTCString()`, `seen?.toJSON()`, `seen?.toUTCString().length`, valid, invalid and at the edges of the range), over optional and nullable values that are present, absent and empty; in `computed`, `v-if`, `??` and `v-for` |
 | `NumberIncludes` | `.includes()` across `number` and `Float`: a fraction in a list of integers, an integer in a list of fractions and in a list mapped to fractions, `-0` found as `0`, integers beyond 2⁵³ |
 | `Records` | `Record<string, T>` and `{ [key: string]: T }` in JavaScript's order of keys (array indices first, a key given twice), `Object.keys` / `values` / `entries`, a record handed to a child |
+| `FieldedCards`, `FieldedCard` | An interface holding a string, a `TrustedHtml` and dictionaries of numbers and of strings, handed to a child alone and in a list, the dictionaries walked by `v-for` and `Object.entries()` in JavaScript's order of keys; typical, empty and holding markup |
 | `Nullable`, `NullChild`, `Session` | `T \| null` props, interface fields, list items, slot props and Pinia state: `null` written and narrowed (`!== null`, `=== null`, `!= null`, `== null`, truthiness), `??`, `?.` over a nullable object and field, interpolations and attributes of `null`, `null` as a `?:` branch and a child's prop, `ref<T \| null>(null)` in setup |
 | `ClientSide` | `<ClientOnly>` with a fallback, without one, and inside another component's slot, around a stand-in for a library component that reads `window` (`vendor/Gauge.ts`); in the browser, the content replaces the fallback once mounted |
 | `Deferred` | `defineAsyncComponent`, as an arrow and with `loader`, given props, slot content and a scoped parent's id |
@@ -283,7 +284,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Dates | `Dates`, `Prices`, `DatePost`, `DateStamp`, `DateFormats`, `DateGuards`, `DateRows`, `DateDays`, `DateReplies`, `DateThread`, `LoadedDates` |
 | Conditions | `Branches`, `Narrowing`, `Nullable`, `TypeofTests`, `AndChains`, `UnionNarrowing`, `UnionNarrowedMatch`, `UnionLogic`, `UnionOptionalRef`, `SelfCompare` |
 | Lists | `Lists`, `Arrays`, `Chips`, `Truthy`, `NumberIncludes`, `NarrowedRows`, `Exprs`, `ListAccess`, `ListBuilding`, `ListFallback`, `Flattened`, `EmptyArrays`, `UnionListBuilt`, `FoldedWide`, `EmptyRanges` |
-| Dictionaries | `Records`, `Chips`, `Pairs`, `OwnKeys` |
+| Dictionaries | `Records`, `FieldedCards`, `Chips`, `Pairs`, `OwnKeys` |
 | HTML comments | `Comments`, `CommentBox`, `TagContent` |
 | Whitespace | `TrimText`, `TrimKept`, `TrimSlots`, `TrimButton` |
 | Attributes | `Attrs`, `BoundObject`, `Keywords`, `MixedTernary`, `Enumerated`, `SvgXlink` |

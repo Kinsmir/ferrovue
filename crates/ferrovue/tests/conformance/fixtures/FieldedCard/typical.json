@@ -1,0 +1,4 @@
+{
+  "card": { "title": "Card", "body": "<p>Body <em>text</em></p>", "counts": { "z": 1, "3": 2 }, "labels": { "b": "bee", "a": "ay" } },
+  "rest": [{ "title": "Other", "body": "", "counts": {}, "labels": { "k": "v", "1": "one" } }]
+}

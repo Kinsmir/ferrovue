@@ -91,6 +91,8 @@ pub mod fall_spaces;
 pub mod fall_switch;
 pub mod fall_use;
 pub mod fallthrough;
+pub mod fielded_card;
+pub mod fielded_cards;
 pub mod filled_computed;
 pub mod filled_joins;
 pub mod flattened;
@@ -745,6 +747,14 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let router = route_table::router();
             let route = router.at(&fixture.route);
             fallthrough::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
+        }
+        "FieldedCard" => {
+            let props: fielded_card::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fielded_card::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FieldedCards" => {
+            let props: fielded_cards::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fielded_cards::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "FilledComputed" => {
             let props: filled_computed::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

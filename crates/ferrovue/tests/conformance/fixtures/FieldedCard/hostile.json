@@ -1,0 +1,4 @@
+{
+  "card": { "title": "</h3><h1>", "body": "<b>&amp;</b>", "counts": { "</dt>": 0 }, "labels": { "\"": "'", "<a>": "</p>" } },
+  "rest": [{ "title": "<li>", "body": "<i>x</i>", "counts": {}, "labels": { "&": "&" } }]
+}

@@ -149,3 +149,16 @@ impl<'a> Step<'a> {
         self
     }
 }
+
+impl<'a> Step<'a> {
+    #[doc(hidden)]
+    // A type the project names may be `Copy`.
+    #[allow(clippy::clone_on_copy)]
+    pub fn borrowed(&self) -> Step<'_> {
+        Step {
+            label: Cow::Borrowed(&*self.label),
+            state: self.state,
+            align: Clone::clone(&self.align),
+        }
+    }
+}

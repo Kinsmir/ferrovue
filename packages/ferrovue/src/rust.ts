@@ -257,7 +257,8 @@ const viewed = new WeakSet<Struct>();
  * reference `v`. Each struct the copy calls `borrowed()` on is marked, so that it is written. */
 export function viewOf(ty: Ty, place: string, comp: Component, seen: Set<string> = new Set()): string | undefined {
   const at = place.startsWith("*") ? place.slice(1) : place;
-  if (holdsMapped(ty)) return undefined;
+  const cloned = place.startsWith("*") ? `Clone::clone(${at})` : `Clone::clone(&${place})`;
+  if (holdsMapped(ty)) return cloned;
   if (enumOf(ty) !== undefined) return place;
   if (enumItems(ty) !== undefined) return ty.k === "opt" ? place : `${at}.to_vec()`;
   switch (ty.k) {
@@ -268,17 +269,25 @@ export function viewOf(ty: Ty, place: string, comp: Component, seen: Set<string>
     case "bool":
       return place;
     case "date":
-      return ctx.dateType === JS_DATE ? place : undefined;
+      return ctx.dateType === JS_DATE ? place : ctx.dateType.includes("'a") ? undefined : cloned;
+    case "html":
+      return needsLifetime(ty, comp) ? undefined : cloned;
+    case "record": {
+      const inner = viewOf(ty.of, "*v", comp, seen);
+      if (inner === undefined) return undefined;
+      return `${at}.borrowed_with(${inner === "Clone::clone(v)" ? "Clone::clone" : `|v| ${inner}`})`;
+    }
     case "opt": {
       if (ty.of.k === "str" && enumOf(ty.of) === undefined) return `${at}.as_deref().map(std::borrow::Cow::Borrowed)`;
       const inner = viewOf(ty.of, "*v", comp, seen);
       if (inner === undefined) return undefined;
+      if (inner === "Clone::clone(v)") return cloned;
       return inner === "*v" ? place : inner === "v.clone()" ? `${at}.clone()` : `${at}.as_ref().map(|v| ${inner})`;
     }
     case "list": {
       const inner = viewOf(ty.of, "*v", comp, seen);
       if (inner === undefined) return undefined;
-      return inner === "*v" || inner === "v.clone()" ? `${at}.to_vec()` : `${at}.iter().map(|v| ${inner}).collect()`;
+      return inner === "*v" || inner === "v.clone()" || inner === "Clone::clone(v)" ? `${at}.to_vec()` : `${at}.iter().map(|v| ${inner}).collect()`;
     }
     case "struct": {
       const { st, owner } = lookupStruct(comp, ty);
@@ -299,10 +308,11 @@ export function viewOf(ty: Ty, place: string, comp: Component, seen: Set<string>
 function borrowedSource(st: Struct, comp: Component, life: string): string {
   if (!life || !viewed.has(st)) return "";
   const inits = st.fields.map((f) => `            ${fieldInit(f.rust, viewOf(f.ty, `self.${f.rust}`, comp, new Set([st.name]))!)},\n`).join("");
+  const copies = inits.includes("Clone::clone(&") ? "    // A type the project names may be `Copy`.\n    #[allow(clippy::clone_on_copy)]\n" : "";
   return shortCow(`
 impl${life} ${st.name}${life} {
     #[doc(hidden)]
-    pub fn borrowed(&self) -> ${st.name}<'_> {
+${copies}    pub fn borrowed(&self) -> ${st.name}<'_> {
         ${st.name} {
 ${inits}        }
     }

@@ -182,7 +182,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props {
             days: fv_row.marks.iter().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 43, 24)).collect(),
             maybe: None,
-            by: fv_row.by_name.to_owned(),
+            by: fv_row.by_name.borrowed_with(|v| *v),
             seen: fv_row.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)).map(|v| v.map(|fv_t| fv_refusals.date(fv_t, 43, 59))).collect(),
         }))?;
         fv_refusals.check(super::date_stamp::try_render(out, &super::date_stamp::Props {
@@ -253,7 +253,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv_refusals.check(super::date_days::try_render(out, &super::date_days::Props {
         days: props.days.iter().map(fv::date::js_time_of).filter(|fv_d| !(*fv_d).is_nan()).map(|fv_t| fv_refusals.date(fv_t, 54, 22)).collect(),
         maybe: props.maybe.as_ref().map(|v| v.iter().map(fv::date::js_time_of).collect::<Vec<_>>()).as_ref().map(|v| v.iter().copied().map(|fv_t| fv_refusals.date(fv_t, 54, 79)).collect()),
-        by: props.stamps.to_owned(),
+        by: props.stamps.borrowed_with(|v| *v),
         seen: Vec::new(),
     }))?;
     if let Some(fv_lead) = props.lead.as_ref() {
