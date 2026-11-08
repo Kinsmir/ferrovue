@@ -93,9 +93,10 @@ template would render in that slot, usually another component's render or island
 
 With the `stream` feature, which `axum` and `actix-web` turn on, `HtmlStream` does this for a response: give it the whole
 render and a future for each hole's content, and it sends each piece and each hole's content as
-soon as they are ready, the futures all running at once. This is the handler from the repository's
-`examples/fullstack` (`src/main.rs`), where `site.page` renders a page with its holes and
-`site.fill` renders one hole's content once its data is ready:
+soon as they are ready, the futures all running at once. Each future is polled again only once its
+own waker wakes, so a page is sent in time linear in its number of holes. This is the handler from
+the repository's `examples/fullstack` (`src/main.rs`), where `site.page` renders a page with its
+holes and `site.fill` renders one hole's content once its data is ready:
 
 ```rust
 # #[cfg(feature = "axum")]

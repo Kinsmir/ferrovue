@@ -65,6 +65,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [CSS](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#css).
 - `s[i]`, `.at()`, `.charAt()`, `.charCodeAt()` and `.codePointAt()` of a prop read on from where the same place in the template last read, so a `v-for` over every index of a 16,000-character prop takes 0.2 ms, down from 411 ms.
   [Reading every index](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#reading-every-index).
+- `HtmlStream` polls a hole's future again only once that future wakes, so a page of 1,000 holes ready one after another streams in 0.19 ms of polling, down from 23 ms.
+  [Streaming](https://docs.rs/ferrovue/latest/ferrovue/guide/streaming/index.html).
 
 ### Fixed
 

@@ -493,6 +493,7 @@ async fn a_streamed_page_writes_its_record_after_its_holes() {
         while let Some(chunk) = std::future::poll_fn(|cx| Pin::new(&mut stream).poll_next(cx)).await
         {
             sent.push_str(std::str::from_utf8(&chunk.unwrap()).unwrap());
+            assert!(sent.len() < 1 << 16, "the stream ends");
         }
     })
     .await
