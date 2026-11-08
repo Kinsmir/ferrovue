@@ -2,7 +2,9 @@ import { type N, type Scope, type Val, absence, BOOL, fail, rustStr } from "./mo
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary } from "./parens.ts";
-import { isBoolean, listCall, listMethod, presentLiteral } from "./lists.ts";
+import { isBoolean, listMethod } from "./lists.ts";
+import { listCall } from "./list-calls.ts";
+import { presentLiteral } from "./array-literals.ts";
 import { meet, noArgStringMethod, regexTest, stringMethod, stringsEqual } from "./strings.ts";
 import { numberMethod } from "./numbers.ts";
 import { boolOf, truthy } from "./narrowing.ts";

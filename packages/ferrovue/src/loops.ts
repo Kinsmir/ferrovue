@@ -8,7 +8,7 @@ import { COUNT } from "./numbers.ts";
 import { Emitter } from "./emitter.ts";
 import { statements } from "./template.ts";
 import { unbound } from "./narrowing.ts";
-import { bindEntry, bindTuple, tupleParts } from "./lists.ts";
+import { bindEntry, bindTuple, tupleParts } from "./destructuring.ts";
 
 export function list(s: Scope, e: Emitter, c: N): void {
   const fn = c.arguments[1];

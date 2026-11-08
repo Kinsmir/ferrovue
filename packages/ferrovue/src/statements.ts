@@ -5,7 +5,8 @@ import { describeTy, expr, statedTy, typedBy } from "./expr.ts";
 import { around, bound, panicky, reps } from "./blocks.ts";
 import { asF64, intFromF64, isCast, isNumber } from "./numbers.ts";
 import { truthTested, truthy, unbound } from "./narrowing.ts";
-import { items, itemVal, ownedString } from "./lists.ts";
+import { items, itemVal } from "./lists.ts";
+import { ownedString } from "./reduce.ts";
 import { atom, bare, closing, condition, enclosed, literalEnd, occurrences, outermost, receiver } from "./parens.ts";
 
 const ITEMS = new Set(["str", "int", "float", "bool", "struct", "child", "entry"]);

@@ -2,7 +2,9 @@ import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT,
 import { atom, bare, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { formatted, lonely, stringOf } from "./strings.ts";
 import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";
-import { items, objectCall, spreadExtreme } from "./lists.ts";
+import { items } from "./lists.ts";
+import { objectCall } from "./object-calls.ts";
+import { spreadExtreme } from "./array-literals.ts";
 import { claim } from "./plugin.ts";
 import { boolOf } from "./narrowing.ts";
 import { describeTy, expr } from "./expr.ts";
