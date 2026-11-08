@@ -55,7 +55,7 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [How links are written](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#how-links-are-written).
 - `Js<f64>`'s `Display` lays out the digits on the stack, so `Js(x).to_string()` allocates once and the conformance components that write numbers into text allocate up to 26% less often.
   [Numbers](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html).
-- A render writes a template literal or string `+` it only escapes, and a `JSON.stringify` of a list, into the page as they are formatted, with no string built for them; the conformance components that format text allocate 6 to 40% less often.
+- A render writes a template literal or string `+` it only escapes, a `JSON.stringify` of a list, and a template literal passed as a fallthrough attribute, into the page as they are formatted, with no string built for them, and tests an attribute's `.join()` for being empty from its items; the conformance components that format text allocate 6 to 40% less often.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 
 ### Security

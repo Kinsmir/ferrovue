@@ -82,6 +82,7 @@ pub mod exprs;
 pub mod fall_bare;
 pub mod fall_binds;
 pub mod fall_fade;
+pub mod fall_formatted;
 pub mod fall_inner;
 pub mod fall_leaf;
 pub mod fall_link;
@@ -121,6 +122,7 @@ pub mod imported_props_mixed;
 pub mod inline_prose;
 pub mod inline_types;
 pub mod join_branches;
+pub mod joined_attrs;
 pub mod kebab_tree;
 pub mod keywords;
 pub mod known_values;
@@ -700,6 +702,13 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: fall_fade::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_fade::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "FallFormatted" => {
+            let props: fall_formatted::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let router = route_table::router();
+            let route = router.at(&fixture.route);
+            fall_formatted::try_render(&mut out, &props, &route).map_err(|e| e.to_string())?;
+        }
         "FallInner" => {
             let props: fall_inner::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_inner::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -895,6 +904,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "JoinBranches" => {
             let props: join_branches::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             join_branches::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "JoinedAttrs" => {
+            let props: joined_attrs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            joined_attrs::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "KebabTree" => {
             let props: kebab_tree::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

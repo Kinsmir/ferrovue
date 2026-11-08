@@ -99,6 +99,15 @@ An island's `data-props` is written in single quotes, with only `&` and `'` esca
 to 28% fewer bytes. A project whose fixtures or tests hold an island's HTML records them again. See
 [islands](crate::guide::islands_and_hydration#islands).
 
+## A template literal passed as an attribute formats as it is written
+
+A template literal a parent passes as a fallthrough attribute, `:title="`${a}-${b}`"`, reaches the
+child's [`Attrs`](crate::attrs::Attrs) as a hidden `Attr` value that formats itself when it is
+written; 0.15 passed an `Attr::Str` it had built. [`attrs_into`](crate::attrs::attrs_into) and
+[`passed_attrs_into`](crate::attrs::passed_attrs_into) write it as they write a string, and it
+equals `Attr::str` of its text. A Rust twin that reads a passed value by matching `Attr::Str` reads
+it with `==`. See [how a render writes text](crate::guide::generated_code#how-a-render-writes-text).
+
 ## The Vite plugin gives plugin-vue `trimEdges`
 
 With `"whitespace": "trim-edges"`, the Vite plugin adds `trimEdges`, with the classes of

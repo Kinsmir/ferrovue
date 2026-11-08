@@ -527,6 +527,10 @@ fn a_render_that_can_write_what_vue_writes_returns_ok() {
         out.contains(r#"<div class="wrap framed"><!--[--><span class="stars">4048/5"#),
         "{out}"
     );
+    assert!(
+        out.contains(r#"<div class="wrap" title="ab-3"><!--[--><!--]--></div>"#),
+        "{out}"
+    );
     assert_eq!(stamped::html(&props).try_into_string().unwrap(), out);
 }
 

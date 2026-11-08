@@ -51,7 +51,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("\">");
     }
     super::root_textarea::try_render_scoped(out, &super::root_textarea::Props { model_value: Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("big")), ("placeholder", fv::attrs::Attr::str(&props.label))], ""))?;
-    super::root_textarea_text::try_render_scoped(out, &super::root_textarea_text::Props {}, &fv::attrs::Attrs::new(&[("id", fv::attrs::Attr::Str(Cow::<str>::Owned(format!("t-{}", props.label))))], ""))?;
+    super::root_textarea_text::try_render_scoped(out, &super::root_textarea_text::Props {}, &fv::attrs::Attrs::new(&[("id", fv::attrs::Attr::Fmt(&fv::attrs::format(|fv_f| write!(fv_f, "t-{}", props.label))))], ""))?;
     super::root_input::try_render_scoped(out, &super::root_input::Props { model_value: Cow::Borrowed(&*props.label) }, &fv::attrs::Attrs::new(&[("name", fv::attrs::Attr::str(&props.label)), ("disabled", fv::attrs::Attr::Bool(!props.on))], ""))?;
     super::root_checkbox::try_render_scoped(out, &super::root_checkbox::Props { model_value: props.on }, &fv::attrs::Attrs::new(&[("name", fv::attrs::Attr::str("agree")), ("class", fv::attrs::Attr::from(fv::attrs::class_names(&[if props.on { "on" } else { "" }])))], ""))?;
     super::root_input::try_render_scoped(out, &super::root_input::Props { model_value: Cow::Borrowed("") }, &fv::attrs::Attrs::NONE)?;
