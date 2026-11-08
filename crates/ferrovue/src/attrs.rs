@@ -813,6 +813,57 @@ pub fn link_to_open(
     link_class(out, state, active, exact, classes, string);
 }
 
+/// [`link_open`] for `to="{ name, params, query, hash }"`, resolved from `route` as
+/// [`crate::router::Route::link_named`] resolves it and written in place.
+#[doc(hidden)]
+#[cfg(feature = "router")]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "generated code passes what `link_open` takes, with the route and the location's parts in place of the link"
+)]
+pub fn link_named_open(
+    out: &mut String,
+    route: &crate::router::Route<'_>,
+    name: &str,
+    params: &[(&str, &str)],
+    search: &str,
+    hash: &str,
+    current: &str,
+    active: &str,
+    exact: &str,
+    classes: &[&str],
+    string: bool,
+) {
+    out.push_str("<a");
+    let state = route.link_named_into(out, name, params, search, hash, current);
+    link_class(out, state, active, exact, classes, string);
+}
+
+/// [`link_open`] for `to="{ path, query, hash }"`, resolved from `route` as
+/// [`crate::router::Route::link_path`] resolves it and written in place.
+#[doc(hidden)]
+#[cfg(feature = "router")]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "generated code passes what `link_open` takes, with the route and the location's parts in place of the link"
+)]
+pub fn link_path_open(
+    out: &mut String,
+    route: &crate::router::Route<'_>,
+    path: &str,
+    search: &str,
+    hash: &str,
+    current: &str,
+    active: &str,
+    exact: &str,
+    classes: &[&str],
+    string: bool,
+) {
+    out.push_str("<a");
+    let state = route.link_path_into(out, path, search, hash, current);
+    link_class(out, state, active, exact, classes, string);
+}
+
 #[cfg(feature = "router")]
 fn link_class(
     out: &mut String,

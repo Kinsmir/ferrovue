@@ -51,7 +51,7 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 - `Head::render` borrows the tags, props and keys it builds from the pushed values, copying none of them, so the bench head renders in 59% fewer instructions.
   [The page head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
-- A `<RouterLink>` with a string `to` is resolved and written straight into the page, allocating nothing; the `small` bench render runs 55% fewer instructions.
+- A `<RouterLink>` with a string `to`, or a `to` of `{ name, params, query, hash }` or `{ path, query, hash }`, is resolved and written straight into the page, allocating nothing beyond a query it builds; the `small` bench render runs 55% fewer instructions.
   [How links are written](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#how-links-are-written).
 - `Js<f64>`'s `Display` lays out the digits on the stack, so `Js(x).to_string()` allocates once and the conformance components that write numbers into text allocate up to 26% less often.
   [Numbers](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html).

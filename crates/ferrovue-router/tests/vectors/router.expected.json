@@ -466,6 +466,45 @@
         "path": "/nowhere",
         "hash": "#h"
       }
+    ],
+    [
+      "/",
+      {
+        "name": "user",
+        "params": {
+          "id": "a'b&c\"<d>"
+        },
+        "hash": "#<b title=\"x\">&'"
+      }
+    ],
+    [
+      "/",
+      {
+        "path": "/blog/a\"b'<c>&d",
+        "query": [
+          [
+            "q",
+            "<'\"&>"
+          ]
+        ],
+        "hash": "#'\"<>&"
+      }
+    ],
+    [
+      "/blog/x",
+      {
+        "name": "post-tab",
+        "params": {
+          "slug": "x&y",
+          "tab": "<t>"
+        },
+        "query": [
+          [
+            "a&b",
+            "'c'"
+          ]
+        ]
+      }
     ]
   ],
   "locations": [
@@ -1639,6 +1678,18 @@
     ],
     [
       "/nowhere#h",
+      false
+    ],
+    [
+      "/users/a'b&c%22%3Cd%3E#%3Cb%20title=%22x%22%3E&'",
+      false
+    ],
+    [
+      "/blog/a\"b'<c>&d?q=%3C'%22%26%3E#'%22%3C%3E&",
+      false
+    ],
+    [
+      "/blog/x&y/%3Ct%3E?a%26b='c'",
       false
     ]
   ],

@@ -230,7 +230,7 @@ mod class {
 
 #[cfg(feature = "router")]
 mod links {
-    use super::{link_open, link_to_open};
+    use super::{link_named_open, link_open, link_path_open, link_to_open};
     use crate::router::{RouteDef, Router};
 
     fn open(
@@ -366,6 +366,87 @@ mod links {
         assert_eq!(
             open("/blog/intro", "/blog/intro", NAMES, &["near"], true),
             r#"<a aria-current="page" href="/blog/intro" class="near here near""#
+        );
+    }
+
+    #[test]
+    fn an_object_link_written_in_place_is_its_link_opened() {
+        let router = Router::tree(&[
+            RouteDef::new("/").with_name("home"),
+            RouteDef::new("/blog")
+                .with_name("blog")
+                .with_children(&[RouteDef::new(":slug").with_name("post")]),
+        ]);
+        for at in ["/", "/blog", "/blog/a'b&c", "/blog/intro"] {
+            let route = router.at(at);
+            for (name, params) in [
+                ("home", &[][..]),
+                ("blog", &[][..]),
+                ("post", &[("slug", "a'b&c")][..]),
+                ("post", &[("slug", "intro")][..]),
+            ] {
+                for (search, hash) in [("", ""), ("q=%3C'&r", "#<'\"&>")] {
+                    let mut out = String::new();
+                    let link = route.link_named(name, params, search, hash);
+                    link_open(&mut out, &link, "page", NAMES.0, NAMES.1, &["x"], false);
+                    let mut written = String::new();
+                    link_named_open(
+                        &mut written,
+                        &route,
+                        name,
+                        params,
+                        search,
+                        hash,
+                        "page",
+                        NAMES.0,
+                        NAMES.1,
+                        &["x"],
+                        false,
+                    );
+                    assert_eq!(
+                        written, out,
+                        "at {at:?}, {name:?} {params:?} written in place"
+                    );
+                }
+            }
+            for path in ["/", "/blog", "/blog/a'b&c", "intro", "/blog/a\"<b>"] {
+                let mut out = String::new();
+                let link = route.link_path(path, "q=1&r", "#h'");
+                link_open(&mut out, &link, "page", NAMES.0, NAMES.1, &[], false);
+                let mut written = String::new();
+                link_path_open(
+                    &mut written,
+                    &route,
+                    path,
+                    "q=1&r",
+                    "#h'",
+                    "page",
+                    NAMES.0,
+                    NAMES.1,
+                    &[],
+                    false,
+                );
+                assert_eq!(written, out, "at {at:?}, {path:?} written in place");
+            }
+        }
+        let route = router.at("/blog/intro");
+        let mut out = String::new();
+        link_named_open(
+            &mut out,
+            &route,
+            "post",
+            &[("slug", "intro")],
+            "",
+            "",
+            "page",
+            NAMES.0,
+            NAMES.1,
+            &[],
+            false,
+        );
+        assert_eq!(
+            out,
+            r#"<a aria-current="page" href="/blog/intro" class="near here""#
         );
     }
 }

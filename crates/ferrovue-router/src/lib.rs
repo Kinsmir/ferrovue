@@ -21,8 +21,8 @@ mod url;
 mod tests;
 
 use debug_map::DebugMap;
-use matching::{Pattern, SPANS, Token, Values, compare};
-use url::{Part, decode, encode_param, encode_url, parse_query, parse_url, split_url};
+use matching::{Given, Pattern, SPANS, Token, Values, compare};
+use url::{Part, decode, encode_into, encode_url, parse_query, parse_url, split_url, text_into};
 
 /// The routes, in the order vue-router tries them.
 ///
@@ -782,27 +782,14 @@ impl Route<'_> {
     /// and ` href="…"` escaped, into `out`. Returns `(active, exact)`.
     #[doc(hidden)]
     pub fn link_into(&self, out: &mut String, to: &str, current: &str) -> (bool, bool) {
-        let router = self.router;
         let (path, search, hash) = split_url(to, &self.path);
-        let (active, exact) = if router.most > SPANS {
-            let matched = router.matched(&path);
-            self.state(matched.as_ref().map(|(i, v)| (*i, v.as_slice())))
-        } else {
-            let matched = router.matched_spans(&path);
-            self.state(matched.as_ref().map(|(i, s)| (*i, &s.at[..s.len])))
-        };
-        if exact {
-            out.push_str(" aria-current=\"");
-            out.push_str(current);
-            out.push('"');
-        }
-        out.push_str(" href=\"");
-        ferrovue_core::escape_into(out, &router.base);
-        ferrovue_core::escape_into(out, &path);
+        let state = self.state_at(&path);
+        self.open_href(out, state, current);
+        text_into(out, &path, true);
         ferrovue_core::escape_into(out, search);
         ferrovue_core::escape_into(out, hash);
         out.push('"');
-        (active, exact)
+        state
     }
 
     /// Resolve `{ name, params, query, hash }`: the named route's path with each parameter
@@ -843,68 +830,113 @@ impl Route<'_> {
         search: &str,
         hash: &str,
     ) -> Link {
-        let i = self
-            .router
+        let mut href = String::new();
+        let (active, exact) = self.named(name, params, |i, values, state| {
+            href.push_str(&self.router.base);
+            self.named_path(&mut href, i, values, false);
+            tail(&mut href, search, hash, false);
+            state
+        });
+        Link {
+            href,
+            active,
+            exact,
+        }
+    }
+
+    /// What `<RouterLink :to="{ name, params, query, hash }">` writes from here, as
+    /// [`Route::link_into`] writes a string `to`. Returns `(active, exact)`.
+    #[doc(hidden)]
+    pub fn link_named_into(
+        &self,
+        out: &mut String,
+        name: &str,
+        params: &[(&str, &str)],
+        search: &str,
+        hash: &str,
+        current: &str,
+    ) -> (bool, bool) {
+        self.named(name, params, |i, values, state| {
+            self.open_href(out, state, current);
+            self.named_path(out, i, values, true);
+            tail(out, search, hash, true);
+            out.push('"');
+            state
+        })
+    }
+
+    fn named<'a, R>(
+        &'a self,
+        name: &str,
+        params: &[(&str, &'a str)],
+        then: impl FnOnce(usize, &[Given<'a>], (bool, bool)) -> R,
+    ) -> R {
+        let router = self.router;
+        let i = router
             .routes
             .iter()
             .position(|r| r.name.as_deref() == Some(name))
             .unwrap_or_else(|| panic!("no route is called {name:?}"));
-        let router = self.router;
         let route = &router.routes[i];
-        let current = match &self.matched {
-            Some((c, values)) => router.params(*c, values),
-            None => Vec::new(),
+        let inherited = |wanted: &str| {
+            route.parent.is_some_and(|p| {
+                router.routes[p].tokens.iter().any(
+                    |t| matches!(t, Token::Param { name, optional: true, .. } if name == wanted),
+                )
+            })
         };
-        let inherited: Vec<&str> = route.parent.map_or_else(Vec::new, |p| {
-            router.routes[p]
-                .tokens
-                .iter()
-                .filter_map(|t| match t {
-                    Token::Param {
-                        name,
-                        optional: true,
-                        ..
-                    } => Some(name.as_str()),
-                    _ => None,
-                })
-                .collect()
+        let count = route.names().count();
+        let mut stack = [Given(None); SPANS];
+        let mut heap = Vec::new();
+        let values = if count <= SPANS {
+            &mut stack[..count]
+        } else {
+            heap.resize(count, Given(None));
+            &mut heap[..]
+        };
+        let params_of = route.tokens.iter().filter_map(|t| match t {
+            Token::Param { name, optional, .. } => Some((name.as_str(), *optional)),
+            Token::Static(_) => None,
         });
-        let mut path = String::new();
-        let mut values = Vec::new();
-        for token in &route.tokens {
-            path.push('/');
+        for (slot, (name, optional)) in values.iter_mut().zip(params_of) {
+            let given = params.iter().find(|(k, _)| *k == name).map(|(_, v)| *v);
+            let value = given.or_else(|| {
+                (!optional || inherited(name))
+                    .then(|| self.param(name))
+                    .flatten()
+            });
+            debug_assert!(
+                optional || value.is_some_and(|v| !v.is_empty()),
+                "missing required param {name:?} for the route called {:?}",
+                route.name
+            );
+            *slot = Given(value);
+        }
+        let state = self.state(Some((i, &*values)));
+        then(i, values, state)
+    }
+
+    fn named_path(&self, out: &mut String, i: usize, values: &[Given<'_>], escaped: bool) {
+        let start = out.len();
+        let mut values = values.iter();
+        for token in &self.router.routes[i].tokens {
             match token {
-                Token::Static(text) => path.push_str(text),
-                Token::Param { name, optional, .. } => {
-                    let given = params.iter().find(|(k, _)| k == name).map(|(_, v)| *v);
-                    let value = given.or_else(|| {
-                        let pick = !optional || inherited.contains(&name.as_str());
-                        pick.then(|| current.iter().find(|(k, _)| k == name).map(|(_, v)| *v))
-                            .flatten()
-                    });
-                    let text = value.unwrap_or("");
+                Token::Static(text) => {
+                    out.push('/');
+                    text_into(out, text, escaped);
+                }
+                Token::Param { optional, .. } => {
+                    let text = values.next().and_then(|v| v.0).unwrap_or("");
                     if text.is_empty() && *optional {
-                        path.pop();
+                        continue;
                     }
-                    debug_assert!(
-                        *optional || !text.is_empty(),
-                        "missing required param {name:?} for the route called {:?}",
-                        route.name
-                    );
-                    let encoded = encode_param(text);
-                    values.push(value.map(|_| decode(&encoded)));
-                    path.push_str(&encoded);
+                    out.push('/');
+                    encode_into(out, text, Part::Param, escaped);
                 }
             }
         }
-        if path.is_empty() {
-            path.push('/');
-        }
-        let (active, exact) = self.state(Some((i, values.as_slice())));
-        Link {
-            href: self.href(&path, search, hash),
-            active,
-            exact,
+        if out.len() == start {
+            out.push('/');
         }
     }
 
@@ -927,25 +959,65 @@ impl Route<'_> {
     /// ```
     #[must_use]
     pub fn link_path(&self, path: &str, search: &str, hash: &str) -> Link {
-        let (path, _) = parse_url(path, &self.path);
-        let matched = self.router.matched(&path);
-        let (active, exact) = self.state(matched.as_ref().map(|(i, v)| (*i, v.as_slice())));
+        let (path, _, _) = split_url(path, &self.path);
+        let (active, exact) = self.state_at(&path);
+        let mut href = format!("{}{path}", self.router.base);
+        tail(&mut href, search, hash, false);
         Link {
-            href: self.href(&path, search, hash),
+            href,
             active,
             exact,
         }
     }
 
-    fn href(&self, path: &str, search: &str, hash: &str) -> String {
-        let mut href = format!("{}{path}", self.router.base);
-        if !search.is_empty() {
-            href.push('?');
-            href.push_str(search);
-        }
-        href.push_str(&encode_url(hash, Part::Hash));
-        href
+    /// What `<RouterLink :to="{ path, query, hash }">` writes from here, as [`Route::link_into`]
+    /// writes a string `to`. Returns `(active, exact)`.
+    #[doc(hidden)]
+    pub fn link_path_into(
+        &self,
+        out: &mut String,
+        path: &str,
+        search: &str,
+        hash: &str,
+        current: &str,
+    ) -> (bool, bool) {
+        let (path, _, _) = split_url(path, &self.path);
+        let state = self.state_at(&path);
+        self.open_href(out, state, current);
+        text_into(out, &path, true);
+        tail(out, search, hash, true);
+        out.push('"');
+        state
     }
+
+    fn state_at(&self, path: &str) -> (bool, bool) {
+        let router = self.router;
+        if router.most > SPANS {
+            let matched = router.matched(path);
+            self.state(matched.as_ref().map(|(i, v)| (*i, v.as_slice())))
+        } else {
+            let matched = router.matched_spans(path);
+            self.state(matched.as_ref().map(|(i, s)| (*i, &s.at[..s.len])))
+        }
+    }
+
+    fn open_href(&self, out: &mut String, (_, exact): (bool, bool), current: &str) {
+        if exact {
+            out.push_str(" aria-current=\"");
+            out.push_str(current);
+            out.push('"');
+        }
+        out.push_str(" href=\"");
+        ferrovue_core::escape_into(out, &self.router.base);
+    }
+}
+
+fn tail(out: &mut String, search: &str, hash: &str, escaped: bool) {
+    if !search.is_empty() {
+        out.push('?');
+        text_into(out, search, escaped);
+    }
+    encode_into(out, hash, Part::Hash, escaped);
 }
 
 /// `stringifyQuery`, one key and value at a time: `key=value`, each encoded as vue-router encodes

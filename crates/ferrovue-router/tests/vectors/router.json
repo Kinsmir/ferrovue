@@ -466,6 +466,45 @@
         "path": "/nowhere",
         "hash": "#h"
       }
+    ],
+    [
+      "/",
+      {
+        "name": "user",
+        "params": {
+          "id": "a'b&c\"<d>"
+        },
+        "hash": "#<b title=\"x\">&'"
+      }
+    ],
+    [
+      "/",
+      {
+        "path": "/blog/a\"b'<c>&d",
+        "query": [
+          [
+            "q",
+            "<'\"&>"
+          ]
+        ],
+        "hash": "#'\"<>&"
+      }
+    ],
+    [
+      "/blog/x",
+      {
+        "name": "post-tab",
+        "params": {
+          "slug": "x&y",
+          "tab": "<t>"
+        },
+        "query": [
+          [
+            "a&b",
+            "'c'"
+          ]
+        ]
+      }
     ]
   ],
   "locations": [
