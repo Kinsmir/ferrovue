@@ -1,4 +1,5 @@
 use super::*;
+use crate::url::resolve_relative_path;
 use std::collections::BTreeMap;
 
 #[derive(serde::Deserialize)]
@@ -568,4 +569,14 @@ fn a_link_is_compared_cloned_and_shown_whole() {
         format!("{link:?}"),
         r#"Link { href: "/blog/intro", active: true, exact: true }"#
     );
+}
+
+#[derive(Default)]
+pub(crate) struct Turns(u32);
+
+impl Turns {
+    pub(crate) fn next(&mut self) {
+        self.0 += 1;
+        assert!(self.0 < 10_000_000, "a loop turned ten million times");
+    }
 }
