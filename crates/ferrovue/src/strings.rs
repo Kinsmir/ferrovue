@@ -1,10 +1,17 @@
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::collections::HashSet;
 
 use ferrovue_core::push_number;
 
 use crate::render::Refused;
+
+use self::number::{decimal_prefix, decimal_value, digit, power_of_two_value};
+use self::regex::{Piece, pieces, substitute_units};
+use self::units::{boundary, char_start, unit, units};
+
+mod number;
+mod regex;
+mod units;
 
 /// `String.prototype.length`: UTF-16 code units, which is what a template's `.length` counts.
 /// `str::len` counts UTF-8 bytes and `chars().count()` scalar values, and either can differ from it.
@@ -236,66 +243,6 @@ pub fn js_order(a: f64, b: f64) -> Ordering {
     }
 }
 
-fn boundary(s: &str, i: usize) -> (usize, bool) {
-    let mut unit = 0;
-    for (byte, c) in s.char_indices() {
-        if unit >= i {
-            return (byte, false);
-        }
-        let width = c.len_utf16();
-        if unit + width > i {
-            return (byte + c.len_utf8(), true);
-        }
-        unit += width;
-    }
-    (s.len(), false)
-}
-
-fn units(s: &str, from: usize, to: usize) -> Cow<'_, str> {
-    if from >= to {
-        return Cow::Borrowed("");
-    }
-    if s.is_ascii() {
-        return Cow::Borrowed(&s[from..to]);
-    }
-    let (start, low_half) = boundary(s, from);
-    let (end, high_half) = boundary(s, to);
-    if !low_half && !high_half {
-        return Cow::Borrowed(&s[start..end]);
-    }
-    let whole_end = if high_half { end - 4 } else { end };
-    let mut out = String::with_capacity(whole_end.saturating_sub(start) + 6);
-    if low_half {
-        out.push('\u{FFFD}');
-    }
-    if whole_end > start {
-        out.push_str(&s[start..whole_end]);
-    }
-    if high_half {
-        out.push('\u{FFFD}');
-    }
-    Cow::Owned(out)
-}
-
-fn unit(s: &str, k: usize) -> &str {
-    if s.is_ascii() {
-        return &s[k..k + 1];
-    }
-    let mut at = 0;
-    for (byte, c) in s.char_indices() {
-        let width = c.len_utf16();
-        if k < at + width {
-            return if width == 1 {
-                &s[byte..byte + c.len_utf8()]
-            } else {
-                "\u{FFFD}"
-            };
-        }
-        at += width;
-    }
-    unreachable!("code unit {k} is in range")
-}
-
 fn length(s: &str) -> usize {
     js_length(s) as usize
 }
@@ -399,13 +346,6 @@ pub fn js_last_index_of(s: &str, search: &str) -> i64 {
 
 fn clamped_unit(s: &str, x: f64) -> usize {
     to_integer(x).clamp(0.0, length(s) as f64) as usize
-}
-
-fn char_start(s: &str, unit: usize) -> usize {
-    match boundary(s, unit) {
-        (byte, true) => byte - 4,
-        (byte, false) => byte,
-    }
 }
 
 /// `String.prototype.includes(search, position)`: whether `search` starts at or after the code unit
@@ -943,90 +883,6 @@ pub fn js_cmp(a: &str, b: &str) -> Ordering {
     a.encode_utf16().cmp(b.encode_utf16())
 }
 
-fn digit(b: u8, radix: u32) -> Option<u32> {
-    char::from(b).to_digit(radix)
-}
-
-fn power_of_two_value(digits: &[u8], radix: u32) -> f64 {
-    let bits = radix.trailing_zeros();
-    let mut number: u64 = 0;
-    let mut exponent: i32 = 0;
-    for (i, &b) in digits.iter().enumerate() {
-        number = number * u64::from(radix) + u64::from(digit(b, radix).expect("a digit"));
-        let overflow = number >> 53;
-        if overflow == 0 {
-            continue;
-        }
-        let dropped_count = 64 - overflow.leading_zeros();
-        let dropped = number & ((1 << dropped_count) - 1);
-        number >>= dropped_count;
-        exponent = dropped_count as i32;
-        let rest = &digits[i + 1..];
-        let zero_tail = rest.iter().all(|&d| d == b'0');
-        exponent += (rest.len() as i32) * bits as i32;
-        let middle = 1 << (dropped_count - 1);
-        if dropped > middle || (dropped == middle && (number & 1 == 1 || !zero_tail)) {
-            number += 1;
-        }
-        if number & (1 << 53) != 0 {
-            exponent += 1;
-            number >>= 1;
-        }
-        break;
-    }
-    (number as f64) * 2f64.powi(exponent)
-}
-
-fn decimal_prefix(s: &str) -> Option<usize> {
-    let b = s.as_bytes();
-    let digits_from = |mut i: usize| {
-        #[cfg(test)]
-        let mut turns = crate::Turns::default();
-        while i < b.len() && b[i].is_ascii_digit() {
-            #[cfg(test)]
-            turns.next();
-            i += 1;
-        }
-        i
-    };
-    let mut i = usize::from(matches!(b.first(), Some(b'+' | b'-')));
-    if s[i..].starts_with("Infinity") {
-        return Some(i + "Infinity".len());
-    }
-    let int_end = digits_from(i);
-    let whole = int_end > i;
-    i = int_end;
-    if b.get(i) == Some(&b'.') {
-        let frac_end = digits_from(i + 1);
-        if whole || frac_end > i + 1 {
-            i = frac_end;
-        } else {
-            return None;
-        }
-    } else if !whole {
-        return None;
-    }
-    if matches!(b.get(i), Some(b'e' | b'E')) {
-        let mut j = i + 1;
-        if matches!(b.get(j), Some(b'+' | b'-')) {
-            j += 1;
-        }
-        let exp_end = digits_from(j);
-        if exp_end > j {
-            i = exp_end;
-        }
-    }
-    Some(i)
-}
-
-fn decimal_value(literal: &str) -> f64 {
-    match literal {
-        "Infinity" | "+Infinity" => f64::INFINITY,
-        "-Infinity" => f64::NEG_INFINITY,
-        _ => literal.parse().expect("a decimal literal"),
-    }
-}
-
 /// `Number(s)` of a string: JavaScript's whitespace trimmed, an empty string 0, a decimal literal
 /// (`1e3`, `.5`, `-Infinity`) or a `0x`, `0o` or `0b` integer read exactly as JavaScript reads it,
 /// and anything else `NaN`.
@@ -1187,313 +1043,6 @@ pub struct JsRegex {
     ignore_case: bool,
 }
 
-#[derive(Debug, Clone)]
-enum Atom {
-    Unit(u16),
-    Any,
-    Class(Vec<(u16, u16)>, bool, Option<HashSet<u16>>),
-    Start,
-    End,
-    Boundary(bool),
-}
-
-#[derive(Debug, Clone)]
-struct Piece {
-    atom: Atom,
-    min: usize,
-    max: usize,
-    greedy: bool,
-}
-
-const SPACES: [(u16, u16); 10] = [
-    (0x09, 0x0D),
-    (0x20, 0x20),
-    (0xA0, 0xA0),
-    (0x1680, 0x1680),
-    (0x2000, 0x200A),
-    (0x2028, 0x2029),
-    (0x202F, 0x202F),
-    (0x205F, 0x205F),
-    (0x3000, 0x3000),
-    (0xFEFF, 0xFEFF),
-];
-const DIGITS: [(u16, u16); 1] = [(0x30, 0x39)];
-const WORD: [(u16, u16); 4] = [(0x30, 0x39), (0x41, 0x5A), (0x5F, 0x5F), (0x61, 0x7A)];
-const QUANTIFIER_BOUND: usize = i32::MAX as usize;
-
-fn negated(ranges: &[(u16, u16)]) -> Vec<(u16, u16)> {
-    let mut out = Vec::new();
-    let mut next = 0_u32;
-    for &(lo, hi) in ranges {
-        if u32::from(lo) > next {
-            out.push((next as u16, lo - 1));
-        }
-        next = u32::from(hi) + 1;
-    }
-    if next <= 0xFFFF {
-        out.push((next as u16, 0xFFFF));
-    }
-    out
-}
-
-fn escape_class(c: char) -> Option<Vec<(u16, u16)>> {
-    match c {
-        'd' => Some(DIGITS.to_vec()),
-        'D' => Some(negated(&DIGITS)),
-        'w' => Some(WORD.to_vec()),
-        'W' => Some(negated(&WORD)),
-        's' => Some(SPACES.to_vec()),
-        'S' => Some(negated(&SPACES)),
-        _ => None,
-    }
-}
-
-struct Parser<'p> {
-    units: Vec<u16>,
-    at: usize,
-    pattern: &'p str,
-}
-
-impl Parser<'_> {
-    fn peek(&self) -> Option<u16> {
-        self.units.get(self.at).copied()
-    }
-
-    fn next(&mut self) -> Result<u16, String> {
-        let unit = self
-            .peek()
-            .ok_or_else(|| format!("`/{}/` ends too early", self.pattern))?;
-        self.at += 1;
-        Ok(unit)
-    }
-
-    fn hex(&mut self, digits: usize) -> Result<u16, String> {
-        let mut value = 0_u16;
-        for _ in 0..digits {
-            let unit = self.next()?;
-            let digit = char::from_u32(u32::from(unit))
-                .and_then(|c| c.to_digit(16))
-                .ok_or_else(|| {
-                    format!(
-                        "`/{}/` has an escape with a digit that is not hexadecimal",
-                        self.pattern
-                    )
-                })?;
-            value = value * 16 + digit as u16;
-        }
-        Ok(value)
-    }
-
-    fn escape(&mut self, in_class: bool) -> Result<Result<u16, Vec<(u16, u16)>>, String> {
-        let unit = self.next()?;
-        let c = char::from_u32(u32::from(unit)).unwrap_or('\u{FFFD}');
-        if let Some(ranges) = escape_class(c) {
-            return Ok(Err(ranges));
-        }
-        Ok(Ok(match c {
-            't' => 0x09,
-            'n' => 0x0A,
-            'v' => 0x0B,
-            'f' => 0x0C,
-            'r' => 0x0D,
-            '0' if !self.peek().is_some_and(|u| (0x30..=0x39).contains(&u)) => 0,
-            'x' => self.hex(2)?,
-            'u' => self.hex(4)?,
-            'b' if in_class => 0x08,
-            '-' if in_class => unit,
-            '^' | '$' | '\\' | '.' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|'
-            | '/' => unit,
-            _ => {
-                return Err(format!(
-                    "`/{}/` has the escape `\\{c}`, which the server does not translate",
-                    self.pattern
-                ));
-            }
-        }))
-    }
-
-    fn class(&mut self) -> Result<Atom, String> {
-        let negate = self.peek() == Some(u16::from(b'^'));
-        if negate {
-            self.at += 1;
-        }
-        let mut ranges = Vec::new();
-        loop {
-            let unit = self.next()?;
-            if unit == u16::from(b']') {
-                break;
-            }
-            let low = if unit == u16::from(b'\\') {
-                match self.escape(true)? {
-                    Ok(u) => u,
-                    Err(set) => {
-                        ranges.extend(set);
-                        continue;
-                    }
-                }
-            } else {
-                unit
-            };
-            if self.peek() == Some(u16::from(b'-'))
-                && self.units.get(self.at + 1) != Some(&u16::from(b']'))
-            {
-                self.at += 1;
-                let unit = self.next()?;
-                let high = if unit == u16::from(b'\\') {
-                    match self.escape(true)? {
-                        Ok(u) => u,
-                        Err(_) => {
-                            return Err(format!(
-                                "`/{}/` has a range that ends at a class escape",
-                                self.pattern
-                            ));
-                        }
-                    }
-                } else {
-                    unit
-                };
-                if high < low {
-                    return Err(format!("`/{}/` has a range out of order", self.pattern));
-                }
-                ranges.push((low, high));
-            } else {
-                ranges.push((low, low));
-            }
-        }
-        Ok(Atom::Class(ranges, negate, None))
-    }
-
-    fn number(&mut self) -> Option<usize> {
-        let start = self.at;
-        #[cfg(test)]
-        let mut turns = crate::Turns::default();
-        while self.peek().is_some_and(|u| (0x30..=0x39).contains(&u)) {
-            #[cfg(test)]
-            turns.next();
-            self.at += 1;
-        }
-        (self.at > start).then(|| {
-            self.units[start..self.at].iter().fold(0, |n: usize, &u| {
-                n.saturating_mul(10)
-                    .saturating_add(usize::from(u - 0x30))
-                    .min(QUANTIFIER_BOUND)
-            })
-        })
-    }
-
-    fn quantifier(&mut self) -> Result<Option<(usize, usize)>, String> {
-        let Some(unit) = self.peek() else {
-            return Ok(None);
-        };
-        let bounds = match unit {
-            0x2A => (0, usize::MAX),
-            0x2B => (1, usize::MAX),
-            0x3F => (0, 1),
-            0x7B => {
-                let start = self.at;
-                self.at += 1;
-                let Some(min) = self.number() else {
-                    self.at = start;
-                    return Ok(None);
-                };
-                let max = if self.peek() == Some(u16::from(b',')) {
-                    self.at += 1;
-                    if self.peek() == Some(u16::from(b'}')) {
-                        Some(usize::MAX)
-                    } else {
-                        self.number()
-                    }
-                } else {
-                    Some(min)
-                };
-                let Some(max) = max.filter(|_| self.peek() == Some(u16::from(b'}'))) else {
-                    self.at = start;
-                    return Ok(None);
-                };
-                if max < min {
-                    return Err(format!(
-                        "`/{}/` has a quantifier out of order",
-                        self.pattern
-                    ));
-                }
-                (min, max)
-            }
-            _ => return Ok(None),
-        };
-        self.at += 1;
-        Ok(Some(bounds))
-    }
-
-    fn parse(mut self) -> Result<Vec<Piece>, String> {
-        let mut pieces: Vec<Piece> = Vec::new();
-        while let Some(unit) = self.peek() {
-            self.at += 1;
-            let atom = match unit {
-                0x5E => Atom::Start,
-                0x24 => Atom::End,
-                0x2E => Atom::Any,
-                0x5B => self.class()?,
-                0x5C => {
-                    if self.peek() == Some(u16::from(b'b')) || self.peek() == Some(u16::from(b'B'))
-                    {
-                        let word = self.next()? == u16::from(b'b');
-                        Atom::Boundary(word)
-                    } else {
-                        match self.escape(false)? {
-                            Ok(u) => Atom::Unit(u),
-                            Err(set) => Atom::Class(set, false, None),
-                        }
-                    }
-                }
-                0x28 | 0x29 | 0x7C | 0x5D | 0x7D | 0x2A | 0x2B | 0x3F | 0x7B => {
-                    let c = char::from_u32(u32::from(unit)).unwrap_or('?');
-                    return Err(format!(
-                        "`/{}/` holds `{c}` where the server's subset has none",
-                        self.pattern
-                    ));
-                }
-                _ => Atom::Unit(unit),
-            };
-            let zero_width = matches!(atom, Atom::Start | Atom::End | Atom::Boundary(_));
-            let (min, max, greedy) = match self.quantifier()? {
-                Some(_) if zero_width => {
-                    return Err(format!("`/{}/` quantifies an assertion", self.pattern));
-                }
-                Some((min, max)) => {
-                    let lazy = self.peek() == Some(u16::from(b'?'));
-                    if lazy {
-                        self.at += 1;
-                    }
-                    (min, max, !lazy)
-                }
-                None => (1, 1, true),
-            };
-            pieces.push(Piece {
-                atom,
-                min,
-                max,
-                greedy,
-            });
-        }
-        Ok(pieces)
-    }
-}
-
-fn canonical(unit: u16) -> u16 {
-    let Some(c) = char::from_u32(u32::from(unit)) else {
-        return unit;
-    };
-    let mut upper = c.to_uppercase();
-    match (upper.next(), upper.next()) {
-        (Some(u), None) if u.len_utf16() == 1 && !(unit >= 128 && (u as u32) < 128) => u as u16,
-        _ => unit,
-    }
-}
-
-fn is_word(unit: u16) -> bool {
-    WORD.iter().any(|&(lo, hi)| (lo..=hi).contains(&unit))
-}
-
 impl JsRegex {
     /// The literal `/pattern/flags`.
     ///
@@ -1514,25 +1063,7 @@ impl JsRegex {
                 }
             }
         }
-        let mut pieces = Parser {
-            units: pattern.encode_utf16().collect(),
-            at: 0,
-            pattern,
-        }
-        .parse()?;
-        if ignore_case {
-            for p in &mut pieces {
-                if let Atom::Class(ranges, _, folded) = &mut p.atom {
-                    *folded = Some(
-                        ranges
-                            .iter()
-                            .flat_map(|&(lo, hi)| lo..=hi)
-                            .map(canonical)
-                            .collect(),
-                    );
-                }
-            }
-        }
+        let pieces = pieces(pattern, ignore_case)?;
         Ok(JsRegex {
             pieces,
             global,
@@ -1551,73 +1082,6 @@ impl JsRegex {
             Ok(re) => re,
             Err(e) => panic!("{e}"),
         }
-    }
-
-    fn matches_unit(&self, atom: &Atom, unit: u16) -> bool {
-        match atom {
-            Atom::Unit(u) => *u == unit || (self.ignore_case && canonical(*u) == canonical(unit)),
-            Atom::Any => !matches!(unit, 0x0A | 0x0D | 0x2028 | 0x2029),
-            Atom::Class(ranges, negate, folded) => {
-                let found = ranges.iter().any(|&(lo, hi)| (lo..=hi).contains(&unit))
-                    || folded
-                        .as_ref()
-                        .is_some_and(|set| set.contains(&canonical(unit)));
-                found != *negate
-            }
-            Atom::Start | Atom::End | Atom::Boundary(_) => false,
-        }
-    }
-
-    fn assertion(atom: &Atom, text: &[u16], at: usize) -> Option<bool> {
-        match atom {
-            Atom::Start => Some(at == 0),
-            Atom::End => Some(at == text.len()),
-            Atom::Boundary(word) => {
-                let before = at > 0 && is_word(text[at - 1]);
-                let after = at < text.len() && is_word(text[at]);
-                Some((before != after) == *word)
-            }
-            _ => None,
-        }
-    }
-
-    fn match_from(&self, piece: usize, text: &[u16], at: usize) -> Option<usize> {
-        let Some(p) = self.pieces.get(piece) else {
-            return Some(at);
-        };
-        if let Some(holds) = JsRegex::assertion(&p.atom, text, at) {
-            return if holds {
-                self.match_from(piece + 1, text, at)
-            } else {
-                None
-            };
-        }
-        let mut count = 0;
-        #[cfg(test)]
-        let mut turns = crate::Turns::default();
-        while count < p.max
-            && at + count < text.len()
-            && self.matches_unit(&p.atom, text[at + count])
-        {
-            #[cfg(test)]
-            turns.next();
-            count += 1;
-        }
-        if count < p.min {
-            return None;
-        }
-        if p.greedy {
-            (p.min..=count)
-                .rev()
-                .find_map(|n| self.match_from(piece + 1, text, at + n))
-        } else {
-            (p.min..=count).find_map(|n| self.match_from(piece + 1, text, at + n))
-        }
-    }
-
-    fn find(&self, text: &[u16], from: usize) -> Option<(usize, usize)> {
-        (from..=text.len())
-            .find_map(|start| self.match_from(0, text, start).map(|end| (start, end)))
     }
 
     /// `regex.test(s)` of the literal.
@@ -1691,39 +1155,6 @@ impl JsRegex {
         }
         out.push(String::from_utf16_lossy(&text[p..]));
         out
-    }
-}
-
-fn substitute_units(out: &mut Vec<u16>, with: &[u16], text: &[u16], start: usize, end: usize) {
-    let mut i = 0;
-    while i < with.len() {
-        if with[i] == u16::from(b'$') && i + 1 < with.len() {
-            match with[i + 1] {
-                0x24 => {
-                    out.push(0x24);
-                    i += 2;
-                    continue;
-                }
-                0x26 => {
-                    out.extend_from_slice(&text[start..end]);
-                    i += 2;
-                    continue;
-                }
-                0x60 => {
-                    out.extend_from_slice(&text[..start]);
-                    i += 2;
-                    continue;
-                }
-                0x27 => {
-                    out.extend_from_slice(&text[end..]);
-                    i += 2;
-                    continue;
-                }
-                _ => {}
-            }
-        }
-        out.push(with[i]);
-        i += 1;
     }
 }
 

@@ -79,7 +79,7 @@ crates/ferrovue/src/date.rs: replace + with - in v8_day
 crates/ferrovue/src/date.rs: replace > with >= in try_date_utc
 
 # `units` at `whole_end == start` pushes `&s[start..start]`, which is empty.
-crates/ferrovue/src/strings.rs: replace > with >= in units
+crates/ferrovue/src/strings/units.rs: replace > with >= in units
 
 # `try_repeat` with a zero count or an empty string: past the guard, `length(s) * n` is 0 and `s.repeat(n as usize)` is empty.
 crates/ferrovue/src/strings.rs: replace || with && in try_repeat
@@ -91,20 +91,20 @@ crates/ferrovue/src/strings.rs: replace - with + in js_last_index_of_from
 crates/ferrovue/src/strings.rs: replace || with && in js_cmp
 
 # `power_of_two_value` rounding up to 2⁵³: `2⁵³ × 2ᵉ` and `2⁵² × 2ᵉ⁺¹` are the same double, infinity included.
-crates/ferrovue/src/strings.rs: replace << with >> in power_of_two_value
+crates/ferrovue/src/strings/number.rs: replace << with >> in power_of_two_value
 
 # Rust's `f64` parse reads "Infinity", "+Infinity" and "-Infinity" as the infinities too.
-crates/ferrovue/src/strings.rs: delete match arm "Infinity" | "+Infinity" in decimal_value
-crates/ferrovue/src/strings.rs: delete match arm "-Infinity" in decimal_value
+crates/ferrovue/src/strings/number.rs: delete match arm "Infinity" | "+Infinity" in decimal_value
+crates/ferrovue/src/strings/number.rs: delete match arm "-Infinity" in decimal_value
 
 # `negated` at `lo == next`: no range of `DIGITS`, `WORD` or `SPACES` starts at 0 or just after the one before it, so the two sides are never equal.
-crates/ferrovue/src/strings.rs: replace > with >= in negated
+crates/ferrovue/src/strings/regex.rs: replace > with >= in negated
 
 # `\b` outside a class: `Parser::parse` reads `\b` and `\B` as boundaries before it calls `escape(false)`, which never sees a `b`.
-crates/ferrovue/src/strings.rs: replace match guard in_class with true in Parser<'_>::escape
+crates/ferrovue/src/strings/regex.rs: replace match guard in_class with true in Parser<'_>::escape
 
 # `canonical` at an uppercase of U+0080: no character's uppercase is U+0080, so `< 128` and `<= 128` agree.
-crates/ferrovue/src/strings.rs: replace < with <= in canonical
+crates/ferrovue/src/strings/regex.rs: replace < with <= in canonical
 
 # `split` with an infinite or NaN limit: `trunc().rem_euclid(2³²)` of either is NaN, which casts to 0, the limit the other arm gives.
 crates/ferrovue/src/strings.rs: replace match guard l.is_finite() with true in JsRegex::split
