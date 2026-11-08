@@ -255,9 +255,9 @@ describe("`??`", () => {
   it("falls back from an optional list to an array literal as `?:` does", () => {
     expect(lines("<b>{{ (ys ?? ['q']).length }}|{{ (zs ?? ['q', 'r']).join('-') }}|{{ (ns ?? [1, 2]).length }}</b>")).toMatch(like([
       'out.push_str("<b>");',
-      "fv::core::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }).len() as i64);",
+      "fv::core::push_int(out, (if let Some(n1) = props.ys.as_ref() { n1.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() } else { [\"q\"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }).len() as i64);",
       "out.push('|');",
-      'fv::core::escape_join(out, if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }, "-");',
+      'fv::core::escape_join(out, if let Some(n2) = props.zs.as_ref() { n2.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() } else { ["q", "r"].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() }, "-");',
       "out.push('|');",
       "fv::core::push_int(out, (if let Some(n3) = props.ns.as_ref() { n3.to_vec() } else { [1i64, 2i64].to_vec() }).len() as i64);",
       'out.push_str("</b>");',

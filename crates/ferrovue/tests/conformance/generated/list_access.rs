@@ -89,7 +89,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_first = props.words.first().map(|v| &**v);
     let s_last = fv::strings::js_item_at(props.words.iter(), -1.0f64).map(|v| &**v).unwrap_or("none");
     let s_chosen = props.rows.iter().filter(|fv_r| fv_r.n as f64 > 0.0).nth(usize::try_from(props.i).unwrap_or(usize::MAX));
-    let s_tail = fv::strings::js_item_at(props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_w| Cow::<str>::Owned(fv::strings::js_trim(&fv_w).to_owned())), -1.0f64).map(|v| Cow::<str>::Owned(v.into_owned()));
+    let s_tail = fv::strings::js_item_at(props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_w| Cow::<str>::Owned(fv::strings::js_trim(&fv_w).to_owned())), -1.0f64);
     out.push_str("<!--[--><p>");
     if let Some(v) = props.words.first().map(|v| &**v) {
         fv::core::escape_into(out, v);

@@ -13,6 +13,7 @@ const CHAR = /'(?:[^'\\]|\\u\{[0-9a-f]+\}|\\.)'/y;
 export function fresh(role: string, hint: string): string {
   const name = `fv_${role}${++ctx.narrowCount}`;
   ctx.hints.set(name, hint);
+  ctx.held.delete(name);
   return name;
 }
 

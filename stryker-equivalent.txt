@@ -1850,3 +1850,40 @@ packages/ferrovue/src/dynamic.ts: BooleanLiteral: !p.picks.size => p.picks.size 
 # component is generated, where `dynamicComponent` runs the same `pickOf` on the same node.
 packages/ferrovue/src/dynamic.ts: BlockStatement: { if (!(e instanceof GenError)) throw e; } => {} in } catch (e) {
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: !(e instanceof GenError) => false in if (!(e instanceof GenError)) throw e;
+
+# borrows.ts, `bindsHeld` and `listHeld`: `.*` at the start matches from the text's first character, so the leftmost match starts there with `^` or without it.
+packages/ferrovue/src/borrows.ts: Regex: /^(.*)\.as_(?:ref|deref)\(\)$/s => /(.*)\.as_(?:ref|deref)\(\)$/s in const place = /^(.*)\.as_(?:ref|deref)\(\)$/s.exec(option)?.[1];
+packages/ferrovue/src/borrows.ts: Regex: /^(.*)\.collect::<Vec<_>>\(\)$/s => /(.*)\.collect::<Vec<_>>\(\)$/s in const chain = /^(.*)\.collect::<Vec<_>>\(\)$/s.exec(init)?.[1];
+
+# borrows.ts, `borrowsHeld`: `root` gives a position past the chain's first character or -1, so a negative `at` never enters the loop and fails the end test, and 0 never occurs.
+packages/ferrovue/src/borrows.ts: EqualityOperator: at >= 0 => at > 0 in while (at >= 0 && at < chain.length) {
+packages/ferrovue/src/borrows.ts: ConditionalExpression: at >= 0 => true in while (at >= 0 && at < chain.length) {
+
+# borrows.ts, `root`: `ctx.held` holds no entry for `undefined`, so the test of `local` changes nothing.
+packages/ferrovue/src/borrows.ts: ConditionalExpression: local !== undefined => true in if (local !== undefined && ctx.held.get(local) === "items" … th(KEPT, local.length)) return local.length + KEPT.length;
+
+# borrows.ts, `root`: a root of 1 in place of -1 starts the loop at the chain's second character, which is a letter of a place or `v::` of a call, never a `.` that starts a call, so the chain still fails.
+packages/ferrovue/src/borrows.ts: UnaryOperator: -1 => +1 in if (place !== undefined) return chain.startsWith(".iter()", place.length) ? place.length + ".iter()".length : -1;
+packages/ferrovue/src/borrows.ts: UnaryOperator: -1 => +1 in if (end < 0) return -1;
+packages/ferrovue/src/borrows.ts: UnaryOperator: -1 => +1 in if (chain.startsWith(".into_iter()", end + 1)) return given.every(plainArg) ? end + 1 + ".into_iter()".length : -1;
+packages/ferrovue/src/borrows.ts: UnaryOperator: -1 => +1 in return given.length && borrowsHeld(given[0]!) && given.sli … y((a) => plainArg(a) || a.startsWith("|")) ? end + 1 : -1;
+
+# borrows.ts, `root`: `closing` fails only on a bracket or quote left open, and the brackets of an array or call it has closed hold none, so `splitArgs` never meets one, and a failed `closing` leaves no `.iter()` or `.into_iter()` at position 0 for the tests after it.
+packages/ferrovue/src/borrows.ts: ArrayDeclaration: [] => ["Stryker was here"] in const elems = end < 0 ? [] : splitArgs(chain.slice(1, end));
+packages/ferrovue/src/borrows.ts: ConditionalExpression: end < 0 => false in const elems = end < 0 ? [] : splitArgs(chain.slice(1, end));
+packages/ferrovue/src/borrows.ts: EqualityOperator: end < 0 => end <= 0 in const elems = end < 0 ? [] : splitArgs(chain.slice(1, end));
+packages/ferrovue/src/borrows.ts: ConditionalExpression: end < 0 => false in if (end < 0) return -1;
+packages/ferrovue/src/borrows.ts: EqualityOperator: end < 0 => end <= 0 in if (end < 0) return -1;
+packages/ferrovue/src/borrows.ts: ArrayDeclaration: [] => ["Stryker was here"] in if (i < 0) return [];
+packages/ferrovue/src/borrows.ts: ConditionalExpression: i < 0 => false in if (i < 0) return [];
+
+# borrows.ts, `borrowedArg`: what `plainArg` accepts is a place, a whole literal or a number, which holds no bracket, so the call's `(` always closes at the last character.
+packages/ferrovue/src/borrows.ts: ConditionalExpression: closing(arg, BORROWED.length - 1) === arg.length - 1 => true in return arg.startsWith(BORROWED) && closing(arg, BORROWED.l … rg.length - 1 && plainArg(arg.slice(BORROWED.length, -1));
+
+# borrows.ts, `plainArg`: a bare place is never the argument of a call `root` reads: generated code hands the runtime `&place` or `&*place`, and a bare place as a list's item fails the `.iter()` the array test asks for.
+packages/ferrovue/src/borrows.ts: ConditionalExpression: place !== arg => true in if (place !== arg && heldPlace(place) === place) return true;
+
+# borrows.ts, `splitArgs`: past the text's end `ch` is `undefined`, which no test matches; no argument `plainArg` accepts holds a character literal, so one split apart still fails.
+packages/ferrovue/src/borrows.ts: EqualityOperator: i < text.length => i <= text.length in for (let i = 0; i < text.length; i++) {
+packages/ferrovue/src/borrows.ts: ConditionalExpression: ch === "'" => false in if (ch === '"' || ch === "'") i = literalEnd(text, i);
+packages/ferrovue/src/borrows.ts: StringLiteral: "'" => "" in if (ch === '"' || ch === "'") i = literalEnd(text, i);

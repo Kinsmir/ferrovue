@@ -917,6 +917,12 @@ pub fn js_repeat(s: &str, count: f64) -> String {
 ///
 /// FV0714 for a negative or infinite count, FV0725 for a result longer than V8's longest string.
 #[doc(hidden)]
+#[must_use]
+pub fn kept<'a>(s: &Cow<'a, str>) -> Cow<'a, str> {
+    s.clone()
+}
+
+#[doc(hidden)]
 pub fn try_repeat(s: &str, count: f64) -> Result<String, Refused> {
     let n = to_integer(count);
     if n < 0.0 || n == f64::INFINITY {

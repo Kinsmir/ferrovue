@@ -76,7 +76,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Arrays.vue");
     let s_cheap = props.items.iter().filter(|fv_i| fv_i.price < 10.0).collect::<Vec<_>>();
     let s_labels = props.items.iter().map(|fv_i_2| Cow::<str>::Owned(fv_i_2.label.to_uppercase())).collect::<Vec<_>>();
-    let s_found = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w| fv::strings::js_length(fv_w) > 3).map(|v| Cow::<str>::Owned(v.into_owned()));
+    let s_found = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w| fv::strings::js_length(fv_w) > 3);
     let s_shown = if props.min as f64 > 2.0 { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_2| fv::strings::js_length(fv_w_2) > 1).collect::<Vec<_>>() } else { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() };
     out.push_str("<section><ul><!--[-->");
     for (fv_i_3, fv_item) in props.items.iter().filter(|fv_x| fv_x.id as f64 >= props.min as f64).enumerate() {
@@ -110,7 +110,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.items.iter().position(|fv_i_6| if let Some(fv_note_2) = fv_i_6.note.as_deref() { fv::strings::js_length(fv_note_2) > 3 } else { false }).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::core::escape_into(out, &props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w_6| fv_w_6.starts_with(&*props.query)).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("-")));
+    fv::core::escape_into(out, &props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w_6| fv_w_6.starts_with(&*props.query)).unwrap_or(Cow::<str>::Borrowed("-")));
     out.push_str("</p><p>");
     fv::core::push_int(out, s_cheap.iter().copied().count() as i64);
     out.push('|');
@@ -163,7 +163,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("</i>");
     }
     out.push_str("<!--]-->|");
-    fv::core::escape_into(out, &(if !props.query.is_empty() { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w_10| fv_w_10.contains(&*props.query)).map(|v| Cow::<str>::Owned(v.into_owned())) } else { None }).unwrap_or(Cow::<str>::Borrowed("?")));
+    fv::core::escape_into(out, &(if !props.query.is_empty() { props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_w_10| fv_w_10.contains(&*props.query)) } else { None }).unwrap_or(Cow::<str>::Borrowed("?")));
     out.push_str("</p>");
     fv_refusals.check(super::chips::try_render(out, &super::chips::Props {
         chips: props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w_11| **fv_w_11 != *props.query).collect(),

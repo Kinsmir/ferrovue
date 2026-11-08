@@ -68,7 +68,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         + props.sep.len()
     );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Flattened.vue");
-    let s_tags = props.posts.iter().flat_map(|fv_p| fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).collect::<Vec<_>>();
+    let s_tags = props.posts.iter().flat_map(|fv_p| fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>()).collect::<Vec<_>>();
     let s_cells = props.deep.iter().flat_map(|v| v.iter()).collect::<Vec<_>>();
     out.push_str("<!--[--><p>");
     fv::core::escape_join_ints(out, props.matrix.iter().flat_map(|v| v.iter().copied()), &props.sep);
@@ -93,7 +93,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, s_tags.len() as i64);
     out.push('|');
-    fv::core::escape_join(out, props.posts.iter().flat_map(|fv_p_2| [Cow::<str>::Borrowed(&*fv_p_2.title)].into_iter().chain(fv_p_2.tags.iter().map(|v| Cow::<str>::Borrowed(&**v))).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()), "/");
+    fv::core::escape_join(out, props.posts.iter().flat_map(|fv_p_2| [Cow::<str>::Borrowed(&*fv_p_2.title)].into_iter().chain(fv_p_2.tags.iter().map(|v| Cow::<str>::Borrowed(&**v))).collect::<Vec<_>>()), "/");
     out.push('|');
     fv::core::escape_join_numbers(out, props.posts.iter().enumerate().flat_map(|(fv_i, fv_p_3)| { let fv_i = fv_i as i64; fv_p_3.scores.iter().copied().map(|fv_s| fv_s as f64 * fv_i as f64).collect::<Vec<_>>() }), ",");
     out.push('|');
@@ -109,13 +109,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.groups.values().count() as i64);
     out.push('|');
-    fv::core::escape_join(out, props.groups.iter().flat_map(|fv_item| fv_item.1.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t| Cow::<str>::Owned(Cow::<str>::Owned(format!("{}{}", fv_item.0, fv_t)).into_owned())).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()), ",");
+    fv::core::escape_join(out, props.groups.iter().flat_map(|fv_item| fv_item.1.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t| Cow::<str>::Owned(Cow::<str>::Owned(format!("{}{}", fv_item.0, fv_t)).into_owned())).collect::<Vec<_>>()), ",");
     out.push('|');
     fv::core::push_int(out, s_cells.iter().copied().count() as i64);
     out.push('|');
     fv::core::escape_join_ints(out, s_cells.iter().copied().flat_map(|v| v.iter().copied()).filter(|fv_n| *fv_n as f64 > 1.0), ",");
     out.push_str("</p><ul><!--[-->");
-    for fv_t_cow in props.posts.iter().flat_map(|fv_p_6| fv_p_6.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).filter(|fv_t_2| **fv_t_2 != *props.sep) {
+    for fv_t_cow in props.posts.iter().flat_map(|fv_p_6| fv_p_6.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>()).filter(|fv_t_2| **fv_t_2 != *props.sep) {
         let fv_t_3: &str = &fv_t_cow;
         out.push_str("<li>");
         fv::core::escape_into(out, fv_t_3);

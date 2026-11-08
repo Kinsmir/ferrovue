@@ -8,6 +8,7 @@ import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
 import { expr, typedBy } from "./expr.ts";
 import { collected, heldList } from "./lists.ts";
+import { listHeld } from "./borrows.ts";
 import { atom, bare, occurrences, operand, UNARY } from "./parens.ts";
 import { presence } from "./narrowing.ts";
 import { asCow, heldStr, isTemporary } from "./strings.ts";
@@ -46,7 +47,15 @@ export function bindingOf(v: Val): { init: string; read: (at: string) => Val; ow
   }
   if (v.owned) return { init: bare(v.code), read: (at) => ({ code: v.ty.k === "opt" ? `${at}.as_ref()` : at, ty: v.ty, ...lone }), owned: true };
   if (v.slice) return { init: bare(v.code), read: (at) => ({ code: at, ty: v.ty, slice: true, ...lone }), owned: false };
-  if (v.ty.k === "list" && v.iter !== undefined) return { init: collected(v), read: (at) => heldList(at, v.ty.k === "list" ? v.ty.of : v.ty, v.lone), owned: true };
+  if (v.ty.k === "list" && v.iter !== undefined) {
+    const of = v.ty.of;
+    const init = collected(v);
+    const read = (at: string): Val => {
+      if (of.k === "str") listHeld(at, init);
+      return heldList(at, of, v.lone);
+    };
+    return { init, read, owned: true };
+  }
   if (v.held !== undefined) return { init: v.held, read: (at) => ({ code: `${at}.as_deref()`, ty: v.ty, ...lone }), owned: true };
   if (isCast(v) || (v.ty.k === "int" && v.f64 !== undefined && Object.is(v.num, -0))) {
     return {

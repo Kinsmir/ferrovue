@@ -311,6 +311,7 @@ export const ctx = {
   components: new Map<string, Component>(),
   narrowCount: 0,
   hints: new Map<string, string>(),
+  held: new Map<string, "ref" | "items">(),
   componentsDir: "",
   vnodeTag: null as string | null,
   sources: new Map<string, string>(),

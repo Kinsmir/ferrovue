@@ -115,7 +115,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::push_int(out, props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).position(|fv_item_9| !fv_item_9.is_empty()).map_or(-1, |i| i as i64));
     out.push('|');
-    fv::core::escape_into(out, &props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_item_10| !fv_item_10.is_empty()).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("none")));
+    fv::core::escape_into(out, &props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_item_10| !fv_item_10.is_empty()).unwrap_or(Cow::<str>::Borrowed("none")));
     out.push_str("</p><p>");
     fv::core::push_int(out, props.flags.iter().copied().filter(|fv_item_11| *fv_item_11).count() as i64);
     out.push('/');

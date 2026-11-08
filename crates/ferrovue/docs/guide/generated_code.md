@@ -796,8 +796,13 @@ let s_total = { let mut fv_sum: f64 = 0.0f64; for fv_r in props.rows.iter() { fv
 
 A list of strings a local holds keeps each string borrowed where it comes from the props, a string
 literal or a `<script setup>` binding, which all live as long as the render, so building it copies
-no text. A string taken from a value the list's own expression makes, such as a `const` inside a
-`computed`'s body, is copied into the list, since that value is gone once the expression ends.
+no text. So does a string reached through an arrow function's object parameter
+(`posts.flatMap((p) => p.tags)`), through `?.` or `??` on an optional list, or through a `const`
+inside a `computed`'s body that holds such strings: the list copies each `Cow` of the `const`, and
+a copy of a borrowed `Cow` borrows the same string. The string `.find()` or `.at()` picks is kept
+the same way. A string the expression makes or is handed as its own value, such as the pieces of
+`w.split("-")` in `words.flatMap((w) => w.split("-"))`, is copied into the list, since that value
+is gone once the expression ends.
 
 ```rust
 # use std::borrow::Cow;
@@ -806,6 +811,9 @@ no text. A string taken from a value the list's own expression makes, such as a 
 // const long = computed(() => props.words.filter((w) => w.length > 2));
 let s_long = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w| fv_w.len() > 2).collect::<Vec<_>>();
 # assert!(matches!(s_long[..], [Cow::Borrowed("long")]));
+// const first = computed(() => { const all = props.words.filter((w) => w.length > 2); return all.slice(0, 1); });
+let s_first = { let fv_all = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w| fv_w.len() > 2).collect::<Vec<_>>(); fv_all.iter().cloned().take(1).collect::<Vec<_>>() };
+# assert!(matches!(s_first[..], [Cow::Borrowed("long")]));
 ```
 
 A render tests only what can go either way. It writes no test of the empty string for a value

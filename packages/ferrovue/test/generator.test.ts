@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.ts";
 import { generate } from "../src/compiler.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
-import { borrowsHeld } from "../src/borrows.ts";
+import { bindsHeld, borrowsHeld, itemsHeld, keptBorrowed, listHeld } from "../src/borrows.ts";
+import { ctx } from "../src/context.ts";
 import { CONFIG, compile, island } from "./project.ts";
 
 describe("the generator", () => {
@@ -441,14 +442,27 @@ const later = computed(() => long.value.filter((w) => w !== "x"));`,
       expect(out).not.toContain("into_owned");
     });
 
-    it("owns the strings it takes from a value its own expression makes", () => {
+    it("keeps borrowed the strings a closure's parameter or a block's local takes from the props", () => {
       const out = held(
         `const tags = computed(() => props.posts.flatMap((p) => p.tags));
-const first = computed(() => { const all = props.words.filter((w) => w.length > 1); return all.slice(0, 2); });`,
-        `<p v-for="t in tags" :key="t">{{ t }}</p><i v-for="w in first" :key="w">{{ w }}</i>`,
+const first = computed(() => { const all = props.words.filter((w) => w.length > 1); return all.slice(0, 2); });
+const found = computed(() => { const all = props.words.filter((w) => w.length > 1); return all.find((w) => w !== "x") ?? "-"; });`,
+        `<p v-for="t in tags" :key="t">{{ t }}</p><i v-for="w in first" :key="w">{{ w }}</i>{{ found }}`,
       );
-      expect(out).toContain("fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()");
-      expect(out).toMatch(/let s_first = \{ let fv_all = props\.words[^;]*\.collect::<Vec<_>>\(\); [^;]*fv_all\.iter\(\)[^;]*\.map\(\|v\| Cow::<str>::Owned\(v\.into_owned\(\)\)\)\.collect::<Vec<_>>\(\) \};/);
+      expect(out).toContain("fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>()");
+      expect(out).toMatch(/let s_first = \{ let fv_all = props\.words[^;]*\.collect::<Vec<_>>\(\); fv::strings::js_slice_items\(fv_all\.iter\(\)\.map\(fv::strings::kept\), [^;]*\)\.collect::<Vec<_>>\(\) \};/);
+      expect(out).toMatch(/fv_all_2\.iter\(\)\.map\(fv::strings::kept\)\.find\(/);
+      expect(out.split("\n").filter((l) => l.includes("into_owned"))).toEqual([expect.stringContaining("let s_found = ")]);
+    });
+
+    it("owns the strings it takes from a string a closure is handed", () => {
+      const out = held(
+        `const parts = computed(() => props.words.flatMap((w) => w.split("-")));
+const heads = computed(() => props.words.map((w) => w.split("-").find((p) => p.length > 0) ?? ""));`,
+        `<p v-for="t in parts" :key="t">{{ t }}</p><i v-for="h in heads" :key="h">{{ h }}</i>`,
+      );
+      expect(out).toContain('fv::strings::js_split(&fv_w, "-").into_iter().map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()');
+      expect(out).toMatch(/fv::strings::js_split\(&fv_w_2, "-"\)\.into_iter\(\)\.find\([^;]*\)\.map\(\|v\| Cow::<str>::Owned\(v\.into_owned\(\)\)\)/);
     });
 
     it("reads a chain as borrowing only what outlives the list", () => {
@@ -512,6 +526,33 @@ const first = computed(() => { const all = props.words.filter((w) => w.length > 
       ]) {
         expect(borrowsHeld(chain), chain).toBe(false);
       }
+    });
+
+    it("reads a local bound to a reference into the props as outliving the list", () => {
+      ctx.held = new Map();
+      const cow = "std::borrow::Cow::<str>";
+      expect(borrowsHeld("fv_p1.tags.iter()")).toBe(false);
+      for (const option of ["props.words.as_ref()", "s_user.langs.as_deref()"]) bindsHeld("fv_n1", option);
+      for (const option of ["props.words", "props.a.as_ref().map(f)", "fv_n2.as_ref()", "f(props.a).as_ref()", "props.a.as_ref() "]) bindsHeld("fv_n9", option);
+      itemsHeld("fv_p1", "props.posts.iter().filter(|p| p.on).take(2).rev()");
+      itemsHeld("fv_p2", "fv_p1.rows.iter()");
+      for (const chain of ["props.posts.iter().map(|p| p)", "props.posts", "props.posts.iter().filter(", "fv_q1.iter()", "props.posts.iter()x", "props.posts.iter().mapp(x).take(1)"]) itemsHeld("fv_p9", chain);
+      listHeld("fv_l1", `props.words.iter().map(|v| ${cow}::Borrowed(&**v)).collect::<Vec<_>>()`);
+      listHeld("fv_l2", `fv_l1.iter().map(fv::strings::kept).collect::<Vec<_>>()`);
+      for (const init of [`fv_z1.iter().map(|v| ${cow}::Borrowed(&**v)).collect::<Vec<_>>()`, "props.words.iter()", "x.collect::<Vec<_>>()", "props.words.iter().collect::<Vec<_>>().into_iter()"]) listHeld("fv_l9", init);
+      expect(Object.fromEntries(ctx.held)).toEqual({ fv_n1: "ref", fv_p1: "ref", fv_p2: "ref", fv_l1: "items", fv_l2: "items" });
+      for (const chain of ["fv_n1.iter()", "fv_p2.tags.iter().rev()", `[${cow}::Borrowed(&*fv_p1.title), ${cow}::Borrowed("x")].into_iter().chain(fv_p1.tags.iter())`, "fv_l2.iter().map(fv::strings::kept).take(1)", "fv::strings::js_x(&*fv_n1, 1).into_iter()", "props.fv_q1.iter()"]) {
+        expect(borrowsHeld(chain), chain).toBe(true);
+      }
+      for (const chain of ["fv_n9.iter()", "fv_l1.iter()", "fv_p1.iter().cloned()", `[${cow}::Borrowed(&*fv_q1.title)].into_iter()`, `[${cow}::Borrowed(&*props.a)].iter()`, "[].into_iter()", `[${cow}::Borrowed(&*props.a).x].into_iter()`, "fv_l9.iter().map(fv::strings::kept)", "propz.iter().map(fv::strings::kept).take(fv_l1)", "fv_l1.iter().map(fv::strings::kepx)", `[${cow}::Borrowed(&*props.a), ${cow}::Borrowed(&*fv_q1.x)].into_iter()`, `[${cow}::Borrowed(&*props.a)].rev().rev()`, "[std::borrow::Cow::<str>::Owned___(&*props.a)].into_iter()"]) {
+        expect(borrowsHeld(chain), chain).toBe(false);
+      }
+      const read = (name: string): string => `${name}.iter().map(|v| ${cow}::Borrowed(&**v))`;
+      expect(keptBorrowed(`fv::strings::js_slice_items(${read("fv_l1")}, 0.0f64, None)`)).toBe("fv::strings::js_slice_items(fv_l1.iter().map(fv::strings::kept), 0.0f64, None)");
+      expect(keptBorrowed(`${read("fv_l1")}.chain(${read("fv_l2")})`)).toBe("fv_l1.iter().map(fv::strings::kept).chain(fv_l2.iter().map(fv::strings::kept))");
+      expect(keptBorrowed(`${read("fv_l1")}.chain(${read("fv_n1")})`)).toBe(`fv_l1.iter().map(fv::strings::kept).chain(${read("fv_n1")})`);
+      for (const chain of [read("fv_l9"), `${read("fv_l1")}.chain(fv_z1.iter())`, "props.words.iter()"]) expect(keptBorrowed(chain), chain).toBeNull();
+      ctx.held = new Map();
     });
   });
 

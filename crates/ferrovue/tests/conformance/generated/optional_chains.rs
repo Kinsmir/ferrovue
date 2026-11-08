@@ -146,7 +146,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(
         313
-        + 9 * props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).len()
+        + 9 * props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).len()
         + 9 * props.user.as_ref().map(|fv_user| &fv_user.langs).map(|v| &v[..]).unwrap_or(&[]).len()
         + props.user.as_ref().map_or(0, |v| v.name.len() + v.nick.as_deref().map_or(0, str::len) + v.langs.iter().map(|v| v.len()).sum::<usize>() + v.profile.as_ref().map_or(0, |v| v.bio.len() + v.site.as_deref().map_or(0, str::len)))
         + props.title.as_deref().map_or(0, str::len)
@@ -225,7 +225,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, v);
     }
     out.push('|');
-    out.push('['); fv::core::escape_join(out, props.tags.as_ref().map(|fv_tags_11| fv::strings::js_slice_items(fv_tags_11.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)), ","); out.push(']');
+    out.push('['); fv::core::escape_join(out, props.tags.as_ref().map(|fv_tags_11| fv::strings::js_slice_items(fv_tags_11.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)), ","); out.push(']');
     out.push_str("</p><p>");
     if let Some(v) = props.user.as_ref().map(|fv_user_3| &*fv_user_3.name) {
         fv::core::escape_into(out, v);
@@ -263,7 +263,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::escape_into(out, v);
     }
     out.push('|');
-    if let Some(v) = props.user.as_ref().and_then(|fv_user_12| fv_user_12.langs.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_l| fv_l.starts_with("r")).map(|v| Cow::<str>::Owned(v.into_owned()))).as_deref() {
+    if let Some(v) = props.user.as_ref().and_then(|fv_user_12| fv_user_12.langs.iter().map(|v| Cow::<str>::Borrowed(&**v)).find(|fv_l| fv_l.starts_with("r"))).as_deref() {
         fv::core::escape_into(out, v);
     }
     out.push_str("</p><p>");
@@ -334,7 +334,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     }
     out.push_str(if props.user.as_ref().and_then(|fv_user_13| fv_user_13.profile.as_ref()).and_then(|fv_profile_6| fv_profile_6.site.as_deref()).is_some() { "<p>site</p>" } else { "<!---->" });
     out.push_str(if props.user.as_ref().and_then(|fv_user_14| fv_user_14.nick.as_deref()).is_none() { "<p>no nick</p><ul><!--[-->" } else { "<!----><ul><!--[-->" });
-    for fv_t_ref in props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {
+    for fv_t_ref in props.tags.as_ref().map(|fv_tags| fv_tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_t| fv::strings::js_length(fv_t) > 1).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {
         let fv_t_5: &str = fv_t_ref;
         out.push_str("<li>");
         fv::core::escape_into(out, fv_t_5);
