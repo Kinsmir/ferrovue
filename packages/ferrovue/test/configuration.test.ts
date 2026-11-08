@@ -325,6 +325,8 @@ describe("the configuration", () => {
     ["a `dateType` of one name", { ...CONFIG, dateType: "JsDate" }, "FV1122", /is "JsDate"/],
     ["a `dateType` whose generic arguments do not close", { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc" }, "FV1122", /is "chrono::DateTime<chrono::Utc"/],
     ["a `trustedHtml` that is a block", { ...CONFIG, trustedHtml: "crate::Safe { x }" }, "FV1122", /^`trustedHtml` in ferrovue\.config\.json is "crate::Safe \{ x \}"/],
+    ["a `trustedHtml` that is a lifetime", { ...CONFIG, trustedHtml: "'a" }, "FV1122", /is "'a"/],
+    ["a `trustedHtml` whose lifetime is not a name", { ...CONFIG, trustedHtml: "crate::Safe<'a b>" }, "FV1122", /is "crate::Safe<'a b>"/],
     ["a path holding a line break", { ...CONFIG, components: "\npub fn evil() {}\n//../components" }, "FV1123", /^`components` in ferrovue\.config\.json holds a control character, such as a line break, which would end a comment of the generated code: remove it$/],
     ["a nested name holding a control character", { ...CONFIG, router: { routes: "routes.json", linkActiveClass: "on\u0000" } }, "FV1123", /^`router\.linkActiveClass` in/],
     ["a key holding a control character", { ...CONFIG, unions: { "To\tne": "crate::Tone" } }, "FV1123", /^`unions\.To\tne` in/],
@@ -339,7 +341,7 @@ describe("the configuration", () => {
   }
 
   it("takes the paths of Rust types with generic arguments as `dateType` and `trustedHtml`", () => {
-    for (const ty of ["chrono::DateTime<chrono::Utc>", "::app::When<app::Zone, u8>", "crate::a::B<c::D<e::F>, G>", "crate::Html"]) {
+    for (const ty of ["chrono::DateTime<chrono::Utc>", "::app::When<app::Zone, u8>", "crate::a::B<c::D<e::F>, G>", "crate::Html", "crate::render::Trusted<'a>", "crate::When<'static, app::Zone>", "crate::Html<'_>"]) {
       expect(loadConfig(configured({ ...CONFIG, dateType: ty, trustedHtml: ty }))).toMatchObject({ dateType: ty, trustedHtml: ty });
     }
   });
