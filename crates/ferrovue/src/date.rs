@@ -6,6 +6,14 @@ use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use self::calendar::{civil, date_part, integer, time, time_part, v8_day};
+use self::iso::iso_time;
+
+mod calendar;
+#[cfg(feature = "chrono")]
+mod chrono_time;
+mod iso;
+
 /// A JavaScript `Date`: its time value, the milliseconds since 1970-01-01T00:00:00Z, a whole number
 /// within ±8.64 × 10¹⁵, or `NaN` for an invalid date. It is the Rust type of a prop the component
 /// types `Date`, unless `dateType` in `ferrovue.config.json` names another
@@ -480,40 +488,6 @@ impl fmt::Display for DateOutOfRange {
 #[cfg(feature = "chrono")]
 impl std::error::Error for DateOutOfRange {}
 
-#[cfg(feature = "chrono")]
-mod chrono_time {
-    use chrono::{DateTime, Utc};
-
-    use super::{DateOutOfRange, JsDate, JsTime};
-
-    impl From<DateTime<Utc>> for JsDate {
-        fn from(t: DateTime<Utc>) -> JsDate {
-            JsDate::from_millis(t.timestamp_millis() as f64)
-        }
-    }
-
-    impl TryFrom<JsDate> for DateTime<Utc> {
-        type Error = DateOutOfRange;
-
-        fn try_from(date: JsDate) -> Result<DateTime<Utc>, DateOutOfRange> {
-            if !date.is_valid() {
-                return Err(DateOutOfRange(date));
-            }
-            DateTime::from_timestamp_millis(date.time_value() as i64).ok_or(DateOutOfRange(date))
-        }
-    }
-
-    impl JsTime for DateTime<Utc> {
-        fn time_value(&self) -> f64 {
-            JsDate::from(*self).time_value()
-        }
-
-        fn from_time_value(t: f64) -> Option<DateTime<Utc>> {
-            DateTime::try_from(JsDate::from_millis(t)).ok()
-        }
-    }
-}
-
 const MS_PER_DAY: i64 = 86_400_000;
 const MAX_TIME: f64 = 8.64e15;
 
@@ -795,36 +769,6 @@ pub fn js_json_date(t: f64) -> String {
 
 const EXACT: f64 = 9_007_199_254_740_992.0;
 
-fn integer(x: f64) -> f64 {
-    x.trunc() + 0.0
-}
-
-fn v8_day(year: f64, month: f64, date: f64) -> f64 {
-    if !((-1e6..=1e6).contains(&year) && (-1e7..=1e7).contains(&month)) {
-        return f64::NAN;
-    }
-    const DELTA: i64 = 399_999;
-    let days_before =
-        |y: i64| 365 * (y + DELTA) + (y + DELTA) / 4 - (y + DELTA) / 100 + (y + DELTA) / 400;
-    let mut y = year as i64;
-    let mut m = month as i64;
-    y += m / 12;
-    m %= 12;
-    if m < 0 {
-        m += 12;
-        y -= 1;
-    }
-    const COMMON: [i64; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    const LEAP: [i64; 12] = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
-    let table = if y % 4 != 0 || (y % 100 == 0 && y % 400 != 0) {
-        COMMON
-    } else {
-        LEAP
-    };
-    let day = days_before(y) - days_before(1970) + table[m as usize];
-    (day - 1) as f64 + integer(date)
-}
-
 /// `Date.UTC(year, month, date, hours, minutes, seconds, ms)`: the time value of a date and time
 /// in UTC, each part truncated toward zero, a year from 0 to 99 read as 1900 to 1999, a month or a
 /// day beyond its range carried into the next, and `NaN` where a part is not finite or the time
@@ -924,139 +868,6 @@ pub fn try_date_utc(
     } else {
         f64::NAN
     })
-}
-
-fn time(t: f64) -> Option<i64> {
-    let t = js_time_clip(t);
-    (!t.is_nan()).then_some(t as i64)
-}
-
-fn date_part(t: f64, part: fn((i64, i64, i64)) -> i64) -> f64 {
-    time(t).map_or(f64::NAN, |t| part(civil(t.div_euclid(MS_PER_DAY))) as f64)
-}
-
-fn time_part(t: f64, unit: i64, count: i64) -> f64 {
-    time(t).map_or(f64::NAN, |t| {
-        (t.rem_euclid(MS_PER_DAY) / unit % count) as f64
-    })
-}
-
-fn days_from_civil(year: i64, month: i64, day: i64) -> i64 {
-    let y = if month <= 2 { year - 1 } else { year };
-    let era = y.div_euclid(400);
-    let yoe = y - era * 400;
-    let doy = (153 * ((month + 9) % 12) + 2) / 5 + day - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    era * 146_097 + doe - 719_468
-}
-
-fn civil(days: i64) -> (i64, i64, i64) {
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    (year, month, day)
-}
-
-fn days_in_month(year: i64, month: i64) -> i64 {
-    match month {
-        2 if year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) => 29,
-        2 => 28,
-        4 | 6 | 9 | 11 => 30,
-        _ => 31,
-    }
-}
-
-struct Cursor<'s> {
-    s: &'s [u8],
-    at: usize,
-}
-
-impl Cursor<'_> {
-    fn eat(&mut self, c: u8) -> bool {
-        let found = self.s.get(self.at) == Some(&c);
-        self.at += usize::from(found);
-        found
-    }
-
-    fn digits(&mut self, n: usize) -> Option<i64> {
-        let run = self.s.get(self.at..self.at + n)?;
-        if !run.iter().all(u8::is_ascii_digit) {
-            return None;
-        }
-        self.at += n;
-        Some(run.iter().fold(0, |acc, d| acc * 10 + i64::from(d - b'0')))
-    }
-
-    fn sign(&mut self) -> Option<i64> {
-        if self.eat(b'+') {
-            Some(1)
-        } else if self.eat(b'-') {
-            Some(-1)
-        } else {
-            None
-        }
-    }
-
-    fn within(&mut self, n: usize, low: i64, high: i64) -> Option<i64> {
-        self.digits(n).filter(|v| (low..=high).contains(v))
-    }
-}
-
-pub(crate) fn iso_time(s: &[u8]) -> Option<f64> {
-    let mut c = Cursor { s, at: 0 };
-    let year = match c.sign() {
-        Some(sign) => {
-            let year = c.digits(6)?;
-            if sign == -1 && year == 0 {
-                return None;
-            }
-            sign * year
-        }
-        None => c.digits(4)?,
-    };
-    let mut month = 1;
-    let mut day = 1;
-    if c.eat(b'-') {
-        month = c.within(2, 1, 12)?;
-        if c.eat(b'-') {
-            day = c.within(2, 1, days_in_month(year, month))?;
-        }
-    }
-    let mut ms = days_from_civil(year, month, day) * MS_PER_DAY;
-    if c.eat(b'T') {
-        let hours = c.within(2, 0, 23)?;
-        c.eat(b':').then_some(())?;
-        let minutes = c.within(2, 0, 59)?;
-        let mut seconds = 0;
-        let mut millis = 0;
-        if c.eat(b':') {
-            seconds = c.within(2, 0, 59)?;
-            if c.eat(b'.') {
-                millis = c.digits(3)?;
-            }
-        }
-        ms += ((hours * 60 + minutes) * 60 + seconds) * 1000 + millis;
-        if !c.eat(b'Z') {
-            let sign = c.sign()?;
-            let hours = c.within(2, 0, 23)?;
-            c.eat(b':').then_some(())?;
-            let fields = ms as f64;
-            ms -= sign * (hours * 60 + c.within(2, 0, 59)?) * 60_000;
-            if js_time_clip(fields).is_nan() && !js_time_clip(ms as f64).is_nan() {
-                return None;
-            }
-        }
-    }
-    if c.at != s.len() {
-        return None;
-    }
-    Some(js_time_clip(ms as f64))
 }
 
 #[cfg(test)]

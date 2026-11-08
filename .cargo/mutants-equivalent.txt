@@ -67,13 +67,13 @@ crates/ferrovue-router/src/lib.rs: replace > with >= in resolve_relative_path
 crates/ferrovue/src/strings.rs: replace + with - in to_integer
 
 # `integer` in `Date.UTC` gives −0 for a part in (−1, 0] where `x.trunc() + 0.0` gives +0. Each part is compared, made a term of `time`, or added to `(day - 1) as f64`, an integer that is never −0, so `days` and `t = days + time` are never −0, and `integer(t)` of the integer `t` is the same.
-crates/ferrovue/src/date.rs: replace + with - in integer
+crates/ferrovue/src/date/calendar.rs: replace + with - in integer
 
 # `v8_day` is called only once `agreed` holds, which keeps the year and the month within the same ranges.
-crates/ferrovue/src/date.rs: replace && with || in v8_day
+crates/ferrovue/src/date/calendar.rs: replace && with || in v8_day
 
 # `days_before(y) - days_before(1970)`: the terms `365 * (y + DELTA)` and `365 * (y - DELTA)` both leave `365 * (y - 1970)`.
-crates/ferrovue/src/date.rs: replace + with - in v8_day
+crates/ferrovue/src/date/calendar.rs: replace + with - in v8_day
 
 # `largest > EXACT` in `Date.UTC`: each term of `largest` is a multiple of 1000 ms, held exactly by a double below 2⁵⁴, and 2⁵³ is no multiple of 1000, so `largest` is never 2⁵³.
 crates/ferrovue/src/date.rs: replace > with >= in try_date_utc
