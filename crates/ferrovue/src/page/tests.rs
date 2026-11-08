@@ -1,6 +1,7 @@
 use super::*;
 use crate::render::{slot_into, slot_into_slotted};
 use ferrovue_core::{escape_into, push_number};
+use std::task::Waker;
 
 #[derive(Serialize)]
 struct WordProps<'a> {
