@@ -499,170 +499,175 @@ packages/ferrovue/src/constants.ts: ConditionalExpression: n.object.name === "_c
 packages/ferrovue/src/constants.ts: StringLiteral: "_ctx" => "" in if (n.type === "MemberExpression" && n.object.type === "Id … n.object.name === "$setup" || n.object.name === "_ctx")) {
 packages/ferrovue/src/constants.ts: ConditionalExpression: name !== undefined => true in const c = name !== undefined ? s.consts.get(name) : undefined;
 
-# constants.ts, `declareConsts`: a destructuring `const` is stored under the key `undefined`, and
+# const-decls.ts, `declareConsts`: a destructuring `const` is stored under the key `undefined`, and
 # every lookup of a declared constant is by an identifier's name; the one loop over a module's
 # declarations (`moduleOf` in functions.ts) evaluates it and keeps the result or the refusal under
 # `undefined`, which no read asks for.
-packages/ferrovue/src/constants.ts: ConditionalExpression: v.id.type === "Identifier" => true in for (const v of d.declarations) if (v.id.type === "Identifier" && v.init) found.set(v.id.name, { node: v, home });
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: v.id.type === "Identifier" => true in for (const v of d.declarations) if (v.id.type === "Identifier" && v.init) found.set(v.id.name, { node: v, home });
 
-# constants.ts, `exportsOf`: Babel parses `export * as ns from` as an `ExportNamedDeclaration` with
+# ts-exports.ts, `exportsOf`: Babel parses `export * as ns from` as an `ExportNamedDeclaration` with
 # an `ExportNamespaceSpecifier`, so an `ExportAllDeclaration` has no `exported`; its other
 # specifiers are `ExportSpecifier`s, since `export v from` needs the `exportDefaultFrom` plugin,
 # which `parseTs` leaves out. An export with a declaration has no specifiers, and a destructuring
 # one stores its name under the key `undefined`, which no import asks for.
-packages/ferrovue/src/constants.ts: ConditionalExpression: st.exported => false in if (st.exported) names.set(nameOf(st.exported), { file: null, name: null });
-packages/ferrovue/src/constants.ts: ObjectLiteral: { file: null, name: null } => {} in if (st.exported) names.set(nameOf(st.exported), { file: null, name: null });
-packages/ferrovue/src/constants.ts: ConditionalExpression: sp.type === "ExportSpecifier" => true in else if (sp.type === "ExportSpecifier") names.set(as, from … sp.local.name } : { file: from, name: nameOf(sp.local) });
-packages/ferrovue/src/constants.ts: ConditionalExpression: d => false in if (d) continue;
-packages/ferrovue/src/constants.ts: ConditionalExpression: v.id.type === "Identifier" => true in if (d?.type === "VariableDeclaration") for (const v of d.d …  "Identifier") names.set(v.id.name, { local: v.id.name });
+packages/ferrovue/src/ts-exports.ts: ConditionalExpression: st.exported => false in if (st.exported) names.set(nameOf(st.exported), { file: null, name: null });
+packages/ferrovue/src/ts-exports.ts: ObjectLiteral: { file: null, name: null } => {} in if (st.exported) names.set(nameOf(st.exported), { file: null, name: null });
+packages/ferrovue/src/ts-exports.ts: ConditionalExpression: sp.type === "ExportSpecifier" => true in else if (sp.type === "ExportSpecifier") names.set(as, from … sp.local.name } : { file: from, name: nameOf(sp.local) });
+packages/ferrovue/src/ts-exports.ts: ConditionalExpression: d => false in if (d) continue;
+packages/ferrovue/src/ts-exports.ts: ConditionalExpression: v.id.type === "Identifier" => true in if (d?.type === "VariableDeclaration") for (const v of d.d …  "Identifier") names.set(v.id.name, { local: v.id.name });
 
-# constants.ts, `exportOrigin`, `exportedConst` and `exportedFunction`: every file they are given
+# ts-exports.ts, `exportOrigin`, `exportedConst` and `exportedFunction`: every file they are given
 # has been read whole before: each caller reads the file it imports from first, and `readTypeFile`
 # reads every file an `export … from` or `export * from` of it names. No constant is evaluated
 # while a file is read, so `ctx.tsModules` and `ctx.constDecls` hold every file an origin is in. A
 # name is `null` only for a namespace, whose file is `null` too.
-packages/ferrovue/src/constants.ts: CallExpression: readTypeFile(file); => ; in readTypeFile(file);
-packages/ferrovue/src/constants.ts: OptionalChaining: ctx.tsModules.get(file)?.exports => ctx.tsModules.get(file).exports in const exports = ctx.tsModules.get(file)?.exports;
-packages/ferrovue/src/constants.ts: OptionalChaining: exports?.names => exports.names in const e = exports?.names.get(name);
-packages/ferrovue/src/constants.ts: ConditionalExpression: e.name === null => false in return e.file === null || e.name === null ? undefined : exportOrigin(e.file, e.name, seen);
-packages/ferrovue/src/constants.ts: OptionalChaining: exports?.stars => exports.stars in for (const star of exports?.stars ?? []) {
-packages/ferrovue/src/constants.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const star of exports?.stars ?? []) {
-packages/ferrovue/src/constants.ts: OptionalChaining: ctx.constDecls.get(o.file)?.get => ctx.constDecls.get(o.file).get in return o === undefined ? undefined : ctx.constDecls.get(o.file)?.get(o.local);
-packages/ferrovue/src/constants.ts: OptionalChaining: ctx.tsModules.get(o.file)?.functions => ctx.tsModules.get(o.file).functions in return o === undefined ? undefined : ctx.tsModules.get(o.file)?.functions.get(o.local);
+packages/ferrovue/src/ts-exports.ts: CallExpression: readTypeFile(file); => ; in readTypeFile(file);
+packages/ferrovue/src/ts-exports.ts: OptionalChaining: ctx.tsModules.get(file)?.exports => ctx.tsModules.get(file).exports in const exports = ctx.tsModules.get(file)?.exports;
+packages/ferrovue/src/ts-exports.ts: OptionalChaining: exports?.names => exports.names in const e = exports?.names.get(name);
+packages/ferrovue/src/ts-exports.ts: ConditionalExpression: e.name === null => false in return e.file === null || e.name === null ? undefined : exportOrigin(e.file, e.name, seen);
+packages/ferrovue/src/ts-exports.ts: OptionalChaining: exports?.stars => exports.stars in for (const star of exports?.stars ?? []) {
+packages/ferrovue/src/ts-exports.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const star of exports?.stars ?? []) {
+packages/ferrovue/src/ts-exports.ts: OptionalChaining: ctx.constDecls.get(o.file)?.get => ctx.constDecls.get(o.file).get in return o === undefined ? undefined : ctx.constDecls.get(o.file)?.get(o.local);
+packages/ferrovue/src/ts-exports.ts: OptionalChaining: ctx.tsModules.get(o.file)?.functions => ctx.tsModules.get(o.file).functions in return o === undefined ? undefined : ctx.tsModules.get(o.file)?.functions.get(o.local);
 
-# constants.ts, `typedAs` and `typeValues`: they are given a declarator `declareConsts` kept for
+# const-decls.ts, `typedAs` and `typeValues`: they are given a declarator `declareConsts` kept for
 # having an `init`, and
 # `as` and `satisfies` always have an `expression`, so `n` is never `undefined`. Babel gives every
 # type reference with type arguments a `params` array. A qualified type name has no `name`, and
 # `ctx.typeStructs` has no key `undefined`.
-packages/ferrovue/src/constants.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
-packages/ferrovue/src/constants.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
-packages/ferrovue/src/constants.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
-packages/ferrovue/src/constants.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
-packages/ferrovue/src/constants.ts: OptionalChaining: t.typeParameters?.params?.[0] => t.typeParameters?.params[0] in const item = t?.type === "TSArrayType" ? t.elementType : t … s(t.typeName.name) ? t.typeParameters?.params?.[0] : null;
-packages/ferrovue/src/constants.ts: ConditionalExpression: item.typeName.type === "Identifier" => true in if (item?.type === "TSTypeReference" && item.typeName.type … tructs.has(item.typeName.name)) return item.typeName.name;
+packages/ferrovue/src/const-decls.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
+packages/ferrovue/src/const-decls.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
+packages/ferrovue/src/const-decls.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
+packages/ferrovue/src/const-decls.ts: OptionalChaining: n?.type => n.type in for (let n = decl.init; n?.type === "TSAsExpression" || n? … pression"; n = n.expression) names.push(n.typeAnnotation);
+packages/ferrovue/src/const-decls.ts: OptionalChaining: t.typeParameters?.params?.[0] => t.typeParameters?.params[0] in const item = t?.type === "TSArrayType" ? t.elementType : t … s(t.typeName.name) ? t.typeParameters?.params?.[0] : null;
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: item.typeName.type === "Identifier" => true in if (item?.type === "TSTypeReference" && item.typeName.type … tructs.has(item.typeName.name)) return item.typeName.name;
 
-# constants.ts, `constOfDecl`: an enum declaration has no type annotation and no `init`, so
+# const-decls.ts, `constOfDecl`: an enum declaration has no type annotation and no `init`, so
 # `typeValues` finds no value type for it and returns.
-packages/ferrovue/src/constants.ts: ConditionalExpression: d.node.type !== "TSEnumDeclaration" => true in if (c.k === "object" && d.node.type !== "TSEnumDeclaration") typeValues(d.home, d.node, c);
-packages/ferrovue/src/constants.ts: StringLiteral: "TSEnumDeclaration" => "" in if (c.k === "object" && d.node.type !== "TSEnumDeclaration") typeValues(d.home, d.node, c);
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: d.node.type !== "TSEnumDeclaration" => true in if (c.k === "object" && d.node.type !== "TSEnumDeclaration") typeValues(d.home, d.node, c);
+packages/ferrovue/src/const-decls.ts: StringLiteral: "TSEnumDeclaration" => "" in if (c.k === "object" && d.node.type !== "TSEnumDeclaration") typeValues(d.home, d.node, c);
 
-# constants.ts, `valueType`: a qualified type name has no `name`, which none of the names it
+# const-decls.ts, `valueType`: a qualified type name has no `name`, which none of the names it
 # tests equals. `valueType` of `undefined`, a name no alias has, is null.
-packages/ferrovue/src/constants.ts: ConditionalExpression: t.typeName.type !== "Identifier" => false in if (t?.type !== "TSTypeReference" || t.typeName.type !== "Identifier") return null;
-packages/ferrovue/src/constants.ts: ConditionalExpression: alias === undefined => false in return alias === undefined ? null : valueType(home, alias, new Set(seen).add(name));
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: t.typeName.type !== "Identifier" => false in if (t?.type !== "TSTypeReference" || t.typeName.type !== "Identifier") return null;
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: alias === undefined => false in return alias === undefined ? null : valueType(home, alias, new Set(seen).add(name));
 
-# constants.ts, `typeValues`: `tyOfTs` throws only `GenError`; another error is a fault of the
+# const-decls.ts, `typeValues`: `tyOfTs` throws only `GenError`; another error is a fault of the
 # compiler. A constant that is not a scalar has no `js`, so the type test before it is implied.
-packages/ferrovue/src/constants.ts: BlockStatement: { if (e instanceof GenError) return; throw e; } => {} in } catch (e) {
-packages/ferrovue/src/constants.ts: ConditionalExpression: e instanceof GenError => true in if (e instanceof GenError) return;
-packages/ferrovue/src/constants.ts: ConditionalExpression: f.k !== "scalar" => false in if (f.k !== "scalar" || typeof f.js !== "string") continue;
+packages/ferrovue/src/const-decls.ts: BlockStatement: { if (e instanceof GenError) return; throw e; } => {} in } catch (e) {
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: e instanceof GenError => true in if (e instanceof GenError) return;
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: f.k !== "scalar" => false in if (f.k !== "scalar" || typeof f.js !== "string") continue;
 
-# constants.ts, `typeValues`: `as` and `satisfies` always have an `expression`, so `init` is never
+# const-decls.ts, `typeValues`: `as` and `satisfies` always have an `expression`, so `init` is never
 # `undefined`, and every property of a constant object is an `ObjectProperty` (`evaluate` refuses
 # the others with FV0206), whose `computed` decides alone.
-packages/ferrovue/src/constants.ts: OptionalChaining: init?.type => init.type in while (init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
-packages/ferrovue/src/constants.ts: OptionalChaining: init?.type => init.type in while (init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
-packages/ferrovue/src/constants.ts: OptionalChaining: init?.type => init.type in const at = init?.type === "ObjectExpression" ? init.proper …  (p.key.name ?? String(p.key.value)) === key) : undefined;
-packages/ferrovue/src/constants.ts: ConditionalExpression: p.type === "ObjectProperty" => true in const at = init?.type === "ObjectExpression" ? init.proper …  (p.key.name ?? String(p.key.value)) === key) : undefined;
+packages/ferrovue/src/const-decls.ts: OptionalChaining: init?.type => init.type in while (init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
+packages/ferrovue/src/const-decls.ts: OptionalChaining: init?.type => init.type in while (init?.type === "TSAsExpression" || init?.type === "TSSatisfiesExpression") init = init.expression;
+packages/ferrovue/src/const-decls.ts: OptionalChaining: init?.type => init.type in const at = init?.type === "ObjectExpression" ? init.proper …  (p.key.name ?? String(p.key.value)) === key) : undefined;
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: p.type === "ObjectProperty" => true in const at = init?.type === "ObjectExpression" ? init.proper …  (p.key.name ?? String(p.key.value)) === key) : undefined;
 
-# constants.ts, `enumConst`: `enumScope` is read only by `evaluate`, which runs below `constOfDecl`,
+# const-decls.ts, `enumConst`: `enumScope` is read only by `evaluate`, which runs below `constOfDecl`,
 # which sets it to null for the declaration and restores it after, or below `enumConst`, which sets
 # its own; a scope `enumType` leaves behind is set again before it is read.
-packages/ferrovue/src/constants.ts: BlockStatement: { enumScope = outer; } => {} in } finally {
+packages/ferrovue/src/const-decls.ts: BlockStatement: { enumScope = outer; } => {} in } finally {
 
-# constants.ts, `evaluate`: `declareConsts` fills `files` for a component and a `.ts` module before
+# const-decls.ts, `evaluate`: `declareConsts` fills `files` for a component and a `.ts` module before
 # any of their constants or enums is evaluated (component.ts, script.ts, `readTypeFile`), and
 # `evaluate` is handed only those homes.
-packages/ferrovue/src/constants.ts: OptionalChaining: files.get(home)?.get => files.get(home).get in const d = files.get(home)?.get(n.name);
-packages/ferrovue/src/constants.ts: OptionalChaining: files.get(home)?.has => files.get(home).has in if (n.callee.type === "Identifier" && n.callee.name === "M … les.get(home)?.has("Map")) return mapConst(home, n, path);
+packages/ferrovue/src/const-decls.ts: OptionalChaining: files.get(home)?.get => files.get(home).get in const d = files.get(home)?.get(n.name);
+packages/ferrovue/src/const-decls.ts: OptionalChaining: files.get(home)?.has => files.get(home).has in if (n.callee.type === "Identifier" && n.callee.name === "M … les.get(home)?.has("Map")) return mapConst(home, n, path);
 
-# constants.ts, `enumType`: `enumConst` returns an object or throws, so `c.k` is always "object".
-packages/ferrovue/src/constants.ts: ArrayDeclaration: [] => ["Stryker was here"] in const members = c.k === "object" ? d.members.map((m: N) => … .id.type === "Identifier" ? m.id.name : m.id.value)) : [];
-packages/ferrovue/src/constants.ts: ConditionalExpression: c.k === "object" => true in const members = c.k === "object" ? d.members.map((m: N) => … .id.type === "Identifier" ? m.id.name : m.id.value)) : [];
+# const-decls.ts, `enumType`: `enumConst` returns an object or throws, so `c.k` is always "object".
+packages/ferrovue/src/const-decls.ts: ArrayDeclaration: [] => ["Stryker was here"] in const members = c.k === "object" ? d.members.map((m: N) => … .id.type === "Identifier" ? m.id.name : m.id.value)) : [];
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: c.k === "object" => true in const members = c.k === "object" ? d.members.map((m: N) => … .id.type === "Identifier" ? m.id.name : m.id.value)) : [];
 
-# constants.ts, `evaluate`: ferrovue and Vue parse without Babel's `createParenthesizedExpressions`,
+# const-decls.ts, `evaluate`: ferrovue and Vue parse without Babel's `createParenthesizedExpressions`,
 # so no node is a `ParenthesizedExpression`, and no node's type is "". Only a list has the kind
 # "list": every reader tests a constant for "scalar", "object" or "map" and takes the rest as a
 # list. A callee that is not a name has no `name` to equal "Map".
-packages/ferrovue/src/constants.ts: StringLiteral: "ParenthesizedExpression" => "" in case "ParenthesizedExpression":
-packages/ferrovue/src/constants.ts: StringLiteral: "list" => "" in k: "list",
-packages/ferrovue/src/constants.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.callee.type === "Identifier" && n.callee.name === "M … les.get(home)?.has("Map")) return mapConst(home, n, path);
+packages/ferrovue/src/const-decls.ts: StringLiteral: "ParenthesizedExpression" => "" in case "ParenthesizedExpression":
+packages/ferrovue/src/const-decls.ts: StringLiteral: "list" => "" in k: "list",
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: n.callee.type === "Identifier" => true in if (n.callee.type === "Identifier" && n.callee.name === "M … les.get(home)?.has("Map")) return mapConst(home, n, path);
 
-# constants.ts, `mapConst`: `Number.isSafeInteger` is false for every value that is not a number,
+# const-decls.ts, `mapConst`: `Number.isSafeInteger` is false for every value that is not a number,
 # and a JavaScript `Map` stores the key `-0` as `0`, while the path names it by `String(key)`, "0"
 # for both.
-packages/ferrovue/src/constants.ts: ConditionalExpression: typeof key === "number" => true in if (typeof key !== "string" && !(typeof key === "number" & … `Map`'s key is a string or an integer", pair.elements[0]);
-packages/ferrovue/src/constants.ts: UnaryOperator: -0 => +0 in entries.set(Object.is(key, -0) ? 0 : key, evaluate(home, pair.elements[1], `${path}_${String(key)}`, null));
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: typeof key === "number" => true in if (typeof key !== "string" && !(typeof key === "number" & … `Map`'s key is a string or an integer", pair.elements[0]);
+packages/ferrovue/src/const-decls.ts: UnaryOperator: -0 => +0 in entries.set(Object.is(key, -0) ? 0 : key, evaluate(home, pair.elements[1], `${path}_${String(key)}`, null));
 
-# constants.ts, `computedKey`: a constant that is not a scalar has no `js`, so the type tests that
+# const-decls.ts, `computedKey`: a constant that is not a scalar has no `js`, so the type tests that
 # follow fail for it.
-packages/ferrovue/src/constants.ts: ConditionalExpression: c.k === "scalar" => true in if (c.k === "scalar" && (typeof c.js === "string" || typeof c.js === "number")) return String(c.js);
+packages/ferrovue/src/const-decls.ts: ConditionalExpression: c.k === "scalar" => true in if (c.k === "scalar" && (typeof c.js === "string" || typeof c.js === "number")) return String(c.js);
 
-# constants.ts, `scalarVal`, `symVal` and `unified`: the code of a value typed `null` or `undefined`
-# is never written: every reader of one (text, attributes, `:class`, `:style`, `?:`, `??`, `===`,
+# const-values.ts, `scalarVal`: the code of a value typed `null` is never written: every reader of
+# one (text, attributes, `:class`, `:style`, `?:`, `??`, `===`, `String()`, template literals, a
+# `computed`, a child's prop, a `.ts` function's argument) tests `nothing()` and writes `None`,
+# `"null"` or nothing from the type.
+packages/ferrovue/src/const-values.ts: StringLiteral: "None" => "" in if (js === null) return { code: "None", ty: NULL };
+
+# constants.ts, `symVal` and `unified`: the code of a value typed `null` or `undefined` is never
+# written: every reader of one (text, attributes, `:class`, `:style`, `?:`, `??`, `===`,
 # `String()`, template literals, a `computed`, a child's prop, a `.ts` function's argument) tests
 # `nothing()` and writes `None`, `"null"` or nothing from the type, `unified` writes "None" itself
 # for such an arm, and a symbol `none` reaches `symVal` only as an arm of a choice.
-packages/ferrovue/src/constants.ts: StringLiteral: "None" => "" in if (js === null) return { code: "None", ty: NULL };
 packages/ferrovue/src/constants.ts: StringLiteral: "None" => "" in if (sym.k === "none") return { code: "None", ty: UNDEF };
 packages/ferrovue/src/constants.ts: StringLiteral: "None" => "" in return { ty: arms[0]!.ty, codes: arms.map(() => "None") };
 packages/ferrovue/src/constants.ts: ArrowFunction: () => "None" => () => undefined in return { ty: arms[0]!.ty, codes: arms.map(() => "None") };
 
-# constants.ts, `scalarVal`: line 218 returns for every safe integer that is not a float, so at line
-# 219 the condition is always false.
-packages/ferrovue/src/constants.ts: ConditionalExpression: !float && Number.isSafeInteger(js) => false in return numberVal(js, !float && Number.isSafeInteger(js));
+# const-values.ts, `scalarVal`: the line before returns for every safe integer that is not a float,
+# so on the last line the condition is always false.
+packages/ferrovue/src/const-values.ts: ConditionalExpression: !float && Number.isSafeInteger(js) => false in return numberVal(js, !float && Number.isSafeInteger(js));
 
-# constants.ts, `scalarTy`: it is never given `null`: `listVal` refuses a list with `null` before it
+# const-values.ts, `scalarTy`: it is never given `null`: `listVal` refuses a list with `null` before it
 # (FV0209), `fieldLiteral` returns for `null` before it, and `itemStruct` leaves `null` out.
-packages/ferrovue/src/constants.ts: ConditionalExpression: js === null => false in if (js === null) return NULL;
+packages/ferrovue/src/const-values.ts: ConditionalExpression: js === null => false in if (js === null) return NULL;
 
-# constants.ts, `constVal`: the cache only saves work: `listVal` built again writes the same code
+# const-values.ts, `constVal`: the cache only saves work: `listVal` built again writes the same code
 # and type, `ctx.typeConsts` takes the same text under the same name (the owner is the same list, so
 # FV0212 stays silent), `itemStruct` sets the same struct under the same name and file (so FV0220
 # stays silent), and `reachType` runs once per name. No caller mutates the value, and the only map
 # keyed by a type (`HINTS` in enums.ts) is filled from type aliases.
-packages/ferrovue/src/constants.ts: ConditionalExpression: done => false in if (done) return done;
-packages/ferrovue/src/constants.ts: CallExpression: vals.set(c, val); => ; in vals.set(c, val);
+packages/ferrovue/src/const-values.ts: ConditionalExpression: done => false in if (done) return done;
+packages/ferrovue/src/const-values.ts: CallExpression: vals.set(c, val); => ; in vals.set(c, val);
 
-# constants.ts, `listVal`: `reachType` returns at once for a name `ctx.typeDecls` lacks, and it has
+# const-values.ts, `listVal`: `reachType` returns at once for a name `ctx.typeDecls` lacks, and it has
 # no `null`. `constVal`'s cache builds each list once, so an owner of the same Rust name already
 # recorded is always another list. `structLifetime` reads the component it is given only to look up
 # structs, and the fields of a list's struct are scalars or structs whose home is "types", which it
 # looks up in `ctx.typeStructs` whatever the component's name, module and file.
-packages/ferrovue/src/constants.ts: ConditionalExpression: c.typed !== null => true in if (c.typed !== null) reachType(c.typed);
-packages/ferrovue/src/constants.ts: ConditionalExpression: owner.of !== c => true in if (owner && owner.of !== c) fail(c.home, "FV0212", `a con … n Rust comes from ${owner.file} too; rename one`, c.node);
-packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
-packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
-packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
+packages/ferrovue/src/const-values.ts: ConditionalExpression: c.typed !== null => true in if (c.typed !== null) reachType(c.typed);
+packages/ferrovue/src/const-values.ts: ConditionalExpression: owner.of !== c => true in if (owner && owner.of !== c) fail(c.home, "FV0212", `a con … n Rust comes from ${owner.file} too; rename one`, c.node);
+packages/ferrovue/src/const-values.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
+packages/ferrovue/src/const-values.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
+packages/ferrovue/src/const-values.ts: StringLiteral: "types" => "" in const life = structLifetime(st, blankComponent("types", "types", "types", ctx.typeStructs)) ? "<'static>" : "";
 
-# constants.ts, `fieldLiteral`: no field of a struct is absent as both `null` and `undefined`:
+# const-values.ts, `fieldLiteral`: no field of a struct is absent as both `null` and `undefined`:
 # `tyOfTs` refuses such a union (FV0311), `fieldOf` refuses `?: T | null` (FV0321) and makes
 # optional only a type that is not, and `itemStruct` gives one absence. A constant that is not a
 # scalar has no `js`, so it is not `null`, and `scalarTy` of it is a float: a float field then takes
 # `plain`, and the test `v.k !== "scalar"` refuses it with the same FV0215; each of the two tests is
 # implied by the other.
-packages/ferrovue/src/constants.ts: ConditionalExpression: none === "either" => false in if (v === undefined) return none === "undefined" || none = … (c.home, "FV0213", `this object needs \`${f.js}\``, node);
-packages/ferrovue/src/constants.ts: StringLiteral: "either" => "" in if (v === undefined) return none === "undefined" || none = … (c.home, "FV0213", `this object needs \`${f.js}\``, node);
-packages/ferrovue/src/constants.ts: ConditionalExpression: v.k === "scalar" => true in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
-packages/ferrovue/src/constants.ts: ConditionalExpression: none === "either" => false in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
-packages/ferrovue/src/constants.ts: StringLiteral: "either" => "" in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
-packages/ferrovue/src/constants.ts: ConditionalExpression: v.k === "scalar" => true in const plain = v.k === "scalar" && (scalarTy(v.js).k === want.k || (want.k === "float" && typeof v.js === "number"));
-packages/ferrovue/src/constants.ts: ConditionalExpression: v.k !== "scalar" => false in if (!plain || v.k !== "scalar") return fail(c.home, "FV021 …  in a constant list's object is ${describe(want)}`, node);
+packages/ferrovue/src/const-values.ts: ConditionalExpression: none === "either" => false in if (v === undefined) return none === "undefined" || none = … (c.home, "FV0213", `this object needs \`${f.js}\``, node);
+packages/ferrovue/src/const-values.ts: StringLiteral: "either" => "" in if (v === undefined) return none === "undefined" || none = … (c.home, "FV0213", `this object needs \`${f.js}\``, node);
+packages/ferrovue/src/const-values.ts: ConditionalExpression: v.k === "scalar" => true in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
+packages/ferrovue/src/const-values.ts: ConditionalExpression: none === "either" => false in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
+packages/ferrovue/src/const-values.ts: StringLiteral: "either" => "" in if (v.k === "scalar" && v.js === null) return none === "nu … js}\` in a constant list's object is not \`null\``, node);
+packages/ferrovue/src/const-values.ts: ConditionalExpression: v.k === "scalar" => true in const plain = v.k === "scalar" && (scalarTy(v.js).k === want.k || (want.k === "float" && typeof v.js === "number"));
+packages/ferrovue/src/const-values.ts: ConditionalExpression: v.k !== "scalar" => false in if (!plain || v.k !== "scalar") return fail(c.home, "FV021 …  in a constant list's object is ${describe(want)}`, node);
 
-# constants.ts, `fieldLiteral`: an integer field's value is a safe integer, which `numberVal` writes
+# const-values.ts, `fieldLiteral`: an integer field's value is a safe integer, which `numberVal` writes
 # as `<digits>i64`, with `i64` once and at the end; a float's code has no `i64`.
-packages/ferrovue/src/constants.ts: Regex: /i64$/ => /i64/ in const code = def !== undefined ? variantPath(TYPES_HOME, d … want.k === "int").code.replace(/i64$/, "") : String(v.js);
+packages/ferrovue/src/const-values.ts: Regex: /i64$/ => /i64/ in const code = def !== undefined ? variantPath(TYPES_HOME, d … want.k === "int").code.replace(/i64$/, "") : String(v.js);
 
-# constants.ts, `TYPES_HOME`: it is handed only to `variantPath`, which reads its `module` alone, so
+# const-values.ts, `TYPES_HOME`: it is handed only to `variantPath`, which reads its `module` alone, so
 # its name and file change nothing.
-packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const TYPES_HOME = blankComponent("types", "types", "types");
-packages/ferrovue/src/constants.ts: StringLiteral: "types" => "" in const TYPES_HOME = blankComponent("types", "types", "types");
+packages/ferrovue/src/const-values.ts: StringLiteral: "types" => "" in const TYPES_HOME = blankComponent("types", "types", "types");
+packages/ferrovue/src/const-values.ts: StringLiteral: "types" => "" in const TYPES_HOME = blankComponent("types", "types", "types");
 
-# constants.ts, `pascal` and `rustConstName`: an empty word becomes an empty string, so leaving it
+# const-values.ts, `pascal` and `rustConstName`: an empty word becomes an empty string, so leaving it
 # in joins the same name; `snake` writes `r#` only before a whole keyword.
-packages/ferrovue/src/constants.ts: MethodExpression: path .split(/_|(?=[A-Z][a-z])/) .filter(Boolean) => path.split(/_|(?=[A-Z][a-z])/) in return path
-packages/ferrovue/src/constants.ts: Regex: /^r#/ => /r#/ in .map((w) => (/^[A-Z0-9]+$/.test(w) ? w : snake(w).replace(/^r#/, "").toUpperCase()))
+packages/ferrovue/src/const-values.ts: MethodExpression: path .split(/_|(?=[A-Z][a-z])/) .filter(Boolean) => path.split(/_|(?=[A-Z][a-z])/) in return path
+packages/ferrovue/src/const-values.ts: Regex: /^r#/ => /r#/ in .map((w) => (/^[A-Z0-9]+$/.test(w) ? w : snake(w).replace(/^r#/, "").toUpperCase()))
 
 # constants.ts, `keyAmong` and `constOf`: the regular expression accepts only a quoted literal,
 # which only a string value's code is; a string's code that begins with a quoted literal is that

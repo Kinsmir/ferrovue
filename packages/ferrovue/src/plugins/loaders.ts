@@ -1,7 +1,8 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, enumOf, fail, nothing, rustStr, sameTy, snake } from "../model.ts";
 import { GenError } from "../errors.ts";
 import { ctx } from "../context.ts";
-import { type Declared, exportedConst } from "../constants.ts";
+import type { Declared } from "../const-decls.ts";
+import { exportedConst } from "../ts-exports.ts";
 import { resolveImport } from "../resolve.ts";
 import { bareDates, datePlan, lookupStruct, markHome, readTypeFile, tyOfTs } from "../typescript.ts";
 import { coerce, describeTy, expr, fieldVal } from "../expr.ts";

@@ -181,7 +181,7 @@ jobs:
           - name: attributes and templates
             modules: attrs template
           - name: constants
-            modules: constants
+            modules: constants const-decls const-values ts-exports
           - name: component choices
             modules: dynamic
           - name: expressions
@@ -189,7 +189,7 @@ jobs:
           - name: calls and methods
             modules: calls globals numbers strings
           - name: lists
-            modules: lists
+            modules: lists array-literals borrows destructuring flat list-calls object-calls reduce sorting
     env:
       MODULES: ${{ matrix.modules }}
     steps:

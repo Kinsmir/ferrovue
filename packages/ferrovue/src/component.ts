@@ -12,7 +12,7 @@ import { typesImports, declareTypes, defaultValue, definePropsType, inlineTypes,
 import { enumField } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { asyncChildren } from "./script.ts";
-import { declareConsts } from "./constants.ts";
+import { declareConsts } from "./const-decls.ts";
 import { resolveImport } from "./resolve.ts";
 import { trimEdges } from "./whitespace.ts";
 import type { TemplateNode } from "./whitespace-rules.ts";

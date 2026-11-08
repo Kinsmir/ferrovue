@@ -4,7 +4,7 @@ import { basename } from "node:path";
 import { type Component, type N, type Scope, type Ty, camelize, directiveOwner, fail, isAttribute, literalsOf, placeOf, rustStr, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
-import { exportedConst } from "./constants.ts";
+import { exportedConst } from "./ts-exports.ts";
 import { matchOver } from "./enums.ts";
 import { expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";

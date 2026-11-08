@@ -1,7 +1,8 @@
 import { type Component, type Fn, type N, type Scope, type Ty, type Val, fail, placeOf } from "./model.ts";
 import { GenError } from "./errors.ts";
-import type { Const } from "./constants.ts";
-import { constOfDecl, exportedConst, exportedFunction } from "./constants.ts";
+import type { Const } from "./const-decls.ts";
+import { constOfDecl } from "./const-decls.ts";
+import { exportedConst, exportedFunction } from "./ts-exports.ts";
 import { ctx } from "./context.ts";
 import { expr, typedBy } from "./expr.ts";
 import { bodyExpr, bound, destructured } from "./blocks.ts";
