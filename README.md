@@ -364,12 +364,12 @@ describes both.
 ## Versions
 
 Byte-identical output depends on Vue's own SSR compiler, so ferrovue compiles with an exact
-`@vue/compiler-sfc` (currently 3.5.44), and its conformance fixtures are recorded from one version
+`@vue/compiler-sfc` (currently 3.5.45), and its conformance fixtures are recorded from one version
 of Vue and of each integration. Your project may use any later patch of the same minor:
 
 | Peer | Supported | Recorded from |
 |---|---|---|
-| `vue` | `~3.5.44` (3.5.44 and later 3.5 patches) | 3.5.44 |
+| `vue` | `~3.5.45` (3.5.45 and later 3.5 patches) | 3.5.45 |
 | `vue-router` (optional) | `~5.4.0` | 5.4.0 |
 | `pinia` (optional) | `~4.1.0` | 4.1.0 |
 | `vue-i18n` (optional) | `~11.4.15` | 11.4.15 |

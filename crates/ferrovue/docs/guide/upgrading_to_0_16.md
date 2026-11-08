@@ -29,6 +29,13 @@ any of them itself bumps it to 0.16 as well. A project that lists `ferrovue@0.15
 `minimumReleaseAgeExclude` adds `ferrovue@0.16.0` beside it, and removes the 0.15.2 entry once the
 lockfile no longer holds it.
 
+The 0.16 npm package compiles with `@vue/compiler-sfc` 3.5.45, and the `vue` peer range moves to
+`~3.5.45`. The other peers keep the ranges of 0.15:
+
+```sh
+pnpm add vue@~3.5.45
+```
+
 ## 2. Generate every component again
 
 ```sh
@@ -62,3 +69,11 @@ helps most on long strings, and a `.join()` writes into the page with no string 
 The bench renders run up to 9% fewer instructions, and renders that join a list up to 25% fewer.
 A test that counts allocations or instructions of a render sees lower numbers. See
 [how a render writes text](crate::guide::generated_code#how-a-render-writes-text).
+
+## Two more boolean attributes
+
+Vue 3.5.45 adds `disablepictureinpicture` and `disableremoteplayback` to its boolean attributes,
+and 0.16 writes them as Vue does. Bound, or falling through to a child's root, `true` writes the
+name alone and `false` leaves the attribute out; 0.15 wrote `disablepictureinpicture="true"` and
+`disablepictureinpicture="false"`. A project whose fixtures hold such an attribute records them
+again. See [attribute values](crate::guide::security#attribute-values).

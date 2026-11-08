@@ -10,7 +10,7 @@ for which constructs, so a project knows whether to record its fixtures again.
 
 ## [Unreleased]
 
-Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes, and in an island's wrapper, whose `data-props` is in single quotes.
+Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes, in an island's wrapper, whose `data-props` is in single quotes, and for a bound or fallthrough `disablepictureinpicture` or `disableremoteplayback`.
 
 ### Added
 
@@ -25,6 +25,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 
 ### Changed
 
+- The npm package compiles with `@vue/compiler-sfc` 3.5.45 and the `vue` peer range moves to `~3.5.45`, so a bound or fallthrough `disablepictureinpicture` or `disableremoteplayback` is written as a boolean attribute.
+  [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#two-more-boolean-attributes).
 - An island's `data-props` is written in single quotes, escaping only `&` and `'`, so the props take 7 to 28% fewer bytes; `mountIslands` reads it unchanged.
   [Islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#islands).
 - A struct, or a list of structs, passed to a child is handed over with its strings borrowed from the parent's props through a hidden `borrowed()`, copying no text.
