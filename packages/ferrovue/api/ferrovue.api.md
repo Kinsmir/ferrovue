@@ -44,6 +44,7 @@ export function mountIslands(components: Record<string, IslandComponent>, option
 
 // @public (undocumented)
 export interface MountOptions {
+    islandKey?: string;
     onError?: (element: Element, problem: string) => void;
     pinia?: Pinia;
     plugins?: Plugin_2[];

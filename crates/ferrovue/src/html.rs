@@ -11,6 +11,142 @@ use basic::build;
 use island::island_into;
 use markers::marker;
 
+/// A key written on every island of one page, which `mountIslands` checks, so an element of user
+/// HTML that copies an island's `data-island` and `data-props` mounts nothing.
+///
+/// Make one for each page, render the page inside [`IslandKey::scope`], and write the key's script
+/// with [`IslandKey::script_into`]. On a page that holds the script, `mountIslands` mounts only the
+/// islands carrying its key. A page without the script mounts every island, as before.
+///
+/// # Example
+///
+/// ```
+/// # mod hello {
+/// # use ferrovue as fv;
+/// # #[derive(serde::Serialize)]
+/// # pub struct Props { pub name: &'static str }
+/// # pub fn render(out: &mut String, props: &Props) {
+/// #     out.push_str("<p>");
+/// #     fv::core::escape_into(out, props.name);
+/// #     out.push_str("</p>");
+/// # }
+/// # pub fn island(props: &Props) -> fv::html::Html<'_, Props> {
+/// #     fv::html::Html::island("Hello", props, render)
+/// # }
+/// # }
+/// use ferrovue::html::IslandKey;
+///
+/// let key = IslandKey::new("k3y");
+/// let mut page = String::new();
+/// key.scope(|| hello::island(&hello::Props { name: "Ada" }).render_to(&mut page));
+/// key.script_into(&mut page);
+/// assert_eq!(
+///     page,
+///     concat!(
+///         r#"<div data-island="Hello" data-island-key="k3y" data-props='{"name":"Ada"}'><p>Ada</p></div>"#,
+///         r#"<script type="application/json" id="__fv_island_key">"k3y"</script>"#,
+///     )
+/// );
+/// ```
+#[derive(Clone, PartialEq, Eq)]
+pub struct IslandKey(String);
+
+thread_local! {
+    static ISLAND_KEY: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+}
+
+pub(crate) fn island_key_into(out: &mut String) {
+    ISLAND_KEY.with_borrow(|key| {
+        if let Some(key) = key {
+            out.push_str(" data-island-key=\"");
+            escape_into(out, key);
+            out.push('"');
+        }
+    });
+}
+
+#[cfg(feature = "dioxus")]
+pub(crate) fn island_key() -> Option<String> {
+    ISLAND_KEY.with_borrow(Clone::clone)
+}
+
+impl IslandKey {
+    /// The `id` of the script [`IslandKey::script_into`] writes, which `mountIslands` reads.
+    pub const SCRIPT_ID: &str = "__fv_island_key";
+
+    /// A key of 128 bits from the operating system's random source: one for each page rendered.
+    /// On `wasm32-unknown-unknown`, which has no such source, make the key with [`IslandKey::new`].
+    ///
+    /// # Panics
+    ///
+    /// When the operating system gives no random bytes.
+    #[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
+    #[must_use]
+    pub fn random() -> IslandKey {
+        let mut bytes = [0u8; 16];
+        getrandom::fill(&mut bytes).expect("the operating system gives random bytes");
+        let mut key = String::with_capacity(32);
+        for b in bytes {
+            key.push(char::from(b"0123456789abcdef"[usize::from(b >> 4)]));
+            key.push(char::from(b"0123456789abcdef"[usize::from(b & 15)]));
+        }
+        IslandKey(key)
+    }
+
+    /// A key the application made, such as the page's CSP nonce: ASCII letters, digits, `-`, `_`,
+    /// `+`, `/` and `=`.
+    ///
+    /// # Panics
+    ///
+    /// On an empty key, or one holding any other character.
+    #[must_use]
+    pub fn new(key: &str) -> IslandKey {
+        let valid = !key.is_empty()
+            && key.bytes().all(|b| {
+                b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'+' | b'/' | b'=')
+            });
+        assert!(
+            valid,
+            "an island key is ASCII letters, digits, `-`, `_`, `+`, `/` and `=`: {key:?}"
+        );
+        IslandKey(key.to_owned())
+    }
+
+    /// The key, as `data-island-key` carries it.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+
+    /// Run `render` with every island it writes on this thread carrying the key, and give back
+    /// what it returns. A scope inside another uses its own key until it ends.
+    pub fn scope<R>(&self, render: impl FnOnce() -> R) -> R {
+        struct Restore(Option<String>);
+        impl Drop for Restore {
+            fn drop(&mut self) {
+                let before = self.0.take();
+                ISLAND_KEY.with_borrow_mut(|key| *key = before);
+            }
+        }
+        let before = ISLAND_KEY.with_borrow_mut(|key| key.replace(self.0.clone()));
+        let _restore = Restore(before);
+        render()
+    }
+
+    /// Write the script holding the key, `<script type="application/json" id="__fv_island_key">`,
+    /// which `mountIslands` reads.
+    pub fn script_into(&self, out: &mut String) {
+        crate::page::json_script_into(out, Self::SCRIPT_ID, &crate::json::to_string(&self.0));
+    }
+}
+
+/// The key is a secret of the page it is written on, so `Debug` leaves it out.
+impl std::fmt::Debug for IslandKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("IslandKey(..)")
+    }
+}
+
 /// A component applied to its props, ready to be written: what a generated `html()` or `island()`
 /// returns, borrowing the props, and `into_html()` or `into_island()`, holding them.
 ///

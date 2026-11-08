@@ -13,7 +13,9 @@ pub(super) fn island_into<P: Serialize>(
 ) -> Result<(), Refused> {
     out.push_str("<div data-island=\"");
     escape_into(out, name);
-    out.push_str("\" data-props='");
+    out.push('"');
+    super::island_key_into(out);
+    out.push_str(" data-props='");
     json::escaped_into(out, props);
     out.push('\'');
     if let Some(hydrate) = hydrate {

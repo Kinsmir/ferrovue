@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use ferrovue::{
     head::Head,
-    html::Hydrate,
+    html::{Hydrate, IslandKey},
     page::{PageHole, PageScript, Part},
     render::Slot,
     router::{Route, Router},
@@ -30,10 +30,10 @@ pub struct Page {
 /// A part of a page that is written after the rest, once its data is ready.
 #[derive(Debug)]
 pub enum Hole {
-    /// The reviews of the book with this id.
-    Reviews(String),
+    /// The reviews of the book with this id, as an island carrying the page's key.
+    Reviews(String, IslandKey),
     /// The reviews of the book with this id, as a part of a page hydrated whole.
-    PageReviews(String, PageHole),
+    PageReviews(String, PageHole, IslandKey),
     /// The record of a page hydrated whole, once its other holes are filled.
     Record(PageScript),
 }
@@ -43,6 +43,7 @@ pub struct Site {
     router: Router,
     assets: Assets,
     review_delay: Duration,
+    island_key: fn() -> IslandKey,
 }
 
 impl Site {
@@ -52,7 +53,15 @@ impl Site {
             router: route_table::router(),
             assets,
             review_delay,
+            island_key: IslandKey::random,
         }
+    }
+
+    /// The same site, making each page's island key with `island_key`: a fixed key, for a test
+    /// that renders a page twice.
+    #[cfg(test)]
+    pub fn with_island_key(self, island_key: fn() -> IslandKey) -> Site {
+        Site { island_key, ..self }
     }
 
     /// The page at `location` (a path), rendered up to its holes.
@@ -67,27 +76,33 @@ impl Site {
         }
         let route = self.router.at(location);
         let stores = Stores::new(BasketState::new("guest", ["solaris"]));
+        let key = (self.island_key)();
         match (route.name(), route.param("id")) {
-            (Some("/"), _) => self.home(&route, &stores),
-            (Some("/picks"), _) => self.picks(&route, &stores).await,
+            (Some("/"), _) => self.home(&route, &stores, &key),
+            (Some("/picks"), _) => self.picks(&route, &stores, &key).await,
             (Some("/books/[id]"), Some(id)) => match catalogue::book(id) {
-                Some(book) => self.book(&route, &stores, book),
-                None => self.not_found(&route, &stores, location),
+                Some(book) => self.book(&route, &stores, book, &key),
+                None => self.not_found(&route, &stores, location, &key),
             },
-            _ => self.not_found(&route, &stores, location),
+            _ => self.not_found(&route, &stores, location, &key),
         }
     }
 
     /// The content of one hole: the slow part of a page, as an island the client hydrates.
     pub async fn fill(&self, hole: Hole) -> String {
         match hole {
-            Hole::Reviews(id) => self.reviews(&id).await.into_string(),
-            Hole::PageReviews(id, hole) => {
+            Hole::Reviews(id, key) => {
+                let island = self.reviews(&id).await;
+                key.scope(|| island.into_string())
+            }
+            Hole::PageReviews(id, hole, key) => {
                 let list = catalogue::reviews(&id, self.review_delay).await;
-                hole.fill([Part::new(
-                    reviews::NAME,
-                    reviews::into_html(reviews::Props::new(list)),
-                )])
+                key.scope(|| {
+                    hole.fill([Part::new(
+                        reviews::NAME,
+                        reviews::into_html(reviews::Props::new(list)),
+                    )])
+                })
             }
             Hole::Record(script) => script.await,
         }
@@ -122,7 +137,7 @@ impl Site {
         (status, out)
     }
 
-    fn home(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
+    fn home(&self, route: &Route<'_>, stores: &Stores<'_>, key: &IslandKey) -> Page {
         let head = Head::new();
         let props = index::Props::new(catalogue::books());
         let actions = |out: &mut String, slot: &index::ActionsSlotProps<'_>| {
@@ -137,7 +152,7 @@ impl Site {
             };
             index::render(out, &props, slots, route, &head);
         };
-        let body = in_layout(&head, route, stores, &view);
+        let body = keyed(key, || in_layout(&head, route, stores, &view));
         self.finish(200, &head, &body, stores, &[], Vec::new())
     }
 
@@ -146,6 +161,7 @@ impl Site {
         route: &Route<'_>,
         stores: &Stores<'_>,
         book: crate::generated::types::Book<'static>,
+        key: &IslandKey,
     ) -> Page {
         let head = Head::new();
         let id = book.id.clone();
@@ -159,13 +175,13 @@ impl Site {
             };
             books_id::render(out, &props, slots, route, &head);
         };
-        let holes = vec![Hole::Reviews(id.into_owned())];
+        let holes = vec![Hole::Reviews(id.into_owned(), key.clone())];
         let islands = [add_to_basket::NAME];
-        let body = in_layout(&head, route, stores, &view);
+        let body = keyed(key, || in_layout(&head, route, stores, &view));
         self.finish(200, &head, &body, stores, &islands, holes)
     }
 
-    async fn picks(&self, route: &Route<'_>, stores: &Stores<'_>) -> Page {
+    async fn picks(&self, route: &Route<'_>, stores: &Stores<'_>, key: &IslandKey) -> Page {
         let notes = [
             ("dune", "The desert planet, and the politics of water."),
             (
@@ -188,42 +204,52 @@ impl Site {
             .collect::<Vec<_>>();
         let props = picks::Props::new(SHOP, featured.clone(), books);
         let rendered = loaders::load(&Catalogue, |loads| {
-            let mut page = ferrovue::page::Page::new();
-            let parts = page.slot(
-                "default",
-                picks
-                    .iter()
-                    .map(|props| Part::new(pick::NAME, pick::html(props))),
-            );
-            let reviews = page.hole("reviews");
-            let head = Head::new();
-            let mut body = String::from("<div id=\"app\">");
-            let slots = picks::Slots {
-                default: Some(parts.slot()),
-                reviews: Some(reviews.slot()),
-            };
-            let record = page.render_to(&mut body, picks::html(&props, slots, route, &head, loads));
-            body.push_str("</div>");
-            loads.script_into(&mut body);
-            ferrovue::page::hole().render_to(&mut body);
-            (head, body, record, reviews)
+            key.scope(|| {
+                let mut page = ferrovue::page::Page::new();
+                let parts = page.slot(
+                    "default",
+                    picks
+                        .iter()
+                        .map(|props| Part::new(pick::NAME, pick::html(props))),
+                );
+                let reviews = page.hole("reviews");
+                let head = Head::new();
+                let mut body = String::from("<div id=\"app\">");
+                let slots = picks::Slots {
+                    default: Some(parts.slot()),
+                    reviews: Some(reviews.slot()),
+                };
+                let record =
+                    page.render_to(&mut body, picks::html(&props, slots, route, &head, loads));
+                body.push_str("</div>");
+                loads.script_into(&mut body);
+                ferrovue::page::hole().render_to(&mut body);
+                key.script_into(&mut body);
+                (head, body, record, reviews)
+            })
         })
         .await;
         let Ok((head, body, record, reviews)) = rendered;
         let mut islands = record.island_names();
         islands.push(reviews::NAME);
         let holes = vec![
-            Hole::PageReviews(featured.id.clone().into_owned(), reviews),
+            Hole::PageReviews(featured.id.clone().into_owned(), reviews, key.clone()),
             Hole::Record(record.script("__fv_page")),
         ];
         self.finish(200, &head, &body, stores, &islands, holes)
     }
 
-    fn not_found(&self, route: &Route<'_>, stores: &Stores<'_>, location: &str) -> Page {
+    fn not_found(
+        &self,
+        route: &Route<'_>,
+        stores: &Stores<'_>,
+        location: &str,
+        key: &IslandKey,
+    ) -> Page {
         let head = Head::new();
         let props = missing::Props::new(location);
         let view = |out: &mut String| missing::render(out, &props, route, &head);
-        let body = in_layout(&head, route, stores, &view);
+        let body = keyed(key, || in_layout(&head, route, stores, &view));
         self.finish(404, &head, &body, stores, &[], Vec::new())
     }
 
@@ -263,6 +289,13 @@ impl Site {
             holes,
         }
     }
+}
+
+/// What `render` writes, every island in it carrying `key`, then the key's script.
+fn keyed(key: &IslandKey, render: impl FnOnce() -> String) -> String {
+    let mut body = key.scope(render);
+    key.script_into(&mut body);
+    body
 }
 
 /// The body of a page whose `view` goes in the layout's `<RouterView>`.

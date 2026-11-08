@@ -147,7 +147,7 @@ mod tests {
             script: "/assets/main.js".to_owned(),
             chunks: ferrovue::page::Chunks::from_manifest(manifest, islands).unwrap(),
         };
-        Site::new(assets, Duration::ZERO)
+        Site::new(assets, Duration::ZERO).with_island_key(|| ferrovue::html::IslandKey::new("k3y"))
     }
 
     #[tokio::test]
@@ -163,6 +163,16 @@ mod tests {
         assert_eq!(
             html.matches(r#"data-hydrate="interaction""#).count(),
             4,
+            "{html}"
+        );
+        assert_eq!(
+            html.matches(r#"data-island="AddToBasket" data-island-key="k3y""#)
+                .count(),
+            4,
+            "{html}"
+        );
+        assert!(
+            html.contains(r#"<script type="application/json" id="__fv_island_key">"k3y"</script>"#),
             "{html}"
         );
         assert!(html.contains(r#"<a href="/books/left-hand""#), "{html}");
@@ -210,7 +220,7 @@ mod tests {
         let site = site();
         let page = site.page("/books/dune").await;
         assert!(
-            matches!(&page.holes[..], [Hole::Reviews(id)] if id == "dune"),
+            matches!(&page.holes[..], [Hole::Reviews(id, _)] if id == "dune"),
             "{:?}",
             page.holes
         );
@@ -234,7 +244,7 @@ mod tests {
         assert!(after.starts_with("<!--]--></section>"), "{after}");
         let reviews = site.fill(page.holes.into_iter().next().unwrap()).await;
         assert!(
-            reviews.starts_with(r#"<div data-island="Reviews""#),
+            reviews.starts_with(r#"<div data-island="Reviews" data-island-key="k3y""#),
             "{reviews}"
         );
         assert!(
@@ -377,8 +387,10 @@ mod tests {
         let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("a body");
-        let hole = Hole::Reviews("dune".to_owned());
-        assert_eq!(body, site.fill(hole).await);
+        let hole = Hole::Reviews("dune".to_owned(), ferrovue::html::IslandKey::new("k3y"));
+        let filled = site.fill(hole).await;
+        assert!(filled.contains(r#" data-island-key="k3y""#), "{filled}");
+        assert_eq!(body, filled.replacen(r#" data-island-key="k3y""#, "", 1));
     }
 
     #[tokio::test]

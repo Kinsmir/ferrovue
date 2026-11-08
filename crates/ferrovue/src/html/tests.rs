@@ -762,3 +762,84 @@ fn splice_keeps_html_without_markers() {
         "<<>>é<"
     );
 }
+
+#[test]
+fn an_island_written_in_a_key_s_scope_carries_the_key_and_one_outside_it_none() {
+    let props = Label { label: "x" };
+    let island = || Html::island("Label", &props, label).into_string();
+    let key = IslandKey::new("a-Z_09+/=");
+    assert_eq!(
+        key.scope(island),
+        r#"<div data-island="Label" data-island-key="a-Z_09+/=" data-props='{"label":"x"}'><b>x</b></div>"#
+    );
+    assert_eq!(
+        island(),
+        r#"<div data-island="Label" data-props='{"label":"x"}'><b>x</b></div>"#
+    );
+    assert!(
+        !key.scope(|| Html::markup(&props, label).into_string())
+            .contains("data-island-key")
+    );
+}
+
+#[test]
+fn a_scope_inside_another_uses_its_own_key_until_it_ends_even_when_it_panics() {
+    let props = Label { label: "x" };
+    let outer = IslandKey::new("outer");
+    let inner = IslandKey::new("inner");
+    let written = outer.scope(|| {
+        let first = inner.scope(|| Html::island("Label", &props, label).into_string());
+        let caught = std::panic::catch_unwind(|| inner.scope(|| panic!("a render panicked")));
+        assert!(caught.is_err());
+        (first, Html::island("Label", &props, label).into_string())
+    });
+    assert!(
+        written.0.contains(r#"data-island-key="inner""#),
+        "{}",
+        written.0
+    );
+    assert!(
+        written.1.contains(r#"data-island-key="outer""#),
+        "{}",
+        written.1
+    );
+    assert!(
+        !Html::island("Label", &props, label)
+            .into_string()
+            .contains("data-island-key")
+    );
+}
+
+#[test]
+fn a_random_key_is_128_bits_of_hex_and_new_on_each_call() {
+    let keys: Vec<IslandKey> = (0..64).map(|_| IslandKey::random()).collect();
+    for key in &keys {
+        assert_eq!(key.as_str().len(), 32);
+        assert!(
+            key.as_str()
+                .bytes()
+                .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+        );
+    }
+    let distinct: std::collections::HashSet<&str> = keys.iter().map(IslandKey::as_str).collect();
+    assert_eq!(distinct.len(), keys.len());
+    assert_eq!(format!("{:?}", keys[0]), "IslandKey(..)");
+}
+
+#[test]
+fn a_key_s_script_holds_it_as_json() {
+    let mut out = String::new();
+    IslandKey::new("k3y").script_into(&mut out);
+    assert_eq!(
+        out,
+        r#"<script type="application/json" id="__fv_island_key">"k3y"</script>"#
+    );
+}
+
+#[test]
+fn a_key_of_another_character_is_refused() {
+    for key in ["", "a b", "a\"b", "a<b", "é", "a&b"] {
+        let made = std::panic::catch_unwind(|| IslandKey::new(key));
+        assert!(made.is_err(), "{key:?}");
+    }
+}
