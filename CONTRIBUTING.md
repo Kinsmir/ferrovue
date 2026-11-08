@@ -160,7 +160,9 @@ site/                        the VitePress site at kinsmir.github.io/ferrovue: `
    markup-breaking characters in every prop that reaches the page. Run `pnpm conformance:generate`
    and `pnpm conformance:record`, read the recorded HTML, then run `cargo test`.
 4. **Refuse the edges.** Whatever part of the construct you do not translate exactly must be an
-   error. Add a case to `refused` in `packages/ferrovue/test/compiler.test.ts`. Each error has a
+   error. Add a row to one of the `refused` tables,
+   `packages/ferrovue/test/refused-expressions.ts`, `refused-values.ts` or `refused-types.ts`, which
+   `refusals.test.ts` runs. Each error has a
    stable code: add a new one to `ERRORS` in `packages/ferrovue/src/errors.ts`, after the last
    of its area, with a short title, and run `pnpm errors:generate` to rewrite the guide's
    `error_codes` page. A code is never reused or renumbered: one no longer raised gets `retired`
