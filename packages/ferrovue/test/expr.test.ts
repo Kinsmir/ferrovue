@@ -410,6 +410,16 @@ describe("items read by `[…]`", () => {
     expect(out).not.toMatch(/fv_units_s_5/);
   });
 
+  it("names a unit cursor after the path of the prop it reads, and reads an index that starts with a literal through one", () => {
+    const out = render(
+      "interface User { name: string }\ndefineProps<{ u: User; s: string }>();",
+      '<p v-for="i in s.length">{{ u.name[i] }}{{ s.charAt(1 + i) }}</p>',
+    );
+    expect(out).toContain("let fv_units_u_name = fv::strings::UnitCursor::new();");
+    expect(out).toContain("Some(fv_units_u_name.char_at(&props.u.name, ");
+    expect(out).toMatch(like("fv_units_s.char_at(&props.s, 1.0 + fv_i as f64)"));
+  });
+
   it("reads the parts of a `[key, value]` pair by a literal index", () => {
     expect(render("defineProps<{ r: Record<string, number> }>();", '<p v-for="e in Object.entries(r).map((p) => p[1])">{{ e }}</p>')).toMatch(like("for e in props.r.iter().map(|fv_a1| *fv_a1.1) {"));
   });

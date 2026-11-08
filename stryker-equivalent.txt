@@ -1887,3 +1887,7 @@ packages/ferrovue/src/borrows.ts: ConditionalExpression: place !== arg => true i
 packages/ferrovue/src/borrows.ts: EqualityOperator: i < text.length => i <= text.length in for (let i = 0; i < text.length; i++) {
 packages/ferrovue/src/borrows.ts: ConditionalExpression: ch === "'" => false in if (ch === '"' || ch === "'") i = literalEnd(text, i);
 packages/ferrovue/src/borrows.ts: StringLiteral: "'" => "" in if (ch === '"' || ch === "'") i = literalEnd(text, i);
+
+# strings.ts, `unitCursor`: the code of a string the compiler writes ends in `&props.<path>` only when
+# it is that path: a string it builds is a `format!`, a call or a block, each ending in `)` or `}`.
+packages/ferrovue/src/strings.ts: Regex: /^&props((?:\.[a-z_][a-z0-9_]*)+)$/ => /&props((?:\.[a-z_][a-z0-9_]*)+)$/ in const path = /^&props((?:\.[a-z_][a-z0-9_]*)+)$/.exec(strArg(target.code))?.[1];
