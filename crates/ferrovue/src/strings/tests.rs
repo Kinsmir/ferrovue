@@ -395,3 +395,49 @@ fn a_unit_cursor_reads_every_index_in_any_order() {
         }
     }
 }
+
+#[test]
+fn a_unit_cursor_reads_every_index_in_steps_linear_in_the_length() {
+    let s = "é🦀a日".repeat(500);
+    let len = js_length(&s);
+    let bytes = s.len();
+    let codes: Vec<u16> = s.encode_utf16().collect();
+    let walked = |order: &mut dyn Iterator<Item = i64>| {
+        let cursor = UnitCursor::new();
+        units::STEPS.with(|steps| steps.set(0));
+        for i in order {
+            assert_eq!(
+                cursor.char_code_at(&s, i as f64),
+                f64::from(codes[i as usize])
+            );
+        }
+        units::STEPS.with(std::cell::Cell::get)
+    };
+    let ascii = "x".repeat(2000);
+    let cursor = UnitCursor::new();
+    units::STEPS.with(|steps| steps.set(0));
+    for i in 0..2000 {
+        assert_eq!(cursor.char_at(&ascii, f64::from(i)), "x");
+    }
+    assert!(
+        units::STEPS.with(std::cell::Cell::get) <= 2000,
+        "ASCII text is scanned once"
+    );
+    for (name, steps) in [
+        ("forwards", walked(&mut (0..len))),
+        ("backwards", walked(&mut (0..len).rev())),
+        (
+            "from the end, then forwards",
+            walked(&mut [len - 1].into_iter().chain(0..len)),
+        ),
+        (
+            "from the start, then backwards",
+            walked(&mut [0].into_iter().chain((0..len).rev())),
+        ),
+    ] {
+        assert!(
+            steps <= 3 * bytes,
+            "{name}: {steps} steps for {bytes} bytes"
+        );
+    }
+}

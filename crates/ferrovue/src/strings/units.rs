@@ -76,8 +76,20 @@ pub(super) struct Cursor<'a> {
     pub(super) byte: usize,
 }
 
+#[cfg(test)]
+thread_local! {
+    pub(super) static STEPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+fn step(n: usize) {
+    STEPS.with(|steps| steps.set(steps.get() + n));
+}
+
 impl<'a> Cursor<'a> {
     pub(super) fn new(s: &'a str) -> Self {
+        #[cfg(test)]
+        step(s.len());
         let ascii = s.is_ascii();
         let len = if ascii {
             s.len()
@@ -99,14 +111,9 @@ impl<'a> Cursor<'a> {
             self.byte = k;
             return (char::from(self.s.as_bytes()[k]), 0);
         }
-        if k < self.unit / 2 {
-            self.unit = 0;
-            self.byte = 0;
-        } else if k >= self.unit + (self.len - self.unit) / 2 {
-            self.unit = self.len;
-            self.byte = self.s.len();
-        }
         while self.unit > k {
+            #[cfg(test)]
+            step(1);
             let ch = self.s[..self.byte]
                 .chars()
                 .next_back()
@@ -115,6 +122,8 @@ impl<'a> Cursor<'a> {
             self.byte -= ch.len_utf8();
         }
         loop {
+            #[cfg(test)]
+            step(1);
             let ch = self.s[self.byte..]
                 .chars()
                 .next()

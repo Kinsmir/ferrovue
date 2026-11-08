@@ -146,9 +146,9 @@ format with `Intl` ([`dates_and_prices`](crate::guide::dates_and_prices)).
 
 `s[i]`, `.at(i)`, `.charAt(i)`, `.charCodeAt(i)` and `.codePointAt(i)` of a prop, at an index that
 is not a literal, read through a `UnitCursor`: one for each place in the template that reads,
-declared at the top of the render. Each read starts where that place's last read ended, or at the
-nearer end of the string, so a `v-for` over every index of a prop takes time linear in its length,
-as in V8. A read in a `computed`, a function or setup, or of a string the render builds, counts its
+declared at the top of the render. Each read walks from where that place's last read ended, so a
+`v-for` over every index of a prop, forwards or backwards, takes time linear in its length, as in
+V8. A read in a `computed`, a function or setup, or of a string the render builds, counts its
 index from the start of the string.
 
 ```rust
