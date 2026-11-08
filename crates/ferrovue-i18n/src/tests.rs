@@ -14,6 +14,19 @@ static UNEVALUABLE: &[Locale] = &[Locale {
             },
         ),
         (
+            "linked",
+            Message {
+                cases: &[&[
+                    Part::Text("x "),
+                    Part::Linked {
+                        key: "apples",
+                        modifier: Some("upper"),
+                    },
+                    Part::Text(" y"),
+                ]],
+            },
+        ),
+        (
             "loop",
             Message {
                 cases: &[&[
@@ -40,15 +53,40 @@ fn a_cycle_of_linked_messages_ends_with_the_key_once_nested_too_deep() {
 }
 
 #[test]
-#[cfg(debug_assertions)]
-#[should_panic(expected = "chooses none of the cases")]
-fn a_fraction_that_chooses_no_case_fails_a_debug_render() {
+fn a_fraction_that_chooses_no_case_is_returned_where_vue_i18n_throws() {
+    let i18n = I18n::new(UNEVALUABLE, "en", &[]);
+    for (count, chosen) in [
+        (1.5, Err(1.5)),
+        (0.5, Err(0.5)),
+        (-1.5, Err(-1.5)),
+        (1e-300, Err(1e-300)),
+        (2.5, Ok("many")),
+        (-2.5, Ok("many")),
+        (-0.0, Ok("none")),
+    ] {
+        let named = [("count", Value::Float(count))];
+        let args = Args::new().with_named(&named);
+        assert_eq!(
+            i18n.try_t("apples", &args),
+            chosen.map(str::to_owned),
+            "{count}"
+        );
+    }
+}
+
+#[test]
+fn a_linked_message_that_chooses_no_case_is_written_as_its_key() {
+    let named = [("n", Value::Float(0.5))];
+    let args = Args::new().with_named(&named);
+    let i18n = I18n::new(UNEVALUABLE, "en", &[]);
+    assert_eq!(i18n.try_t("linked", &args), Ok("x APPLES y".to_owned()));
+}
+
+#[test]
+#[should_panic(expected = "`t(\"apples\")` with a plural number of 1.5, which chooses none")]
+fn t_panics_where_a_fraction_chooses_no_case() {
     let named = [("count", Value::Float(1.5))];
-    let args = Args {
-        named: &named,
-        ..Args::default()
-    };
-    let _ = I18n::new(UNEVALUABLE, "en", &[]).t("apples", &args);
+    let _ = I18n::new(UNEVALUABLE, "en", &[]).t("apples", &Args::new().with_named(&named));
 }
 
 #[test]

@@ -1,7 +1,7 @@
 import { basename, posix } from "node:path";
 import { createParser } from "@intlify/message-compiler";
 import { type Component, type N, type Scope, type Val, STR } from "../model.ts";
-import { fail, failIn } from "../locate.ts";
+import { fail, failIn, kept, refusalAt } from "../locate.ts";
 import { rustStr } from "../rust-syntax.ts";
 import { expr } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
@@ -156,11 +156,15 @@ function translate(s: Scope, args: N[], n: N): Val {
   let named = "";
   let list = "";
   let plural = "";
+  let fractional = false;
   for (const a of args.slice(1)) {
     if (a.type === "ObjectExpression") {
       const pairs = a.properties.map((p: N) => {
         if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1410", "named values hold plain keys", p);
-        return `(${rustStr(String(p.key.name ?? p.key.value))}, ${i18nValue(s, p.value)})`;
+        const name = String(p.key.name ?? p.key.value);
+        const value = i18nValue(s, p.value);
+        if ((name === "count" || name === "n") && value.startsWith("fv::i18n::Value::Float(")) fractional = true;
+        return `(${rustStr(name)}, ${value})`;
       });
       named = `.with_named(&[${pairs.join(", ")}])`;
     } else if (a.type === "ArrayExpression") {
@@ -172,7 +176,9 @@ function translate(s: Scope, args: N[], n: N): Val {
       plural = `.with_plural(${bare(v.code)})`;
     }
   }
-  return { code: `&*fv_i18n.t(${strArg(key.code)}, &fv::i18n::Args::new()${named}${list}${plural})`, ty: STR };
+  const built = `&fv::i18n::Args::new()${named}${list}${plural}`;
+  if (fractional) return { code: `&*${kept(`fv::render::try_t(fv_i18n, ${strArg(key.code)}, ${built})`, refusalAt(s.comp, n))}`, ty: STR };
+  return { code: `&*fv_i18n.t(${strArg(key.code)}, ${built})`, ty: STR };
 }
 
 export const i18n: Plugin<I18nRun, I18nScope> = {

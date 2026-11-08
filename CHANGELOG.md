@@ -60,6 +60,11 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 - A render writes a template literal or string `+` it only escapes, and a `JSON.stringify` of a list, into the page as they are formatted, with no string built for them; the conformance components that format text allocate 6 to 40% less often.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 
+### Fixed
+
+- `t()` with a fractional `count` or `n` between -2 and 2 on a message of three cases refuses the render with FV1414, as vue-i18n throws there; 0.15 wrote nothing, or panicked in a debug build.
+  [Translating with vue-i18n](https://docs.rs/ferrovue/latest/ferrovue/guide/i18n/index.html#what-is-supported).
+
 ### Security
 
 - `linkRoutes` and `linkRouter` refuse to hand `navigate` a link to another host, such as a relative link on a page whose path starts with `//`.

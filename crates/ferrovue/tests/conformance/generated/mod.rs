@@ -190,6 +190,7 @@ pub mod picker;
 pub mod placed_html;
 pub mod plain_box;
 pub mod plain_forward;
+pub mod plural_fractions;
 pub mod plurals;
 pub mod precision;
 pub mod prices;
@@ -1289,6 +1290,12 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             plain_forward::try_render(&mut out, &props, plain_forward::Slots { default: fixture.slot("default").map(|_| ferrovue::render::Slot::new(&s_default)) }).map_err(|e| e.to_string())?;
+        }
+        "PluralFractions" => {
+            let props: plural_fractions::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let fixture: Fixture = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            let i18n = i18n::i18n(fixture.locale.as_deref().unwrap_or(i18n::LOCALE));
+            plural_fractions::try_render(&mut out, &props, &i18n).map_err(|e| e.to_string())?;
         }
         "Plurals" => {
             let props: plurals::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

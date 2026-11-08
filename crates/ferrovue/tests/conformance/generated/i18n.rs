@@ -20,6 +20,7 @@ pub static LOCALES: &[Locale] = &[
         ("englishHop", Message::new(&[&[Part::Linked { key: "common.hi", modifier: None }, Part::Text(" and more")]])),
         ("englishLink", Message::new(&[&[Part::Linked { key: "common.hi", modifier: None }, Part::Text(" then "), Part::Linked { key: "common.hi", modifier: Some("upper") }]])),
         ("flat.key", Message::new(&[&[Part::Text("a flat key")]])),
+        ("fractionLink", Message::new(&[&[Part::Named("count"), Part::Text(" of "), Part::Linked { key: "apples", modifier: Some("upper") }]])),
         ("greeting", Message::new(&[&[Part::Text("Hello "), Part::Named("name"), Part::Text("!")]])),
         ("html", Message::new(&[&[Part::Text("<b>"), Part::Named("name"), Part::Text("</b> & co")]])),
         ("items", Message::new(&[&[Part::Text("one item")], &[Part::Named("n"), Part::Text(" items")]])),
