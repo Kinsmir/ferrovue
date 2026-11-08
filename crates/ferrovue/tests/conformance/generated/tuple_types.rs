@@ -143,7 +143,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let fv_refusals = fv::render::Refusals::new(NAME, "components/TupleTypes.vue");
     let s_range = format!("{}–{}", props.booking.span.0, props.booking.span.1);
     let s_total = std::cell::LazyCell::new(|| fv::strings::js_reduce(props.scores.iter(), 0i64, |fv_sum, fv_item| fv_refusals.keep(fv::render::try_int(fv_sum as f64 + fv_item.1 as f64), 21, 66)));
-    let s_names = props.scores.iter().map(|fv_item_2| Cow::<str>::Borrowed(&fv_item_2.0)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_names = props.scores.iter().map(|fv_item_2| Cow::<str>::Borrowed(&fv_item_2.0)).collect::<Vec<_>>();
     if s_range.is_empty() {
         out.push_str("<section title data-seats=\"");
     } else {

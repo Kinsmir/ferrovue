@@ -69,7 +69,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         + props.bs.iter().map(|v| v.len()).sum::<usize>()
     );
     let s_pick = if let Some(fv_a) = props.a.as_deref().filter(|v| !v.is_empty()) { if fv::strings::js_length(&props.b) != 0 { fv_a } else { &props.b } } else { "none" };
-    let s_both = if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { [fv_a_2, &*props.b].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>() } else { Vec::new() };
+    let s_both = if let Some(fv_a_2) = props.a.as_deref().filter(|v| !v.is_empty()) { [fv_a_2, &*props.b].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>() } else { Vec::new() };
     let s_built = if let Some(fv_a_3) = props.a.as_deref().filter(|v| !v.is_empty()) { { let fv_r = Tally { n: props.bs.len() as i64, tags: props.bs.iter().map(|v| Cow::Borrowed(&**v)).collect() }; [fv_a_3, if fv_r.n as f64 > 0.0 { "some" } else { "none" }].to_vec() } } else { { let fv_q = Tally { n: props.bs.len() as i64 + 1, tags: props.bs.iter().map(|v| Cow::Borrowed(&**v)).collect() }; [&*props.b, if fv_q.n as f64 > 1.0 { "some" } else { "none" }].to_vec() } };
     if !s_pick.is_empty() {
         out.push_str("<div><b>[");

@@ -29,6 +29,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#islands).
 - A struct, or a list of structs, passed to a child is handed over with its strings borrowed from the parent's props through a hidden `borrowed()`, copying no text.
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
+- A list of strings a render holds, such as a `computed` that filters or splits the props, keeps the strings it takes from the props, literals and setup bindings borrowed, copying no text.
+  [The locals of a render](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-locals-of-a-render).
 - A render writes the text next to a `v-if` or `?:` inside each branch, and branches that only write text as one write of the text their test picks; the bench renders run up to 5% fewer instructions.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 - Text the compiler proves needs no escaping is written without `escape_into`: a `?:` or a constant lookup whose values are plain string literals, `String(n)` with no string built, and the digits of `.toFixed()` and its kin.

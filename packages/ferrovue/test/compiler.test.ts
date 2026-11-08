@@ -9,6 +9,7 @@ import { GenError, GenErrors } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
 import { type ErrorCode, ERRORS } from "../src/errors.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
+import { borrowsHeld } from "../src/lists.ts";
 import { like, oneLine } from "./code.ts";
 
 const roots: string[] = [];
@@ -542,6 +543,107 @@ defineProps<{ note?: string }>();
       const out = generate(root, config);
       expect([...out.keys()].toSorted()).toEqual(readdirSync(join(root, config.out)).toSorted());
       for (const [name, text] of out) expect(readFileSync(join(root, config.out, name), "utf8"), name).toBe(text);
+    });
+  });
+
+  describe("a list of strings a setup local holds", () => {
+    const held = (setup: string, template: string): string =>
+      compile(
+        island(`<script setup lang="ts">
+import { computed } from "vue";
+const props = defineProps<{ words: string[]; text: string; a?: string; b: string; posts: { tags: string[] }[] }>();
+${setup}
+</script>
+<template>${template}</template>`),
+      ).get("x.rs")!;
+
+    it("keeps borrowed the strings it takes from the props, a literal or an earlier local", () => {
+      const out = held(
+        `const long = computed(() => props.words.filter((w) => w.length > 2));
+const words = computed(() => props.text.split(" "));
+const both = computed(() => (props.a ? [props.a, props.b] : []));
+const sorted = computed(() => [...long.value].sort());
+const later = computed(() => long.value.filter((w) => w !== "x"));`,
+        `<p v-for="w in long" :key="w">{{ w }}</p><i v-for="w in words" :key="w">{{ w }}</i><b v-for="w in both" :key="w">{{ w }}</b><s v-for="w in sorted" :key="w">{{ w }}</s><u v-for="w in later" :key="w">{{ w }}</u>`,
+      );
+      expect(out).toContain("let s_long = props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_w| fv::strings::js_length(fv_w) > 2).collect::<Vec<_>>();");
+      expect(out).toContain('let s_words = fv::strings::js_split(&props.text, " ").into_iter().collect::<Vec<_>>();');
+      expect(out).toContain("[fv_a, &*props.b].iter().map(|v| Cow::<str>::Borrowed(&**v)).collect::<Vec<_>>()");
+      expect(out).toMatch(/let s_later = s_long\.iter\(\)\.map\(\|v\| Cow::<str>::Borrowed\(&\*\*v\)\)\.filter\([^;]*\)\.collect::<Vec<_>>\(\);/);
+      expect(out).not.toContain("into_owned");
+    });
+
+    it("owns the strings it takes from a value its own expression makes", () => {
+      const out = held(
+        `const tags = computed(() => props.posts.flatMap((p) => p.tags));
+const first = computed(() => { const all = props.words.filter((w) => w.length > 1); return all.slice(0, 2); });`,
+        `<p v-for="t in tags" :key="t">{{ t }}</p><i v-for="w in first" :key="w">{{ w }}</i>`,
+      );
+      expect(out).toContain("fv_p.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()");
+      expect(out).toMatch(/let s_first = \{ let fv_all = props\.words[^;]*\.collect::<Vec<_>>\(\); [^;]*fv_all\.iter\(\)[^;]*\.map\(\|v\| Cow::<str>::Owned\(v\.into_owned\(\)\)\)\.collect::<Vec<_>>\(\) \};/);
+    });
+
+    it("reads a chain as borrowing only what outlives the list", () => {
+      for (const chain of [
+        "props.words.iter()",
+        "props.user.tags.iter().map(|v| Cow::Borrowed(&**v)).filter(|w| !w.is_empty()).rev()",
+        "s_kept.iter().map(|v| Cow::Borrowed(&**v)).chain(props.more.iter().map(|v| Cow::Borrowed(&**v)))",
+        '["x", &*props.b].iter().map(|v| Cow::Borrowed(&**v))',
+        "[fv_a, &props.b].iter()",
+        'fv::strings::js_split(&props.text, " ").into_iter()',
+        "fv::strings::js_split_limit(&*s_line, \",\", 2.0f64).into_iter().take(1)",
+        "fv::strings::js_slice_items(props.xs.iter(), -1, Some(3usize)).skip(1)",
+        "fv::strings::js_sorted(props.xs.iter(), |a, b| fv::strings::js_cmp(a, b))",
+        "fv::strings::js_slice_items(props.xs.iter(), None, 2i64)",
+        "props.pair.10.iter()",
+        "props.xs.iter().filter_map(|v| Some(v)).take_while(|v| true).skip_while(|v| false)",
+        '["x", 12, 1.25, Some(12), Some(1.25), Some(1)].iter()',
+        "fv::strings::js_x().into_iter()",
+        "fv::strings::js_x(&props.a, ).into_iter()",
+        "fv::strings::js_x(props.xs.iter().filter(|v| g(v, 1)), 1)",
+        'fv::strings::js_x([&*props.a, "b"].iter(), 1)',
+      ]) {
+        expect(borrowsHeld(chain), chain).toBe(true);
+      }
+      for (const chain of [
+        "fv_all.iter()",
+        "props.words.iter().map(|v| Cow::Borrowed(&**v)).collect::<Vec<_>>().into_iter()",
+        "props.words.iter().chain(fv_rest.iter())",
+        "props.words.iter().map(|v| v.borrowed()).zip(props.b.iter())",
+        "props.words.into_iter()",
+        "props.words",
+        "props.words.iter",
+        "props.words.iter().map(",
+        "[fv_a, fv_b].iter()",
+        "[fv_a, &*props.b].into_iter()",
+        "[fv_a, &*props.b",
+        'fv::strings::js_split(&fv_w, " ").into_iter()',
+        "fv::strings::js_split(&props.text, fv_sep).into_iter()",
+        "fv::strings::js_split(&props.text, \"a\" ).into_iter()x",
+        "fv::strings::js_slice_items(fv_xs.iter(), 1.0f64, None)",
+        "fv::strings::js_slice_items(props.xs.iter(), fv_n, None)",
+        "fv::strings::js_slice_items()",
+        "fv::strings::js_slice_items(props.xs.iter(), 1.0f64",
+        "fv::core::js_split(&props.text, \" \").into_iter()",
+        "s_.iter()",
+        "props.x.iter() ",
+        "&props.words.iter()",
+        "props.x.iter()x.map(|v| v)",
+        "props.w[0..20].rev()",
+        '["x"]1234567.rev()',
+        "x.rev()",
+        "xfv::strings::js_x().into_iter()",
+        "[.rev()",
+        '["x", fv_a.len()].iter()',
+        '["x", gfv_a].iter()',
+        '["x", props.a&].iter()',
+        '["x", &props.a.len()].iter()',
+        '["x", y].iter()',
+        '["x", "a"x].iter()',
+        '["x", 1x].iter()',
+      ]) {
+        expect(borrowsHeld(chain), chain).toBe(false);
+      }
     });
   });
 

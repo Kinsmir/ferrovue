@@ -59,7 +59,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Strings.vue");
     let s_initial = fv::strings::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
-    let s_words = fv::strings::js_split(&props.text, " ").into_iter().map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>();
+    let s_words = fv::strings::js_split(&props.text, " ").into_iter().collect::<Vec<_>>();
     let s_short = fv::strings::js_slice(&props.text, 0.0f64, Some(3.0f64)).into_owned();
     let s_last = fv::strings::js_at(&props.text.to_uppercase(), -1.0f64).map(|v| Cow::<str>::Owned(v.to_owned()));
     out.push_str("<section><p>");

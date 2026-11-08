@@ -65,7 +65,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     let s_stamp = std::cell::LazyCell::new(|| format!("{} ({})", (*s_iso), props.word));
     let s_day = std::cell::LazyCell::new(|| fv::date::js_utc_date(fv_refusals.keep(fv::date::try_date_parse(&props.when), 11, 28)));
     let s_size = std::cell::LazyCell::new(|| fv::strings::js_length(&fv_refusals.keep(fv::strings::try_repeat(&props.word, props.count as f64), 12, 29)));
-    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t| Cow::<str>::Owned(Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&fv_t, props.count as f64), 13, 53)).into_owned())).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>());
+    let s_copies = std::cell::LazyCell::new(|| props.tags.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_t| Cow::<str>::Owned(Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(&fv_t, props.count as f64), 13, 53)).into_owned())).collect::<Vec<_>>());
     let s_echoed = std::cell::LazyCell::new(|| props.note.as_deref().filter(|v| !v.is_empty()).map(|fv_note| Cow::<str>::Owned(fv_refusals.keep(fv::strings::try_repeat(fv_note, props.count as f64), 14, 45))));
     out.push_str("<section><p>");
     fv::core::escape_into(out, &s_upper);
