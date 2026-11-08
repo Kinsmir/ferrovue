@@ -592,7 +592,7 @@ fn strip_comments(css: &str) -> Cow<'_, str> {
                     continue;
                 }
             }
-            b'\\' if i + 1 < b.len() => {
+            b'\\' => {
                 i += 2;
                 continue;
             }

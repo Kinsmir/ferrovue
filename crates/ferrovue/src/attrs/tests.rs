@@ -519,6 +519,9 @@ fn comments_are_stripped_as_a_scan_of_characters_strips_them() {
         "a: \"x /* y\" /* z */ ; b: '\\'/* w */'",
         "\\/* a */ b",
         "a: 1 /* open /* open */ c /* open",
+        "\"a\"/**/\"",
+        "'x'/* y */'",
+        "a \\",
     ] {
         assert_eq!(
             strip_comments(text),
