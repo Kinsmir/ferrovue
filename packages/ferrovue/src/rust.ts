@@ -18,6 +18,7 @@ import { paramsOf, type RenderParam, renderParams, slotContextOf, slotFieldsOf }
 import { scopeFor } from "./script.ts";
 import { readable } from "./names.ts";
 import { foldBranches } from "./folding.ts";
+import { UNIT_CURSOR } from "./strings.ts";
 
 function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
@@ -505,6 +506,8 @@ export function componentSource(comp: Component, ast: N[], ssr: string, componen
   const sized = terms.filter((t) => !/^\d+$/.test(t));
   const reserve = [...(fixed || !sized.length ? [String(fixed)] : []), ...sized];
   if (refuses) e.lines.unshift(`    let ${REFUSALS} = fv::render::Refusals::new(NAME, ${rustStr(comp.file)});`);
+  const cursors = new Set(e.lines.flatMap((l) => [...l.matchAll(new RegExp(`\\b${UNIT_CURSOR}\\w+(?=\\.)`, "g"))].map((m) => m[0])));
+  for (const c of [...cursors].toReversed()) e.lines.unshift(`    let ${c} = fv::strings::UnitCursor::new();`);
   e.lines.unshift(reserve.length > 1 ? `    out.reserve(\n${reserve.map((t, i) => `        ${i ? "+ " : ""}${t}`).join("\n")}\n    );` : `    out.reserve(${reserve[0]});`);
 
   const life = structLifetime(comp.props, comp) ? "<'_>" : "";

@@ -63,6 +63,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [What a component may pass](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html#what-a-component-may-pass).
 - A `:style` string merged with other styles has its comments stripped in one pass, copying nothing at each `/*`; 48 KB of unclosed `/*` takes 0.09 ms, down from 543 ms.
   [CSS](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#css).
+- `s[i]`, `.at()`, `.charAt()`, `.charCodeAt()` and `.codePointAt()` of a prop read on from where the same place in the template last read, so a `v-for` over every index of a 16,000-character prop takes 0.2 ms, down from 411 ms.
+  [Reading every index](https://docs.rs/ferrovue/latest/ferrovue/guide/strings/index.html#reading-every-index).
 
 ### Fixed
 

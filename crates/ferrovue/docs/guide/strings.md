@@ -142,6 +142,22 @@ is refused, as are `.toLocaleUpperCase()` and `.toLocaleLowerCase()`, since
 the server's locale is not the browser's, and `.localeCompare()` and `.toLocaleString()`, which
 format with `Intl` ([`dates_and_prices`](crate::guide::dates_and_prices)).
 
+# Reading every index
+
+`s[i]`, `.at(i)`, `.charAt(i)`, `.charCodeAt(i)` and `.codePointAt(i)` of a prop, at an index that
+is not a literal, read through a `UnitCursor`: one for each place in the template that reads,
+declared at the top of the render. Each read walks from where that place's last read ended, so a
+`v-for` over every index of a prop, forwards or backwards, takes time linear in its length, as in
+V8. A read in a `computed`, a function or setup, or of a string the render builds, counts its
+index from the start of the string.
+
+```rust
+let units = ferrovue::strings::UnitCursor::new();
+let codes: Vec<f64> = (0..4).map(|i| units.char_code_at("é🦀a", f64::from(i))).collect();
+assert_eq!(codes, [233.0, 55358.0, 56704.0, 97.0]);
+assert_eq!(units.at("é🦀a", -1.0), Some("a"));
+```
+
 # Regular expressions
 
 `.replace()`, `.replaceAll()` and `.split()` take a regular expression literal, and a literal's

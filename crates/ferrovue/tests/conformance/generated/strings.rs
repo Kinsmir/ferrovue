@@ -57,6 +57,8 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         + props.sep.len()
         + props.fill.as_deref().map_or(0, str::len)
     );
+    let fv_units_text = fv::strings::UnitCursor::new();
+    let fv_units_text_2 = fv::strings::UnitCursor::new();
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Strings.vue");
     let s_initial = fv::strings::js_char_at(&props.text, 0.0f64).to_uppercase().to_owned();
     let s_words = fv::strings::js_split(&props.text, " ").into_iter().collect::<Vec<_>>();
@@ -81,13 +83,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, fv::strings::js_at(&props.text, -1.0f64).unwrap_or("none"));
     out.push('|');
-    fv::core::escape_into(out, fv::strings::js_char_at(&props.text, props.n as f64));
+    fv::core::escape_into(out, fv_units_text.char_at(&props.text, props.n as f64));
     out.push('|');
     fv::core::escape_into(out, &s_initial);
     out.push('|');
     fv::core::escape_into(out, fv::strings::js_char_at(&props.text, 99.0f64));
     out.push('|');
-    out.push_str(if fv::strings::js_at(&props.text, props.n as f64 - 100.0).is_none() { "true" } else { "false" });
+    out.push_str(if fv_units_text_2.at(&props.text, props.n as f64 - 100.0).is_none() { "true" } else { "false" });
     out.push_str("</p><p>");
     fv::core::push_int(out, fv::strings::js_index_of(&props.text, &props.other));
     out.push('|');

@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::cell::Cell;
 use std::cmp::Ordering;
 
 use ferrovue_core::push_number;
@@ -7,7 +8,7 @@ use crate::render::Refused;
 
 use self::number::{decimal_prefix, decimal_value, digit, power_of_two_value};
 use self::regex::{Piece, pieces, substitute_units};
-use self::units::{boundary, char_start, unit, units};
+use self::units::{Cursor, boundary, char_start, unit, units};
 
 mod number;
 mod regex;
@@ -315,6 +316,85 @@ pub fn js_char_at(s: &str, index: f64) -> &str {
         ""
     } else {
         unit(s, n as usize)
+    }
+}
+
+/// A string's code units read in order: what generated code reads `s[i]`, `.at()`, `.charAt()`,
+/// `.charCodeAt()` and `.codePointAt()` of a prop through, each read starting where the last one
+/// ended, so a loop over every index of a string takes time linear in its length.
+#[doc(hidden)]
+#[derive(Debug, Default)]
+pub struct UnitCursor<'a> {
+    at: Cell<Option<Cursor<'a>>>,
+}
+
+impl<'a> UnitCursor<'a> {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn on(&self, s: &'a str) -> Cursor<'a> {
+        match self.at.get() {
+            Some(c) if std::ptr::eq(c.s, s) => c,
+            _ => Cursor::new(s),
+        }
+    }
+
+    fn read(&self, s: &'a str, index: f64, from_end: bool) -> Option<(char, usize)> {
+        let mut c = self.on(s);
+        let n = to_integer(index);
+        let k = if from_end && n < 0.0 {
+            c.len as f64 + n
+        } else {
+            n
+        };
+        let found = (0.0 <= k && k < c.len as f64).then(|| c.seek(k as usize));
+        self.at.set(Some(c));
+        found
+    }
+
+    /// [`js_at`].
+    #[must_use]
+    pub fn at(&self, s: &'a str, index: f64) -> Option<&'a str> {
+        let (ch, half) = self.read(s, index, true)?;
+        Some(self.piece(ch, half))
+    }
+
+    /// [`js_char_at`].
+    #[must_use]
+    pub fn char_at(&self, s: &'a str, index: f64) -> &'a str {
+        self.read(s, index, false)
+            .map_or("", |(ch, half)| self.piece(ch, half))
+    }
+
+    /// [`js_char_code_at`].
+    #[must_use]
+    pub fn char_code_at(&self, s: &'a str, index: f64) -> f64 {
+        self.read(s, index, false).map_or(f64::NAN, |(ch, half)| {
+            let mut pair = [0; 2];
+            f64::from(ch.encode_utf16(&mut pair)[half])
+        })
+    }
+
+    /// [`js_code_point_at`].
+    #[must_use]
+    pub fn code_point_at(&self, s: &'a str, index: f64) -> Option<i64> {
+        let (ch, half) = self.read(s, index, false)?;
+        if half == 0 {
+            return Some(i64::from(u32::from(ch)));
+        }
+        let mut pair = [0; 2];
+        Some(i64::from(ch.encode_utf16(&mut pair)[1]))
+    }
+
+    fn piece(&self, ch: char, half: usize) -> &'a str {
+        let c = self.at.get().expect("a read sets the cursor");
+        if ch.len_utf16() == 1 && half == 0 {
+            &c.s[c.byte..c.byte + ch.len_utf8()]
+        } else {
+            "\u{FFFD}"
+        }
     }
 }
 

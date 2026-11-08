@@ -385,13 +385,29 @@ describe("items read by `[…]`", () => {
   });
 
   it("reads a string's character by an integer index, holding it where the string is computed", () => {
-    expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s[i] }}</p>")).toMatch(like("if let Some(v) = Some(fv::strings::js_char_at(&props.s, props.i as f64)).filter(|c| !c.is_empty()) {"));
+    expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s[i] }}</p>")).toMatch(like("if let Some(v) = Some(fv_units_s.char_at(&props.s, props.i as f64)).filter(|c| !c.is_empty()) {"));
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ (s + 'x')[i] }}</p>")).toMatch(like(
       'if let Some(v) = Some(fv::strings::js_char_at(&format!("{}x", props.s), props.i as f64)).filter(|c| !c.is_empty()).map(|v| Cow::<str>::Owned(v.to_owned())).as_deref() {',
     ));
     expect(render("defineProps<{ s: string; i: number }>();", "<p>{{ s.toUpperCase()[i] ?? '-' }}</p>")).toMatch(like(
       'fv::core::escape_into(out, &Some(fv::strings::js_char_at(&props.s.to_uppercase(), props.i as f64)).filter(|c| !c.is_empty()).map(|v| Cow::<str>::Owned(v.to_owned())).unwrap_or(Cow::<str>::Borrowed("-")));',
     ));
+  });
+
+  it("reads a prop's code units by a computed index through a cursor of each place that reads them", () => {
+    const out = render(
+      "const props = defineProps<{ s: string; t: string }>(); const last = computed(() => props.s.charCodeAt(props.s.length - 1));",
+      '<p v-for="i in s.length">{{ s[i] }}{{ s.at(-i) }}{{ s.charCodeAt(i) }}{{ s.codePointAt(i) }}{{ t.charAt(i) }}{{ s.charAt(0) }}{{ last }}</p>',
+    );
+    expect(out).toMatch(like("let fv_units_s = fv::strings::UnitCursor::new();\n    let fv_units_s_2 = fv::strings::UnitCursor::new();\n    let fv_units_s_3 = fv::strings::UnitCursor::new();\n    let fv_units_s_4 = fv::strings::UnitCursor::new();\n    let fv_units_t = fv::strings::UnitCursor::new();"));
+    expect(out).toMatch(like("Some(fv_units_s.char_at(&props.s, fv_i as f64)).filter(|c| !c.is_empty())"));
+    expect(out).toMatch(like("fv_units_s_2.at(&props.s, -(fv_i as f64))"));
+    expect(out).toMatch(like("fv_units_s_3.char_code_at(&props.s, fv_i as f64)"));
+    expect(out).toMatch(like("fv_units_s_4.code_point_at(&props.s, fv_i as f64)"));
+    expect(out).toMatch(like("fv_units_t.char_at(&props.t, fv_i as f64)"));
+    expect(out).toMatch(like("fv::strings::js_char_at(&props.s, 0.0f64)"));
+    expect(out).toMatch(like("fv::strings::js_char_code_at(&props.s,"));
+    expect(out).not.toMatch(/fv_units_s_5/);
   });
 
   it("reads the parts of a `[key, value]` pair by a literal index", () => {

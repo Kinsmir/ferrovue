@@ -242,6 +242,7 @@ pub mod shown;
 pub mod signed_zeros;
 pub mod slot_probe;
 pub mod statements;
+pub mod string_indexes;
 pub mod string_of;
 pub mod string_search;
 pub mod strings;
@@ -1548,6 +1549,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "Statements" => {
             let props: statements::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             statements::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "StringIndexes" => {
+            let props: string_indexes::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            string_indexes::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "StringOf" => {
             let props: string_of::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

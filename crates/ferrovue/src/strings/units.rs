@@ -66,3 +66,74 @@ pub(super) fn char_start(s: &str, unit: usize) -> usize {
         (byte, false) => byte,
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Cursor<'a> {
+    pub(super) s: &'a str,
+    pub(super) len: usize,
+    ascii: bool,
+    unit: usize,
+    pub(super) byte: usize,
+}
+
+#[cfg(test)]
+thread_local! {
+    pub(super) static STEPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+fn step(n: usize) {
+    STEPS.with(|steps| steps.set(steps.get() + n));
+}
+
+impl<'a> Cursor<'a> {
+    pub(super) fn new(s: &'a str) -> Self {
+        #[cfg(test)]
+        step(s.len());
+        let ascii = s.is_ascii();
+        let len = if ascii {
+            s.len()
+        } else {
+            s.chars().map(char::len_utf16).sum()
+        };
+        Self {
+            s,
+            len,
+            ascii,
+            unit: 0,
+            byte: 0,
+        }
+    }
+
+    pub(super) fn seek(&mut self, k: usize) -> (char, usize) {
+        if self.ascii {
+            self.unit = k;
+            self.byte = k;
+            return (char::from(self.s.as_bytes()[k]), 0);
+        }
+        while self.unit > k {
+            #[cfg(test)]
+            step(1);
+            let ch = self.s[..self.byte]
+                .chars()
+                .next_back()
+                .expect("a character before");
+            self.unit -= ch.len_utf16();
+            self.byte -= ch.len_utf8();
+        }
+        loop {
+            #[cfg(test)]
+            step(1);
+            let ch = self.s[self.byte..]
+                .chars()
+                .next()
+                .expect("a character in range");
+            let width = ch.len_utf16();
+            if k < self.unit + width {
+                return (ch, k - self.unit);
+            }
+            self.unit += width;
+            self.byte += ch.len_utf8();
+        }
+    }
+}
