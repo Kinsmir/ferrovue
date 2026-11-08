@@ -2,6 +2,7 @@ use std::borrow::{Borrow, Cow};
 use std::cell::{Cell, RefCell};
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 
 use ferrovue_core::push_number;
@@ -132,6 +133,18 @@ impl HeadValue {
         out
     }
 
+    fn js_str(&self) -> Cow<'_, str> {
+        match self {
+            HeadValue::Undefined => Cow::Borrowed("undefined"),
+            HeadValue::Null => Cow::Borrowed("null"),
+            HeadValue::Bool(true) => Cow::Borrowed("true"),
+            HeadValue::Bool(false) => Cow::Borrowed("false"),
+            HeadValue::Str(s) => Cow::Borrowed(s),
+            HeadValue::Object(_) => Cow::Borrowed("[object Object]"),
+            HeadValue::Number(_) | HeadValue::Array(_) => Cow::Owned(self.js_string()),
+        }
+    }
+
     fn push_js_string(&self, out: &mut String) {
         match self {
             HeadValue::Undefined => out.push_str("undefined"),
@@ -257,11 +270,36 @@ pub struct HeadHtml {
     pub body_attrs: String,
 }
 
+type SeoMeta = (&'static str, &'static str, HeadValue);
+
 #[derive(Debug)]
 enum Entry {
+    Defaults,
     Input(HeadValue),
-    SeoMeta(HeadValue, Vec<(&'static str, &'static str, HeadValue)>),
+    SeoMeta(HeadValue, Vec<SeoMeta>),
 }
+
+static DEFAULTS: LazyLock<HeadValue> = LazyLock::new(|| {
+    HeadValue::object([
+        (
+            "htmlAttrs",
+            HeadValue::object([("lang", HeadValue::str("en"))]),
+        ),
+        (
+            "meta",
+            HeadValue::array([
+                HeadValue::object([("charset", HeadValue::str("utf-8"))]),
+                HeadValue::object([
+                    ("name", HeadValue::str("viewport")),
+                    (
+                        "content",
+                        HeadValue::str("width=device-width, initial-scale=1"),
+                    ),
+                ]),
+            ]),
+        ),
+    ])
+});
 
 /// The head of one render: what every `useHead` and `useSeoMeta` in the component tree asked for,
 /// in the order they ran. A page renders its components first, then writes [`render`](Self::render)
@@ -319,25 +357,7 @@ impl Head {
     #[must_use]
     pub fn new() -> Head {
         let head = Head::without_defaults();
-        head.push(HeadValue::object([
-            (
-                "htmlAttrs",
-                HeadValue::object([("lang", HeadValue::str("en"))]),
-            ),
-            (
-                "meta",
-                HeadValue::array([
-                    HeadValue::object([("charset", HeadValue::str("utf-8"))]),
-                    HeadValue::object([
-                        ("name", HeadValue::str("viewport")),
-                        (
-                            "content",
-                            HeadValue::str("width=device-width, initial-scale=1"),
-                        ),
-                    ]),
-                ]),
-            ),
-        ]));
+        head.entries.borrow_mut().push((0, Entry::Defaults));
         head
     }
 
@@ -399,22 +419,32 @@ impl Head {
             .borrow_mut()
             .push((self.deferral.get(), Entry::SeoMeta(input, meta)));
     }
-
     /// The head as unhead's `renderSSRHead` writes it.
     #[must_use]
     pub fn render(&self) -> HeadHtml {
-        let tags = self.resolve();
+        let entries = self.entries.borrow();
+        let mut ordered: Vec<&(usize, Entry)> = entries.iter().collect();
+        ordered.sort_by_key(|(deferral, _)| *deferral);
+        let inputs: Vec<(Cow<'_, HeadValue>, &[SeoMeta])> = ordered
+            .into_iter()
+            .map(|(_, entry)| match entry {
+                Entry::Defaults => (Cow::Borrowed(&*DEFAULTS), &[][..]),
+                Entry::Input(input) => (strip_unsafe(input), &[][..]),
+                Entry::SeoMeta(input, meta) => (strip_unsafe(input), meta.as_slice()),
+            })
+            .collect();
+        let tags = resolve(&inputs);
         let mut html = HeadHtml::default();
         let mut html_attrs = Props::default();
         let mut body_attrs = Props::default();
-        for tag in &tags {
-            match tag.tag.as_str() {
-                "htmlAttrs" => html_attrs.assign(&tag.props),
-                "bodyAttrs" => body_attrs.assign(&tag.props),
+        for tag in tags {
+            match tag.tag {
+                "htmlAttrs" => html_attrs.assign(tag.props),
+                "bodyAttrs" => body_attrs.assign(tag.props),
                 _ => {
                     let target = match tag.tag_position.truthy() {
                         false => &mut html.head_tags,
-                        true => match &tag.tag_position {
+                        true => match &*tag.tag_position {
                             HeadValue::Str(s) if s == "head" => &mut html.head_tags,
                             HeadValue::Str(s) if s == "bodyClose" => &mut html.body_tags,
                             HeadValue::Str(s) if s == "bodyOpen" => &mut html.body_tags_open,
@@ -424,7 +454,7 @@ impl Head {
                     if !target.is_empty() {
                         target.push('\n');
                     }
-                    tag_into(target, tag);
+                    tag_into(target, &tag);
                 }
             }
         }
@@ -432,53 +462,41 @@ impl Head {
         props_into(&mut html.body_attrs, &body_attrs);
         html
     }
+}
 
-    fn resolve(&self) -> Vec<Tag> {
-        let mut all = Vec::new();
-        let entries = self.entries.borrow();
-        let mut ordered: Vec<&(usize, Entry)> = entries.iter().collect();
-        ordered.sort_by_key(|(deferral, _)| *deferral);
-        for (i, (_, entry)) in ordered.into_iter().enumerate() {
-            let mut tags = match entry {
-                Entry::Input(input) => entry_tags(input),
-                Entry::SeoMeta(input, meta) => {
-                    let mut tags = entry_tags(input);
-                    tags.extend(seo_meta_tags(meta));
-                    tags
-                }
-            };
-            for (j, tag) in tags.iter_mut().enumerate() {
-                tag.weight = capo_weight(tag);
-                tag.position = (((i + 1) as i64) << 10) + j as i64;
-                tag.dedupe = dedupe_key(tag);
-                if tag.dedupe.is_none() {
-                    tag.hash = Some(hash_tag(tag));
-                }
+fn resolve<'a>(inputs: &'a [(Cow<'a, HeadValue>, &'a [SeoMeta])]) -> Vec<Tag<'a>> {
+    let mut all = Vec::new();
+    for (i, (input, meta)) in inputs.iter().enumerate() {
+        let start = all.len();
+        entry_tags(input, &mut all);
+        seo_meta_tags(meta, &mut all);
+        for (j, tag) in all[start..].iter_mut().enumerate() {
+            tag.weight = capo_weight(tag);
+            tag.position = (((i + 1) as i64) << 10) + j as i64;
+            tag.dedupe = dedupe_key(tag);
+            if tag.dedupe.is_none() {
+                tag.hash = Some(hash_tag(tag));
             }
-            all.extend(tags);
         }
-        let (mut map, flat) = dedupe(all);
-        title_template(&mut map);
-        let mut tags: Vec<Tag> = map
-            .slots
-            .into_iter()
-            .flat_map(|(_, slot)| slot.tags)
-            .collect();
-        if flat {
-            tags.sort_by(order);
-        }
-        sanitize(tags)
     }
+    let (mut map, flat) = dedupe(all);
+    title_template(&mut map);
+    let mut tags: Vec<Tag<'a>> = map.slots.into_iter().flatten().collect();
+    if flat {
+        tags.sort_by(order);
+    }
+    sanitize(&mut tags);
+    tags
 }
 
 #[derive(Debug, Clone)]
-enum Prop {
-    Value(HeadValue),
-    Class(Vec<String>),
-    Style(Vec<(String, String)>),
+enum Prop<'a> {
+    Value(Cow<'a, HeadValue>),
+    Class(Vec<&'a str>),
+    Style(Vec<(&'a str, Cow<'a, str>)>),
 }
 
-impl Prop {
+impl Prop<'_> {
     fn truthy(&self) -> bool {
         match self {
             Prop::Value(v) => v.truthy(),
@@ -486,31 +504,45 @@ impl Prop {
         }
     }
 
-    fn js_string(&self) -> String {
+    fn js_str(&self) -> Cow<'_, str> {
         match self {
-            Prop::Value(v) => v.js_string(),
-            Prop::Class(_) => "[object Set]".to_owned(),
-            Prop::Style(_) => "[object Map]".to_owned(),
+            Prop::Value(v) => v.js_str(),
+            Prop::Class(_) => Cow::Borrowed("[object Set]"),
+            Prop::Style(_) => Cow::Borrowed("[object Map]"),
+        }
+    }
+
+    fn as_str(&self) -> Option<&str> {
+        match self {
+            Prop::Value(v) => match &**v {
+                HeadValue::Str(s) => Some(s),
+                _ => None,
+            },
+            _ => None,
         }
     }
 
     fn is_str(&self, s: &str) -> bool {
-        matches!(self, Prop::Value(HeadValue::Str(v)) if v == s)
+        self.as_str() == Some(s)
+    }
+
+    fn is_value(&self, f: impl Fn(&HeadValue) -> bool) -> bool {
+        matches!(self, Prop::Value(v) if f(v))
     }
 
     fn has_content(&self) -> bool {
         match self {
-            Prop::Value(HeadValue::Number(x)) => x.is_finite(),
+            Prop::Value(v) => has_content(v),
             other => other.truthy(),
         }
     }
 }
 
 #[derive(Debug, Clone, Default)]
-struct Props(Vec<(String, Prop)>);
+struct Props<'a>(Vec<(Cow<'a, str>, Prop<'a>)>);
 
-impl Props {
-    fn get(&self, key: &str) -> Option<&Prop> {
+impl<'a> Props<'a> {
+    fn get(&self, key: &str) -> Option<&Prop<'a>> {
         self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
     }
 
@@ -518,47 +550,47 @@ impl Props {
         self.get(key).is_some_and(Prop::truthy)
     }
 
-    fn defined(&self, key: &str) -> Option<&Prop> {
+    fn defined(&self, key: &str) -> Option<&Prop<'a>> {
         self.get(key)
-            .filter(|p| !matches!(p, Prop::Value(HeadValue::Undefined)))
+            .filter(|p| !p.is_value(|v| matches!(v, HeadValue::Undefined)))
     }
 
-    fn set(&mut self, key: String, value: Prop) {
+    fn set(&mut self, key: Cow<'a, str>, value: Prop<'a>) {
         if let Some(slot) = self.0.iter_mut().find(|(k, _)| *k == key) {
             slot.1 = value;
             return;
         }
-        let at = js_key_place(self.0.iter().map(|(k, _)| k.as_str()), &key);
+        let at = js_key_place(self.0.iter().map(|(k, _)| &**k), &key);
         self.0.insert(at, (key, value));
     }
 
-    fn assign(&mut self, other: &Props) {
-        for (k, v) in &other.0 {
-            self.set(k.clone(), v.clone());
+    fn assign(&mut self, other: Props<'a>) {
+        for (k, v) in other.0 {
+            self.set(k, v);
         }
     }
 }
 
 #[derive(Debug, Clone, Default)]
-struct Tag {
-    tag: String,
-    props: Props,
-    text_content: HeadValue,
-    inner_html: HeadValue,
-    key: HeadValue,
-    tag_position: HeadValue,
-    tag_priority: HeadValue,
-    tag_duplicate_strategy: HeadValue,
+struct Tag<'a> {
+    tag: &'a str,
+    props: Props<'a>,
+    text_content: Cow<'a, HeadValue>,
+    inner_html: Cow<'a, HeadValue>,
+    key: Cow<'a, HeadValue>,
+    tag_position: Cow<'a, HeadValue>,
+    tag_priority: Cow<'a, HeadValue>,
+    tag_duplicate_strategy: Cow<'a, HeadValue>,
     weight: f64,
     position: i64,
-    dedupe: Option<String>,
-    hash: Option<Key>,
+    dedupe: Option<Cow<'a, str>>,
+    hash: Option<Key<'a>>,
 }
 
-impl Tag {
-    fn named(tag: &str) -> Tag {
+impl<'a> Tag<'a> {
+    fn named(tag: &'a str) -> Tag<'a> {
         Tag {
-            tag: tag.to_owned(),
+            tag,
             ..Tag::default()
         }
     }
@@ -626,148 +658,206 @@ fn invalid_attr_name(name: &str) -> bool {
     })
 }
 
-fn strip_unsafe(value: &HeadValue) -> HeadValue {
+fn has_unsafe(value: &HeadValue) -> bool {
     match value {
-        HeadValue::Array(items) => HeadValue::Array(items.iter().map(strip_unsafe).collect()),
+        HeadValue::Array(items) => items.iter().any(has_unsafe),
+        HeadValue::Object(entries) => entries.iter().any(|(k, v)| unsafe_key(k) || has_unsafe(v)),
+        _ => false,
+    }
+}
+
+fn strip_unsafe(value: &HeadValue) -> Cow<'_, HeadValue> {
+    if has_unsafe(value) {
+        Cow::Owned(stripped(value))
+    } else {
+        Cow::Borrowed(value)
+    }
+}
+
+fn stripped(value: &HeadValue) -> HeadValue {
+    match value {
+        HeadValue::Array(items) => HeadValue::Array(items.iter().map(stripped).collect()),
         HeadValue::Object(entries) => HeadValue::Object(
             entries
                 .iter()
                 .filter(|(k, _)| !unsafe_key(k))
-                .map(|(k, v)| (k.clone(), strip_unsafe(v)))
+                .map(|(k, v)| (k.clone(), stripped(v)))
                 .collect(),
         ),
         other => other.clone(),
     }
 }
 
-fn entry_tags(input: &HeadValue) -> Vec<Tag> {
-    let HeadValue::Object(entries) = strip_unsafe(input) else {
-        return Vec::new();
+fn value_str<'a>(value: &Cow<'a, HeadValue>) -> Cow<'a, str> {
+    match value {
+        Cow::Borrowed(v) => v.js_str(),
+        Cow::Owned(v) => Cow::Owned(v.js_str().into_owned()),
+    }
+}
+
+fn items_of<'a>(value: &Cow<'a, HeadValue>) -> Option<Vec<Cow<'a, HeadValue>>> {
+    match value {
+        Cow::Borrowed(v) => match *v {
+            HeadValue::Array(items) => Some(items.iter().map(Cow::Borrowed).collect()),
+            _ => None,
+        },
+        Cow::Owned(HeadValue::Array(items)) => {
+            Some(items.iter().cloned().map(Cow::Owned).collect())
+        }
+        Cow::Owned(_) => None,
+    }
+}
+
+fn joined(parts: &[&str]) -> String {
+    let mut out = String::with_capacity(parts.iter().map(|p| p.len()).sum());
+    for part in parts {
+        out.push_str(part);
+    }
+    out
+}
+
+fn entry_tags<'a>(input: &'a HeadValue, out: &mut Vec<Tag<'a>>) {
+    let HeadValue::Object(entries) = input else {
+        return;
     };
-    let mut tags = Vec::new();
-    for (key, value) in &entries {
+    for (key, value) in entries {
         match value {
             HeadValue::Undefined => {}
             HeadValue::Array(items) => {
                 for item in items {
-                    tags.extend(normalize_tag(key, item));
+                    normalize_tag(key, item, out);
                 }
             }
-            other => tags.extend(normalize_tag(key, other)),
+            other => normalize_tag(key, other, out),
         }
     }
-    tags
 }
 
-fn normalize_tag(name: &str, input: &HeadValue) -> Vec<Tag> {
-    let wrapped;
-    let input = if input.is_object_type() {
-        input
+fn normalize_tag<'a>(name: &'a str, input: &'a HeadValue, out: &mut Vec<Tag<'a>>) {
+    let mut tag = Tag::named(name);
+    if input.is_object_type() {
+        normalize_props(&mut tag, input);
     } else {
         let field = if matches!(name, "script" | "noscript" | "style") {
             "innerHTML"
         } else {
             "textContent"
         };
-        wrapped = HeadValue::Object(vec![(Cow::Borrowed(field), input.clone())]);
-        &wrapped
-    };
-    let mut tag = Tag::named(name);
-    normalize_props(&mut tag, input);
+        if name == "templateParams" {
+            tag.props
+                .set(Cow::Borrowed(field), Prop::Value(Cow::Borrowed(input)));
+        } else {
+            config_field(&mut tag, field, Cow::Borrowed(input));
+        }
+    }
     if tag.key.truthy() && DUPEABLE.contains(&name) {
         tag.props
-            .set("data-hid".to_owned(), Prop::Value(tag.key.clone()));
+            .set(Cow::Borrowed("data-hid"), Prop::Value(tag.key.clone()));
         tag.hash = Some(Key::of(&tag.key));
     }
-    if let Some(Prop::Value(HeadValue::Array(contents))) = tag.props.get("content").cloned() {
-        return contents
-            .into_iter()
-            .map(|content| {
-                let mut each = tag.clone();
-                each.props.set("content".to_owned(), Prop::Value(content));
-                each
-            })
-            .collect();
+    if let Some(Prop::Value(content)) = tag.props.get("content")
+        && let Some(contents) = items_of(content)
+    {
+        for content in contents {
+            let mut each = tag.clone();
+            each.props
+                .set(Cow::Borrowed("content"), Prop::Value(content));
+            out.push(each);
+        }
+        return;
     }
-    vec![tag]
+    out.push(tag);
 }
 
-fn normalize_props(tag: &mut Tag, input: &HeadValue) {
-    let entries: Vec<(Cow<'static, str>, HeadValue)> = match input {
-        HeadValue::Object(entries) => entries.clone(),
-        HeadValue::Array(items) => items
-            .iter()
-            .enumerate()
-            .map(|(i, v)| (Cow::Owned(i.to_string()), v.clone()))
-            .collect(),
+fn lowercase(name: Cow<'_, str>) -> Cow<'_, str> {
+    if name.is_ascii() && !name.bytes().any(|b| b.is_ascii_uppercase()) {
+        name
+    } else {
+        Cow::Owned(name.to_lowercase())
+    }
+}
+
+fn normalize_props<'a>(tag: &mut Tag<'a>, input: &'a HeadValue) {
+    let (entries, items): (&'a [(Cow<'static, str>, HeadValue)], &'a [HeadValue]) = match input {
+        HeadValue::Object(entries) => (entries.as_slice(), &[]),
+        HeadValue::Array(items) => (&[], items.as_slice()),
         _ => return,
     };
+    let entries = entries.iter().map(|(k, v)| (Cow::Borrowed(&**k), v)).chain(
+        items
+            .iter()
+            .enumerate()
+            .map(|(i, v)| (Cow::Owned(i.to_string()), v)),
+    );
     if tag.tag == "templateParams" {
         for (k, v) in entries {
-            tag.props.set(k.into_owned(), Prop::Value(v));
+            tag.props.set(k, Prop::Value(Cow::Borrowed(v)));
         }
         return;
     }
     let html_tag =
-        HAS_ELEMENT.contains(&tag.tag.as_str()) || tag.tag == "htmlAttrs" || tag.tag == "bodyAttrs";
-    for (prop, value) in &entries {
-        let prop: &str = prop;
-        if unsafe_key(prop) {
+        HAS_ELEMENT.contains(&tag.tag) || tag.tag == "htmlAttrs" || tag.tag == "bodyAttrs";
+    for (prop, value) in entries {
+        if unsafe_key(&prop) {
             continue;
         }
         let data = prop.starts_with("data-");
-        let attr = html_tag && !CONFIG_KEYS.contains(&prop);
+        let config = CONFIG_KEYS.contains(&&*prop);
+        let attr = html_tag && !config;
         let key = if attr && !data {
-            prop.to_lowercase()
+            lowercase(prop.clone())
         } else {
-            prop.to_owned()
+            prop.clone()
         };
         if attr && (key.is_empty() || invalid_attr_name(&key)) {
             continue;
         }
         if *value == HeadValue::Null {
-            tag.props.set(key, Prop::Value(HeadValue::Null));
+            tag.props.set(key, Prop::Value(Cow::Borrowed(value)));
         } else if prop == "class" || prop == "style" {
             tag.props
-                .set(prop.to_owned(), class_or_style(prop == "style", value));
-        } else if CONFIG_KEYS.contains(&prop) {
-            if matches!(prop, "textContent" | "innerHTML") && value.is_object_type() {
+                .set(prop.clone(), class_or_style(prop == "style", value));
+        } else if config {
+            if matches!(&*prop, "textContent" | "innerHTML") && value.is_object_type() {
                 let given = input.get("type");
                 let ty = if given.truthy() {
-                    given.clone()
+                    Cow::Borrowed(given)
                 } else {
-                    HeadValue::str("application/json")
+                    Cow::Owned(HeadValue::str("application/json"))
                 };
-                if let HeadValue::Str(t) = &ty
+                if let HeadValue::Str(t) = &*ty
                     && (t.ends_with("json") || t == "speculationrules" || t == "importmap")
                 {
-                    tag.props.set("type".to_owned(), Prop::Value(ty.clone()));
+                    tag.props
+                        .set(Cow::Borrowed("type"), Prop::Value(ty.clone()));
                     let json = HeadValue::Str(value.json().unwrap_or_default());
-                    config_field(tag, prop, json);
+                    config_field(tag, &prop, Cow::Owned(json));
                 }
             } else {
-                config_field(tag, prop, value.clone());
+                config_field(tag, &prop, Cow::Borrowed(value));
             }
         } else if *value != HeadValue::Undefined {
-            let s = value.js_string();
+            let s = value.js_str();
             let meta_content = tag.tag == "meta" && key == "content";
             let normalized = if s == "true" || s.is_empty() {
-                if data || meta_content {
-                    HeadValue::Str(s)
+                if !(data || meta_content) {
+                    Cow::Owned(HeadValue::Bool(true))
+                } else if matches!(value, HeadValue::Str(_)) {
+                    Cow::Borrowed(value)
                 } else {
-                    HeadValue::Bool(true)
+                    Cow::Owned(HeadValue::Str(s.into_owned()))
                 }
             } else if !value.truthy() && data && s == "false" {
-                HeadValue::str("false")
+                Cow::Owned(HeadValue::str("false"))
             } else {
-                value.clone()
+                Cow::Borrowed(value)
             };
             tag.props.set(key, Prop::Value(normalized));
         }
     }
 }
 
-fn config_field(tag: &mut Tag, prop: &str, value: HeadValue) {
+fn config_field<'a>(tag: &mut Tag<'a>, prop: &str, value: Cow<'a, HeadValue>) {
     match prop {
         "key" => tag.key = value,
         "tagPosition" => tag.tag_position = value,
@@ -779,53 +869,64 @@ fn config_field(tag: &mut Tag, prop: &str, value: HeadValue) {
     }
 }
 
-fn class_or_style(style: bool, value: &HeadValue) -> Prop {
-    let mut classes: Vec<String> = Vec::new();
-    let mut styles: Vec<(String, String)> = Vec::new();
-    let mut add_style = |k: String, v: String| {
-        if let Some(slot) = styles.iter_mut().find(|(sk, _)| *sk == k) {
-            slot.1 = v;
-        } else {
-            styles.push((k, v));
+fn add_style<'a>(styles: &mut Vec<(&'a str, Cow<'a, str>)>, k: &'a str, v: Cow<'a, str>) {
+    if let Some(slot) = styles.iter_mut().find(|(sk, _)| *sk == k) {
+        slot.1 = v;
+    } else {
+        styles.push((k, v));
+    }
+}
+
+fn add_part<'a>(
+    style: bool,
+    v: &'a str,
+    classes: &mut Vec<&'a str>,
+    styles: &mut Vec<(&'a str, Cow<'a, str>)>,
+) {
+    if v.is_empty() {
+        return;
+    }
+    if style {
+        if let Some(i) = v.find(':').filter(|i| *i > 0) {
+            add_style(
+                styles,
+                js_trim(&v[..i]),
+                Cow::Borrowed(js_trim(&v[i + 1..])),
+            );
         }
-    };
-    let mut add = |v: &str, add_style: &mut dyn FnMut(String, String)| {
-        if v.is_empty() {
-            return;
-        }
-        if style {
-            if let Some(i) = v.find(':').filter(|i| *i > 0) {
-                add_style(js_trim(&v[..i]).to_owned(), js_trim(&v[i + 1..]).to_owned());
+    } else {
+        for c in v.split(' ').filter(|c| !c.is_empty()) {
+            if !classes.contains(&c) {
+                classes.push(c);
             }
-        } else {
-            for c in v.split(' ').filter(|c| !c.is_empty()) {
-                if !classes.iter().any(|x| x == c) {
-                    classes.push(c.to_owned());
-                }
-            }
         }
-    };
+    }
+}
+
+fn class_or_style(style: bool, value: &HeadValue) -> Prop<'_> {
+    let mut classes = Vec::new();
+    let mut styles = Vec::new();
     match value {
         HeadValue::Str(s) if style => {
             for part in s.split(';') {
-                add(part, &mut add_style);
+                add_part(style, part, &mut classes, &mut styles);
             }
         }
-        HeadValue::Str(s) => add(s, &mut add_style),
+        HeadValue::Str(s) => add_part(style, s, &mut classes, &mut styles),
         HeadValue::Array(items) => {
             for item in items {
                 if let HeadValue::Str(s) = item {
-                    add(s, &mut add_style);
+                    add_part(style, s, &mut classes, &mut styles);
                 }
             }
         }
         HeadValue::Object(entries) => {
             for (k, v) in entries {
-                if v.truthy() && *v != HeadValue::str("false") {
+                if v.truthy() && !matches!(v, HeadValue::Str(s) if s == "false") {
                     if style {
-                        add_style(js_trim(k).to_owned(), v.js_string());
+                        add_style(&mut styles, js_trim(k), v.js_str());
                     } else {
-                        add(k, &mut add_style);
+                        add_part(style, k, &mut classes, &mut styles);
                     }
                 }
             }
@@ -839,49 +940,52 @@ fn class_or_style(style: bool, value: &HeadValue) -> Prop {
     }
 }
 
-fn seo_meta_tags(meta: &[(&'static str, &'static str, HeadValue)]) -> Vec<Tag> {
-    let mut tags = Vec::new();
+fn seo_meta_tags<'a>(meta: &'a [SeoMeta], out: &mut Vec<Tag<'a>>) {
     for (attr, name, value) in meta {
         let value = match value {
             HeadValue::Undefined => continue,
-            HeadValue::Null => HeadValue::Null,
+            HeadValue::Null => Cow::Owned(HeadValue::Null),
             other => {
-                let s = other.js_string();
+                let s = other.js_str();
                 if s == "true" || s.is_empty() {
-                    HeadValue::Bool(true)
+                    Cow::Owned(HeadValue::Bool(true))
                 } else {
-                    other.clone()
+                    Cow::Borrowed(other)
                 }
             }
         };
         let mut tag = Tag::named("meta");
         if *attr == "charset" {
-            let charset = match value {
-                HeadValue::Null => HeadValue::str("_null"),
-                other => other,
-            };
-            tag.props.set("charset".to_owned(), Prop::Value(charset));
-        } else {
-            let content = match value {
-                HeadValue::Null => HeadValue::Null,
-                HeadValue::Str(s) if s == "_null" => HeadValue::Null,
-                HeadValue::Number(x) => HeadValue::Str(HeadValue::Number(x).js_string()),
-                other => other,
+            let charset = if matches!(*value, HeadValue::Null) {
+                Cow::Owned(HeadValue::str("_null"))
+            } else {
+                value
             };
             tag.props
-                .set((*attr).to_owned(), Prop::Value(HeadValue::str(name)));
-            tag.props.set("content".to_owned(), Prop::Value(content));
+                .set(Cow::Borrowed("charset"), Prop::Value(charset));
+        } else {
+            let content = match &*value {
+                HeadValue::Null => Cow::Owned(HeadValue::Null),
+                HeadValue::Str(s) if s == "_null" => Cow::Owned(HeadValue::Null),
+                HeadValue::Number(_) => Cow::Owned(HeadValue::Str(value.js_string())),
+                _ => value,
+            };
+            tag.props.set(
+                Cow::Borrowed(attr),
+                Prop::Value(Cow::Owned(HeadValue::str(name))),
+            );
+            tag.props
+                .set(Cow::Borrowed("content"), Prop::Value(content));
         }
-        tags.push(tag);
+        out.push(tag);
     }
-    tags
 }
 
-fn capo_weight(tag: &Tag) -> f64 {
-    if let HeadValue::Number(x) = tag.tag_priority {
+fn capo_weight(tag: &Tag<'_>) -> f64 {
+    if let HeadValue::Number(x) = *tag.tag_priority {
         return x;
     }
-    let offset = match &tag.tag_priority {
+    let offset = match &*tag.tag_priority {
         HeadValue::Str(s) if s == "critical" => -8.0,
         HeadValue::Str(s) if s == "high" => -1.0,
         HeadValue::Str(s) if s == "low" => 2.0,
@@ -891,9 +995,9 @@ fn capo_weight(tag: &Tag) -> f64 {
     let set = |key: &str| {
         props
             .get(key)
-            .is_some_and(|p| matches!(p, Prop::Value(HeadValue::Bool(true))) || p.is_str(""))
+            .is_some_and(|p| p.is_value(|v| matches!(v, HeadValue::Bool(true))) || p.is_str(""))
     };
-    let weight = match tag.tag.as_str() {
+    let weight = match tag.tag {
         "base" => -10.0,
         "title" => 10.0,
         "meta" => {
@@ -910,21 +1014,15 @@ fn capo_weight(tag: &Tag) -> f64 {
                 100.0
             }
         }
-        "link" if props.truthy("rel") => match props.get("rel") {
-            Some(Prop::Value(HeadValue::Str(rel))) => match rel.as_str() {
-                "preconnect" => 20.0,
-                "stylesheet" => 60.0,
-                "preload" | "modulepreload" => 70.0,
-                "prefetch" | "dns-prefetch" | "prerender" => 90.0,
-                _ => 100.0,
-            },
+        "link" if props.truthy("rel") => match props.get("rel").and_then(Prop::as_str) {
+            Some("preconnect") => 20.0,
+            Some("stylesheet") => 60.0,
+            Some("preload" | "modulepreload") => 70.0,
+            Some("prefetch" | "dns-prefetch" | "prerender") => 90.0,
             _ => 100.0,
         },
         "script" => {
-            let ty = match props.get("type") {
-                Some(Prop::Value(HeadValue::Str(t))) => t.as_str(),
-                _ => "",
-            };
+            let ty = props.get("type").and_then(Prop::as_str).unwrap_or("");
             let json = ty.ends_with("json");
             let content = tag.inner_html.truthy() || tag.text_content.truthy();
             if ty == "importmap" {
@@ -944,7 +1042,7 @@ fn capo_weight(tag: &Tag) -> f64 {
             }
         }
         "style" => {
-            if tag.inner_html.truthy() && tag.inner_html.js_string().contains("@import") {
+            if tag.inner_html.truthy() && tag.inner_html.js_str().contains("@import") {
                 40.0
             } else {
                 60.0
@@ -955,53 +1053,54 @@ fn capo_weight(tag: &Tag) -> f64 {
     weight + offset
 }
 
-fn dedupe_key(tag: &Tag) -> Option<String> {
-    let t = tag.tag.as_str();
+fn dedupe_key<'a>(tag: &Tag<'a>) -> Option<Cow<'a, str>> {
+    let t = tag.tag;
     let props = &tag.props;
     if UNIQUE.contains(&t) {
-        return Some(t.to_owned());
+        return Some(Cow::Borrowed(t));
     }
     if t == "link" {
         if props.get("rel").is_some_and(|p| p.is_str("canonical")) {
-            return Some("canonical".to_owned());
+            return Some(Cow::Borrowed("canonical"));
         }
         if props.get("rel").is_some_and(|p| p.is_str("alternate")) && props.truthy("hreflang") {
-            return Some(format!("alternate:{}", props.get("hreflang")?.js_string()));
+            return Some(Cow::Owned(joined(&[
+                "alternate:",
+                &props.get("hreflang")?.js_str(),
+            ])));
         }
     }
     if props.truthy("charset") {
-        return Some("charset".to_owned());
+        return Some(Cow::Borrowed("charset"));
     }
     if t == "meta" {
         for n in ["name", "property", "http-equiv"] {
             if let Some(v) = props.defined(n) {
-                let s = v.js_string();
-                let colon = matches!(v, Prop::Value(HeadValue::Str(_))) && s.contains(':');
-                let norewrite = matches!(
-                    s.as_str(),
-                    "viewport" | "description" | "keywords" | "robots"
-                );
+                let s = v.js_str();
+                let colon = v.as_str().is_some() && s.contains(':');
+                let norewrite = matches!(&*s, "viewport" | "description" | "keywords" | "robots");
                 let keyed = !colon && !norewrite && tag.key.truthy();
-                return Some(if keyed {
-                    format!("meta:{s}:key:{}", tag.key.js_string())
+                return Some(Cow::Owned(if keyed {
+                    joined(&["meta:", &s, ":key:", &tag.key.js_str()])
                 } else {
-                    format!("meta:{s}")
-                });
+                    joined(&["meta:", &s])
+                }));
             }
         }
     }
     if tag.key.truthy() {
-        return Some(format!("{t}:key:{}", tag.key.js_string()));
+        return Some(Cow::Owned(joined(&[t, ":key:", &tag.key.js_str()])));
     }
     if props.truthy("id") {
-        return Some(format!("{t}:id:{}", props.get("id")?.js_string()));
+        return Some(Cow::Owned(joined(&[t, ":id:", &props.get("id")?.js_str()])));
     }
     if t == "link" && props.truthy("rel") && props.truthy("href") {
-        return Some(format!(
-            "link:{}:{}",
-            props.get("rel")?.js_string(),
-            props.get("href")?.js_string()
-        ));
+        return Some(Cow::Owned(joined(&[
+            "link:",
+            &props.get("rel")?.js_str(),
+            ":",
+            &props.get("href")?.js_str(),
+        ])));
     }
     if INNER_CONTENT.contains(&t) {
         let content = if tag.text_content.truthy() {
@@ -1010,7 +1109,7 @@ fn dedupe_key(tag: &Tag) -> Option<String> {
             &tag.inner_html
         };
         if content.truthy() {
-            return Some(format!("{t}:content:{}", content.js_string()));
+            return Some(Cow::Owned(joined(&[t, ":content:", &content.js_str()])));
         }
     }
     None
@@ -1019,26 +1118,26 @@ fn dedupe_key(tag: &Tag) -> Option<String> {
 static UNIQUE_KEYS: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-enum Key {
-    Str(String),
+enum Key<'a> {
+    Str(Cow<'a, str>),
     Num(u64),
     Bool(bool),
     Unique(usize),
 }
 
-impl Key {
-    fn of(value: &HeadValue) -> Key {
-        match value {
-            HeadValue::Str(s) => Key::Str(s.clone()),
+impl<'a> Key<'a> {
+    fn of(value: &Cow<'a, HeadValue>) -> Key<'a> {
+        match **value {
+            HeadValue::Str(_) => Key::Str(value_str(value)),
             HeadValue::Number(x) if x.is_nan() => Key::Num(f64::NAN.to_bits()),
             HeadValue::Number(x) => Key::Num((x + 0.0).to_bits()),
-            HeadValue::Bool(b) => Key::Bool(*b),
+            HeadValue::Bool(b) => Key::Bool(b),
             _ => Key::Unique(UNIQUE_KEYS.fetch_add(1, AtomicOrdering::Relaxed)),
         }
     }
 }
 
-fn hash_tag(tag: &Tag) -> Key {
+fn hash_tag<'a>(tag: &Tag<'a>) -> Key<'a> {
     if let Some(h) = &tag.hash {
         return h.clone();
     }
@@ -1051,21 +1150,23 @@ fn hash_tag(tag: &Tag) -> Key {
     if tag.inner_html.truthy() {
         return Key::of(&tag.inner_html);
     }
-    let mut keys: Vec<&String> = tag.props.0.iter().map(|(k, _)| k).collect();
-    keys.sort_by(|a, b| js_cmp(a, b));
-    let mut hash = format!("{}:", tag.tag);
-    for (i, k) in keys.into_iter().enumerate() {
+    let mut props: Vec<&(Cow<'a, str>, Prop<'a>)> = tag.props.0.iter().collect();
+    props.sort_by(|(a, _), (b, _)| js_cmp(a, b));
+    let mut hash = String::new();
+    hash.push_str(tag.tag);
+    hash.push(':');
+    for (i, (k, v)) in props.into_iter().enumerate() {
         if i > 0 {
             hash.push(',');
         }
         hash.push_str(k);
         hash.push(':');
-        hash.push_str(&tag.props.get(k).map(Prop::js_string).unwrap_or_default());
+        hash.push_str(&v.js_str());
     }
-    Key::Str(hash)
+    Key::Str(Cow::Owned(hash))
 }
 
-fn order(a: &Tag, b: &Tag) -> Ordering {
+fn order(a: &Tag<'_>, b: &Tag<'_>) -> Ordering {
     if a.weight == b.weight {
         a.position.cmp(&b.position)
     } else {
@@ -1073,39 +1174,22 @@ fn order(a: &Tag, b: &Tag) -> Ordering {
     }
 }
 
-struct Slot {
-    tags: Vec<Tag>,
-}
-
-impl Slot {
-    fn last(&self) -> &Tag {
-        self.tags.last().expect("a slot holds a tag")
-    }
-}
-
 #[derive(Default)]
-struct TagMap {
-    slots: Vec<(Key, Slot)>,
-    index: HashMap<Key, usize>,
+struct TagMap<'a> {
+    slots: Vec<Vec<Tag<'a>>>,
+    index: HashMap<Key<'a>, usize>,
 }
 
-impl TagMap {
-    fn get(&self, key: &Key) -> Option<&Slot> {
-        self.index.get(key).map(|&i| &self.slots[i].1)
-    }
-
-    fn set(&mut self, key: Key, slot: Slot) {
-        match self.index.get(&key) {
-            Some(&i) => self.slots[i].1 = slot,
-            None => {
-                self.index.insert(key.clone(), self.slots.len());
-                self.slots.push((key, slot));
-            }
-        }
-    }
+fn last<'s, 'a>(slot: &'s [Tag<'a>]) -> &'s Tag<'a> {
+    slot.last().expect("a slot holds a tag")
 }
 
-fn is_meta_array_key(key: &Key) -> bool {
+fn keep_last(slot: &mut Vec<Tag<'_>>) {
+    let before = slot.len() - 1;
+    slot.drain(..before);
+}
+
+fn is_meta_array_key(key: &Key<'_>) -> bool {
     let Key::Str(k) = key else {
         return false;
     };
@@ -1119,19 +1203,19 @@ fn is_meta_array_key(key: &Key) -> bool {
             .any(|p| rest.starts_with(p))
 }
 
-fn merged(prev: &Tag, next: &Tag) -> Tag {
-    let mut props = prev.props.clone();
-    for (p, value) in &next.props.0 {
-        let value = match (p.as_str(), prev.props.get(p), value) {
+fn merged<'a>(prev: Tag<'a>, mut next: Tag<'a>) -> Tag<'a> {
+    let mut props = prev.props;
+    for (p, value) in std::mem::take(&mut next.props.0) {
+        let value = match (&*p, props.get(&p), value) {
             ("style", before, Prop::Style(after)) => {
                 let mut all = match before {
                     Some(Prop::Style(s)) => s.clone(),
                     _ => Vec::new(),
                 };
                 for (k, v) in after {
-                    match all.iter_mut().find(|(sk, _)| sk == k) {
-                        Some(slot) => slot.1 = v.clone(),
-                        None => all.push((k.clone(), v.clone())),
+                    match all.iter_mut().find(|(sk, _)| *sk == k) {
+                        Some(slot) => slot.1 = v,
+                        None => all.push((k, v)),
                     }
                 }
                 Prop::Style(all)
@@ -1142,20 +1226,17 @@ fn merged(prev: &Tag, next: &Tag) -> Tag {
                     _ => Vec::new(),
                 };
                 for c in after {
-                    if !all.contains(c) {
-                        all.push(c.clone());
+                    if !all.contains(&c) {
+                        all.push(c);
                     }
                 }
                 Prop::Class(all)
             }
-            _ => value.clone(),
+            (_, _, value) => value,
         };
-        props.set(p.clone(), value);
+        props.set(p, value);
     }
-    Tag {
-        props,
-        ..next.clone()
-    }
+    Tag { props, ..next }
 }
 
 fn same_key(a: &HeadValue, b: &HeadValue) -> bool {
@@ -1166,7 +1247,7 @@ fn same_key(a: &HeadValue, b: &HeadValue) -> bool {
     }
 }
 
-fn outranks(next: &Tag, prev: &Tag) -> bool {
+fn outranks(next: &Tag<'_>, prev: &Tag<'_>) -> bool {
     if next.weight == prev.weight {
         next.position > prev.position
     } else {
@@ -1174,85 +1255,71 @@ fn outranks(next: &Tag, prev: &Tag) -> bool {
     }
 }
 
-fn dedupe(mut tags: Vec<Tag>) -> (TagMap, bool) {
+fn dedupe(mut tags: Vec<Tag<'_>>) -> (TagMap<'_>, bool) {
     tags.sort_by(order);
     let mut map = TagMap::default();
     let mut flat = false;
     for next in tags {
-        let key = next
-            .dedupe
-            .clone()
-            .map_or_else(|| hash_tag(&next), Key::Str);
-        let Some(slot) = map.get(&key) else {
-            map.set(key, Slot { tags: vec![next] });
+        let key = match &next.dedupe {
+            Some(d) => Key::Str(d.clone()),
+            None => hash_tag(&next),
+        };
+        let Some(&i) = map.index.get(&key) else {
+            map.index.insert(key, map.slots.len());
+            map.slots.push(vec![next]);
             continue;
         };
-        let prev = slot.last();
+        let slot = &mut map.slots[i];
+        let prev = last(slot);
         let strategy_merge = if next.tag_duplicate_strategy.truthy() {
-            next.tag_duplicate_strategy == HeadValue::str("merge")
+            matches!(&*next.tag_duplicate_strategy, HeadValue::Str(s) if s == "merge")
         } else {
-            MERGED.contains(&next.tag.as_str())
-                || (next.key.truthy() && same_key(&next.key, &prev.key))
+            MERGED.contains(&next.tag) || (next.key.truthy() && same_key(&next.key, &prev.key))
         };
         if strategy_merge {
-            let tag = merged(prev, &next);
-            map.set(key, Slot { tags: vec![tag] });
+            keep_last(slot);
+            if let Some(prev) = slot.pop() {
+                slot.push(merged(prev, next));
+            }
         } else if next.position >> 10 == prev.position >> 10
             && next.tag == "meta"
             && is_meta_array_key(&key)
         {
-            let mut group = slot.tags.clone();
-            group.push(next);
-            map.set(key, Slot { tags: group });
+            slot.push(next);
             flat = true;
         } else if outranks(&next, prev) {
-            map.set(key, Slot { tags: vec![next] });
+            slot.clear();
+            slot.push(next);
         }
     }
     (map, flat)
 }
 
-fn title_template(map: &mut TagMap) {
-    let title_key = Key::Str("title".to_owned());
-    let template_key = Key::Str("titleTemplate".to_owned());
-    let Some(template) = map.get(&template_key).map(|s| s.last().clone()) else {
+fn title_template(map: &mut TagMap<'_>) {
+    let Some(&template_at) = map.index.get(&Key::Str(Cow::Borrowed("titleTemplate"))) else {
         return;
     };
+    let template = last(&map.slots[template_at]);
     if !template.text_content.truthy() {
         return;
     }
-    let title = map.get(&title_key).map(|s| s.last().clone());
-    let value = match &template.text_content {
+    let title_at = map.index.get(&Key::Str(Cow::Borrowed("title"))).copied();
+    let value = match &*template.text_content {
         HeadValue::Str(t) => {
-            let with = match &title {
-                Some(title) if title.text_content.truthy() => title.text_content.js_string(),
-                _ => String::new(),
+            let with = match title_at.map(|i| last(&map.slots[i])) {
+                Some(title) if title.text_content.truthy() => title.text_content.js_str(),
+                _ => Cow::Borrowed(""),
             };
-            HeadValue::Str(js_replace(t, "%s", &with).into_owned())
+            Cow::Owned(HeadValue::Str(js_replace(t, "%s", &with).into_owned()))
         }
-        other => other.clone(),
+        _ => template.text_content.clone(),
     };
-    match title {
-        Some(title) => map.set(
-            title_key,
-            Slot {
-                tags: vec![Tag {
-                    text_content: value,
-                    ..title
-                }],
-            },
-        ),
-        None => map.set(
-            template_key,
-            Slot {
-                tags: vec![Tag {
-                    tag: "title".to_owned(),
-                    text_content: value,
-                    ..template
-                }],
-            },
-        ),
+    let slot = &mut map.slots[title_at.unwrap_or(template_at)];
+    keep_last(slot);
+    if title_at.is_none() {
+        slot[0].tag = "title";
     }
+    slot[0].text_content = value;
 }
 
 fn has_content(value: &HeadValue) -> bool {
@@ -1262,83 +1329,96 @@ fn has_content(value: &HeadValue) -> bool {
     }
 }
 
-fn sanitize(tags: Vec<Tag>) -> Vec<Tag> {
-    let mut kept = Vec::with_capacity(tags.len());
-    for mut t in tags {
-        if !VALID.contains(&t.tag.as_str())
+fn script_escaped<'a>(json_like: bool, content: &Cow<'a, HeadValue>) -> Cow<'a, HeadValue> {
+    if json_like {
+        let text = match &**content {
+            HeadValue::Str(s) => Cow::Borrowed(s.as_str()),
+            other => Cow::Owned(other.json().unwrap_or_default()),
+        };
+        if text.contains('<') {
+            Cow::Owned(HeadValue::Str(text.replace('<', "\\u003C")))
+        } else if let Cow::Owned(text) = text {
+            Cow::Owned(HeadValue::Str(text))
+        } else {
+            content.clone()
+        }
+    } else {
+        match &**content {
+            HeadValue::Str(s) if s.contains("</script") => {
+                Cow::Owned(HeadValue::Str(s.replace("</script", "<\\/script")))
+            }
+            _ => content.clone(),
+        }
+    }
+}
+
+fn sanitize(tags: &mut Vec<Tag<'_>>) {
+    tags.retain_mut(|t| {
+        if !VALID.contains(&t.tag)
             || (t.props.0.is_empty()
                 && !has_content(&t.inner_html)
                 && !has_content(&t.text_content))
         {
-            continue;
+            return false;
         }
         if t.tag == "meta"
             && !t.props.get("content").is_some_and(Prop::has_content)
             && !t.props.truthy("http-equiv")
             && !t.props.truthy("charset")
         {
-            continue;
+            return false;
         }
         if t.tag == "script" && (t.inner_html.truthy() || t.text_content.truthy()) {
-            let ty = t
-                .props
-                .get("type")
-                .map_or_else(|| "undefined".to_owned(), Prop::js_string);
-            let json_like = ty.ends_with("json") || ty == "importmap" || ty == "speculationrules";
-            let escape = |content: &HeadValue| -> HeadValue {
-                if json_like {
-                    let text = match content {
-                        HeadValue::Str(s) => s.clone(),
-                        other => other.json().unwrap_or_default(),
-                    };
-                    HeadValue::Str(text.replace('<', "\\u003C"))
-                } else {
-                    match content {
-                        HeadValue::Str(s) => HeadValue::Str(s.replace("</script", "<\\/script")),
-                        other => other.clone(),
-                    }
-                }
+            let json_like = {
+                let ty = t
+                    .props
+                    .get("type")
+                    .map_or(Cow::Borrowed("undefined"), Prop::js_str);
+                ty.ends_with("json") || ty == "importmap" || ty == "speculationrules"
             };
             if t.inner_html.truthy() {
-                t.inner_html = escape(&t.inner_html);
+                t.inner_html = script_escaped(json_like, &t.inner_html);
             }
             if t.text_content.truthy() {
-                t.text_content = escape(&t.text_content);
+                t.text_content = script_escaped(json_like, &t.text_content);
             }
-            t.dedupe = dedupe_key(&t);
         }
-        kept.push(t);
-    }
-    kept
+        true
+    });
 }
 
 fn escape_html_into(out: &mut String, s: &str) {
-    for c in s.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&#x27;"),
-            '/' => out.push_str("&#x2F;"),
-            c => out.push(c),
-        }
+    let mut at = 0;
+    for (i, b) in s.bytes().enumerate() {
+        let escaped = match b {
+            b'&' => "&amp;",
+            b'<' => "&lt;",
+            b'>' => "&gt;",
+            b'"' => "&quot;",
+            b'\'' => "&#x27;",
+            b'/' => "&#x2F;",
+            _ => continue,
+        };
+        out.push_str(&s[at..i]);
+        out.push_str(escaped);
+        at = i + 1;
     }
+    out.push_str(&s[at..]);
 }
 
-fn props_into(out: &mut String, props: &Props) {
+fn props_into(out: &mut String, props: &Props<'_>) {
     for (key, value) in &props.0 {
         if key.is_empty() || invalid_attr_name(key) {
             continue;
         }
-        if let Prop::Value(HeadValue::Bool(false) | HeadValue::Null) = value {
+        if value.is_value(|v| matches!(v, HeadValue::Bool(false) | HeadValue::Null)) {
             continue;
         }
         out.push(' ');
         out.push_str(key);
         match value {
-            Prop::Value(HeadValue::Bool(true)) => continue,
-            Prop::Value(v) => quoted_into(out, &v.js_string()),
+            Prop::Value(v) if matches!(**v, HeadValue::Bool(true)) => continue,
+            Prop::Value(v) => quoted_into(out, &v.js_str()),
             Prop::Class(classes) if key == "class" => {
                 out.push_str("=\"");
                 for (i, class) in classes.iter().enumerate() {
@@ -1361,7 +1441,7 @@ fn props_into(out: &mut String, props: &Props) {
                 }
                 out.push('"');
             }
-            other => quoted_into(out, &other.js_string()),
+            other => quoted_into(out, &other.js_str()),
         }
     }
 }
@@ -1404,30 +1484,30 @@ fn replace_close_tag_into(out: &mut String, content: &str, tag: &str) {
     out.push_str(&content[at..]);
 }
 
-fn tag_into(out: &mut String, tag: &Tag) {
+fn tag_into(out: &mut String, tag: &Tag<'_>) {
     out.push('<');
-    out.push_str(&tag.tag);
+    out.push_str(tag.tag);
     props_into(out, &tag.props);
     out.push('>');
-    if SELF_CLOSING.contains(&tag.tag.as_str()) {
+    if SELF_CLOSING.contains(&tag.tag) {
         return;
     }
-    if INNER_CONTENT.contains(&tag.tag.as_str()) {
-        let content = match (&tag.text_content, &tag.inner_html) {
+    if INNER_CONTENT.contains(&tag.tag) {
+        let content = match (&*tag.text_content, &*tag.inner_html) {
             (HeadValue::Undefined | HeadValue::Null, HeadValue::Undefined | HeadValue::Null) => {
-                String::new()
+                Cow::Borrowed("")
             }
-            (HeadValue::Undefined | HeadValue::Null, html) => html.js_string(),
-            (text, _) => text.js_string(),
+            (HeadValue::Undefined | HeadValue::Null, html) => html.js_str(),
+            (text, _) => text.js_str(),
         };
         if tag.tag == "title" {
             escape_html_into(out, &content);
         } else {
-            replace_close_tag_into(out, &content, &tag.tag);
+            replace_close_tag_into(out, &content, tag.tag);
         }
     }
     out.push_str("</");
-    out.push_str(&tag.tag);
+    out.push_str(tag.tag);
     out.push('>');
 }
 
