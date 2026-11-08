@@ -582,21 +582,27 @@ the chunks it imports statically: link them where a page loads islands the entry
 [`stylesheets_for_islands`](crate::page::Chunks::stylesheets_for_islands) give the URLs instead, for
 a `Link` header. Both follow the manifest's order and
 [`with_base`](crate::page::Chunks::with_base). In development Vite injects the styles itself: link
-nothing. `examples/fullstack/src/assets.rs` links the entry's.
+nothing. [`Document`](#the-page-shell) links them for the entry and islands it is given.
+`examples/fullstack/src/assets.rs` links the entry's, and takes its script's URL from
+[`script_for_entry`](crate::page::Chunks::script_for_entry).
 
 # The page shell
 
 [`Document`](crate::page::Document) writes the page around a render written at once: the doctype,
 `<html>` and `<body>` with the attributes the [`Head`](crate::head::Head) gives them, the head's tags,
-a `modulepreload` for each chunk the entry imports and the islands need, and the entry's
-`<script type="module">` at the end of `<body>`:
+a `<link rel="stylesheet">` for each stylesheet the entry and the islands need, a `modulepreload` for
+each chunk the entry imports and the islands need, and the entry's `<script type="module">` at the
+end of `<body>`:
 
 ```rust
-# let manifest = r#"{ "client/main.ts": { "file": "assets/main.js", "isEntry": true } }"#;
+# let manifest = r#"{
+#     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"] },
+#     "client/components/Counter.vue": { "file": "assets/Counter.js", "css": ["assets/Counter.css"] }
+# }"#;
 use ferrovue::head::Head;
 use ferrovue::page::{Chunks, Document};
 
-let chunks = Chunks::from_manifest(manifest, "{}")?;
+let chunks = Chunks::from_manifest(manifest, r#"{ "Counter": "assets/Counter.js" }"#)?;
 let head = Head::new();
 let body = String::from("<main>…</main>"); // the components, rendered first, pushing to `head`
 let page = Document::new(head.render())
@@ -604,6 +610,12 @@ let page = Document::new(head.render())
     .with_islands(&chunks, ["Counter"]) // the page's `record.island_names()`, or your own
     .render(&body);
 assert!(page.starts_with("<!DOCTYPE html>\n<html lang=\"en\">"));
+assert!(page.contains(concat!(
+    r#"<link rel="stylesheet" href="/assets/main.css">"#,
+    r#"<link rel="stylesheet" href="/assets/Counter.css">"#,
+    "\n",
+    r#"<link rel="modulepreload" href="/assets/Counter.js">"#,
+)));
 assert!(page.ends_with("<script type=\"module\" src=\"/assets/main.js\"></script>\n</body>\n</html>\n"));
 # Ok::<(), ferrovue::page::ManifestError>(())
 ```

@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use serde::Deserialize;
-
 const ENTRY: &str = "client/main.ts";
 
 /// Where the page loads the client from.
@@ -20,11 +18,6 @@ pub enum Assets {
     Dev(String),
     /// No client at all: the page renders, and nothing hydrates it.
     None,
-}
-
-#[derive(Deserialize)]
-struct Chunk {
-    file: String,
 }
 
 impl Assets {
@@ -46,20 +39,15 @@ impl Assets {
         let path = dist.join(".vite/manifest.json");
         let text =
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let manifest: std::collections::HashMap<String, Chunk> =
-            serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
-        let entry = manifest
-            .get(ENTRY)
-            .ok_or_else(|| format!("{} has no entry {ENTRY}", path.display()))?;
         let islands_path = dist.join(".vite/ferrovue-islands.json");
         let islands = std::fs::read_to_string(&islands_path)
             .map_err(|e| format!("{}: {e}", islands_path.display()))?;
         let chunks = ferrovue::page::Chunks::from_manifest(&text, &islands)
             .map_err(|e| format!("{}: {e}", dist.display()))?;
-        Ok(Assets::Built {
-            script: format!("/{}", entry.file),
-            chunks,
-        })
+        let script = chunks
+            .script_for_entry(ENTRY)
+            .ok_or_else(|| format!("{} has no entry {ENTRY}", path.display()))?;
+        Ok(Assets::Built { script, chunks })
     }
 
     /// The `<link>`s for the `<head>`: the entry's stylesheets and those of the chunks it loads

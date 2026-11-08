@@ -22,13 +22,15 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 - `ferrovue diff --against <ref>` renders the conformance fixtures in the working tree and at a git ref, and prints the fixtures whose visible text changed, exiting 1 when one did.
   [Seeing what a change renders](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html#seeing-what-a-change-renders).
-- `ferrovue::page::Chunks` reads each chunk's `css` from Vite's manifest, and `Stylesheets` writes the `<link rel="stylesheet">`s of an entry, its lazily loaded islands included, and of the islands a page renders.
+- `ferrovue::page::Chunks` reads each chunk's `css` from Vite's manifest, and `Stylesheets` writes the `<link rel="stylesheet">`s of an entry, its lazily loaded islands included, and of the islands a page renders; `Chunks::script_for_entry` gives the entry's script.
   [Linking the stylesheets](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#linking-the-stylesheets).
 - `"strict"` and `"sensitive"` under `router` match paths as `createRouter`'s options do, through `Router::with_strict` and `Router::with_sensitive` on the server and `linkRoutes` on the client.
   [Matching paths exactly](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#matching-paths-exactly).
 
 ### Changed
 
+- `Document::with_entry` and `with_islands` link the stylesheets the entry and the islands need, before their `modulepreload`s.
+  [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#document-links-the-stylesheets).
 - The npm package compiles with `@vue/compiler-sfc` 3.5.45 and the `vue` peer range moves to `~3.5.45`, so a bound or fallthrough `disablepictureinpicture` or `disableremoteplayback` is written as a boolean attribute.
   [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#two-more-boolean-attributes).
 - An island's `data-props` is written in single quotes, escaping only `&` and `'`, so the props take 7 to 28% fewer bytes; `mountIslands` reads it unchanged.
