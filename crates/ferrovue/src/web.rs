@@ -570,7 +570,13 @@ mod tests {
 
     async fn chunks(mut stream: HtmlStream) -> Vec<String> {
         let mut sent = Vec::new();
-        while let Some(chunk) = poll_fn(|cx| Pin::new(&mut stream).poll_next(cx)).await {
+        while let Some(chunk) = tokio::time::timeout(
+            Duration::from_secs(10),
+            poll_fn(|cx| Pin::new(&mut stream).poll_next(cx)),
+        )
+        .await
+        .expect("the stream goes on")
+        {
             let Ok(chunk) = chunk;
             sent.push(String::from_utf8(chunk.to_vec()).expect("UTF-8"));
         }
