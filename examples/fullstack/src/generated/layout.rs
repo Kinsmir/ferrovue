@@ -54,32 +54,14 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         ("titleTemplate", fv::head::HeadValue::str(&format!("%s · {}", props.shop))),
     ]));
     out.push_str("<div class=\"layout\"><header>");
-    {
-        let fv_link = {
-            fv_route.link_named("/", &[], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &["brand"], true);
-        out.push('>');
-        fv::core::escape_into(out, &props.shop);
-        out.push_str("</a>");
-    }
-    out.push_str("<nav>");
-    {
-        let fv_link = {
-            fv_route.link_named("/", &[], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
-        out.push_str(">All books</a>");
-    }
-    out.push(' ');
-    {
-        let fv_link = {
-            fv_route.link_named("/books/[id]", &[("id", "dune")], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
-        out.push_str(">Book of the week</a>");
-    }
-    out.push_str("</nav><div id=\"basket\">");
+    fv::attrs::link_named_open(out, fv_route, "/", &[], "", "", "page", "", "active", &["brand"], true);
+    out.push('>');
+    fv::core::escape_into(out, &props.shop);
+    out.push_str("</a><nav>");
+    fv::attrs::link_named_open(out, fv_route, "/", &[], "", "", "page", "", "active", &[], false);
+    out.push_str(">All books</a> ");
+    fv::attrs::link_named_open(out, fv_route, "/books/[id]", &[("id", "dune")], "", "", "page", "", "active", &[], false);
+    out.push_str(">Book of the week</a></nav><div id=\"basket\">");
     super::basket_summary::try_render(out, &super::basket_summary::Props { label: Cow::Borrowed("Basket") }, fv_stores)?;
     out.push_str("</div></header><main>");
     fv_slots.router_view.render_to(out);

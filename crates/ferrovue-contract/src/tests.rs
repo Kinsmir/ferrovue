@@ -380,6 +380,14 @@ fn every_render_parameter_in_order() {
         )
     });
     assert!(out.contains("2 for Ada"), "{out}");
+    assert!(
+        out.contains(r#"<a href="/books/Shelf" class="">Book</a>"#),
+        "{out}"
+    );
+    assert!(
+        out.contains(r#"<a href="/?from=shell" class="">Back</a>"#),
+        "{out}"
+    );
     assert!(out.contains("Hallo, Shelf!"), "{out}");
     assert!(
         out.contains(r#"<button type="button" class="dark">Shelf</button>"#),

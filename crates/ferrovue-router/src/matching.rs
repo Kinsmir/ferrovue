@@ -79,6 +79,19 @@ impl Captured for Option<&str> {
     }
 }
 
+#[derive(Clone, Copy)]
+pub(crate) struct Given<'a>(pub(crate) Option<&'a str>);
+
+impl Captured for Given<'_> {
+    fn given(&self) -> Option<&str> {
+        self.0
+    }
+
+    fn same(given: &str, here: &str) -> bool {
+        given == here
+    }
+}
+
 pub(crate) const ROOT: i32 = 9000;
 pub(crate) const STATIC: i32 = 8000;
 pub(crate) const PARAM: i32 = 6000;

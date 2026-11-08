@@ -70,16 +70,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         out.push_str("<section class=\"books\"><h1>All books</h1><ul><!--[-->");
         for fv_book in props.books.iter() {
             out.push_str("<li>");
-            {
-                let fv_link = {
-                    fv_route.link_named("/books/[id]", &[("id", &*fv_book.id)], "", "")
-                };
-                fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
-                out.push('>');
-                fv::core::escape_into(out, &fv_book.title);
-                out.push_str("</a>");
-            }
-            out.push_str("<span class=\"by\">by ");
+            fv::attrs::link_named_open(out, fv_route, "/books/[id]", &[("id", &*fv_book.id)], "", "", "page", "", "active", &[], false);
+            out.push('>');
+            fv::core::escape_into(out, &fv_book.title);
+            out.push_str("</a><span class=\"by\">by ");
             fv::core::escape_into(out, &fv_book.author);
             out.push_str(" (");
             fv::core::push_int(out, fv_book.year);

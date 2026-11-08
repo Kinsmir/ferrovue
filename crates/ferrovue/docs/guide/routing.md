@@ -433,10 +433,15 @@ for `{ name, params, query, hash }`, [`Route::link_path`](crate::router::Route::
 `{ path, query, hash }`. Each returns a [`Link`](crate::router::Link): the `href`, with the base, and
 whether it is active and exactly active.
 
-A string `to` is resolved as `Route::link` resolves it and written straight into the page: the
-anchor's `href` goes from the base, the path and the `to`'s query and hash into the output, and the
-link's parameters are compared with the route's where they stand in `to`, so the link allocates
-nothing. A route with more than eight parameters is resolved through `Route::link`.
+Generated code writes each link straight into the page, resolved as these methods resolve it: the
+anchor's `href` goes from the base, the path and the query and hash into the output, and the link's
+parameters are compared with the route's where they stand, so the link allocates nothing. A string
+`to`'s parameters are read in `to`; a named route's are encoded as they are written, and compared
+as they were given. A `query` is built into one string first, with
+[`query_into`](crate::router::query_into). A router with a route of more than eight parameters
+matches a string or `path` in a vector, and a link to a named route of more than eight parameters
+holds them in one. A `<RouterLink>` that takes fallthrough attributes gets its `Link` from the
+methods above, to merge its `href` and classes with the attributes.
 
 Nested routes work the same way at every level: a parent route's component has a `<RouterView>`
 whose slot holds the child route's component. A link to a parent is active, but not exactly active,

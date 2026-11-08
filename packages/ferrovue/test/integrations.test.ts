@@ -106,8 +106,9 @@ defineProps<{ id: string }>();
 
     it("resolves a named route with its parameters, and writes the base and class names configured", () => {
       const out = named(island(linkTo("{ name: 'user', params: { id } }")), { base: "/app/", linkActiveClass: "on", linkExactActiveClass: "here" });
-      expect(out.get("x.rs")).toContain('fv_route.link_named("user", &[("id", &*props.id)], "", "")');
-      expect(out.get("x.rs")).toContain('fv::attrs::link_open(out, &fv_link, "page", "on", "on here", &[], false);');
+      expect(out.get("x.rs")).toContain('fv::attrs::link_named_open(out, fv_route, "user", &[("id", &*props.id)], "", "", "page", "on", "on here", &[], false);');
+      const path = named(island(linkTo("{ path: '/users/' + id, query: { tab: 'a' }, hash: '#h' }")));
+      expect(path.get("x.rs")).toContain('fv::attrs::link_path_open(out, fv_route, &format!("/users/{}", props.id), &fv_search, "#h", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);');
       const same = named(island(linkTo("'/users/' + id\" active-class=\"same\" exact-active-class=\"same\" aria-current-value=\"a&quot;<b>")));
       expect(same.get("x.rs")).toContain('fv::attrs::link_to_open(out, fv_route, &format!("/users/{}", props.id), "a&quot;&lt;b&gt;", "", "same", &[], false);');
       expect(out.get("route_table.rs")).toContain('pub const BASE: &str = "/app/";');
@@ -140,7 +141,7 @@ defineProps<{ id: string }>();
       const out = generate(root, { ...CONFIG, routes: "routes.json" });
       expect(out.get("route_table.rs")).toContain('ferrovue::router::RouteDef::new("posts/:post").with_name("post"),');
       expect(out.get("route_table.rs")).toContain('"/users/:id/posts/:post",');
-      expect(out.get("x.rs")).toContain('fv_route.link_named("post", &[("id", &*props.id), ("post", &*props.id)], "", "")');
+      expect(out.get("x.rs")).toContain('fv::attrs::link_named_open(out, fv_route, "post", &[("id", &*props.id), ("post", &*props.id)], "", "", "page"');
       const missing = island(linkTo("{ name: 'post', params: { post: id } }"));
       writeFileSync(join(missing, "routes.json"), JSON.stringify([{ path: "/users/:id", children: [{ path: "posts/:post", name: "post" }] }]));
       expect(() => generate(missing, { ...CONFIG, routes: "routes.json" })).toThrow(/route `post` needs `id`/);
@@ -174,7 +175,7 @@ const route = useRoute();
       expect(table).toContain('ferrovue::router::RouteDef::new("/").with_name("/"),');
       expect(table).toContain('ferrovue::router::RouteDef::new("/books").with_view(false).with_children(&[\n        ferrovue::router::RouteDef::new(":id").with_name("/books/[id]"),');
       expect(table).toContain('ferrovue::router::RouteDef::new("/:path(.*)").with_name("/[...path]"),');
-      expect(out.get("x.rs")).toContain('fv_route.link_named("/books/[id]", &[("id", &*props.id)], "", "")');
+      expect(out.get("x.rs")).toContain('fv::attrs::link_named_open(out, fv_route, "/books/[id]", &[("id", &*props.id)], "", "", "page"');
       expect(out.get("books_id.rs")).toContain('pub const NAME: &str = "BooksId";');
       expect(out.get("books_id.rs")).toContain('fv_route.param("id")');
       expect(out.has("index.rs") && out.has("path.rs")).toBe(true);
@@ -183,8 +184,8 @@ const route = useRoute();
 
     it("takes an optional parameter given or left out", () => {
       const out = withPages(island(linkTo("{ name: '/[[lang]]/about' }"), { Y: linkTo("{ name: '/[[lang]]/about', params: { lang: id } }") }), { "[[lang]]/about.vue": view });
-      expect(out.get("x.rs")).toContain('fv_route.link_named("/[[lang]]/about", &[], "", "")');
-      expect(out.get("y.rs")).toContain('fv_route.link_named("/[[lang]]/about", &[("lang", &*props.id)], "", "")');
+      expect(out.get("x.rs")).toContain('fv::attrs::link_named_open(out, fv_route, "/[[lang]]/about", &[], "", "", "page"');
+      expect(out.get("y.rs")).toContain('fv::attrs::link_named_open(out, fv_route, "/[[lang]]/about", &[("lang", &*props.id)], "", "", "page"');
       expect(out.get("route_table.rs")).toContain('ferrovue::router::RouteDef::new("/:lang?").with_view(false).with_children(&[');
     });
 

@@ -48,15 +48,13 @@ function linkTo(s: Scope, to: N): string {
   return strArg(target.code);
 }
 
-function linkCall(s: Scope, to: N): string {
-  return `fv_route.link(${linkTo(s, to)})`;
+interface Resolved {
+  form: "to" | "named" | "path";
+  args: string;
 }
 
-function resolveLink(s: Scope, e: Emitter, to: N): void {
-  if (to.type !== "ObjectExpression") {
-    e.stmt(`let fv_link = ${linkCall(s, to)};`);
-    return;
-  }
+function resolveLink(s: Scope, e: Emitter, to: N): Resolved {
+  if (to.type !== "ObjectExpression") return { form: "to", args: linkTo(s, to) };
   const parts = new Map<string, N>();
   for (const p of to.properties) {
     if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV1203", "a `to` object holds plain keys", p);
@@ -65,7 +63,6 @@ function resolveLink(s: Scope, e: Emitter, to: N): void {
     if (!["name", "path", "params", "query", "hash"].includes(key)) fail(s.comp, "FV1204", `\`${key}\` in a \`to\` object`, p);
     parts.set(key, p.value);
   }
-  e.open("let fv_link =");
   const query = parts.get("query");
   const search = query ? "&fv_search" : '""';
   if (query) {
@@ -116,15 +113,24 @@ function resolveLink(s: Scope, e: Emitter, to: N): void {
     const missing = wanted.filter((w) => !given.has(w) && !optional.includes(w));
     if (missing.length) fail(s.comp, "FV1214", `route \`${name.value}\` needs \`${missing.join("`, `")}\`: give every parameter it does not mark optional`, to);
     const list = wanted.filter((w) => given.has(w)).map((w) => `(${rustStr(w)}, ${urlText(s, expr(s, given.get(w)), given.get(w))})`);
-    e.stmt(`fv_route.link_named(${rustStr(name.value)}, &[${list.join(", ")}], ${search}, ${hash})`);
-  } else if (path) {
+    return { form: "named", args: `${rustStr(name.value)}, &[${list.join(", ")}], ${search}, ${hash}` };
+  }
+  if (path) {
     if (parts.has("params")) fail(s.comp, "FV1215", "a `to` with a `path` takes no `params`, which vue-router ignores", path);
     const v = expr(s, path);
     if (v.ty.k !== "str") fail(s.comp, "FV1216", "a `to`'s `path` is a string", path);
     noHalves(s, v, path);
-    e.stmt(`fv_route.link_path(${strArg(v.code)}, ${search}, ${hash})`);
-  } else fail(s.comp, "FV1217", "a `to` object has a `name` or a `path`", to);
-  e.close(";");
+    return { form: "path", args: `${strArg(v.code)}, ${search}, ${hash}` };
+  }
+  return fail(s.comp, "FV1217", "a `to` object has a `name` or a `path`", to);
+}
+
+const LINK_CALL = { to: "link", named: "link_named", path: "link_path" };
+
+const LINK_OPEN = { to: "link_to_open", named: "link_named_open", path: "link_path_open" };
+
+function queried(to: N): boolean {
+  return to.type === "ObjectExpression" && to.properties.some((p: N) => p.type === "ObjectProperty" && !p.computed && (p.key.name ?? p.key.value) === "query");
 }
 
 function stringClass(n: N): boolean {
@@ -187,11 +193,16 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const parts = mergedParts(rawProps);
   const passedOn = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
   const fallsThrough = parts.some(passedOn);
-  const inline = !fallsThrough && to.type !== "ObjectExpression";
-  if (!inline) {
-    e.open("");
-    resolveLink(s, e, to);
-  }
+  const object = to.type === "ObjectExpression";
+  const block = fallsThrough || queried(to);
+  if (block) e.open("");
+  if (fallsThrough && object) e.open("let fv_link =");
+  const link = resolveLink(s, e, to);
+  const call = `fv_route.${LINK_CALL[link.form]}(${link.args})`;
+  if (fallsThrough && object) {
+    e.stmt(call);
+    e.close(";");
+  } else if (fallsThrough) e.stmt(`let fv_link = ${call};`);
   if (fallsThrough) {
     for (const name of s.comp.attrNames) {
       const key = camelize(name);
@@ -209,7 +220,7 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const cls = fields.get("class");
   const string = !!cls && stringClass(cls);
   const own = !cls ? [] : cls.type === "StringLiteral" ? [rustStr(cls.value)] : classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
-  const open = inline ? `link_to_open(out, fv_route, ${linkTo(s, to)}` : "link_open(out, &fv_link";
+  const open = fallsThrough ? "link_open(out, &fv_link" : `${LINK_OPEN[link.form]}(out, fv_route, ${link.args}`;
   e.stmt(`fv::attrs::${open}, ${rustStr(current)}, ${rustStr(escapeHtml(active))}, ${rustStr(escapeHtml(exact))}, &[${own.join(", ")}], ${string});`);
   e.expect(Buffer.byteLength(`<a aria-current="${current}" href="" class=""`));
   for (const p of attrs) {
@@ -263,5 +274,5 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
     statements({ ...s, fill: false, vnode: true }, e, slotBody(s, p.value));
   }
   e.lit("</a>");
-  if (!inline) e.close();
+  if (block) e.close();
 }

@@ -32,12 +32,13 @@ pub(crate) enum Part {
     Hash,
 }
 
-pub(crate) fn encode_param(text: &str) -> String {
-    encode_url(text, Part::Param)
-}
-
 pub(crate) fn encode_url(text: &str, part: Part) -> String {
     let mut out = String::with_capacity(text.len());
+    encode_into(&mut out, text, part, false);
+    out
+}
+
+pub(crate) fn encode_into(out: &mut String, text: &str, part: Part, escaped: bool) {
     for c in text.chars() {
         let uri = ferrovue_core::kept_by_encode_uri(c) || matches!(c, '|' | '[' | ']');
         let keep = match (part, c) {
@@ -52,13 +53,22 @@ pub(crate) fn encode_url(text: &str, part: Part) -> String {
             (Part::Hash, '{' | '}' | '^') => true,
             _ => uri,
         };
-        if keep {
-            out.push(c);
+        if !keep {
+            ferrovue_core::percent_encode_into(out, c);
+        } else if escaped && matches!(c, '&' | '\'' | '"' | '<' | '>') {
+            ferrovue_core::escape_into(out, c.encode_utf8(&mut [0; 4]));
         } else {
-            ferrovue_core::percent_encode_into(&mut out, c);
+            out.push(c);
         }
     }
-    out
+}
+
+pub(crate) fn text_into(out: &mut String, text: &str, escaped: bool) {
+    if escaped {
+        ferrovue_core::escape_into(out, text);
+    } else {
+        out.push_str(text);
+    }
 }
 
 pub(crate) fn parse_url(location: &str, current: &str) -> (String, String) {

@@ -10,7 +10,11 @@ defineProps<{ title: string }>();
 
 <template>
   <div class="shell">
-    <nav><RouterLink to="/">Home</RouterLink></nav>
+    <nav>
+      <RouterLink to="/">Home</RouterLink>
+      <RouterLink :to="{ name: '/books/[id]', params: { id: title } }">Book</RouterLink>
+      <RouterLink :to="{ path: '/', query: { from: 'shell' } }">Back</RouterLink>
+    </nav>
     <CartBadge />
     <Translated :name="title" />
     <Modal :title="title" />

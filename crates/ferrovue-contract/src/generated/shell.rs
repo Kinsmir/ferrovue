@@ -53,12 +53,21 @@ pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route
 #[allow(clippy::too_many_arguments)]
 pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>, fv_stores: &super::stores::Stores<'_>, fv_i18n: &fv::i18n::I18n, fv_teleports: &fv::page::Teleports, fv_provides: super::provides::Provides<'_>, fv_head: &fv::head::Head) -> Result<(), fv::render::Refused> {
     out.reserve(
-        97
+        193
         + props.title.len()
     );
     out.push_str("<div class=\"shell\"><nav>");
     fv::attrs::link_to_open(out, fv_route, "/", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
-    out.push_str(">Home</a></nav>");
+    out.push_str(">Home</a>");
+    fv::attrs::link_named_open(out, fv_route, "/books/[id]", &[("id", &*props.title)], "", "", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+    out.push_str(">Book</a>");
+    {
+        let mut fv_search = String::new();
+        fv::router::query_into(&mut fv_search, "from", "shell");
+        fv::attrs::link_path_open(out, fv_route, "/", &fv_search, "", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+        out.push_str(">Back</a>");
+    }
+    out.push_str("</nav>");
     super::cart_badge::try_render(out, &super::cart_badge::Props {}, fv_stores)?;
     super::translated::try_render(out, &super::translated::Props { name: Cow::Borrowed(&*props.title) }, fv_i18n)?;
     super::modal::try_render(out, &super::modal::Props { title: Cow::Borrowed(&*props.title) }, fv_teleports)?;

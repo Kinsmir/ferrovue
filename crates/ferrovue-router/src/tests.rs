@@ -238,9 +238,12 @@ fn check_nested(v: &Nested, want: &NestedExpected) {
             .iter()
             .map(|(k, v)| (k.as_str(), v.as_str()))
             .collect();
-        let link = router
-            .at(at)
-            .link_named(to.name.as_deref().unwrap(), &params, "", "");
+        let route = router.at(at);
+        let name = to.name.as_deref().unwrap();
+        let link = route.link_named(name, &params, "", "");
+        written_in_place(&link, name, |out| {
+            route.link_named_into(out, name, &params, "", "", "page")
+        });
         assert_eq!(
             (&link.href, link.active, link.exact),
             (href, *active, *exact),
@@ -275,6 +278,14 @@ fn check_nested(v: &Nested, want: &NestedExpected) {
 }
 
 fn written_as(route: &Route<'_>, to: &str, link: &Link) {
+    written_in_place(link, to, |out| route.link_into(out, to, "page"));
+}
+
+fn written_in_place(
+    link: &Link,
+    to: impl std::fmt::Debug,
+    write: impl FnOnce(&mut String) -> (bool, bool),
+) {
     let mut want = String::new();
     if link.exact {
         want.push_str(" aria-current=\"page\"");
@@ -282,11 +293,11 @@ fn written_as(route: &Route<'_>, to: &str, link: &Link) {
     want.push_str(" href=\"");
     ferrovue_core::escape_into(&mut want, &link.href);
     want.push('"');
-    let mut out = String::new();
-    let state = route.link_into(&mut out, to, "page");
+    let mut out = String::from("<a");
+    let state = write(&mut out);
     assert_eq!(
-        (out, state),
-        (want, (link.active, link.exact)),
+        (&out[2..], state),
+        (want.as_str(), (link.active, link.exact)),
         "a link to {to:?} written in place"
     );
 }
@@ -342,9 +353,19 @@ fn object_links_resolve_as_vue_router_resolves_them() {
                     .iter()
                     .map(|(k, v)| (k.as_str(), v.as_str()))
                     .collect();
-                route.link_named(name, &params, &search, &to.hash)
+                let link = route.link_named(name, &params, &search, &to.hash);
+                written_in_place(&link, name, |out| {
+                    route.link_named_into(out, name, &params, &search, &to.hash, "page")
+                });
+                link
             }
-            (None, Some(path)) => route.link_path(path, &search, &to.hash),
+            (None, Some(path)) => {
+                let link = route.link_path(path, &search, &to.hash);
+                written_in_place(&link, path, |out| {
+                    route.link_path_into(out, path, &search, &to.hash, "page")
+                });
+                link
+            }
             (None, None) => unreachable!("a vector names a route or a path"),
         };
         assert_eq!(
@@ -580,6 +601,34 @@ fn a_route_with_more_parameters_than_spans_is_written_in_place() {
         written_as(&route, to, &route.link(to));
     }
     assert!(route.link("/1/2/3/4/5/6/7/8/9").exact);
+}
+
+#[test]
+fn a_named_route_with_more_parameters_than_spans_is_written_in_place() {
+    let router = Router::named(&[("/:a/:b/:c/:d/:e/:f/:g/:h/:i?", Some("deep"))]);
+    let route = router.at("/1/2/3/4/5/6/7/8/9");
+    let names = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+    let all: Vec<(&str, &str)> = names
+        .iter()
+        .zip(["1", "2", "3", "4", "5", "6", "7", "8", "9"])
+        .map(|(k, v)| (*k, v))
+        .collect();
+    let other: Vec<(&str, &str)> = all[..8]
+        .iter()
+        .map(|&(k, v)| (k, if k == "h" { "<&>" } else { v }))
+        .collect();
+    for params in [&all[..], &other[..], &all[..8]] {
+        let link = route.link_named("deep", params, "q=1", "#h");
+        written_in_place(&link, params, |out| {
+            route.link_named_into(out, "deep", params, "q=1", "#h", "page")
+        });
+    }
+    assert!(route.link_named("deep", &all, "", "").exact);
+    assert_eq!(
+        route.link_named("deep", &other, "", "").href,
+        "/1/2/3/4/5/6/7/%3C&%3E"
+    );
+    assert!(route.link_named("deep", &all[..8], "", "").active);
 }
 
 #[test]

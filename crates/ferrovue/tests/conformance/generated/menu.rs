@@ -62,49 +62,28 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         + props.tab.as_deref().map_or(0, str::len)
     );
     out.push_str("<nav>");
+    fv::attrs::link_named_open(out, fv_route, "home", &[], "", "", "page", "on", "on here", &[], false);
+    out.push_str(">home</a>");
+    fv::attrs::link_named_open(out, fv_route, "post", &[("slug", &*props.slug)], "", "", "location", "router-link-active", "router-link-active router-link-exact-active", &["post"], true);
+    out.push('>');
+    fv::core::escape_into(out, &props.slug);
+    out.push_str("</a>");
+    fv::attrs::link_named_open(out, fv_route, "post-tab", &[("slug", &*props.slug), ("tab", props.tab.as_deref().unwrap_or("view"))], "", "#top", "page", "", "same", &[], false);
+    out.push_str(">tab</a>");
     {
-        let fv_link = {
-            fv_route.link_named("home", &[], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "on", "on here", &[], false);
-        out.push_str(">home</a>");
-    }
-    {
-        let fv_link = {
-            fv_route.link_named("post", &[("slug", &*props.slug)], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "location", "router-link-active", "router-link-active router-link-exact-active", &["post"], true);
-        out.push('>');
-        fv::core::escape_into(out, &props.slug);
-        out.push_str("</a>");
-    }
-    {
-        let fv_link = {
-            fv_route.link_named("post-tab", &[("slug", &*props.slug), ("tab", props.tab.as_deref().unwrap_or("view"))], "", "#top")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "", "same", &[], false);
-        out.push_str(">tab</a>");
-    }
-    {
-        let fv_link = {
-            let mut fv_search = String::new();
-            if let Some(v) = props.q.as_deref() {
-                fv::router::query_into(&mut fv_search, "q", v);
-            }
-            fv::router::query_into(&mut fv_search, "page", &fv::core::Js(props.page).to_string());
-            fv::router::query_into(&mut fv_search, "empty", "");
-            fv_route.link_named("search", &[], &fv_search, "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+        let mut fv_search = String::new();
+        if let Some(v) = props.q.as_deref() {
+            fv::router::query_into(&mut fv_search, "q", v);
+        }
+        fv::router::query_into(&mut fv_search, "page", &fv::core::Js(props.page).to_string());
+        fv::router::query_into(&mut fv_search, "empty", "");
+        fv::attrs::link_named_open(out, fv_route, "search", &[], &fv_search, "", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
         out.push_str(">search</a>");
     }
     {
-        let fv_link = {
-            let mut fv_search = String::new();
-            fv::router::query_into(&mut fv_search, "from", "menu");
-            fv_route.link_path(&format!("/users/{}", props.slug), &fv_search, "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "router-link-active", "router-link-active router-link-exact-active", &["user"], false);
+        let mut fv_search = String::new();
+        fv::router::query_into(&mut fv_search, "from", "menu");
+        fv::attrs::link_path_open(out, fv_route, &format!("/users/{}", props.slug), &fv_search, "", "page", "router-link-active", "router-link-active router-link-exact-active", &["user"], false);
         out.push_str(">user</a>");
     }
     out.push_str("</nav>");

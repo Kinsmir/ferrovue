@@ -67,24 +67,12 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         ("htmlAttrs", fv::head::HeadValue::object([("class", fv::head::HeadValue::str("picks-page"))])),
     ]));
     out.push_str("<div class=\"layout picks\"><header>");
-    {
-        let fv_link = {
-            fv_route.link_named("/", &[], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &["brand"], true);
-        out.push('>');
-        fv::core::escape_into(out, &props.shop);
-        out.push_str("</a>");
-    }
-    out.push_str("<nav>");
-    {
-        let fv_link = {
-            fv_route.link_named("/picks", &[], "", "")
-        };
-        fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
-        out.push_str(">Staff picks</a>");
-    }
-    out.push_str("</nav></header><main>");
+    fv::attrs::link_named_open(out, fv_route, "/", &[], "", "", "page", "", "active", &["brand"], true);
+    out.push('>');
+    fv::core::escape_into(out, &props.shop);
+    out.push_str("</a><nav>");
+    fv::attrs::link_named_open(out, fv_route, "/picks", &[], "", "", "page", "", "active", &[], false);
+    out.push_str(">Staff picks</a></nav></header><main>");
     fv::render::slot_into(out, fv_slots.default, None);
     out.push_str("</main><aside class=\"reviews\"><h2>Readers on ");
     fv::core::escape_into(out, &props.featured.title);
@@ -96,12 +84,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
     out.push_str("<nav class=\"featured\"><!--[-->");
     for fv_book in props.books.iter() {
         {
-            let fv_link = {
-                let mut fv_search = String::new();
-                fv::router::query_into(&mut fv_search, "featured", &fv_book.id);
-                fv_route.link_named("/picks", &[], &fv_search, "")
-            };
-            fv::attrs::link_open(out, &fv_link, "page", "", "active", &[], false);
+            let mut fv_search = String::new();
+            fv::router::query_into(&mut fv_search, "featured", &fv_book.id);
+            fv::attrs::link_named_open(out, fv_route, "/picks", &[], &fv_search, "", "page", "", "active", &[], false);
             out.push('>');
             fv::core::escape_into(out, &fv_book.title);
             out.push_str("</a>");

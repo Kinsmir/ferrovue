@@ -55,12 +55,12 @@ error: this module was generated as version 9 of ferrovue's generated code, and 
 
 Most generated files change once. A render writes the text beside a `v-if` or `?:` inside each
 branch, writes text that needs no escaping without `escape_into`, writes formatted text into the
-page as it escapes it, and writes a `<RouterLink>` with a string `to` in place, and the modules lose
-their stray blank lines. A module imports `std::borrow::Cow` and writes `Cow`, and a field keeps
-`#[serde(rename)]` only where its JSON key differs from its name, so props read and write the same
-JSON. What a render writes is the same. A CI job that runs `pnpm ferrovue --check` reports each
-module as stale until it is generated again with 0.16 and committed. See
-[the version check](crate::guide::generated_code#the-version-check).
+page as it escapes it, and writes a `<RouterLink>` with a string or object `to` in place, and the
+modules lose their stray blank lines. A module imports `std::borrow::Cow` and writes `Cow`, and a
+field keeps `#[serde(rename)]` only where its JSON key differs from its name, so props read and
+write the same JSON. What a render writes is the same. A CI job that runs `pnpm ferrovue --check`
+reports each module as stale until it is generated again with 0.16 and committed. See [the version
+check](crate::guide::generated_code#the-version-check).
 
 # Behaviour that changed
 
@@ -73,8 +73,9 @@ instructions and allocations:
   to 9% fewer instructions.
 - A `.join()` writes into the page with no string built per item: renders that join a list run up
   to 25% fewer instructions.
-- A `<RouterLink>` with a string `to` is resolved and written into the page with no allocation: the
-  `small` bench, which holds two links, runs 55% fewer instructions.
+- A `<RouterLink>` with a string `to`, or a `to` of `{ name, … }` or `{ path, … }`, is resolved and
+  written into the page with no allocation beyond a query it builds: the `small` bench, which holds
+  two links, runs 55% fewer instructions.
 - [`Head::render`](crate::head::Head::render) borrows what it was pushed: the bench head renders in
   59% fewer instructions. A `Head`'s `Debug` output shows unhead's defaults as `Defaults`.
 - Formatted text, such as a template literal or a number with a unit, is escaped as it is written,

@@ -123,9 +123,9 @@ tag as it hydrates. A value still cannot leave its attribute, since `"` is escap
 | | |
 |---|---|
 | Written | The `href` of each link, its active classes, `aria-current` |
-| Guarantee | The `href` is what vue-router's `router.resolve(to).href` gives, escaped with `escape_into`. With `{ name, params }`, each parameter is encoded as vue-router encodes it (`/`, `?`, `#` and characters outside a URI percent-encoded); a query built with [`query_into`](crate::router::query_into) encodes keys and values (`&`, `#`, `+`, `=` in a key, a space as `+`); a hash is encoded. A string `to`, and the `path` of `{ path }`, are kept as written and resolved against the current path when they do not start with `/` |
-| Code | `link`, `link_named`, `link_path`, `encode_url` and `parse_url` in `crates/ferrovue-router/src/lib.rs`; `packages/ferrovue/src/plugins/router-link.ts` |
-| Tests | `crates/ferrovue-router/tests/vectors/router.json` (recorded from vue-router: hostile parameters, queries and hashes, `javascript:alert(1)`, `https://example.com/` and `//evil.example/x` as a string `to`); `crates/ferrovue-router/tests/properties.rs`; the `Nav` and `Menu` hostile fixtures, `Links/encoded` and `RouteInfo/query-hostile` |
+| Guarantee | The `href` is what vue-router's `router.resolve(to).href` gives, escaped as `escape_into` escapes, whether it is built or written in place. With `{ name, params }`, each parameter is encoded as vue-router encodes it (`/`, `?`, `#` and characters outside a URI percent-encoded); a query built with [`query_into`](crate::router::query_into) encodes keys and values (`&`, `#`, `+`, `=` in a key, a space as `+`); a hash is encoded. A string `to`, and the `path` of `{ path }`, are kept as written and resolved against the current path when they do not start with `/` |
+| Code | `link`, `link_named`, `link_path` and the `_into` writers of each in `crates/ferrovue-router/src/lib.rs`, `encode_into` and `split_url` in `crates/ferrovue-router/src/url.rs`; `packages/ferrovue/src/plugins/router-link.ts` |
+| Tests | `crates/ferrovue-router/tests/vectors/router.json` (recorded from vue-router: hostile parameters, queries and hashes, `javascript:alert(1)`, `https://example.com/` and `//evil.example/x` as a string `to`); `crates/ferrovue-router/tests/properties.rs`; the `Nav` and `Menu` hostile fixtures (`Menu/hostile-quotes` with `'` and `&` in every parameter and query), `Links/encoded` and `RouteInfo/query-hostile` |
 
 ## Translated messages
 
