@@ -450,3 +450,82 @@ mod links {
         );
     }
 }
+
+fn strip_comments_by_chars(css: &str) -> String {
+    let chars: Vec<char> = css.chars().collect();
+    let mut out = String::new();
+    let mut i = 0;
+    while i < chars.len() {
+        let c = chars[i];
+        if c == '"' || c == '\'' {
+            let mut j = i + 1;
+            let mut closed = false;
+            while j < chars.len() {
+                if chars[j] == '\\' {
+                    j += 2;
+                    continue;
+                }
+                if chars[j] == c {
+                    closed = true;
+                    break;
+                }
+                j += 1;
+            }
+            if closed {
+                out.extend(&chars[i..=j]);
+                i = j + 1;
+                continue;
+            }
+        } else if c == '\\' && i + 1 < chars.len() {
+            out.push(c);
+            out.push(chars[i + 1]);
+            i += 2;
+            continue;
+        } else if c == '/' && chars.get(i + 1) == Some(&'*') {
+            let rest: String = chars[i + 2..].iter().collect();
+            if let Some(end) = rest.find("*/") {
+                i += 2 + rest[..end].chars().count() + 2;
+                continue;
+            }
+        }
+        out.push(c);
+        i += 1;
+    }
+    out
+}
+
+#[test]
+fn comments_are_stripped_as_a_scan_of_characters_strips_them() {
+    let pieces = ["/", "*", "\"", "'", "\\", "a", "é", "🦀"];
+    let mut texts = vec![String::new()];
+    for _ in 0..6 {
+        let longer: Vec<String> = texts
+            .iter()
+            .flat_map(|t| pieces.iter().map(move |p| format!("{t}{p}")))
+            .collect();
+        for text in &longer {
+            assert_eq!(
+                strip_comments(text),
+                strip_comments_by_chars(text),
+                "{text:?}"
+            );
+        }
+        texts = longer;
+    }
+    for text in [
+        "a: 1 /**/ b",
+        "/*/ a */ b",
+        "a /* 'b */ c' d",
+        "a: \"x /* y\" /* z */ ; b: '\\'/* w */'",
+        "\\/* a */ b",
+        "a: 1 /* open /* open */ c /* open",
+    ] {
+        assert_eq!(
+            strip_comments(text),
+            strip_comments_by_chars(text),
+            "{text:?}"
+        );
+    }
+    let many = "/* a".repeat(20_000);
+    assert_eq!(strip_comments(&many), many);
+}

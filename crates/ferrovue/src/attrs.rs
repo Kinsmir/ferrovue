@@ -567,54 +567,47 @@ fn parse_style<'a>(css: &str) -> Vec<(Cow<'a, str>, Attr<'a>)> {
 }
 
 fn strip_comments(css: &str) -> Cow<'_, str> {
-    if !css.contains("/*") {
+    let Some(last_close) = css.rfind("*/") else {
         return Cow::Borrowed(css);
-    }
-    let chars: Vec<char> = css.chars().collect();
+    };
+    let b = css.as_bytes();
     let mut out = String::with_capacity(css.len());
+    let mut kept = 0;
     let mut i = 0;
     #[cfg(test)]
     let mut turns = crate::Turns::default();
-    while i < chars.len() {
+    while i < b.len() {
         #[cfg(test)]
         turns.next();
-        let c = chars[i];
-        if c == '"' || c == '\'' {
-            let mut j = i + 1;
-            let mut closed = false;
-            while j < chars.len() {
-                #[cfg(test)]
-                turns.next();
-                if chars[j] == '\\' {
-                    j += 2;
+        match b[i] {
+            quote @ (b'"' | b'\'') => {
+                let mut j = i + 1;
+                while j < b.len() && b[j] != quote {
+                    #[cfg(test)]
+                    turns.next();
+                    j += if b[j] == b'\\' { 2 } else { 1 };
+                }
+                if j < b.len() {
+                    i = j + 1;
                     continue;
                 }
-                if chars[j] == c {
-                    closed = true;
-                    break;
-                }
-                j += 1;
             }
-            if closed {
-                out.extend(&chars[i..=j]);
-                i = j + 1;
+            b'\\' if i + 1 < b.len() => {
+                i += 2;
                 continue;
             }
-        } else if c == '\\' && i + 1 < chars.len() {
-            out.push(c);
-            out.push(chars[i + 1]);
-            i += 2;
-            continue;
-        } else if c == '/' && chars.get(i + 1) == Some(&'*') {
-            let rest: String = chars[i + 2..].iter().collect();
-            if let Some(end) = rest.find("*/") {
-                i += 2 + rest[..end].chars().count() + 2;
+            b'/' if b.get(i + 1) == Some(&b'*') && last_close >= i + 2 => {
+                let close = i + 2 + css[i + 2..].find("*/").expect("a `*/` after the last");
+                out.push_str(&css[kept..i]);
+                i = close + 2;
+                kept = i;
                 continue;
             }
+            _ => {}
         }
-        out.push(c);
         i += 1;
     }
+    out.push_str(&css[kept..]);
     Cow::Owned(out)
 }
 
