@@ -123,4 +123,13 @@ loaded, so the server's markup shows unstyled until then. [`Chunks`](crate::page
 each chunk's `css` from Vite's manifest, and [`Stylesheets`](crate::page::Stylesheets) writes the
 `<link rel="stylesheet">`s of the entry, its lazily loaded islands and the islands a page renders,
 each once. A server that read the manifest's `css` itself, as the full-stack example did, can use
-them instead. See [linking the stylesheets](crate::guide::islands_and_hydration#linking-the-stylesheets).
+them instead, and [`Chunks::script_for_entry`](crate::page::Chunks::script_for_entry) gives the
+entry's script. See [linking the stylesheets](crate::guide::islands_and_hydration#linking-the-stylesheets).
+
+## `Document` links the stylesheets
+
+[`Document::with_entry`](crate::page::Document::with_entry) and
+[`with_islands`](crate::page::Document::with_islands) also write a `<link rel="stylesheet">` for
+each stylesheet the entry and the islands need, on a line of their own before the
+`modulepreload`s. A page that linked them itself next to a `Document` links each twice: drop its
+own links. See [the page shell](crate::guide::islands_and_hydration#the-page-shell).

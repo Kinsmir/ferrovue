@@ -923,3 +923,62 @@ fn a_document_loads_its_entry_from_the_base_and_links_each_chunk_once() {
     document.write_into(&mut out, "b");
     assert_eq!(out, format!("x{page}"));
 }
+
+#[test]
+fn a_document_links_the_stylesheets_of_its_entry_and_its_islands_once_and_escaped() {
+    let manifest = r#"{
+        "main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/m\"<.css"], "dynamicImports": ["A.vue"] },
+        "A.vue": { "file": "assets/A.js", "css": ["assets/A.css"], "imports": ["_s.js"] },
+        "B.vue": { "file": "assets/B.js", "css": ["assets/B&.css"], "imports": ["_s.js"] },
+        "_s.js": { "file": "assets/s.js", "css": ["assets/s.css"] }
+    }"#;
+    let chunks = Chunks::from_manifest(manifest, r#"{ "A": "assets/A.js", "B": "assets/B.js" }"#)
+        .unwrap()
+        .with_base("/x\"/");
+    let page = Document::new(crate::head::HeadHtml::default())
+        .with_entry(&chunks, "main.ts")
+        .with_islands(&chunks, ["B", "A", "B"])
+        .render("");
+    assert!(page.contains(concat!(
+        "<head>\n",
+        r#"<link rel="stylesheet" href="/x&quot;/assets/m&quot;&lt;.css">"#,
+        r#"<link rel="stylesheet" href="/x&quot;/assets/A.css">"#,
+        r#"<link rel="stylesheet" href="/x&quot;/assets/s.css">"#,
+        r#"<link rel="stylesheet" href="/x&quot;/assets/B&amp;.css">"#,
+        "\n",
+        r#"<link rel="modulepreload" href="/x&quot;/assets/B.js">"#,
+        r#"<link rel="modulepreload" href="/x&quot;/assets/s.js">"#,
+        r#"<link rel="modulepreload" href="/x&quot;/assets/A.js">"#,
+        "\n</head>",
+    )));
+    let bare = Document::new(crate::head::HeadHtml::default())
+        .with_islands(
+            &Chunks::from_manifest(manifest, r#"{ "B": "assets/B.js" }"#).unwrap(),
+            ["B"],
+        )
+        .render("");
+    assert!(bare.contains("<head>\n<link rel=\"stylesheet\" href=\"/assets/B&amp;.css\"><link rel=\"stylesheet\" href=\"/assets/s.css\">\n<link rel=\"modulepreload\""));
+}
+
+#[test]
+fn the_script_of_an_entry_is_its_file_under_the_base() {
+    let manifest = r#"{ "main.ts": { "file": "assets/m\"ain.js", "isEntry": true } }"#;
+    let chunks = Chunks::from_manifest(manifest, "{}").unwrap();
+    assert_eq!(
+        chunks.script_for_entry("main.ts").as_deref(),
+        Some("/assets/m\"ain.js")
+    );
+    assert_eq!(
+        chunks
+            .with_base("https://cdn.example.com/")
+            .script_for_entry("main.ts")
+            .as_deref(),
+        Some("https://cdn.example.com/assets/m\"ain.js")
+    );
+    assert_eq!(
+        Chunks::from_manifest(manifest, "{}")
+            .unwrap()
+            .script_for_entry("missing.ts"),
+        None
+    );
+}

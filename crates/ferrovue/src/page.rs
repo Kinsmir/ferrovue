@@ -606,6 +606,13 @@ impl Chunks {
             .collect()
     }
 
+    /// The URL of the script of the entry the manifest names by `key` (`"client/main.ts"`), for
+    /// the page's `<script type="module">`. A key the manifest lacks has none.
+    #[must_use]
+    pub fn script_for_entry(&self, key: &str) -> Option<String> {
+        self.chunks.get(key).map(|chunk| self.url(&chunk.file))
+    }
+
     /// A page's links, which write each URL once.
     #[must_use]
     pub fn preloads(&self) -> Preloads<'_> {
@@ -778,8 +785,9 @@ impl<'c> Stylesheets<'c> {
 }
 
 /// The page around the components: the doctype, `<html>` and `<body>` with the attributes the
-/// [`Head`](crate::head::Head) gives them, its tags, the `<link rel="modulepreload">`s of the
-/// entry and of the islands, and the entry's `<script type="module">` at the end of `<body>`.
+/// [`Head`](crate::head::Head) gives them, its tags, the `<link rel="stylesheet">`s and
+/// `<link rel="modulepreload">`s of the entry and of the islands, and the entry's
+/// `<script type="module">` at the end of `<body>`.
 ///
 /// # Example
 ///
@@ -788,8 +796,8 @@ impl<'c> Stylesheets<'c> {
 /// use ferrovue::page::{Chunks, Document};
 ///
 /// let manifest = r#"{
-///     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "imports": ["_vue.js"] },
-///     "client/components/Counter.vue": { "file": "assets/Counter.js", "imports": ["_vue.js"] },
+///     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "imports": ["_vue.js"] },
+///     "client/components/Counter.vue": { "file": "assets/Counter.js", "css": ["assets/Counter.css"], "imports": ["_vue.js"] },
 ///     "_vue.js": { "file": "assets/vue.js" }
 /// }"#;
 /// let chunks = Chunks::from_manifest(manifest, r#"{ "Counter": "assets/Counter.js" }"#)?;
@@ -800,6 +808,7 @@ impl<'c> Stylesheets<'c> {
 ///     document.render("<main>Hi</main>"),
 ///     "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n\
 ///      <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
+///      <link rel=\"stylesheet\" href=\"/assets/main.css\"><link rel=\"stylesheet\" href=\"/assets/Counter.css\">\n\
 ///      <link rel=\"modulepreload\" href=\"/assets/vue.js\"><link rel=\"modulepreload\" href=\"/assets/Counter.js\">\n\
 ///      </head>\n<body>\n<main>Hi</main>\n<script type=\"module\" src=\"/assets/main.js\"></script>\n</body>\n</html>\n"
 /// );
@@ -808,6 +817,8 @@ impl<'c> Stylesheets<'c> {
 #[derive(Debug, Clone, Default)]
 pub struct Document {
     head: crate::head::HeadHtml,
+    stylesheets: String,
+    styled: HashSet<String>,
     preloads: String,
     linked: HashSet<String>,
     entry: Option<String>,
@@ -825,14 +836,18 @@ impl Document {
     }
 
     /// Load the entry the manifest names by `key` (`"client/main.ts"`): its `<script
-    /// type="module">`, and a link for each chunk it imports. A key the manifest lacks adds
-    /// nothing.
+    /// type="module">`, a `<link rel="stylesheet">` for each stylesheet
+    /// [`Chunks::stylesheets_for_entry`] lists, and a `<link rel="modulepreload">` for each chunk
+    /// it imports. A key the manifest lacks adds nothing.
     #[must_use]
     pub fn with_entry(mut self, chunks: &Chunks, key: &str) -> Self {
         let Some((key, chunk)) = chunks.chunks.get_key_value(key) else {
             return self;
         };
         self.entry = Some(chunks.url(&chunk.file));
+        for url in chunks.stylesheets_for_entry(key) {
+            self.style(url);
+        }
         let mut seen = HashSet::from([key.as_str()]);
         for import in &chunk.imports {
             for chunk in chunks.needed(import, &mut seen) {
@@ -842,17 +857,30 @@ impl Document {
         self
     }
 
-    /// Link the chunks the islands called `names` need, each once.
+    /// Link the stylesheets and the chunks the islands called `names` need, each once.
     #[must_use]
     pub fn with_islands<'n>(
         mut self,
         chunks: &Chunks,
         names: impl IntoIterator<Item = &'n str>,
     ) -> Self {
+        let names: Vec<&str> = names.into_iter().collect();
+        for url in chunks.stylesheets_for_islands(names.iter().copied()) {
+            self.style(url);
+        }
         for url in chunks.for_islands(names) {
             self.link(url);
         }
         self
+    }
+
+    fn style(&mut self, url: String) {
+        if self.styled.insert(url.clone()) {
+            self.stylesheets
+                .push_str("<link rel=\"stylesheet\" href=\"");
+            escape_into(&mut self.stylesheets, &url);
+            self.stylesheets.push_str("\">");
+        }
     }
 
     fn link(&mut self, url: String) {
@@ -870,7 +898,11 @@ impl Document {
         out.push_str("<!DOCTYPE html>\n<html");
         out.push_str(&head.html_attrs);
         out.push_str(">\n<head>\n");
-        for part in [head.head_tags.as_str(), self.preloads.as_str()] {
+        for part in [
+            head.head_tags.as_str(),
+            self.stylesheets.as_str(),
+            self.preloads.as_str(),
+        ] {
             if !part.is_empty() {
                 out.push_str(part);
                 out.push('\n');
