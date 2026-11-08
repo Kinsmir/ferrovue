@@ -828,6 +828,12 @@ room the page needs before the first one:
   before the branches moves only when their tests can neither return nor write;
 - branches that only write text are one `out.push_str` of the text their test picks, and a test the
   compiler knows the result of leaves the text of the branch it takes.
+- a value built by formatting, such as a template literal or a string `+` in a function or a
+  `computed`, is written into the page as it is formatted, escaped on the way, with `write!`
+  through a hidden `fv::core::escaping(out)`, and a `JSON.stringify` of a list is written item by
+  item. A bare attribute, and a CSS variable whose text may be empty, still build the value to
+  test it for being empty;
+- a string a loop builds by prepending, `out = ch + out`, grows in place.
 
 What each branch writes, and the order of the writes, stay those of Vue's `renderToString`.
 

@@ -77,7 +77,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_join_numbers(out, props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_s_3| fv::strings::js_parse_float(&fv_s_3)), " ");
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &format!("[{}]", props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, props.inputs.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)), ","); out.push(']');
     out.push('|');
     fv::core::escape_into(out, &fv::strings::js_json_string(&props.input));
     out.push('|');

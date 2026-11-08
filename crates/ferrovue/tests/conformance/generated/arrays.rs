@@ -144,13 +144,13 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     out.push_str(if props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|fv_w_8| fv::strings::js_length(&fv_w_8)).any(|fv_item_5| fv_item_5 == props.min) { "true" } else { "false" });
     out.push_str("</p><p>");
-    fv::core::escape_into(out, &format!("[{}]", props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, props.words.iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)), ","); out.push(']');
     out.push('|');
-    fv::core::escape_into(out, &format!("[{}]", props.nums.iter().copied().filter(|fv_n_6| *fv_n_6 as f64 > 0.0).map(|v| fv::core::Js(v).to_string()).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, props.nums.iter().copied().filter(|fv_n_6| *fv_n_6 as f64 > 0.0).map(|v| fv::core::Js(v).to_string()), ","); out.push(']');
     out.push('|');
     fv::core::escape_into(out, &fv::strings::js_json_string(&props.query));
     out.push('|');
-    fv::core::escape_into(out, &format!("[{}]", props.items.iter().map(|fv_i_11| fv_i_11.price).map(fv::strings::js_json_number).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, props.items.iter().map(|fv_i_11| fv_i_11.price).map(fv::strings::js_json_number), ","); out.push(']');
     out.push_str("</p><p>");
     fv::core::escape_into(out, s_found.as_deref().unwrap_or("none"));
     out.push('|');

@@ -54,7 +54,7 @@ export function shout(t: string): string {
 }
 ` })).get("x.rs")!;
     expect(out).toMatch(/fv::strings::js_trim\(&props\.word\)/);
-    expect(out).toMatch(/format!\("\{\}!", /);
+    expect(out).toMatch(/write!\(fv::core::escaping\(out\), "\{\}!", /);
   });
 
   it("inlines a function a .ts file exports as its default", () => {

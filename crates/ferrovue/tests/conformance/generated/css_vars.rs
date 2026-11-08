@@ -64,7 +64,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
 #[doc(hidden)]
 pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::attrs::Attrs<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(
-        380
+        388
         + props.color.len()
         + props.label.as_deref().map_or(0, str::len)
         + props.font.len()
@@ -84,9 +84,9 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
             fv::core::escape_into(out, &props.color);
         }
         out.push_str(";--b3187d50-doubled\\ \\+\\ \\&quot;px\\&quot;:");
-        match AsRef::<str>::as_ref(&format!("{}px", fv::core::Js(s_doubled))) { "" => out.push(' '), v => fv::core::escape_into(out, v) }
+        fv::core::push_number(out, s_doubled);
         if let Some(v) = props.label.as_deref() {
-            out.push_str(";--b3187d50-accent:teal;--b3187d50-label:");
+            out.push_str("px;--b3187d50-accent:teal;--b3187d50-label:");
             if v.is_empty() {
                 out.push(' ');
             } else {
@@ -94,7 +94,7 @@ pub fn try_render_scoped(out: &mut String, props: &Props<'_>, fv_attrs: &fv::att
             }
             out.push_str(";--b3187d50-font:");
         } else {
-            out.push_str(";--b3187d50-accent:teal;--b3187d50-label:initial;--b3187d50-font:");
+            out.push_str("px;--b3187d50-accent:teal;--b3187d50-label:initial;--b3187d50-font:");
         }
         if props.font.is_empty() {
             out.push(' ');

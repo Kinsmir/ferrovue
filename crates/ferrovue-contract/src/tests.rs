@@ -16,8 +16,8 @@ use ferrovue::{
 use crate::domain::Tone;
 use crate::generated::{
     blank, books_id, cart_badge, counter, data_list, greeting, head_note, i18n, index, joined,
-    modal, picker, posted, provides, rated, render_json, route_table, scored, shell, sized,
-    stamped, stores, theme_scope, themed_button, timeline, toned, translated, twins, types,
+    modal, picker, posted, provides, rated, render_json, route_table, scored, shell, shouted,
+    sized, stamped, stores, theme_scope, themed_button, timeline, toned, translated, twins, types,
 };
 
 const _: fn(&mut String, &sized::Props) = sized::render;
@@ -644,5 +644,19 @@ fn a_list_joined_into_the_page_is_escaped() {
     assert_eq!(
         render(|out| joined::render(out, &empty)),
         r#"<p title>||</p>"#
+    );
+}
+
+#[test]
+fn text_formatted_into_the_page_is_escaped() {
+    let props = shouted::Props::new("<a href='x'>", 1.5, ["\"&", "b"]);
+    assert_eq!(
+        render(|out| shouted::render(out, &props)),
+        r#"<p>&lt;A HREF=&#39;X&#39;&gt;:1.5|[&quot;\&quot;&amp;&quot;,&quot;b&quot;]</p>"#
+    );
+    let empty = shouted::Props::new("", -0.0, Vec::<String>::new());
+    assert_eq!(
+        render(|out| shouted::render(out, &empty)),
+        r#"<p>:0|[]</p>"#
     );
 }

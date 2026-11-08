@@ -225,7 +225,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, v);
     }
     out.push('|');
-    fv::core::escape_into(out, &format!("[{}]", props.tags.as_ref().map(|fv_tags_11| fv::strings::js_slice_items(fv_tags_11.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, props.tags.as_ref().map(|fv_tags_11| fv::strings::js_slice_items(fv_tags_11.iter().map(|v| Cow::<str>::Borrowed(&**v)), 1.0f64, None).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)), ","); out.push(']');
     out.push_str("</p><p>");
     if let Some(v) = props.user.as_ref().map(|fv_user_3| &*fv_user_3.name) {
         fv::core::escape_into(out, v);

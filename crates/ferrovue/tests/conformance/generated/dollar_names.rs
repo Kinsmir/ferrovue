@@ -105,7 +105,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, s_label);
     out.push('|');
-    fv::core::escape_into(out, &{ let fv_loud = props.title.to_uppercase(); Cow::<str>::Owned(format!("{}:{}", fv_loud, fv::core::Js(props.price))) });
+    { let fv_loud = props.title.to_uppercase(); write!(fv::core::escaping(out), "{}:{}", fv_loud, fv::core::Js(props.price)); }
     out.push_str("</h2><p>");
     fv::core::escape_into(out, &props.entry.meta.tag_2);
     out.push('|');
