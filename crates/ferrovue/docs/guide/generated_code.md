@@ -168,9 +168,11 @@ and booleans has a plain `Props`), and a component with no props has an empty `P
 A struct that a parent hands to a child, alone or in a list, gets a `#[doc(hidden)]`
 `borrowed(&self)`: the same value with each string a `Cow::Borrowed` of the parent's, which the
 parent passes as `rows: props.rows.iter().map(|v| v.borrowed()).collect()`. Handing a child its
-rows then copies no text, however the parent's props were built. A struct holding a dictionary
-(`Record`), a project's own `dateType` or a union `unions` maps to an enum of the application has
-none, and is cloned.
+rows then copies no text, however the parent's props were built. A dictionary (`Record`) handed to
+a child, alone or in a struct, keeps its keys borrowed the same way. A `TrustedHtml`, a project's
+own `dateType` and an enum of the application that `unions` maps a union to are cloned inside the
+copy. Where `trustedHtml` or `dateType` names a type with the lifetime `'a`, a struct holding it
+has no `borrowed()` and is cloned whole.
 
 The module is laid out for `git diff`. The render's `out.reserve` writes its constant on a line of
 its own and each term it adds on the next ones, so an edit of the template's markup changes the

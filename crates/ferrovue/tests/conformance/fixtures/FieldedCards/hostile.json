@@ -1,0 +1,4 @@
+{
+  "lead": { "title": "<script>alert(1)</script>", "body": "<p>&amp; <i>trusted</i></p>", "counts": { "<b>": -1, "&": 9007199254740991 }, "labels": { "</p>": "\"'<>&", "🦀": "é" } },
+  "cards": [{ "title": "</li><li>", "body": "<em>&lt;</em>", "counts": { "'": 1 }, "labels": { "<": ">" } }]
+}

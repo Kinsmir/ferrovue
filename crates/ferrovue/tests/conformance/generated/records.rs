@@ -162,7 +162,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     super::chips::try_render(out, &super::chips::Props {
         chips: props.labels.keys().map(Cow::<str>::Borrowed).collect(),
         counts: None,
-        marks: Some(props.counts.to_owned()),
+        marks: Some(props.counts.borrowed_with(|v| *v)),
     })?;
     out.push_str("</section>");
     Ok(())

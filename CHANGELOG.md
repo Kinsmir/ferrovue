@@ -33,7 +33,7 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#two-more-boolean-attributes).
 - An island's `data-props` is written in single quotes, escaping only `&` and `'`, so the props take 7 to 28% fewer bytes; `mountIslands` reads it unchanged.
   [Islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#islands).
-- A struct, or a list of structs, passed to a child is handed over with its strings borrowed from the parent's props through a hidden `borrowed()`, copying no text.
+- A struct, or a list of structs, passed to a child is handed over with its strings borrowed from the parent's props through a hidden `borrowed()`, copying no text; so is a `Record`, alone or in a struct, and a struct holding a `TrustedHtml`, a `dateType` or an application's enum clones only that field.
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 - A list of strings a render holds, such as a `computed` that filters or splits the props, keeps the strings it takes from the props, literals and setup bindings borrowed, copying no text.
   [The locals of a render](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#the-locals-of-a-render).

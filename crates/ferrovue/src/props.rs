@@ -132,6 +132,18 @@ impl<'de, V: Deserialize<'de>> Deserialize<'de> for Record<'_, V> {
 }
 
 impl<'a, V> Record<'a, V> {
+    #[doc(hidden)]
+    #[must_use]
+    pub fn borrowed_with<'b, W>(&'b self, mut each: impl FnMut(&'b V) -> W) -> Record<'b, W> {
+        Record {
+            entries: self
+                .entries
+                .iter()
+                .map(|(k, v)| (Cow::Borrowed(&**k), each(v)))
+                .collect(),
+        }
+    }
+
     pub(crate) fn from_entries(entries: Vec<(Cow<'a, str>, V)>) -> Self {
         Record { entries }
     }
