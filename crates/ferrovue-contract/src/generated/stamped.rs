@@ -42,10 +42,11 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(
-        39
+        40
         + props.on.len()
         + props.fill.len()
     );
+    let fv_units_fill = fv::strings::UnitCursor::new();
     let fv_refusals = fv::render::Refusals::new(NAME, "components/Stamped.vue");
     out.push_str("<!--[--><p>");
     fv::core::push_number(out, fv_refusals.keep(fv::date::try_date_parse(&props.on), 10, 9));
@@ -57,6 +58,10 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_pad_end(&props.fill, props.count as f64, " "), 10, 98));
     out.push('|');
     fv::core::escape_into(out, &fv_refusals.keep(fv::strings::try_repeat(&props.fill, props.count as f64), 10, 123));
+    out.push('|');
+    if let Some(v) = fv_units_fill.at(&props.fill, props.count as f64 - 4.0) {
+        fv::core::escape_into(out, v);
+    }
     out.push_str("</p>");
     fv_refusals.check(super::posted::try_render(out, &super::posted::Props {
         at: fv_refusals.date(fv_refusals.keep(fv::date::try_date_parse(&props.on), 11, 14), 11, 14),

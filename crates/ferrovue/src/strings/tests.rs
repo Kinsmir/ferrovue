@@ -319,3 +319,79 @@ fn regular_expressions_of_the_subset_are_javascripts() {
     }
     assert!(run > 2000, "the subset ran {run} vectors");
 }
+
+#[test]
+fn a_unit_cursor_reads_what_the_functions_read() {
+    let vectors: Vec<(String, String, Vec<String>, serde_json::Value)> =
+        serde_json::from_str(include_str!("../../tests/vectors/strings.json"))
+            .expect("string vectors");
+    let read = |s: &str, op: &str, i: f64| {
+        let cursor = UnitCursor::new();
+        let mine = match op {
+            "at" => format!("{:?}", cursor.at(s, i)),
+            "charAt" => cursor.char_at(s, i).to_owned(),
+            "charCodeAt" => format!("{:?}", cursor.char_code_at(s, i)),
+            _ => format!("{:?}", cursor.code_point_at(s, i)),
+        };
+        let theirs = match op {
+            "at" => format!("{:?}", js_at(s, i)),
+            "charAt" => js_char_at(s, i).to_owned(),
+            "charCodeAt" => format!("{:?}", js_char_code_at(s, i)),
+            _ => format!("{:?}", js_code_point_at(s, i)),
+        };
+        assert_eq!(mine, theirs, "{op}({s:?}, {i})");
+    };
+    let mut read_some = 0;
+    for (op, s, args, _) in &vectors {
+        if matches!(op.as_str(), "at" | "charAt" | "charCodeAt" | "codePointAt") {
+            read(s, op, vector_number(&args[0]));
+            read_some += 1;
+        }
+    }
+    assert!(read_some >= 100, "the vectors were not all read");
+}
+
+#[test]
+fn a_unit_cursor_reads_every_index_in_any_order() {
+    let texts = ["", "abc", "café", "🦀 crab", "é🦀é🦀x", "𝟘𝟙𝟚", "aé日🦀b"];
+    for s in texts {
+        let len = js_length(s);
+        let mut orders: Vec<Vec<i64>> = vec![
+            (-2..len + 2).collect(),
+            (-2..len + 2).rev().collect(),
+            (0..len).flat_map(|i| [i, len - 1 - i]).collect(),
+            (0..len).map(|i| (i * 7 + 3) % len.max(1)).collect(),
+        ];
+        orders.push(orders[0].iter().map(|i| -i).collect());
+        let cursor = UnitCursor::new();
+        for order in &orders {
+            for &i in order {
+                let i = i as f64;
+                assert_eq!(cursor.at(s, i), js_at(s, i), "at({s:?}, {i})");
+                assert_eq!(cursor.char_at(s, i), js_char_at(s, i), "charAt({s:?}, {i})");
+                assert_eq!(
+                    cursor.char_code_at(s, i).to_bits(),
+                    js_char_code_at(s, i).to_bits(),
+                    "charCodeAt({s:?}, {i})"
+                );
+                assert_eq!(
+                    cursor.code_point_at(s, i),
+                    js_code_point_at(s, i),
+                    "codePointAt({s:?}, {i})"
+                );
+                assert_eq!(
+                    cursor.char_at(s, i + 0.5),
+                    js_char_at(s, i + 0.5),
+                    "charAt({s:?}, {i}.5)"
+                );
+            }
+        }
+        for other in texts {
+            assert_eq!(
+                cursor.char_at(other, 1.0),
+                js_char_at(other, 1.0),
+                "charAt({other:?}, 1)"
+            );
+        }
+    }
+}

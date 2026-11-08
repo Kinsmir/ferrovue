@@ -54,6 +54,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         + props.text.len()
         + props.part.len()
     );
+    let fv_units_text = fv::strings::UnitCursor::new();
+    let fv_units_text_2 = fv::strings::UnitCursor::new();
+    let fv_units_text_3 = fv::strings::UnitCursor::new();
     let s_first_two = fv::strings::js_split_limit(&props.text, " ", 2.0f64).into_iter().collect::<Vec<_>>();
     let s_tail = fv::strings::js_substr(&props.text, -(props.at as f64), None).into_owned();
     let s_codes = &[fv::strings::js_char_code_at(&props.text, 0.0f64), fv::strings::js_char_code_at(&props.text, props.at as f64)];
@@ -143,15 +146,15 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         fv::core::push_int(out, v);
     }
     out.push_str("</p><p>");
-    fv::core::push_number(out, fv::strings::js_char_code_at(&props.text, props.at as f64));
+    fv::core::push_number(out, fv_units_text.char_code_at(&props.text, props.at as f64));
     out.push('|');
     fv::core::push_number(out, fv::strings::js_char_code_at(&props.text, 0.0));
     out.push('|');
-    if let Some(v) = fv::strings::js_code_point_at(&props.text, props.at as f64) {
+    if let Some(v) = fv_units_text_2.code_point_at(&props.text, props.at as f64) {
         fv::core::push_int(out, v);
     }
     out.push('|');
-    fv::core::push_int(out, fv::strings::js_code_point_at(&props.text, props.at as f64).unwrap_or(-1i64));
+    fv::core::push_int(out, fv_units_text_3.code_point_at(&props.text, props.at as f64).unwrap_or(-1i64));
     out.push('|');
     out.push_str(if fv::strings::js_code_point_at(&props.text, 99.0f64).is_none() { "true" } else { "false" });
     out.push('|');

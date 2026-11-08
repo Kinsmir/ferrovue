@@ -66,3 +66,65 @@ pub(super) fn char_start(s: &str, unit: usize) -> usize {
         (byte, false) => byte,
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub(super) struct Cursor<'a> {
+    pub(super) s: &'a str,
+    pub(super) len: usize,
+    ascii: bool,
+    unit: usize,
+    pub(super) byte: usize,
+}
+
+impl<'a> Cursor<'a> {
+    pub(super) fn new(s: &'a str) -> Self {
+        let ascii = s.is_ascii();
+        let len = if ascii {
+            s.len()
+        } else {
+            s.chars().map(char::len_utf16).sum()
+        };
+        Self {
+            s,
+            len,
+            ascii,
+            unit: 0,
+            byte: 0,
+        }
+    }
+
+    pub(super) fn seek(&mut self, k: usize) -> (char, usize) {
+        if self.ascii {
+            self.unit = k;
+            self.byte = k;
+            return (char::from(self.s.as_bytes()[k]), 0);
+        }
+        if k < self.unit / 2 {
+            self.unit = 0;
+            self.byte = 0;
+        } else if k >= self.unit + (self.len - self.unit) / 2 {
+            self.unit = self.len;
+            self.byte = self.s.len();
+        }
+        while self.unit > k {
+            let ch = self.s[..self.byte]
+                .chars()
+                .next_back()
+                .expect("a character before");
+            self.unit -= ch.len_utf16();
+            self.byte -= ch.len_utf8();
+        }
+        loop {
+            let ch = self.s[self.byte..]
+                .chars()
+                .next()
+                .expect("a character in range");
+            let width = ch.len_utf16();
+            if k < self.unit + width {
+                return (ch, k - self.unit);
+            }
+            self.unit += width;
+            self.byte += ch.len_utf8();
+        }
+    }
+}

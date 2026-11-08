@@ -77,6 +77,28 @@ export function isTemporary(v: Val): boolean {
   return /^&\*(?!\**[\w.]+$|\(\*\w+\)$)/.test(v.code) || /\.unwrap_or\(&\*(?!\**[\w.]+\)$)/.test(v.code);
 }
 
+const cursorSites = new WeakMap<Component, Map<string, number>>();
+
+/** The `fv::strings::UnitCursor`, declared at the top of the render, that a template reads the code
+ * units of a prop through: one for each place that reads them, `null` for any other string. */
+export function unitCursor(s: Scope, target: Val): string | null {
+  const path = /^&props((?:\.[a-z_][a-z0-9_]*)+)$/.exec(strArg(target.code))?.[1];
+  if (path === undefined || s.within !== undefined) return null;
+  const name = `${UNIT_CURSOR}${path.slice(1).replaceAll(".", "_")}`;
+  const sites = cursorSites.get(s.comp) ?? new Map<string, number>();
+  cursorSites.set(s.comp, sites);
+  const n = (sites.get(name) ?? 0) + 1;
+  sites.set(name, n);
+  return n === 1 ? name : `${name}_${n}`;
+}
+
+export const UNIT_CURSOR = "fv_units_";
+
+export function unitRead(s: Scope, target: Val, method: "at" | "char_at" | "char_code_at" | "code_point_at", index: string): string {
+  const cursor = /^-?[\d.]+(?:f64)?$/.test(bare(index)) ? null : unitCursor(s, target);
+  return cursor === null ? `fv::strings::js_${method}` : `${cursor}.${method}`;
+}
+
 export function asCow(v: Val): string {
   if (!isTemporary(v)) return `std::borrow::Cow::<str>::Borrowed(${bare(v.code)})`;
   const built = /^&\*(.*)$/s.exec(v.code)?.[1];
@@ -477,14 +499,18 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
       const length = num(1, "", "f64::INFINITY");
       return { code: `&*fv::strings::js_substr(${t}, ${num(0, "0.0", "0.0")}, ${length ? `Some(${bare(length)})` : "None"})`, ty: same, ...cut };
     }
-    case "charCodeAt":
+    case "charCodeAt": {
       arity(0, 1);
       noHalves();
-      return { code: `fv::strings::js_char_code_at(${t}, ${num(0, "0.0", "0.0")})`, ty: FLOAT };
-    case "codePointAt":
+      const index = num(0, "0.0", "0.0");
+      return { code: `${unitRead(s, target, "char_code_at", index)}(${t}, ${index})`, ty: FLOAT };
+    }
+    case "codePointAt": {
       arity(0, 1);
       noHalves();
-      return { code: `fv::strings::js_code_point_at(${t}, ${num(0, "0.0", "0.0")})`, ty: opt(INT) };
+      const index = num(0, "0.0", "0.0");
+      return { code: `${unitRead(s, target, "code_point_at", index)}(${t}, ${index})`, ty: opt(INT) };
+    }
     case "concat":
       return formatted(comp, [target, ...args.map((a: N) => stringOf(comp, expr(s, a), a, "`.concat()`", "FV0723"))], n, "`.concat()`");
     case "slice":
@@ -495,14 +521,17 @@ export function stringMethod(s: Scope, target: Val, method: string, args: N[], n
     }
     case "at": {
       arity(1, 1);
-      const at = `fv::strings::js_at(${t}, ${num(0, "0.0", "0.0")})`;
+      const index = num(0, "0.0", "0.0");
+      const at = `${unitRead(s, target, "at", index)}(${t}, ${index})`;
       if (!isTemporary(target)) return { code: at, ty: opt(same), ...cut };
       const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
       return { code: `${atom(held)}.as_deref()`, ty: opt(same), held, ...cut };
     }
-    case "charAt":
+    case "charAt": {
       arity(0, 1);
-      return { code: `${isTemporary(target) ? "&*" : ""}fv::strings::js_char_at(${t}, ${num(0, "0.0", "0.0")})`, ty: same, ...cut };
+      const index = num(0, "0.0", "0.0");
+      return { code: `${isTemporary(target) ? "&*" : ""}${unitRead(s, target, "char_at", index)}(${t}, ${index})`, ty: same, ...cut };
+    }
     case "split": {
       arity(1, 2);
       const sep = str(0);

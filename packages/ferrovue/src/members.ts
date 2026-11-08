@@ -10,7 +10,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, enclosed, receiver, strArg } from "./parens.ts";
 import { collected, picked, untypedEmpty } from "./lists.ts";
 import { entryPart, tupleParts } from "./destructuring.ts";
-import { asCow, isTemporary, loneOf } from "./strings.ts";
+import { asCow, isTemporary, loneOf, unitRead } from "./strings.ts";
 import { asF64, COUNT, numberVal } from "./numbers.ts";
 import { BUILTINS, builtin, isObjectCall } from "./calls.ts";
 import { refuseInPlace } from "./objects.ts";
@@ -214,7 +214,7 @@ function unitAt(s: Scope, str: Val, key: N): Val {
   }
   const ascii = isAscii(str.ty);
   const cut = ascii ? {} : { lone: true as const };
-  const at = `Some(fv::strings::js_char_at(${strArg(str.code)}, ${bare(asF64(i))})).filter(|c| !c.is_empty())`;
+  const at = `Some(${unitRead(s, str, "char_at", asF64(i))}(${strArg(str.code)}, ${bare(asF64(i))})).filter(|c| !c.is_empty())`;
   if (!isTemporary(str)) return { code: at, ty: opt(strTy(ascii)), ...cut };
   const held = `${at}.map(|v| std::borrow::Cow::<str>::Owned(v.to_owned()))`;
   return { code: `${atom(held)}.as_deref()`, ty: opt(strTy(ascii)), held, ...cut };

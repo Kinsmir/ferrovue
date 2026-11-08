@@ -528,7 +528,7 @@ fn a_render_that_can_write_what_vue_writes_returns_ok() {
     stamped::try_render(&mut out, &props).unwrap();
     assert_eq!(out, render(|out| stamped::render(out, &props)));
     assert!(
-        out.starts_with("<!--[--><p>1714521600000|1711929600000|-ab|ab |ababab</p>"),
+        out.starts_with("<!--[--><p>1714521600000|1711929600000|-ab|ab |ababab|b</p>"),
         "{out}"
     );
     assert!(
