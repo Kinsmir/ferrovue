@@ -10,6 +10,8 @@ for which constructs, so a project knows whether to record its fixtures again.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-08
+
 Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes, in an island's wrapper, whose `data-props` is in single quotes, and for a bound or fallthrough `disablepictureinpicture` or `disableremoteplayback`.
 
 ### Added
@@ -861,7 +863,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 - `.length` of a string counts UTF-16 code units (`ferrovue::js_length`), where it counted bytes.
 - Slot content made only of comments is dropped when the slot has no fallback, as Vue drops it.
 
-[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.15.2...HEAD
+[Unreleased]: https://github.com/Kinsmir/ferrovue/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/Kinsmir/ferrovue/compare/v0.15.2...v0.16.0
 [0.15.2]: https://github.com/Kinsmir/ferrovue/compare/v0.15.1...v0.15.2
 [0.15.1]: https://github.com/Kinsmir/ferrovue/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/Kinsmir/ferrovue/compare/v0.14.1...v0.15.0
