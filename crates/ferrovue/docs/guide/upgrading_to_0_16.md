@@ -2,8 +2,9 @@ Upgrading a project from ferrovue 0.15 to 0.16: the steps to take and what behav
 
 The [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) lists every change;
 this page picks out what an application notices. The steps are to bump both halves together and to
-generate every component again, for version 9 of generated code. A page renders the same HTML as
-with 0.15, in fewer instructions. An upgrade to 0.15 took only the bump, so the page for the
+generate every component again, for version 9 of generated code. A page renders in fewer
+instructions, and its HTML is what 0.15 wrote outside an island's `data-props` and two boolean
+attributes. An upgrade to 0.15 took only the bump, so the page for the
 release before is [`upgrading_to_0_14`](crate::guide::upgrading_to_0_14).
 
 # Steps
@@ -64,7 +65,7 @@ module as stale until it is generated again with 0.16 and committed. See
 
 ## Renders run fewer instructions
 
-The HTML of every page is byte for byte what 0.15 wrote. `escape_into` escapes in one pass, which
+Outside the changes below, the HTML of every page is byte for byte what 0.15 wrote. `escape_into` escapes in one pass, which
 helps most on long strings, and a `.join()` writes into the page with no string built per item.
 The bench renders run up to 9% fewer instructions, and renders that join a list up to 25% fewer.
 A test that counts allocations or instructions of a render sees lower numbers. See
@@ -77,3 +78,28 @@ and 0.16 writes them as Vue does. Bound, or falling through to a child's root, `
 name alone and `false` leaves the attribute out; 0.15 wrote `disablepictureinpicture="true"` and
 `disablepictureinpicture="false"`. A project whose fixtures hold such an attribute records them
 again. See [attribute values](crate::guide::security#attribute-values).
+
+## An island's props are in single quotes
+
+An island's `data-props` is written in single quotes, with only `&` and `'` escaped, as
+`data-props='{"n":1}'`; 0.15 wrote `data-props="{&quot;n&quot;:1}"`. The browser gives
+`dataset.props` back as the same JSON, so `mountIslands` reads it unchanged, and the props take 7
+to 28% fewer bytes. A project whose fixtures or tests hold an island's HTML records them again. See
+[islands](crate::guide::islands_and_hydration#islands).
+
+## The Vite plugin gives plugin-vue `trimEdges`
+
+With `"whitespace": "trim-edges"`, the Vite plugin adds `trimEdges`, with the classes of
+`preserveWhitespace`, to a plugin-vue that has no `trimEdges` of its own. A `vite.config.ts` and a
+Vitest config that use the Vite plugin can drop `nodeTransforms: [trimEdges]`. A plugin-vue given
+`trimEdges` by hand keeps it, and a Vitest config with plugin-vue alone still adds it. See
+[whitespace](crate::guide::generated_code#whitespace).
+
+## Two warnings under `trim-edges`
+
+`pnpm ferrovue` may print two new warnings with `"whitespace": "trim-edges"`, and writes the modules
+all the same. FV0427 names a line break that renders as a space beside a class listed in the new
+`inlineBlockClasses`, which lists none until a project sets it. FV0428 names a Tailwind
+`whitespace-pre*` class on an element whose contents `trim-edges` renders otherwise than Vue does:
+list it in `preserveWhitespace.classes`, and the element renders as Vue spaces it, which changes
+its HTML. See [the error codes](crate::guide::error_codes#fv0427).
