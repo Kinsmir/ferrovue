@@ -58,6 +58,11 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 - A render writes a template literal or string `+` it only escapes, and a `JSON.stringify` of a list, into the page as they are formatted, with no string built for them; the conformance components that format text allocate 6 to 40% less often.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 
+### Security
+
+- `linkRoutes` and `linkRouter` refuse to hand `navigate` a link to another host, such as a relative link on a page whose path starts with `//`.
+  [A page from the fallback](https://docs.rs/ferrovue/latest/ferrovue/guide/web_frameworks/index.html#a-page-from-the-fallback).
+
 ## [0.15.2] - 2026-11-07
 
 ### Fixed

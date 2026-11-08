@@ -191,6 +191,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_path_a_browser_reads_as_another_host_is_not_found_and_links_nowhere() {
+        for location in [
+            "//evil.example/x",
+            "//evil.example/x?page=2",
+            "/\\evil.example/x",
+        ] {
+            let (status, html) = site().render_to_string(location).await;
+            assert_eq!(status, 404, "{location}");
+            assert!(!html.contains("evil"), "{location}: {html}");
+        }
+        let (status, _) = site().render_to_string("/nowhere").await;
+        assert_eq!(status, 404);
+    }
+
+    #[tokio::test]
     async fn a_book_page_reads_its_route_and_streams_its_reviews() {
         let site = site();
         let page = site.page("/books/dune").await;

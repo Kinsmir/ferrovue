@@ -143,6 +143,50 @@ let app: axum::Router = axum::Router::new().fallback(not_found);
 # fn main() {}
 ```
 
+# A page from the fallback
+
+A fallback that renders whatever path the router resolves also serves paths a browser reads as
+another host. axum hands the fallback `//evil.example/x` as it arrived, and on that page every
+relative link, `?page=2`, `#top` or `sibling`, resolves to an `href` starting `//evil.example/`, as
+vue-router resolves it in the browser. A `\` reads as a `/` to the browser, so `/\evil.example/x`
+does the same. Answer such a path before resolving it:
+
+```rust
+# #[cfg(feature = "axum")]
+# fn main() {
+use std::sync::LazyLock;
+
+use axum::http::{StatusCode, Uri};
+use axum::response::{IntoResponse, Response};
+use ferrovue::router::Router;
+
+static ROUTER: LazyLock<Router> = LazyLock::new(|| Router::new(&["/", "/:rest(.*)"]));
+
+async fn page(uri: Uri) -> Response {
+    let path = uri.path();
+    if path.starts_with("//") || path.contains('\\') {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let route = ROUTER.at(uri.path_and_query().map_or(path, |p| p.as_str()));
+    route.link("?page=2").href.into_response()
+}
+# let run = |uri: &'static str| tokio::runtime::Builder::new_current_thread().build().unwrap()
+#     .block_on(async {
+#         let response = page(Uri::from_static(uri)).await;
+#         let status = response.status();
+#         (status, axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap())
+#     });
+# assert_eq!(run("//evil.example/x").0, StatusCode::NOT_FOUND);
+# assert_eq!(run("/docs/intro"), (StatusCode::OK, axum::body::Bytes::from_static(b"/docs/intro?page=2")));
+# }
+# #[cfg(not(feature = "axum"))]
+# fn main() {}
+```
+
+`linkRoutes` and `linkRouter` never hand `navigate` a link to another host: such a navigation fails
+with an error. The `href`s of the page the server sends are written as vue-router writes them, so
+the check above is what keeps them on the site.
+
 # A page streamed
 
 A page rendered with [`hole`](crate::page::hole)s ([`streaming`](crate::guide::streaming)) is sent in

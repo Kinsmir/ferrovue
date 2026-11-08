@@ -66,6 +66,23 @@ it("hands every navigation to navigate with the href and the route, and stays on
   expect(links.route.fullPath).toBe("/users/ada");
 });
 
+it("refuses to hand navigate a link that leaves the site, on a page whose path starts with //", async () => {
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  const navigate = vi.fn<Navigate>();
+  const routes: RouteEntry[] = ["/", "/docs", { path: "/:path(.*)", name: "missing" }];
+  const router = routerOf(createSSRApp(Nav).use(linkRoutes(routes, { navigate, location: "//evil.example/x" })));
+  for (const to of ["?page=2", "#top", "sibling", "/\\evil.example/x", "/\t/evil.example"]) {
+    await expect(router.push(to), to).rejects.toThrow(/leads to another host/);
+  }
+  expect(navigate).not.toHaveBeenCalled();
+  expect(errors).toHaveBeenCalledTimes(5);
+  await router.push("/docs");
+  expect(navigate.mock.calls.map(([href]) => href)).toEqual(["/docs"]);
+  const based = vi.fn<Navigate>();
+  await routerOf(createSSRApp(Nav).use(linkRoutes(routes, { navigate: based, base: "/app", location: "/app//evil.example/x" }))).push("?page=2");
+  expect(based.mock.calls.map(([href]) => href)).toEqual(["/app//evil.example/x?page=2"]);
+});
+
 it("renders the active links and the route on the server", async () => {
   const links = linkRoutes(NESTED, { navigate: () => {}, location: "/account/orders" });
   const html = await renderToString(createSSRApp(Nav).use(links));
@@ -514,15 +531,14 @@ describe("against vue-router", () => {
           if (expected.threw) threw++;
           else tos.push(to);
         }
+        const settled = (p: Promise<unknown>): Promise<string> => p.then(() => "", (e: Error) => e.message);
         for (const to of tos.slice(0, 6)) {
-          await router.push(to);
-          await router.replace(to);
+          reference.push(await settled(router.push(to)), await settled(router.replace(to)));
           navigations += 2;
         }
         const pushed = routerOf(createSSRApp({ render: () => null }).use(links));
         for (const to of tos.slice(0, 6)) {
-          await pushed.push(to);
-          await pushed.replace(to);
+          ours.push(await settled(pushed.push(to)), await settled(pushed.replace(to)));
         }
         expect(ours, where).toEqual(reference);
 

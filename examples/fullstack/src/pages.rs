@@ -57,6 +57,14 @@ impl Site {
 
     /// The page at `location` (a path), rendered up to its holes.
     pub async fn page(&self, location: &str) -> Page {
+        let path = location.split(['?', '#']).next().unwrap_or_default();
+        if path.starts_with("//") || path.contains('\\') {
+            return Page {
+                status: 404,
+                html: "<!doctype html><html><body><h1>Not found</h1></body></html>".to_owned(),
+                holes: Vec::new(),
+            };
+        }
         let route = self.router.at(location);
         let stores = Stores::new(BasketState::new("guest", ["solaris"]));
         match (route.name(), route.param("id")) {

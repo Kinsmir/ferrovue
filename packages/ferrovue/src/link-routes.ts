@@ -1,12 +1,14 @@
 import type { App } from "vue";
 import { shallowReactive, shallowRef } from "vue";
 import { RouterLink, routeLocationKey, routerKey, type RouteLocationNormalized, type RouteLocationNormalizedLoaded, type RouteLocationRaw, type RouteLocationResolved, type Router } from "vue-router";
+import { otherHost, otherHostError } from "./other-host.ts";
 import type { RouteEntry } from "./route-records.ts";
 
 /** What `linkRoutes` hands navigations to, and the router options of `ferrovue.config.json`. */
 export interface LinkRoutesOptions {
   /** The application's own navigation, called with the `href` of every navigation (the base
-   * included, as the link's `href` attribute has it) and the route it resolves to. */
+   * included, as the link's `href` attribute has it) and the route it resolves to. A navigation
+   * whose `href` leads to another host fails with an error and is never handed to it. */
   navigate: (href: string, to: RouteLocationNormalized) => void;
   /** The base, as `router.base` in `ferrovue.config.json` gives it. Left out, there is no base,
    * as on the server, whatever the page's `<base href>`. */
@@ -446,6 +448,7 @@ export function linkRoutes(routes: RouteEntry[], options: LinkRoutesOptions): Li
   const go = async (to: RouteLocationRaw | Target): Promise<undefined> => {
     const target = resolve(to);
     try {
+      if (otherHost(target.href!)) throw otherHostError(target.href!);
       options.navigate(target.href!, target as unknown as RouteLocationNormalized);
     } catch (error) {
       console.error(error);
