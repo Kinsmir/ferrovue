@@ -187,23 +187,29 @@ fn strict_and_sensitive_routes_match_as_vue_router_matches_them() {
 #[test]
 fn matching_options_can_be_set_and_cleared_in_any_order() {
     let file = nested_file();
-    let plain = Router::tree(route_defs(&file.options.routes));
-    let again = Router::tree(route_defs(&file.options.routes))
-        .with_sensitive(true)
-        .with_strict(true)
-        .with_sensitive(false)
-        .with_strict(false);
-    for at in &file.options.locations {
-        assert_eq!(plain.at(at).name(), again.at(at).name(), "at {at:?}");
-    }
-    let both = Router::tree(route_defs(&file.options.routes))
-        .with_strict(true)
-        .with_sensitive(true);
-    let other = Router::tree(route_defs(&file.options.routes))
-        .with_sensitive(true)
-        .with_strict(true);
-    for at in &file.options.locations {
-        assert_eq!(both.at(at).name(), other.at(at).name(), "at {at:?}");
+    for routes in [
+        &file.nested.routes,
+        &file.files.routes,
+        &file.options.routes,
+    ] {
+        let defs = route_defs(routes);
+        let plain = Router::tree(defs);
+        let again = Router::tree(defs)
+            .with_sensitive(true)
+            .with_strict(true)
+            .with_sensitive(false)
+            .with_strict(false);
+        assert_eq!(format!("{plain:?}"), format!("{again:?}"));
+        let strict = Router::tree(defs).with_strict(true);
+        let twice = Router::tree(defs)
+            .with_strict(true)
+            .with_sensitive(true)
+            .with_strict(false)
+            .with_strict(true);
+        assert_eq!(format!("{strict:?}"), format!("{twice:?}"));
+        for at in &file.options.locations {
+            assert_eq!(plain.at(at).name(), again.at(at).name(), "at {at:?}");
+        }
     }
 }
 

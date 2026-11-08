@@ -183,9 +183,6 @@ impl Router {
                 assert!(!again, "two routes are called {name:?}");
             }
         }
-        for (seq, record) in records.iter_mut().enumerate() {
-            record.seq = seq;
-        }
         let most = records.iter().map(|r| r.names().count()).max().unwrap_or(0);
         Router {
             routes: ordered(records),
@@ -232,19 +229,10 @@ impl Router {
     }
 
     fn matching(mut self, strict: bool, sensitive: bool) -> Router {
-        let seqs: Vec<usize> = self.routes.iter().map(|r| r.seq).collect();
-        let mut slots: Vec<Option<Pattern>> = (0..self.routes.len()).map(|_| None).collect();
-        for mut p in self.routes.drain(..) {
-            p.parent = p.parent.map(|parent| seqs[parent]);
-            p.rescore(strict);
-            let seq = p.seq;
-            slots[seq] = Some(p);
+        for route in &mut self.routes {
+            route.rescore(strict);
         }
-        let records = slots
-            .into_iter()
-            .map(|p| p.expect("each record once"))
-            .collect();
-        self.routes = ordered(records);
+        self.routes = ordered(std::mem::take(&mut self.routes));
         self.strict = strict;
         self.sensitive = sensitive;
         self

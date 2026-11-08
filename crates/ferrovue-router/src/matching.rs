@@ -8,7 +8,6 @@ pub(crate) struct Pattern {
     pub(crate) score: Vec<i32>,
     pub(crate) name: Option<String>,
     pub(crate) matchable: bool,
-    pub(crate) seq: usize,
 }
 
 pub(crate) enum Token {
@@ -260,7 +259,6 @@ impl Pattern {
             score: Vec::new(),
             name,
             matchable: true,
-            seq: 0,
         };
         pattern.rescore(false);
         pattern
