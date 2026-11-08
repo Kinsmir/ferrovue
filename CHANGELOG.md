@@ -45,6 +45,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#2-generate-every-component-again).
 - Generated code writes `std::borrow::Cow` as `Cow`, and a field's `#[serde(rename)]` only where its JSON key differs from its name, which makes the generated Rust about 3% smaller.
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
+- `Head::render` borrows the tags, props and keys it builds from the pushed values, copying none of them, so the bench head renders in about half the instructions.
+  [The page head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
 
 ## [0.15.2] - 2026-11-07
 
