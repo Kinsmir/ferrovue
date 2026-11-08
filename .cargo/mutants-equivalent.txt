@@ -141,8 +141,8 @@ crates/ferrovue/src/attrs.rs: replace match guard is_lowercase_ascii(key) with f
 crates/ferrovue/src/attrs.rs: replace is_lowercase_ascii -> bool with false
 
 # `reference_len` counting at most `max` characters of a reference: one longer than `max` is then followed by another allowed character, never `;`, and is refused as it was.
-crates/ferrovue/src/html.rs: replace + with * in reference_len
+crates/ferrovue/src/html/basic.rs: replace + with * in reference_len
 
 # `reference_len` ending a reference one or two characters early: the `Builder` writes what it leaves as text, and those characters, alphanumerics and the `;`, are the same when escaped.
-crates/ferrovue/src/html.rs: replace + with - in reference_len
-crates/ferrovue/src/html.rs: replace + with * in reference_len
+crates/ferrovue/src/html/basic.rs: replace + with - in reference_len
+crates/ferrovue/src/html/basic.rs: replace + with * in reference_len
