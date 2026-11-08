@@ -236,6 +236,13 @@ impl std::fmt::Write for Short {
 /// assert_eq!(written(f64::NAN), "NaN");
 /// ```
 pub fn push_number(out: &mut String, x: f64) {
+    if x.fract() == 0.0 && x.abs() <= MAX_SAFE_INTEGER as f64 {
+        if x < 0.0 {
+            out.push('-');
+        }
+        push_decimal(out, x.abs() as u64);
+        return;
+    }
     let _ = write_number(out, x);
 }
 
