@@ -297,3 +297,23 @@ fn long_class_and_style_lists_keep_each_name_once_in_first_seen_order() {
     head.push(attrs("style", HeadValue::str(&text(back))));
     assert_eq!(head.render().body_attrs, styles);
 }
+
+#[test]
+fn a_list_is_indexed_once_it_holds_sixteen_names() {
+    use super::tag::{Places, add_class};
+
+    let names: Vec<String> = (0..18).map(|i| format!("c{i}")).collect();
+    let mut classes = Vec::new();
+    let mut places = Places::default();
+    for (i, name) in names.iter().enumerate() {
+        add_class(&mut classes, &mut places, name);
+        assert_eq!(
+            places.indexed(),
+            (i >= 16).then_some(i),
+            "after {} names",
+            i + 1
+        );
+    }
+    add_class(&mut classes, &mut places, "c3");
+    assert_eq!(classes, names);
+}

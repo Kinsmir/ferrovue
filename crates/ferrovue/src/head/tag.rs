@@ -140,6 +140,11 @@ const SCANNED: usize = 16;
 pub(super) struct Places<'a>(Option<HashMap<&'a str, usize>>);
 
 impl<'a> Places<'a> {
+    #[cfg(test)]
+    pub(super) fn indexed(&self) -> Option<usize> {
+        self.0.as_ref().map(HashMap::len)
+    }
+
     fn of<T>(&mut self, items: &[T], key: impl Fn(&T) -> &'a str, k: &str) -> Option<usize> {
         if items.len() < SCANNED {
             return items.iter().position(|item| key(item) == k);
