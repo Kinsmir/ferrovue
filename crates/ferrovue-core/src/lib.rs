@@ -141,15 +141,24 @@ fn push_decimal(out: &mut String, n: u64) {
     }
 }
 
-fn write_decimal(out: &mut impl std::fmt::Write, n: u64) -> std::fmt::Result {
-    if n < 10 {
-        return out.write_char(char::from(b'0' + n as u8));
+trait Number: std::fmt::Write {
+    fn write_decimal(&mut self, n: u64) -> std::fmt::Result;
+}
+
+impl Number for String {
+    fn write_decimal(&mut self, n: u64) -> std::fmt::Result {
+        push_decimal(self, n);
+        Ok(())
     }
-    let mut buf = [0; 20];
-    let start = decimal(&mut buf, n);
-    buf[start..]
-        .iter()
-        .try_for_each(|&b| out.write_char(char::from(b)))
+}
+
+impl Number for Short {
+    fn write_decimal(&mut self, n: u64) -> std::fmt::Result {
+        let mut buf = [0; 20];
+        let start = decimal(&mut buf, n);
+        self.extend(buf[start..].iter().copied());
+        Ok(())
+    }
 }
 
 /// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
@@ -244,7 +253,7 @@ pub fn push_number(out: &mut String, x: f64) {
     let _ = write_number(out, x);
 }
 
-fn write_number(out: &mut impl std::fmt::Write, x: f64) -> std::fmt::Result {
+fn write_number(out: &mut impl Number, x: f64) -> std::fmt::Result {
     if x.is_nan() {
         return out.write_str("NaN");
     }
@@ -259,7 +268,7 @@ fn write_number(out: &mut impl std::fmt::Write, x: f64) -> std::fmt::Result {
     }
     let x = x.abs();
     if x.fract() == 0.0 && x <= MAX_SAFE_INTEGER as f64 {
-        return write_decimal(out, x as u64);
+        return out.write_decimal(x as u64);
     }
     let (digits, exp) = shortest_digits(x);
     let digits = digits.as_str();
