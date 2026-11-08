@@ -1,19 +1,24 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 
 pub(crate) fn parse_query(search: &str) -> Vec<(String, Vec<Option<String>>)> {
     let mut query: Vec<(String, Vec<Option<String>>)> = Vec::new();
     if search.is_empty() {
         return query;
     }
+    let mut at: HashMap<String, usize> = HashMap::new();
     for pair in search.split('&') {
         let pair = pair.replace('+', " ");
         let (key, value) = match pair.find('=') {
             Some(i) => (decode(&pair[..i]), Some(decode(&pair[i + 1..]))),
             None => (decode(&pair), None),
         };
-        match query.iter_mut().find(|(k, _)| *k == key) {
-            Some((_, values)) => values.push(value),
-            None => query.push((key, vec![value])),
+        match at.get(&key) {
+            Some(&i) => query[i].1.push(value),
+            None => {
+                at.insert(key.clone(), query.len());
+                query.push((key, vec![value]));
+            }
         }
     }
     query
