@@ -1,4 +1,7 @@
-import { type Component, type N, type Piece, type Scope, type Ty, type Val, asciiText, BOOL, fail, FLOAT, INT, isAscii, joinedVal, kept, nothing, opt, placeOf, refusalAt, REFUSALS, rustStr, STR, strTy } from "./model.ts";
+import { type Component, type N, type Piece, type Scope, type Ty, type Val, BOOL, FLOAT, INT, joinedVal, nothing, opt, STR } from "./model.ts";
+import { asciiText, isAscii, strTy } from "./literal-types.ts";
+import { fail, kept, placeOf, refusalAt, REFUSALS } from "./locate.ts";
+import { rustStr } from "./rust-syntax.ts";
 import type { ErrorCode } from "./errors.ts";
 import { atom, bare, binary, condition, enclosed, pure, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";

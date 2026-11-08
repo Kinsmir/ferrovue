@@ -1,4 +1,7 @@
-import { type N, type Scope, type Val, directiveOwner, enumOf, fail, literalsOf, namesSelf, nodeName } from "./model.ts";
+import { type N, type Scope, type Val, namesSelf } from "./model.ts";
+import { directiveOwner, fail } from "./locate.ts";
+import { enumOf, literalsOf } from "./literal-types.ts";
+import { nodeName } from "./node-names.ts";
 import { optionBinder, variantBinder } from "./enums.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";

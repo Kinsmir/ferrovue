@@ -1,4 +1,6 @@
-import { type N, type Scope, type Ty, type Val, BOOL, fail, FLOAT, joinTy, sameTy, UNDEF } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, BOOL, FLOAT, UNDEF } from "./model.ts";
+import { fail } from "./locate.ts";
+import { joinTy, sameTy } from "./literal-types.ts";
 import { describeTy, expr } from "./expr.ts";
 import { computed, COW, items, untypedEmpty } from "./lists.ts";
 import { bare } from "./parens.ts";

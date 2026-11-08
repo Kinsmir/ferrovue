@@ -1,4 +1,5 @@
-import { type Component, fail } from "../model.ts";
+import { type Component } from "../model.ts";
+import { fail } from "../locate.ts";
 import { expr } from "../expr.ts";
 import { cond } from "../narrowing.ts";
 import { bare, strArg } from "../parens.ts";

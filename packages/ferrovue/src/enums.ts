@@ -1,5 +1,8 @@
 import { basename } from "node:path";
-import { type Component, type EnumDef, type N, type Ty, type Val, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, fail, isAscii, isDeclared, literalNames, literalsOf, literalTy, nameLiterals, refusalAt, REFUSALS, RUST_PRELUDE, rustStr, snake, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type N, type Ty, type Val } from "./model.ts";
+import { type EnumDef, asciiTy, declaredLiterals, enumOf, enumPath, enumTy, isAscii, isDeclared, literalNames, literalsOf, literalTy, nameLiterals, UNION_STR, unionStr, variantPath } from "./literal-types.ts";
+import { fail, refusalAt, REFUSALS } from "./locate.ts";
+import { RUST_PRELUDE, rustStr, snake } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { atom, bare, binary } from "./parens.ts";

@@ -1,4 +1,6 @@
-import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, kept, REFUSALS } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, BOOL, FLOAT, INT } from "./model.ts";
+import { asciiTy } from "./literal-types.ts";
+import { fail, kept, REFUSALS } from "./locate.ts";
 import type { ErrorCode } from "./errors.ts";
 import { AS, atom, bare, binary, FLIPPED, operand, pure, receiver, UNARY } from "./parens.ts";
 import { expr } from "./expr.ts";

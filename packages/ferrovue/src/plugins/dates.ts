@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, fail, FLOAT, kept, nothing, refusalAt, STR } from "../model.ts";
+import { type N, type Scope, type Ty, type Val, FLOAT, nothing, STR } from "../model.ts";
+import { fail, kept, refusalAt } from "../locate.ts";
 import { type Plugin } from "../plugin.ts";
 import { bare, strArg } from "../parens.ts";
 import { asF64, compare, numberVal } from "../numbers.ts";

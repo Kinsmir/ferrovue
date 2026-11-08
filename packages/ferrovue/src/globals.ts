@@ -1,4 +1,6 @@
-import { type N, type Scope, type Ty, type Val, asciiTy, BOOL, fail, FLOAT, INT, refusalAt, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, BOOL, FLOAT, INT, STR } from "./model.ts";
+import { asciiTy } from "./literal-types.ts";
+import { fail, refusalAt } from "./locate.ts";
 import { atom, bare, condition, operand, receiver, strArg, UNARY } from "./parens.ts";
 import { formatted, lonely, stringOf } from "./strings.ts";
 import { asF64, asWritten, intFromF64, isCast, isNumber, numberVal, power } from "./numbers.ts";

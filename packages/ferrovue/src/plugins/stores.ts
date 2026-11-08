@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { relativePath } from "../paths.ts";
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, distinctFields, fail, failIn, FLOAT, INT, nodeName, opt, patternNames, sameTy, snake, STR, tagAst, UNDEF } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, absence, blankComponent, BOOL, FLOAT, INT, opt, STR, UNDEF } from "../model.ts";
+import { distinctFields, snake } from "../rust-syntax.ts";
+import { fail, failIn, tagAst } from "../locate.ts";
+import { nodeName, patternNames } from "../node-names.ts";
+import { sameTy } from "../literal-types.ts";
 import { GenError } from "../errors.ts";
 import { listDir, parseTs } from "../files.ts";
 import { resolveImport } from "../resolve.ts";

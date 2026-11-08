@@ -1,4 +1,6 @@
-import { type Absence, type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, enumTy, fail, FLOAT, joinAbsence, joinTy, keptLiterals, literalsOf, nothing, sameTy, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Absence, type Component, type N, type Scope, type Ty, type Val, absence, BOOL, FLOAT, joinAbsence, nothing, UNDEF, withAbsence } from "./model.ts";
+import { type EnumDef, enumOf, enumTy, joinTy, keptLiterals, literalsOf, sameTy, variantPath } from "./literal-types.ts";
+import { fail } from "./locate.ts";
 import { GenError } from "./errors.ts";
 import { knownLiteral, matchOver, overVariants } from "./enums.ts";
 import { asF64 } from "./numbers.ts";

@@ -1,4 +1,6 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, enumOf, fail, FLOAT, joinAbsence, joinTy, literalsOf, literalTy, neverEmpty, nothing, refusalAt, sameTy, STR, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, FLOAT, joinAbsence, nothing, STR, withAbsence } from "./model.ts";
+import { type EnumDef, enumOf, joinTy, literalsOf, literalTy, neverEmpty, sameTy } from "./literal-types.ts";
+import { fail, refusalAt } from "./locate.ts";
 import { GenError } from "./errors.ts";
 import { annotatedStr, exactlyEnum, intoEnum, knownLiteral } from "./enums.ts";
 import { ctx } from "./context.ts";

@@ -1,7 +1,9 @@
 import { parse as parseJs } from "@babel/parser";
 import { createHash } from "node:crypto";
 import { resolve as resolvePath } from "node:path";
-import { type Component, type N, type Scope, fail, namesSelf, rustStr } from "../model.ts";
+import { type Component, type N, type Scope, namesSelf } from "../model.ts";
+import { fail } from "../locate.ts";
+import { rustStr } from "../rust-syntax.ts";
 import { type ScopeIdMode } from "../config.ts";
 import { type Plugin, runOf } from "../plugin.ts";
 import { untilSettled } from "../fallthrough.ts";

@@ -1,4 +1,7 @@
-import { type Component, type Fn, type N, type Scope, type Val, fail, nothing, patternNames, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Val, nothing } from "./model.ts";
+import { fail } from "./locate.ts";
+import { patternNames } from "./node-names.ts";
+import { UNION_STR, unionStr } from "./literal-types.ts";
 import { GenError } from "./errors.ts";
 import { enumListVal } from "./enums.ts";
 import { ctx } from "./context.ts";

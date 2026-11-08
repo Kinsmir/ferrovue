@@ -1,7 +1,10 @@
 import { parse as parseJs } from "@babel/parser";
 import { isHTMLTag, isVoidTag } from "@vue/shared";
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, camelize, directiveOwner, fail, isAttribute, literalsOf, placeOf, rustStr, templateAst } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, camelize } from "./model.ts";
+import { directiveOwner, fail, isAttribute, placeOf, templateAst } from "./locate.ts";
+import { literalsOf } from "./literal-types.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { ctx } from "./context.ts";
 import { exportedConst } from "./ts-exports.ts";

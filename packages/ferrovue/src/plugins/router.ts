@@ -1,6 +1,8 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
-import { type Component, type N, type Scope, type Val, BOOL, fail, failIn, opt, rustStr, STR } from "../model.ts";
+import { type Component, type N, type Scope, type Val, BOOL, opt, STR } from "../model.ts";
+import { fail, failIn } from "../locate.ts";
+import { rustStr } from "../rust-syntax.ts";
 import { GenError } from "../errors.ts";
 import { type Config, CONFIG_FILE } from "../config.ts";
 import { expr } from "../expr.ts";

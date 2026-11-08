@@ -1,5 +1,9 @@
 import { basename } from "node:path";
-import { type Component, type N, type Scope, type Ty, type Val, absence, dollarNames, enumOf, fail, nodeName, nothing, patternNames, snake, takesAttrs, UNDEF, UNION_STR, unionStr } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, nothing, takesAttrs, UNDEF } from "./model.ts";
+import { dollarNames, snake } from "./rust-syntax.ts";
+import { enumOf, UNION_STR, unionStr } from "./literal-types.ts";
+import { fail } from "./locate.ts";
+import { nodeName, patternNames } from "./node-names.ts";
 import { GenError } from "./errors.ts";
 import { CONFIG_FILE } from "./config.ts";
 import { ctx } from "./context.ts";

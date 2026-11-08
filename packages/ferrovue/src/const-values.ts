@@ -1,4 +1,7 @@
-import { type Component, type Field, type N, type Struct, type Ty, type Val, blankComponent, BOOL, distinctFields, enumOf, fail, FLOAT, INT, joinTy, literalTy, NULL, rustStr, sameTy, snake, STR, UNDEF, variantPath, withAbsence } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, type Val, blankComponent, BOOL, FLOAT, INT, NULL, STR, UNDEF, withAbsence } from "./model.ts";
+import { distinctFields, rustStr, snake } from "./rust-syntax.ts";
+import { enumOf, joinTy, literalTy, sameTy, variantPath } from "./literal-types.ts";
+import { fail } from "./locate.ts";
 import { type Const, type Scalar } from "./const-decls.ts";
 import { numberVal } from "./numbers.ts";
 import { ONE_NOTHING, reachType } from "./typescript.ts";

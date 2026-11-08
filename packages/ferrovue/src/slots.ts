@@ -1,4 +1,6 @@
-import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, directiveOwner, distinctFields, fail, nothing, rustStr, snake } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type Struct, type Ty, type Val, nothing } from "./model.ts";
+import { directiveOwner, fail } from "./locate.ts";
+import { distinctFields, rustStr, snake } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { expr } from "./expr.ts";
 import { atom, bare, operand, strArg, UNARY } from "./parens.ts";

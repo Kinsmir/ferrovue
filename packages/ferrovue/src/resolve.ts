@@ -3,7 +3,8 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
 import { ctx } from "./context.ts";
-import { type Component, fail, type N } from "./model.ts";
+import { type Component, type N } from "./model.ts";
+import { fail } from "./locate.ts";
 
 /** The `paths` of one tsconfig file, after its `extends`, with the directory they are relative to. */
 interface TsPaths {

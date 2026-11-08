@@ -1,5 +1,8 @@
 import { basename } from "node:path";
-import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, isTuple, REFUSALS, rustStr, snake, takesAttrs, templateAst } from "./model.ts";
+import { type Component, type Field, type N, type Struct, type Ty, blankComponent, isTuple, takesAttrs } from "./model.ts";
+import { enumItems, enumOf, enumPath } from "./literal-types.ts";
+import { fail, REFUSALS, templateAst } from "./locate.ts";
+import { rustStr, snake } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { enumsSource, holdsMapped } from "./enums.ts";
 import { ctx, INLINE_HTML, JS_DATE } from "./context.ts";

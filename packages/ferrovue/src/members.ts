@@ -1,4 +1,7 @@
-import { type Component, type N, type Scope, type Ty, type Val, BOOL, enumItems, enumOf, fail, INT, isAscii, literalsOf, nothing, opt, sameTy, snake, STR, strTy, UNDEF, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, INT, nothing, opt, STR, UNDEF } from "./model.ts";
+import { enumItems, enumOf, isAscii, literalsOf, sameTy, strTy, UNION_STR, unionStr, variantPath } from "./literal-types.ts";
+import { fail } from "./locate.ts";
+import { snake } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { enumListVal, knownLiteral, overVariants } from "./enums.ts";
 import { ctx } from "./context.ts";

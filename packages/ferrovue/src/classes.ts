@@ -1,5 +1,7 @@
 import { escapeHtml } from "@vue/shared";
-import { type N, type Piece, type Scope, type Val, directiveOwner, fail, nothing, rustStr, STR } from "./model.ts";
+import { type N, type Piece, type Scope, type Val, nothing, STR } from "./model.ts";
+import { directiveOwner, fail } from "./locate.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { expr } from "./expr.ts";
 import { choice, cond, known, narrowing, narrowTo, presence, truthy } from "./narrowing.ts";
 import { pickPresent } from "./constants.ts";

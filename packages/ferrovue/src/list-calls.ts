@@ -1,4 +1,6 @@
-import { type N, type Scope, type Ty, type Val, BOOL, fail, isAscii, joinedVal, sameTy, STR, strTy } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, BOOL, joinedVal, STR } from "./model.ts";
+import { fail } from "./locate.ts";
+import { isAscii, sameTy, strTy } from "./literal-types.ts";
 import { asF64, isNumber } from "./numbers.ts";
 import { lonely, meet, writesAscii } from "./strings.ts";
 import { atom, binary, operand, strArg, UNARY } from "./parens.ts";

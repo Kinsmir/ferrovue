@@ -1,5 +1,8 @@
 import { hyphenate, isSSRSafeAttrName, propsToAttrMap } from "@vue/shared";
-import { type Component, type Field, type N, type Scope, type StructTy, type Ty, type Val, absence, camelize, declares, enumItems, enumOf, fail, literalsOf, nothing, REFUSALS, refusalAt, rustStr, sameTy, snake, takesAttrs, variantPath } from "./model.ts";
+import { type Component, type Field, type N, type Scope, type StructTy, type Ty, type Val, absence, camelize, declares, nothing, takesAttrs } from "./model.ts";
+import { enumItems, enumOf, literalsOf, sameTy, variantPath } from "./literal-types.ts";
+import { fail, refusalAt, REFUSALS } from "./locate.ts";
+import { rustStr, snake } from "./rust-syntax.ts";
 import { ctx } from "./context.ts";
 import { known } from "./narrowing.ts";
 import { enumItemVal, exactlyEnum, intoEnum, knownLiteral, refuseUnproven } from "./enums.ts";

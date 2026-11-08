@@ -1,4 +1,8 @@
-import { type Component, type EnumDef, type N, type Scope, type StructTy, type Ty, type Val, absence, BOOL, enumItems, enumOf, enumTy, fail, FLOAT, joinTy, keptLiterals, literalsOf, literalTy, nodeName, nothing, NULL, placeOf, rustStr, sameTy, UNDEF, UNION_STR, unionStr, variantPath } from "./model.ts";
+import { type Component, type N, type Scope, type StructTy, type Ty, type Val, absence, BOOL, FLOAT, nothing, NULL, UNDEF } from "./model.ts";
+import { type EnumDef, enumItems, enumOf, enumTy, joinTy, keptLiterals, literalsOf, literalTy, sameTy, UNION_STR, unionStr, variantPath } from "./literal-types.ts";
+import { fail, placeOf } from "./locate.ts";
+import { nodeName } from "./node-names.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { enumListVal, intoEnum, overVariants } from "./enums.ts";
 import { CONFIG_FILE } from "./config.ts";

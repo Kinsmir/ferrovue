@@ -1,4 +1,6 @@
-import { type N, type Scope, type Ty, type Val, fail, FLOAT, isAscii, strTy } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, FLOAT } from "./model.ts";
+import { fail } from "./locate.ts";
+import { isAscii, strTy } from "./literal-types.ts";
 import { bare, enclosed } from "./parens.ts";
 import { arrow, backwards, items, itemsTy } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";

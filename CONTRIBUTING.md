@@ -70,6 +70,10 @@ packages/ferrovue/           the compiler (npm package)
   src/compiler.ts            `ferrovue/compiler`: `generate`, `write`
   src/config.ts              `ferrovue/compiler/config`: `ferrovue.config.json`'s types and `loadConfig`
   src/context.ts, model.ts   the configuration checked, and the types and values the compiler passes around
+  src/literal-types.ts       what is known of a string or integer type: its literals, ASCII, emptiness, its enum
+  src/locate.ts              where a node is in the component's file, and the refusals that name it
+  src/rust-syntax.ts, node-names.ts
+                             Rust names and string literals, the names messages give syntax nodes
   src/schema.ts              the configuration's keys, types and defaults, from which `schema.json` is written
   src/component.ts, script.ts, typescript.ts, ts-exports.ts
                              a `.vue` file read, <script setup>, TypeScript types, what a `.ts` file exports

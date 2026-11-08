@@ -1,4 +1,7 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, distinctFields, enumOf, fail, nothing, rustStr, sameTy, snake } from "../model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, nothing } from "../model.ts";
+import { distinctFields, rustStr, snake } from "../rust-syntax.ts";
+import { enumOf, sameTy } from "../literal-types.ts";
+import { fail } from "../locate.ts";
 import { GenError } from "../errors.ts";
 import { ctx } from "../context.ts";
 import type { Declared } from "../const-decls.ts";

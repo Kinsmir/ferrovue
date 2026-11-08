@@ -1,4 +1,6 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, BOOL, enumOf, fail, FLOAT, INT, joinTy, opt, sameTy, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, BOOL, FLOAT, INT, opt, STR } from "./model.ts";
+import { type EnumDef, enumOf, joinTy, sameTy } from "./literal-types.ts";
+import { fail } from "./locate.ts";
 import { GenError } from "./errors.ts";
 import { enumItemVal, enumListVal } from "./enums.ts";
 import { fresh, jsHint } from "./names.ts";

@@ -1,5 +1,7 @@
 import { escapeHtml, hyphenate, parseStringStyle } from "@vue/shared";
-import { type Component, type N, type Scope, type Val, fail, nothing, rustStr } from "./model.ts";
+import { type Component, type N, type Scope, type Val, nothing } from "./model.ts";
+import { fail } from "./locate.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { describeTy, expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";
 import { condition, logical, not, receiver, scrutinee, strArg } from "./parens.ts";

@@ -1,4 +1,7 @@
-import { type N, type Scope, type Val, BOOL, fail, literalTy, rustStr, STR, UNDEF } from "./model.ts";
+import { type N, type Scope, type Val, BOOL, STR, UNDEF } from "./model.ts";
+import { fail } from "./locate.ts";
+import { literalTy } from "./literal-types.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { constOf, ownKeys, ownKeyTest } from "./constants.ts";
 import { describeTy, expr } from "./expr.ts";
 import { atom, strArg } from "./parens.ts";

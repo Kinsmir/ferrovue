@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, fail, INT, STR } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, INT, STR } from "./model.ts";
+import { fail } from "./locate.ts";
 import { enumItemVal } from "./enums.ts";
 import { fresh, jsHint } from "./names.ts";
 import { expr, fieldVal } from "./expr.ts";
