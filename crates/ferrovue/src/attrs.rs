@@ -392,36 +392,39 @@ fn is_on(key: &str) -> bool {
     b.len() > 2 && b[0] == b'o' && b[1] == b'n' && !b[2].is_ascii_lowercase()
 }
 
-const BOOLEAN_ATTRS: [&str; 28] = [
-    "itemscope",
-    "allowfullscreen",
-    "disablepictureinpicture",
-    "disableremoteplayback",
-    "formnovalidate",
-    "ismap",
-    "nomodule",
-    "novalidate",
-    "playsinline",
-    "readonly",
-    "async",
-    "autofocus",
-    "autoplay",
-    "controls",
-    "default",
-    "defer",
-    "disabled",
-    "inert",
-    "loop",
-    "open",
-    "required",
-    "reversed",
-    "scoped",
-    "seamless",
-    "checked",
-    "muted",
-    "multiple",
-    "selected",
-];
+fn is_boolean_attr(name: &str) -> bool {
+    matches!(
+        name,
+        "itemscope"
+            | "allowfullscreen"
+            | "disablepictureinpicture"
+            | "disableremoteplayback"
+            | "formnovalidate"
+            | "ismap"
+            | "nomodule"
+            | "novalidate"
+            | "playsinline"
+            | "readonly"
+            | "async"
+            | "autofocus"
+            | "autoplay"
+            | "controls"
+            | "default"
+            | "defer"
+            | "disabled"
+            | "inert"
+            | "loop"
+            | "open"
+            | "required"
+            | "reversed"
+            | "scoped"
+            | "seamless"
+            | "checked"
+            | "muted"
+            | "multiple"
+            | "selected"
+    )
+}
 
 fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     if !matches!(
@@ -440,7 +443,7 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     let boolean = if name == "hidden" {
         !matches!(value, Attr::Str(_))
     } else {
-        BOOLEAN_ATTRS.contains(&&*name)
+        is_boolean_attr(&name)
     };
     if boolean {
         if value.truthy() || matches!(value, Attr::Str(s) if s.is_empty()) {
