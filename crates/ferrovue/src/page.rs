@@ -8,8 +8,12 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::task::{Context, Poll, Waker};
+use std::sync::Arc;
+use std::task::{Context, Poll};
+
+use self::record::{Shared, lock, parts_json};
+
+mod record;
 
 /// A page the client hydrates as one app: a layout whose slots hold components rendered from their
 /// props. Each part goes into a slot as a [`Part`], made from the same [`Html`] value that writes
@@ -124,26 +128,9 @@ pub struct PageScript {
     id: String,
 }
 
-type Shared = Arc<Mutex<Recorded>>;
-
 type SlotContent<'p> = dyn Fn(&mut String, &str) -> bool + 'p;
 
 type PartRender<'p> = dyn Fn(&mut String) -> Result<(), Refused> + 'p;
-
-#[derive(Debug, Default)]
-struct Recorded {
-    props: String,
-    dates: &'static str,
-    names: Vec<&'static str>,
-    slots: Vec<(String, Option<String>)>,
-    open: usize,
-    waker: Option<Waker>,
-    refused: Option<Refused>,
-}
-
-fn lock(record: &Shared) -> MutexGuard<'_, Recorded> {
-    record.lock().unwrap_or_else(PoisonError::into_inner)
-}
 
 impl Page {
     /// A page with no slots yet.
@@ -398,62 +385,6 @@ impl Future for PageScript {
         json_script_into(&mut out, &self.id, &record.to_json());
         Poll::Ready(out)
     }
-}
-
-impl Recorded {
-    fn hold(&mut self, refused: Refused) {
-        let held = self.refused.take();
-        self.refused = first(held, Err(refused)).err();
-    }
-
-    fn name(&mut self, parts: &[Part<'_>]) {
-        for part in parts {
-            if !self.names.contains(&part.name) {
-                self.names.push(part.name);
-            }
-        }
-    }
-
-    fn to_json(&self) -> String {
-        let mut out = String::from("{\"props\":");
-        out.push_str(&self.props);
-        out.push_str(",\"slots\":{");
-        for (i, (name, parts)) in self.slots.iter().enumerate() {
-            if i > 0 {
-                out.push(',');
-            }
-            out.push_str(&json::to_string(name));
-            out.push(':');
-            out.push_str(parts.as_deref().unwrap_or("[]"));
-        }
-        out.push('}');
-        if !self.dates.is_empty() {
-            out.push_str(",\"dates\":");
-            out.push_str(self.dates);
-        }
-        out.push('}');
-        out
-    }
-}
-
-fn parts_json(parts: &[Part<'_>]) -> String {
-    let mut out = String::from("[");
-    for (i, part) in parts.iter().enumerate() {
-        if i > 0 {
-            out.push(',');
-        }
-        out.push_str("{\"c\":");
-        out.push_str(&json::to_string(part.name));
-        out.push_str(",\"p\":");
-        out.push_str(&part.props);
-        if !part.dates.is_empty() {
-            out.push_str(",\"d\":");
-            out.push_str(part.dates);
-        }
-        out.push('}');
-    }
-    out.push(']');
-    out
 }
 
 fn refuse_slotted(slot_scope_id: &str) {
