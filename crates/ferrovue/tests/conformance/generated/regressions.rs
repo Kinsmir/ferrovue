@@ -170,7 +170,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     for fv_x_cow in fv::strings::js_split(&props.s1, " ").into_iter().filter(|_| !props.b0) {
         let fv_x: &str = &fv_x_cow;
         out.push_str("<b>");
-        fv::core::escape_into(out, &fv::strings::js_split("a", ",").into_iter().find(|fv_a| if props.b0 { !fv_a.is_empty() } else { !fv_x.is_empty() }).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("&")));
+        fv::core::escape_into(out, &fv::strings::js_split("a", ",").into_iter().find(|fv_a| if props.b0 { !fv_a.is_empty() } else { !fv_x.is_empty() }).unwrap_or(Cow::<str>::Borrowed("&")));
         out.push_str("</b>");
     }
     out.push_str("<!--]--></div>");

@@ -57,6 +57,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.trying = 0;
   ctx.narrowCount = 0;
   ctx.hints = new Map();
+  ctx.held = new Map();
   ctx.datePlans = { components: new Map(), loaders: new Map() };
   ctx.sources = new Map([...sources].map(([file, text]) => [resolve(root, file), text]));
   ctx.aliases = options.aliases ?? [];

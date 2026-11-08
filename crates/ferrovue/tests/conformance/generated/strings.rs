@@ -165,7 +165,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(fv::strings::js_replace(&props.other, "a", "b").to_uppercase()); if !a.is_empty() { a } else { Cow::<str>::Borrowed(&*props.sep) } });
     out.push('|');
-    fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(format!("{}a", fv::strings::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).map(|v| Cow::<str>::Owned(v.into_owned())).unwrap_or(Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { Cow::<str>::Borrowed("-") } });
+    fv::core::escape_into(out, &{ let a = Cow::<str>::Owned(format!("{}a", fv::strings::js_split(&props.text, " ").into_iter().find(|fv_w_3| **fv_w_3 == *props.sep).unwrap_or(Cow::<str>::Borrowed("ß")))); if !a.is_empty() { a } else { Cow::<str>::Borrowed("-") } });
     out.push_str("</p></section>");
     fv_refusals.check(Ok(()))
 }

@@ -43,3 +43,10 @@ packages/ferrovue/src/members.ts: ConditionalExpression: at > 0 => true in while
 packages/ferrovue/src/members.ts: EqualityOperator: at > 0 => at <= 0 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: StringLiteral: ".map(" => "" in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: ArithmeticOperator: at + 1 => at - 1 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
+
+# borrows.ts, `refsHeld` and `borrowsHeld`: an infinite loop. `at` stops advancing with the loop's body gone, moves back with the call's length taken away, and matches an adapter later in the chain from a position before it, which `closing` sends back to where it was.
+packages/ferrovue/src/borrows.ts: BlockStatement: { const call = /^\.(filter|take|skip|rev|take_while|skip_w … false; at = closing(chain, at + call[0].length - 1) + 1; } => {} in while (at < chain.length) {
+packages/ferrovue/src/borrows.ts: Regex: /^\.(filter|take|skip|rev|take_while|skip_while)\(/ => /\.(filter|take|skip|rev|take_while|skip_while)\(/ in const call = /^\.(filter|take|skip|rev|take_while|skip_while)\(/.exec(chain.slice(at));
+packages/ferrovue/src/borrows.ts: ArithmeticOperator: at + call[0].length => at - call[0].length in at = closing(chain, at + call[0].length - 1) + 1;
+packages/ferrovue/src/borrows.ts: BlockStatement: { const call = /^\.([a-z_]+)\(/.exec(chain.slice(at)); if  … ) : !ADAPTERS.has(call[1]!)) return false; at = end + 1; } => {} in while (at >= 0 && at < chain.length) {
+packages/ferrovue/src/borrows.ts: ArithmeticOperator: at + call[0].length => at - call[0].length in const open = at + call[0].length - 1;

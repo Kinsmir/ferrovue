@@ -15,6 +15,7 @@ import { asF64, COUNT, numberVal } from "./numbers.ts";
 import { BUILTINS, builtin, isObjectCall } from "./calls.ts";
 import { refuseInPlace } from "./objects.ts";
 import { fresh, jsHint } from "./names.ts";
+import { bindsHeld } from "./borrows.ts";
 import { describeTy, expr, fieldVal, placeIn, refuseClientOnly, refuseUnavailable } from "./expr.ts";
 
 const MATH_CONSTANTS = new Map([
@@ -258,6 +259,7 @@ export function optionalChain(s: Scope, n: N): Val {
   const within = (v: Val): Scope => ({ ...s, locals: new Map(s.locals).set(hole.name, v) });
   if (base.ty.k !== "opt") return expr(within(base), rest);
   const name = fresh("o", chainHint(link.object));
+  bindsHeld(name, base.code);
   const inner = expr(within({ code: name, ty: base.ty.of, ...loneOf(base) }), rest);
   if (nothing(inner.ty)) return { code: "None", ty: UNDEF };
   const lone = loneOf(base, inner);

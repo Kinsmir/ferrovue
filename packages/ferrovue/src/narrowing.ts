@@ -10,6 +10,7 @@ import { claim } from "./plugin.ts";
 import { atom, bare, binary, condition, ifElse, logical, not, occurrences, receiver } from "./parens.ts";
 import { isNumber, negatedOrder } from "./numbers.ts";
 import { describeTy, expr } from "./expr.ts";
+import { bindsHeld } from "./borrows.ts";
 import { fresh, jsHint } from "./names.ts";
 
 export function known(v: Val): boolean | undefined {
@@ -296,6 +297,7 @@ export function literalNarrowing(s: Scope, n: N, always = false): { yes: Scope; 
 }
 
 export function narrowTo(s: Scope, p: Presence, name: string): Scope {
+  bindsHeld(name, p.option);
   return { ...s, narrowed: new Map(s.narrowed).set(p.path, narrowedVal(p, name)) };
 }
 

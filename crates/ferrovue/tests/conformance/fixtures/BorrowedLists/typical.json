@@ -1,0 +1,8 @@
+{
+  "posts": [{ "title": "Rust", "tags": ["fast", "safe", "-"] }, { "title": "Vue", "tags": ["web"] }],
+  "words": [" beta ", "alpha", "-", "gamma", "a"],
+  "labels": ["x", "red", "blue"],
+  "groups": { "a": ["a", "b", "c"], "10": ["d", "10"] },
+  "user": { "langs": ["en", "ru", "rust"] },
+  "sep": "-"
+}

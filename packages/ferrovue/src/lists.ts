@@ -12,7 +12,7 @@ import { asF64, isNumber } from "./numbers.ts";
 import { asCow, isTemporary, yieldsCow } from "./strings.ts";
 import { atom, bare, enclosed, operand, strArg, UNARY } from "./parens.ts";
 import { expressionBodied } from "./blocks.ts";
-import { borrowsHeld } from "./borrows.ts";
+import { borrowsHeld, itemsHeld, keptBorrowed } from "./borrows.ts";
 import { bindEntry, bindTuple, tupleParts } from "./destructuring.ts";
 import { reduced } from "./reduce.ts";
 import { flatMapped, flattened } from "./flat.ts";
@@ -56,7 +56,15 @@ export function collected(v: Val): string {
   const of = v.ty.k === "list" ? v.ty.of : v.ty;
   if (v.iter === undefined && of.k !== "str" && of.k !== "struct" && of.k !== "child") return `${atom(v.code)}.to_vec()`;
   const each = items(v);
-  return `${each}${of.k === "str" && !borrowsHeld(each) ? `.map(|v| ${COW}::Owned(v.into_owned()))` : ""}.collect::<Vec<_>>()`;
+  if (of.k !== "str" || borrowsHeld(each)) return `${each}.collect::<Vec<_>>()`;
+  return `${keptBorrowed(each) ?? `${each}.map(|v| ${COW}::Owned(v.into_owned()))`}.collect::<Vec<_>>()`;
+}
+
+/** The optional string `pick` makes of the items `chain` gives, held where it outlives them. */
+function heldPick(chain: string, pick: (items: string) => string): string {
+  if (borrowsHeld(chain)) return pick(chain);
+  const kept = keptBorrowed(chain);
+  return kept === null ? `${pick(chain)}.map(|v| ${COW}::Owned(v.into_owned()))` : pick(kept);
 }
 
 export function sliced(v: Val): string {
@@ -104,6 +112,7 @@ export function arrow(s: Scope, fn: N, list: Val, of: Ty, byRef: boolean, method
   if (index && index.type !== "Identifier") fail(comp, "FV0807", "an arrow function's index is a plain name", index);
   const p = fresh(of.k === "str" ? "s" : "a", item?.type === "Identifier" ? jsHint(item.name) : "item");
   const i = fresh("i", index ? jsHint(index.name) : "index");
+  itemsHeld(p, items(list));
   const v = itemOf?.(p) ?? itemVal(of, p, byRef, list.lone);
   const locals = new Map(s.locals);
   const bound: string[] = [];
@@ -207,7 +216,7 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
   const lone = target.lone ? { lone: true as const } : {};
   if (target.iter !== undefined) {
     const got = fromIter(target.iter);
-    if (of.k === "str") return { code: `${atom(got)}.as_deref()`, ty: opt(STR), held: `${got}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
+    if (of.k === "str") return { code: `${atom(got)}.as_deref()`, ty: opt(STR), held: heldPick(target.iter, fromIter), ...lone };
     if (["int", "float", "bool", "date", "struct", "child", "entry"].includes(of.k)) return { code: got, ty: opt(of), ...lone };
   } else {
     const got = fromList(atom(target.code));
@@ -372,9 +381,10 @@ export function listMethod(s: Scope, target: Val, method: string, given: N[], n:
       const { closure, enumerate } = arrow(s, fn, target, of, true, method, (inner) => cond(inner, fn.body));
       const from = method === "find" ? it : backwards(target);
       const rev = method === "find" ? "" : ".rev()";
-      const found = enumerate ? `${from}.enumerate()${rev}.find(${closure}).map(|(_, v)| v)` : `${from}${rev}.find(${closure})`;
+      const pick = (each: string): string => (enumerate ? `${each}.enumerate()${rev}.find(${closure}).map(|(_, v)| v)` : `${each}${rev}.find(${closure})`);
+      const found = pick(from);
       const lone = target.lone ? { lone: true } : {};
-      if (of.k === "str") return { code: `${atom(found)}.as_deref()`, ty: opt(STR), held: `${found}.map(|v| ${COW}::Owned(v.into_owned()))`, ...lone };
+      if (of.k === "str") return { code: `${atom(found)}.as_deref()`, ty: opt(STR), held: heldPick(from, pick), ...lone };
       return { code: found, ty: opt(of), ...lone };
     }
     default: {

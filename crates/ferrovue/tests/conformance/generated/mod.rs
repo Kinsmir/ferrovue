@@ -25,6 +25,7 @@ pub mod badge;
 pub mod blank;
 pub mod bool_kid;
 pub mod bool_shorthand;
+pub mod borrowed_lists;
 pub mod bound_object;
 pub mod branches;
 pub mod builtins;
@@ -456,6 +457,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "BoolShorthand" => {
             let props: bool_shorthand::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             bool_shorthand::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "BorrowedLists" => {
+            let props: borrowed_lists::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            borrowed_lists::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "BoundObject" => {
             let props: bound_object::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

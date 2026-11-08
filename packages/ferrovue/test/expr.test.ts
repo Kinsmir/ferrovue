@@ -500,7 +500,7 @@ describe("optional chains", () => {
       "if let Some(v) = props.s.as_deref().map(|fv_o1| Cow::<str>::Owned(fv_o1.to_uppercase())).as_deref().and_then(|fv_o2| fv::strings::js_at(fv_o2, 0.0f64).map(|v| Cow::<str>::Owned(v.to_owned()))).as_deref() {",
     ));
     expect(render("defineProps<{ l?: string[] }>();", '<p v-for="x in l?.filter((y) => !!y) ?? []">{{ x }}</p>')).toMatch(like(
-      "for x_ref in props.l.as_ref().map(|fv_o1| fv_o1.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_s2| !fv_s2.is_empty()).map(|v| Cow::<str>::Owned(v.into_owned())).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {",
+      "for x_ref in props.l.as_ref().map(|fv_o1| fv_o1.iter().map(|v| Cow::<str>::Borrowed(&**v)).filter(|fv_s2| !fv_s2.is_empty()).collect::<Vec<_>>()).as_deref().unwrap_or(&[]).iter() {",
     ));
   });
 });
