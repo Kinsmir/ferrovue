@@ -1214,6 +1214,118 @@
       "/books//"
     ]
   },
+  "options": {
+    "routes": [
+      {
+        "path": "/",
+        "name": "home"
+      },
+      {
+        "path": "/a",
+        "name": "a"
+      },
+      {
+        "path": "/a/:b?",
+        "name": "ab"
+      },
+      {
+        "path": "/Up",
+        "name": "up"
+      },
+      {
+        "path": "/users/:id",
+        "name": "user",
+        "children": [
+          {
+            "path": "",
+            "name": "user-home"
+          },
+          {
+            "path": "posts",
+            "name": "user-posts"
+          }
+        ]
+      },
+      {
+        "path": "/docs/:rest(.*)",
+        "name": "docs"
+      },
+      {
+        "path": "/files/:name",
+        "name": "file"
+      },
+      {
+        "path": "/:other(.*)",
+        "name": "other"
+      }
+    ],
+    "settings": [
+      {
+        "strict": true
+      },
+      {
+        "sensitive": true
+      },
+      {
+        "strict": true,
+        "sensitive": true
+      }
+    ],
+    "locations": [
+      "/",
+      "//",
+      "///",
+      "/a",
+      "/a/",
+      "/A",
+      "/a/x",
+      "/a/x/",
+      "/A/x",
+      "/up",
+      "/Up",
+      "/UP/",
+      "/users/7",
+      "/users/7/",
+      "/USERS/7/posts",
+      "/users/7/posts/",
+      "/docs/A/b/",
+      "/Docs/a",
+      "/files/x",
+      "/Files/X",
+      "/files/x/",
+      "/nomatch/"
+    ],
+    "links": [
+      [
+        "/users/7",
+        "/users/7/"
+      ],
+      [
+        "/users/7/posts",
+        "/Users/7"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7"
+      ],
+      [
+        "/a",
+        "/a/"
+      ],
+      [
+        "/Up",
+        "/up"
+      ],
+      [
+        "/a/x",
+        "/A/x"
+      ],
+      [
+        "/files/x/",
+        "/files/x"
+      ]
+    ]
+  },
   "expected": [
     [
       "/blog/intro",
@@ -2524,5 +2636,566 @@
         }
       }
     ]
-  }
+  },
+  "expectedOptions": [
+    {
+      "links": [
+        [
+          "/users/7/",
+          false,
+          false
+        ],
+        [
+          "/Users/7",
+          true,
+          false
+        ],
+        [
+          "/users/7",
+          true,
+          false
+        ],
+        [
+          "/a/",
+          false,
+          false
+        ],
+        [
+          "/up",
+          true,
+          true
+        ],
+        [
+          "/A/x",
+          true,
+          true
+        ],
+        [
+          "/files/x",
+          false,
+          false
+        ]
+      ],
+      "locations": [
+        {
+          "path": "/",
+          "name": "home",
+          "params": {}
+        },
+        {
+          "path": "//",
+          "name": "other",
+          "params": {
+            "other": "/"
+          }
+        },
+        {
+          "path": "///",
+          "name": "other",
+          "params": {
+            "other": "//"
+          }
+        },
+        {
+          "path": "/a",
+          "name": "a",
+          "params": {}
+        },
+        {
+          "path": "/a/",
+          "name": "other",
+          "params": {
+            "other": "a/"
+          }
+        },
+        {
+          "path": "/A",
+          "name": "a",
+          "params": {}
+        },
+        {
+          "path": "/a/x",
+          "name": "ab",
+          "params": {
+            "b": "x"
+          }
+        },
+        {
+          "path": "/a/x/",
+          "name": "other",
+          "params": {
+            "other": "a/x/"
+          }
+        },
+        {
+          "path": "/A/x",
+          "name": "ab",
+          "params": {
+            "b": "x"
+          }
+        },
+        {
+          "path": "/up",
+          "name": "up",
+          "params": {}
+        },
+        {
+          "path": "/Up",
+          "name": "up",
+          "params": {}
+        },
+        {
+          "path": "/UP/",
+          "name": "other",
+          "params": {
+            "other": "UP/"
+          }
+        },
+        {
+          "path": "/users/7",
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        },
+        {
+          "path": "/users/7/",
+          "name": "other",
+          "params": {
+            "other": "users/7/"
+          }
+        },
+        {
+          "path": "/USERS/7/posts",
+          "name": "user-posts",
+          "params": {
+            "id": "7"
+          }
+        },
+        {
+          "path": "/users/7/posts/",
+          "name": "other",
+          "params": {
+            "other": "users/7/posts/"
+          }
+        },
+        {
+          "path": "/docs/A/b/",
+          "name": "docs",
+          "params": {
+            "rest": "A/b/"
+          }
+        },
+        {
+          "path": "/Docs/a",
+          "name": "docs",
+          "params": {
+            "rest": "a"
+          }
+        },
+        {
+          "path": "/files/x",
+          "name": "file",
+          "params": {
+            "name": "x"
+          }
+        },
+        {
+          "path": "/Files/X",
+          "name": "file",
+          "params": {
+            "name": "X"
+          }
+        },
+        {
+          "path": "/files/x/",
+          "name": "other",
+          "params": {
+            "other": "files/x/"
+          }
+        },
+        {
+          "path": "/nomatch/",
+          "name": "other",
+          "params": {
+            "other": "nomatch/"
+          }
+        }
+      ]
+    },
+    {
+      "links": [
+        [
+          "/users/7/",
+          true,
+          true
+        ],
+        [
+          "/Users/7",
+          false,
+          false
+        ],
+        [
+          "/users/7",
+          true,
+          false
+        ],
+        [
+          "/a/",
+          true,
+          true
+        ],
+        [
+          "/up",
+          false,
+          false
+        ],
+        [
+          "/A/x",
+          false,
+          false
+        ],
+        [
+          "/files/x",
+          true,
+          true
+        ]
+      ],
+      "locations": [
+        {
+          "path": "/",
+          "name": "home",
+          "params": {}
+        },
+        {
+          "path": "//",
+          "name": "home",
+          "params": {}
+        },
+        {
+          "path": "///",
+          "name": "other",
+          "params": {
+            "other": "//"
+          }
+        },
+        {
+          "path": "/a",
+          "name": "ab",
+          "params": {}
+        },
+        {
+          "path": "/a/",
+          "name": "ab",
+          "params": {}
+        },
+        {
+          "path": "/A",
+          "name": "other",
+          "params": {
+            "other": "A"
+          }
+        },
+        {
+          "path": "/a/x",
+          "name": "ab",
+          "params": {
+            "b": "x"
+          }
+        },
+        {
+          "path": "/a/x/",
+          "name": "ab",
+          "params": {
+            "b": "x"
+          }
+        },
+        {
+          "path": "/A/x",
+          "name": "other",
+          "params": {
+            "other": "A/x"
+          }
+        },
+        {
+          "path": "/up",
+          "name": "other",
+          "params": {
+            "other": "up"
+          }
+        },
+        {
+          "path": "/Up",
+          "name": "up",
+          "params": {}
+        },
+        {
+          "path": "/UP/",
+          "name": "other",
+          "params": {
+            "other": "UP/"
+          }
+        },
+        {
+          "path": "/users/7",
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        },
+        {
+          "path": "/users/7/",
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        },
+        {
+          "path": "/USERS/7/posts",
+          "name": "other",
+          "params": {
+            "other": "USERS/7/posts"
+          }
+        },
+        {
+          "path": "/users/7/posts/",
+          "name": "user-posts",
+          "params": {
+            "id": "7"
+          }
+        },
+        {
+          "path": "/docs/A/b/",
+          "name": "docs",
+          "params": {
+            "rest": "A/b/"
+          }
+        },
+        {
+          "path": "/Docs/a",
+          "name": "other",
+          "params": {
+            "other": "Docs/a"
+          }
+        },
+        {
+          "path": "/files/x",
+          "name": "file",
+          "params": {
+            "name": "x"
+          }
+        },
+        {
+          "path": "/Files/X",
+          "name": "other",
+          "params": {
+            "other": "Files/X"
+          }
+        },
+        {
+          "path": "/files/x/",
+          "name": "file",
+          "params": {
+            "name": "x"
+          }
+        },
+        {
+          "path": "/nomatch/",
+          "name": "other",
+          "params": {
+            "other": "nomatch/"
+          }
+        }
+      ]
+    },
+    {
+      "links": [
+        [
+          "/users/7/",
+          false,
+          false
+        ],
+        [
+          "/Users/7",
+          false,
+          false
+        ],
+        [
+          "/users/7",
+          true,
+          false
+        ],
+        [
+          "/a/",
+          false,
+          false
+        ],
+        [
+          "/up",
+          false,
+          false
+        ],
+        [
+          "/A/x",
+          false,
+          false
+        ],
+        [
+          "/files/x",
+          false,
+          false
+        ]
+      ],
+      "locations": [
+        {
+          "path": "/",
+          "name": "home",
+          "params": {}
+        },
+        {
+          "path": "//",
+          "name": "other",
+          "params": {
+            "other": "/"
+          }
+        },
+        {
+          "path": "///",
+          "name": "other",
+          "params": {
+            "other": "//"
+          }
+        },
+        {
+          "path": "/a",
+          "name": "a",
+          "params": {}
+        },
+        {
+          "path": "/a/",
+          "name": "other",
+          "params": {
+            "other": "a/"
+          }
+        },
+        {
+          "path": "/A",
+          "name": "other",
+          "params": {
+            "other": "A"
+          }
+        },
+        {
+          "path": "/a/x",
+          "name": "ab",
+          "params": {
+            "b": "x"
+          }
+        },
+        {
+          "path": "/a/x/",
+          "name": "other",
+          "params": {
+            "other": "a/x/"
+          }
+        },
+        {
+          "path": "/A/x",
+          "name": "other",
+          "params": {
+            "other": "A/x"
+          }
+        },
+        {
+          "path": "/up",
+          "name": "other",
+          "params": {
+            "other": "up"
+          }
+        },
+        {
+          "path": "/Up",
+          "name": "up",
+          "params": {}
+        },
+        {
+          "path": "/UP/",
+          "name": "other",
+          "params": {
+            "other": "UP/"
+          }
+        },
+        {
+          "path": "/users/7",
+          "name": "user-home",
+          "params": {
+            "id": "7"
+          }
+        },
+        {
+          "path": "/users/7/",
+          "name": "other",
+          "params": {
+            "other": "users/7/"
+          }
+        },
+        {
+          "path": "/USERS/7/posts",
+          "name": "other",
+          "params": {
+            "other": "USERS/7/posts"
+          }
+        },
+        {
+          "path": "/users/7/posts/",
+          "name": "other",
+          "params": {
+            "other": "users/7/posts/"
+          }
+        },
+        {
+          "path": "/docs/A/b/",
+          "name": "docs",
+          "params": {
+            "rest": "A/b/"
+          }
+        },
+        {
+          "path": "/Docs/a",
+          "name": "other",
+          "params": {
+            "other": "Docs/a"
+          }
+        },
+        {
+          "path": "/files/x",
+          "name": "file",
+          "params": {
+            "name": "x"
+          }
+        },
+        {
+          "path": "/Files/X",
+          "name": "other",
+          "params": {
+            "other": "Files/X"
+          }
+        },
+        {
+          "path": "/files/x/",
+          "name": "other",
+          "params": {
+            "other": "files/x/"
+          }
+        },
+        {
+          "path": "/nomatch/",
+          "name": "other",
+          "params": {
+            "other": "nomatch/"
+          }
+        }
+      ]
+    }
+  ]
 }

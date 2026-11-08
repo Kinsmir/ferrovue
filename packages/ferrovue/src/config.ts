@@ -78,6 +78,10 @@ export interface Config {
     linkActiveClass?: string;
     /** The class of a link to exactly the current route. */
     linkExactActiveClass?: string;
+    /** `createRouter`'s `strict`: a path matches a route only without a trailing slash. */
+    strict?: boolean;
+    /** `createRouter`'s `sensitive`: a path's static text matches only in the case its route writes it. */
+    sensitive?: boolean;
   };
   /** The directory of Pinia stores (`.ts` files), whose state a component may read while it renders
    * on the server. */

@@ -19,6 +19,8 @@ export interface LinkRouterOptions {
     linkExactActiveClass?: string;
     location?: string;
     navigate: (href: string, to: RouteLocationNormalized) => void;
+    sensitive?: boolean;
+    strict?: boolean;
 }
 
 // (No @packageDocumentation comment for this package)

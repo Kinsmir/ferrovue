@@ -1213,5 +1213,117 @@
       "//cart",
       "/books//"
     ]
+  },
+  "options": {
+    "routes": [
+      {
+        "path": "/",
+        "name": "home"
+      },
+      {
+        "path": "/a",
+        "name": "a"
+      },
+      {
+        "path": "/a/:b?",
+        "name": "ab"
+      },
+      {
+        "path": "/Up",
+        "name": "up"
+      },
+      {
+        "path": "/users/:id",
+        "name": "user",
+        "children": [
+          {
+            "path": "",
+            "name": "user-home"
+          },
+          {
+            "path": "posts",
+            "name": "user-posts"
+          }
+        ]
+      },
+      {
+        "path": "/docs/:rest(.*)",
+        "name": "docs"
+      },
+      {
+        "path": "/files/:name",
+        "name": "file"
+      },
+      {
+        "path": "/:other(.*)",
+        "name": "other"
+      }
+    ],
+    "settings": [
+      {
+        "strict": true
+      },
+      {
+        "sensitive": true
+      },
+      {
+        "strict": true,
+        "sensitive": true
+      }
+    ],
+    "locations": [
+      "/",
+      "//",
+      "///",
+      "/a",
+      "/a/",
+      "/A",
+      "/a/x",
+      "/a/x/",
+      "/A/x",
+      "/up",
+      "/Up",
+      "/UP/",
+      "/users/7",
+      "/users/7/",
+      "/USERS/7/posts",
+      "/users/7/posts/",
+      "/docs/A/b/",
+      "/Docs/a",
+      "/files/x",
+      "/Files/X",
+      "/files/x/",
+      "/nomatch/"
+    ],
+    "links": [
+      [
+        "/users/7",
+        "/users/7/"
+      ],
+      [
+        "/users/7/posts",
+        "/Users/7"
+      ],
+      [
+        "/users/7/posts",
+        "/users/7"
+      ],
+      [
+        "/a",
+        "/a/"
+      ],
+      [
+        "/Up",
+        "/up"
+      ],
+      [
+        "/a/x",
+        "/A/x"
+      ],
+      [
+        "/files/x/",
+        "/files/x"
+      ]
+    ]
   }
 }

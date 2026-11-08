@@ -24,6 +24,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Seeing what a change renders](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html#seeing-what-a-change-renders).
 - `ferrovue::page::Chunks` reads each chunk's `css` from Vite's manifest, and `Stylesheets` writes the `<link rel="stylesheet">`s of an entry, its lazily loaded islands included, and of the islands a page renders.
   [Linking the stylesheets](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#linking-the-stylesheets).
+- `"strict"` and `"sensitive"` under `router` match paths as `createRouter`'s options do, through `Router::with_strict` and `Router::with_sensitive` on the server and `linkRoutes` on the client.
+  [Matching paths exactly](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#matching-paths-exactly).
 
 ### Changed
 

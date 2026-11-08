@@ -226,6 +226,18 @@
           "markdownDescription": "The class of a link to exactly the current route.",
           "type": "string",
           "default": "router-link-exact-active"
+        },
+        "strict": {
+          "description": "`createRouter`'s `strict`: a path matches a route only without a trailing slash.",
+          "markdownDescription": "`createRouter`'s `strict`: a path matches a route only without a trailing slash.",
+          "type": "boolean",
+          "default": false
+        },
+        "sensitive": {
+          "description": "`createRouter`'s `sensitive`: a path's static text matches only in the case its route writes it.",
+          "markdownDescription": "`createRouter`'s `sensitive`: a path's static text matches only in the case its route writes it.",
+          "type": "boolean",
+          "default": false
         }
       },
       "required": [

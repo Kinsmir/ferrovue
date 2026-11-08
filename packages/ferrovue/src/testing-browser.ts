@@ -65,6 +65,10 @@ export interface RouterOptions {
   base?: string;
   linkActiveClass?: string;
   linkExactActiveClass?: string;
+  /** `createRouter`'s `strict`, as `router.strict` in `ferrovue.config.json` gives it. */
+  strict?: boolean;
+  /** `createRouter`'s `sensitive`, as `router.sensitive` in `ferrovue.config.json` gives it. */
+  sensitive?: boolean;
   /** vue-i18n, when the project translates: every locale's messages, the default locale, and the
    * fallbacks. */
   i18n?: { messages: Record<string, unknown>; locale: string; fallbackLocale?: string | string[] };
@@ -119,6 +123,8 @@ async function installRouter(app: App, fixture: Fixture, routes: RouteEntry[], o
     routes: routeRecords(routes, View),
     ...(options.linkActiveClass !== undefined ? { linkActiveClass: options.linkActiveClass } : {}),
     ...(options.linkExactActiveClass !== undefined ? { linkExactActiveClass: options.linkExactActiveClass } : {}),
+    ...(options.strict !== undefined ? { strict: options.strict } : {}),
+    ...(options.sensitive !== undefined ? { sensitive: options.sensitive } : {}),
   });
   app.use(router);
   await router.push(fixture.route);

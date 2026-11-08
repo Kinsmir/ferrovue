@@ -5,8 +5,8 @@ use proptest::prelude::*;
 
 proptest! {
     #[test]
-    fn any_location_and_link_resolve_without_panicking(at in any::<String>(), to in any::<String>()) {
-        let router = Router::new(&["/", "/a/:x", "/a/:x/b", "/w/:rest(.*)"]);
+    fn any_location_and_link_resolve_without_panicking(at in any::<String>(), to in any::<String>(), strict in any::<bool>(), sensitive in any::<bool>()) {
+        let router = Router::new(&["/", "/a/:x", "/a/:x/b", "/w/:rest(.*)"]).with_strict(strict).with_sensitive(sensitive);
         let at = format!("/{at}");
         let _ = router.at(&at).link(&to);
     }

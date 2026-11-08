@@ -135,10 +135,12 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
   if (raw.routes !== undefined) routesSource(raw.routes, "routes");
   if (raw.router !== undefined) {
     const r = raw.router;
-    if (!isObject(r)) return wrong("router", "an object: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`");
+    if (!isObject(r)) return wrong("router", "an object: `{ routes, base?, linkActiveClass?, linkExactActiveClass?, strict?, sensitive? }`");
     keys(r, "router", shape.router);
     routesSource(r.routes, "router.routes");
     for (const key of ["base", "linkActiveClass", "linkExactActiveClass"]) string(r, key, `router.${key}`);
+    if (r.strict !== undefined && typeof r.strict !== "boolean") wrong("router.strict", "`true` or `false`: whether a path matches a route only without a trailing slash, as `createRouter`'s `strict`");
+    if (r.sensitive !== undefined && typeof r.sensitive !== "boolean") wrong("router.sensitive", "`true` or `false`: whether a path's static text matches only in its route's case, as `createRouter`'s `sensitive`");
   }
   if (raw.i18n !== undefined) {
     const i = raw.i18n;

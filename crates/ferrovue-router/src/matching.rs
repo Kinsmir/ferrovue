@@ -8,6 +8,9 @@ pub(crate) struct Pattern {
     pub(crate) score: Vec<i32>,
     pub(crate) name: Option<String>,
     pub(crate) matchable: bool,
+    pub(crate) seq: usize,
+    pub(crate) strict: bool,
+    pub(crate) sensitive: bool,
 }
 
 pub(crate) enum Token {
@@ -79,11 +82,12 @@ impl Captured for Option<&str> {
     }
 }
 
-pub(crate) const ROOT: i32 = 90;
-pub(crate) const STATIC: i32 = 80;
-pub(crate) const PARAM: i32 = 60;
-pub(crate) const OPTIONAL: i32 = 52;
-pub(crate) const WILDCARD: i32 = 20;
+pub(crate) const ROOT: i32 = 9000;
+pub(crate) const STATIC: i32 = 8000;
+pub(crate) const PARAM: i32 = 6000;
+pub(crate) const OPTIONAL: i32 = 5200;
+pub(crate) const WILDCARD: i32 = 2000;
+pub(crate) const STRICT: i32 = 70;
 
 impl Router {
     pub(crate) fn up(&self, mut from: usize, to: usize) -> Option<usize> {
@@ -183,19 +187,12 @@ impl Pattern {
         let Some(rest) = path.strip_prefix('/') else {
             panic!("a route path starts with `/`: {path:?}");
         };
-        if rest.is_empty() {
-            return Pattern {
-                path: path.to_owned(),
-                parent: None,
-                tokens: Vec::new(),
-                score: vec![ROOT],
-                name,
-                matchable: true,
-            };
-        }
-        let segments: Vec<&str> = rest.split('/').collect();
+        let segments: Vec<&str> = if rest.is_empty() {
+            Vec::new()
+        } else {
+            rest.split('/').collect()
+        };
         let mut tokens = Vec::new();
-        let mut score = Vec::new();
         for (i, seg) in segments.iter().enumerate() {
             if let Some(param) = seg.strip_prefix(':') {
                 let (param, optional) = match param.strip_suffix('?') {
@@ -222,27 +219,47 @@ impl Pattern {
                     wildcard,
                     optional,
                 });
-                score.push(match (wildcard, optional) {
-                    (true, _) => WILDCARD,
-                    (false, true) => OPTIONAL,
-                    (false, false) => PARAM,
-                });
             } else {
                 let plain = !seg.is_empty()
                     && seg.is_ascii()
                     && !seg.contains([':', '(', ')', '*', '?', '+', '\\']);
                 assert!(plain, "a static segment is plain ASCII text: {path:?}");
                 tokens.push(Token::Static((*seg).to_owned()));
-                score.push(STATIC);
             }
         }
-        Pattern {
+        let mut pattern = Pattern {
             path: path.to_owned(),
             parent: None,
             tokens,
-            score,
+            score: Vec::new(),
             name,
             matchable: true,
+            seq: 0,
+            strict: false,
+            sensitive: false,
+        };
+        pattern.set_matching(false, false);
+        pattern
+    }
+
+    pub(crate) fn set_matching(&mut self, strict: bool, sensitive: bool) {
+        self.strict = strict;
+        self.sensitive = sensitive;
+        self.score = if self.tokens.is_empty() {
+            vec![ROOT]
+        } else {
+            self.tokens
+                .iter()
+                .map(|t| match t {
+                    Token::Static(_) => STATIC,
+                    Token::Param { wildcard: true, .. } => WILDCARD,
+                    Token::Param { optional: true, .. } => OPTIONAL,
+                    Token::Param { .. } => PARAM,
+                })
+                .collect()
+        };
+        if strict && let Some(last) = self.score.last_mut() {
+            *last += STRICT;
         }
     }
 
@@ -259,7 +276,11 @@ impl Pattern {
         params: &mut C,
     ) -> bool {
         let Some((token, after)) = tokens.split_first() else {
-            return matches!(rest, "" | "/") || (self.tokens.is_empty() && rest == "//");
+            return match (self.strict, self.tokens.is_empty()) {
+                (true, true) => rest == "/",
+                (true, false) => rest.is_empty(),
+                (false, root) => matches!(rest, "" | "/") || (root && rest == "//"),
+            };
         };
         match token {
             Token::Static(text) => {
@@ -267,7 +288,9 @@ impl Pattern {
                     return false;
                 };
                 match rest.get(..text.len()) {
-                    Some(head) if head.eq_ignore_ascii_case(text) => {
+                    Some(head)
+                        if head == text || (!self.sensitive && head.eq_ignore_ascii_case(text)) =>
+                    {
                         self.parse_from(after, &rest[text.len()..], params)
                     }
                     _ => false,

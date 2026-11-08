@@ -112,6 +112,14 @@ defineProps<{ id: string }>();
       expect(same.get("x.rs")).toContain('fv::attrs::link_to_open(out, fv_route, &format!("/users/{}", props.id), "a&quot;&lt;b&gt;", "", "same", &[], false);');
       expect(out.get("route_table.rs")).toContain('pub const BASE: &str = "/app/";');
       expect(out.get("route_table.rs")).toContain('ferrovue::router::RouteDef::new("/users/:id").with_name("user"),');
+      expect(out.get("route_table.rs")).toContain("ferrovue::router::Router::tree(ROUTES).with_base(BASE)\n}");
+    });
+
+    it("builds the router with vue-router's strict and sensitive matching when configured", () => {
+      const both = named(island(linkTo("'/users/' + id")), { strict: true, sensitive: true });
+      expect(both.get("route_table.rs")).toContain("ferrovue::router::Router::tree(ROUTES).with_base(BASE).with_strict(true).with_sensitive(true)\n}");
+      const strict = named(island(linkTo("'/users/' + id")), { strict: true, sensitive: false });
+      expect(strict.get("route_table.rs")).toContain("ferrovue::router::Router::tree(ROUTES).with_base(BASE).with_strict(true)\n}");
     });
 
     it("keeps the spaces of the class names configured or given, as vue-router's class object does", () => {

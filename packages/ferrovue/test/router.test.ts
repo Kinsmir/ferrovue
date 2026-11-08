@@ -15,6 +15,19 @@ interface Vectors {
   bases: Array<[string, string, string]>;
   nested: NestedVectors;
   files: NestedVectors;
+  options: OptionVectors;
+}
+
+interface Matching {
+  strict?: boolean;
+  sensitive?: boolean;
+}
+
+interface OptionVectors {
+  routes: NestedRoute[];
+  settings: Matching[];
+  locations: string[];
+  links: Array<[string, string]>;
 }
 
 interface NestedVectors {
@@ -44,7 +57,7 @@ function makeRouter(base?: string): Router {
   });
 }
 
-function makeNestedRouter(routes: NestedRoute[]): Router {
+function makeNestedRouter(routes: NestedRoute[], matching: Matching = {}): Router {
   const View = defineComponent({ render: () => null });
   const records = (list: NestedRoute[]): RouteRecordRaw[] =>
     list.map((r) => ({
@@ -53,11 +66,11 @@ function makeNestedRouter(routes: NestedRoute[]): Router {
       ...(r.name ? { name: r.name } : {}),
       ...(r.children ? { children: records(r.children) } : {}),
     }));
-  return createRouter({ history: createMemoryHistory(), routes: records(routes) });
+  return createRouter({ history: createMemoryHistory(), routes: records(routes), ...matching });
 }
 
-async function nestedLink(routes: NestedRoute[], at: string, to: RouteLocationRaw): Promise<[string, boolean, boolean]> {
-  const router = makeNestedRouter(routes);
+async function nestedLink(routes: NestedRoute[], at: string, to: RouteLocationRaw, matching: Matching = {}): Promise<[string, boolean, boolean]> {
+  const router = makeNestedRouter(routes, matching);
   const app = createSSRApp({ render: () => h(RouterLink, { to }, () => "x") });
   app.use(router);
   await router.push(at);
@@ -118,12 +131,31 @@ async function recordNested(v: NestedVectors): Promise<{
   return recorded;
 }
 
+async function recordOptions(v: OptionVectors): Promise<Array<{
+  links: Array<[string, boolean, boolean]>;
+  locations: Array<{ path: string; name: string | null; params: Record<string, string> }>;
+}>> {
+  const recorded = [];
+  for (const matching of v.settings) {
+    const links: Array<[string, boolean, boolean]> = [];
+    for (const [at, to] of v.links) links.push(await nestedLink(v.routes, at, to, matching));
+    const locations: Array<{ path: string; name: string | null; params: Record<string, string> }> = [];
+    for (const at of v.locations) {
+      const r = makeNestedRouter(v.routes, matching).resolve(at);
+      locations.push({ path: r.path, name: typeof r.name === "string" ? r.name : null, params: r.params as Record<string, string> });
+    }
+    recorded.push({ links, locations });
+  }
+  return recorded;
+}
+
 it("holds every router vector it was written with", () => {
   const sizes = (v: NestedVectors): number[] => [v.links.length, v.named.length, v.locations.length];
   const floor = (got: number[], least: number[]): number[] => got.map((n, i) => Math.min(n, least[i]!));
   expect(floor([vectors.links.length, vectors.objects.length, vectors.locations.length, vectors.bases.length], [56, 22, 21, 6])).toEqual([56, 22, 21, 6]);
   expect(floor(sizes(vectors.nested), [25, 6, 10])).toEqual([25, 6, 10]);
   expect(floor(sizes(vectors.files), [37, 22, 26])).toEqual([37, 22, 26]);
+  expect(floor([vectors.options.settings.length, vectors.options.locations.length, vectors.options.links.length], [3, 22, 7])).toEqual([3, 22, 7]);
 });
 
 it("records what RouterLink and useRoute() give for each vector", async () => {
@@ -149,6 +181,7 @@ it("records what RouterLink and useRoute() give for each vector", async () => {
       expectedBases: bases,
       expectedNested: await recordNested(vectors.nested),
       expectedFiles: await recordNested(vectors.files),
+      expectedOptions: await recordOptions(vectors.options),
     };
     if (process.env.FERROVUE_VECTORS_WRITE === "1") {
       writeFileSync(EXPECTED, JSON.stringify(recorded, null, 2) + "\n");

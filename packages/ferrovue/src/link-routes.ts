@@ -15,6 +15,10 @@ export interface LinkRoutesOptions {
   linkActiveClass?: string;
   /** As `router.linkExactActiveClass` in `ferrovue.config.json`. */
   linkExactActiveClass?: string;
+  /** As `router.strict` in `ferrovue.config.json`: a path matches a route only without a trailing slash. */
+  strict?: boolean;
+  /** As `router.sensitive` in `ferrovue.config.json`: a path's static text matches only in its route's case. */
+  sensitive?: boolean;
   /** The location of the page, as an `href` with the base (the one `navigate` is given). The
    * browser's location by default. */
   location?: string;
@@ -152,15 +156,16 @@ function compare(a: Matcher, b: Matcher): number {
   return b.score.length - a.score.length;
 }
 
-function matcherOf(record: RouteRecord, parent: Matcher | undefined, matchable: boolean): Matcher {
+function matcherOf(record: RouteRecord, parent: Matcher | undefined, matchable: boolean, strict: boolean, sensitive: boolean): Matcher {
   const segments = tokenize(record.path);
   const score: number[][] = [];
   const keys: Key[] = [];
   let pattern = "^";
   for (const segment of segments) {
     const scores = segment.length ? [] : [90];
+    if (strict && !segment.length) pattern += "/";
     segment.forEach((token, index) => {
-      let s = 40;
+      let s = 40 + (sensitive ? 0.25 : 0);
       if (typeof token === "string") {
         if (!index) pattern += "/";
         pattern += token.replace(/[.+*?^${}()[\]/\\]/g, "\\$&");
@@ -178,7 +183,11 @@ function matcherOf(record: RouteRecord, parent: Matcher | undefined, matchable: 
     });
     score.push(scores);
   }
-  return { re: new RegExp(pattern + "/?$", "i"), score, keys, segments, record, parent, matchable };
+  if (strict) {
+    const last = score.at(-1)!;
+    last[last.length - 1]! += 0.7000000000000001;
+  }
+  return { re: new RegExp(pattern + (strict ? "$" : "/?$"), sensitive ? "" : "i"), score, keys, segments, record, parent, matchable };
 }
 
 function stringify(matcher: Matcher, params: Values): string {
@@ -339,7 +348,7 @@ export function linkRoutes(routes: RouteEntry[], options: LinkRoutesOptions): Li
       path = above + (path && (above.endsWith("/") ? "" : "/") + path);
     }
     const name = raw.name || undefined;
-    const matcher = matcherOf({ path, name, meta: {}, aliasOf: undefined }, parent, !!name || (raw as { view?: boolean }).view !== false);
+    const matcher = matcherOf({ path, name, meta: {}, aliasOf: undefined }, parent, !!name || (raw as { view?: boolean }).view !== false, options.strict ?? false, options.sensitive ?? false);
     if (matcher.matchable) {
       let lower = 0;
       let upper = matchers.length;
