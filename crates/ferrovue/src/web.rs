@@ -7,7 +7,11 @@ use std::ops::Range;
 #[cfg(feature = "stream")]
 use std::pin::Pin;
 #[cfg(feature = "stream")]
-use std::task::{Context, Poll};
+use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(feature = "stream")]
+use std::sync::{Arc, Mutex, PoisonError};
+#[cfg(feature = "stream")]
+use std::task::{Context, Poll, Wake, Waker};
 
 #[cfg(feature = "stream")]
 use bytes::Bytes;
@@ -30,6 +34,49 @@ const TEXT_HTML: &str = "text/html; charset=utf-8";
 enum Hole {
     Loading(Pin<Box<dyn Future<Output = String> + Send>>),
     Ready(String),
+}
+
+#[cfg(feature = "stream")]
+#[derive(Default)]
+struct Woken {
+    holes: Mutex<Vec<usize>>,
+    stream: Mutex<Option<Waker>>,
+}
+
+#[cfg(feature = "stream")]
+struct HoleWaker {
+    woken: Arc<Woken>,
+    hole: usize,
+    queued: AtomicBool,
+}
+
+#[cfg(feature = "stream")]
+impl HoleWaker {
+    fn queue(&self) {
+        if self.queued.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        locked(&self.woken.holes).push(self.hole);
+        if let Some(stream) = &*locked(&self.woken.stream) {
+            stream.wake_by_ref();
+        }
+    }
+}
+
+#[cfg(feature = "stream")]
+impl Wake for HoleWaker {
+    fn wake(self: Arc<Self>) {
+        self.queue();
+    }
+
+    fn wake_by_ref(self: &Arc<Self>) {
+        self.queue();
+    }
+}
+
+#[cfg(feature = "stream")]
+fn locked<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 /// A page rendered with [`hole`](crate::page::hole)s, sent in pieces: the markup up to the first hole at
@@ -74,6 +121,8 @@ pub struct HtmlStream {
     page: Bytes,
     pieces: Vec<Range<usize>>,
     holes: Vec<Hole>,
+    wakers: Vec<Arc<HoleWaker>>,
+    woken: Arc<Woken>,
     next: usize,
 }
 
@@ -93,6 +142,8 @@ impl HtmlStream {
             page: Bytes::from(rendered),
             pieces,
             holes: Vec::new(),
+            wakers: Vec::new(),
+            woken: Arc::default(),
             next: 0,
         }
     }
@@ -119,6 +170,13 @@ impl HtmlStream {
     #[must_use]
     pub fn hole(mut self, content: impl Future<Output = String> + Send + 'static) -> Self {
         if self.holes.len() + 1 < self.pieces.len() {
+            let waker = Arc::new(HoleWaker {
+                woken: Arc::clone(&self.woken),
+                hole: self.holes.len(),
+                queued: AtomicBool::new(false),
+            });
+            waker.queue();
+            self.wakers.push(waker);
             self.holes.push(Hole::Loading(Box::pin(content)));
         }
         self
@@ -183,11 +241,22 @@ impl Stream for HtmlStream {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let this = self.get_mut();
-        for hole in &mut this.holes {
-            if let Hole::Loading(content) = hole
-                && let Poll::Ready(html) = content.as_mut().poll(cx)
+        {
+            let mut stream = locked(&this.woken.stream);
+            if !stream.as_ref().is_some_and(|w| w.will_wake(cx.waker())) {
+                *stream = Some(cx.waker().clone());
+            }
+        }
+        let woken = std::mem::take(&mut *locked(&this.woken.holes));
+        for i in woken {
+            let waker = &this.wakers[i];
+            waker.queued.store(false, Ordering::Release);
+            if let Hole::Loading(content) = &mut this.holes[i]
+                && let Poll::Ready(html) = content
+                    .as_mut()
+                    .poll(&mut Context::from_waker(&Waker::from(Arc::clone(waker))))
             {
-                *hole = Hole::Ready(html);
+                this.holes[i] = Hole::Ready(html);
             }
         }
         loop {
@@ -603,6 +672,117 @@ mod tests {
         let stream = HtmlStream::new(page).holes([after(0, ""), after(0, "x")]);
         assert_eq!(chunks(stream).await, ["<!--[-->", "<!--]-->", "x"]);
         assert!(chunks(HtmlStream::new(String::new())).await.is_empty());
+    }
+
+    struct Slot {
+        filled: Arc<Mutex<(Option<String>, Option<Waker>)>>,
+        polls: Arc<std::sync::atomic::AtomicUsize>,
+    }
+
+    impl Future for Slot {
+        type Output = String;
+
+        fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<String> {
+            self.polls.fetch_add(1, Ordering::Relaxed);
+            let mut filled = locked(&self.filled);
+            if let Some(html) = filled.0.take() {
+                return Poll::Ready(html);
+            }
+            filled.1 = Some(cx.waker().clone());
+            Poll::Pending
+        }
+    }
+
+    fn fill(slot: &Mutex<(Option<String>, Option<Waker>)>, html: String) {
+        let waker = {
+            let mut filled = locked(slot);
+            filled.0 = Some(html);
+            filled.1.take()
+        };
+        if let Some(waker) = waker {
+            waker.wake();
+        }
+    }
+
+    #[test]
+    fn each_hole_is_polled_again_only_once_its_own_future_wakes() {
+        let count = 1000;
+        let mut page = String::from("<main>");
+        for _ in 0..count {
+            slot_into(&mut page, Some(hole()), None);
+        }
+        page.push_str("</main>");
+        let want: String = split_holes(&page)
+            .iter()
+            .enumerate()
+            .map(|(i, piece)| {
+                if i == 0 {
+                    (*piece).to_owned()
+                } else {
+                    format!("{i}{piece}")
+                }
+            })
+            .collect();
+        for order in [
+            (0..count).collect::<Vec<_>>(),
+            (0..count).rev().collect(),
+            (0..count).map(|i| (i * 7) % count).collect(),
+        ] {
+            let polls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+            let slots: Vec<_> = (0..count)
+                .map(|_| Arc::new(Mutex::new((None, None))))
+                .collect();
+            let mut stream = HtmlStream::new(page.clone()).holes(slots.iter().map(|filled| Slot {
+                filled: Arc::clone(filled),
+                polls: Arc::clone(&polls),
+            }));
+            let mut cx = Context::from_waker(Waker::noop());
+            let mut order = order.into_iter();
+            let mut sent = String::new();
+            loop {
+                match Pin::new(&mut stream).poll_next(&mut cx) {
+                    Poll::Ready(Some(Ok(chunk))) => {
+                        sent.push_str(std::str::from_utf8(&chunk).expect("UTF-8"));
+                    }
+                    Poll::Ready(None) => break,
+                    Poll::Pending => {
+                        let i = order.next().expect("a hole still loading");
+                        fill(&slots[i], (i + 1).to_string());
+                    }
+                }
+            }
+            assert_eq!(sent, want);
+            assert_eq!(polls.load(Ordering::Relaxed), 2 * count);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_hole_woken_from_another_thread_or_while_it_is_polled_is_polled_again() {
+        let filled = Arc::new(Mutex::new((None, None)));
+        let elsewhere = Arc::clone(&filled);
+        let mut yielded = false;
+        let stream = HtmlStream::new(two_holes())
+            .hole(Slot {
+                filled,
+                polls: Arc::default(),
+            })
+            .hole(poll_fn(move |cx| {
+                if yielded {
+                    return Poll::Ready(String::from("b"));
+                }
+                yielded = true;
+                cx.waker().wake_by_ref();
+                Poll::Pending
+            }));
+        let thread = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(20));
+            fill(&elsewhere, String::from("a"));
+        });
+        assert_eq!(
+            chunks(stream).await.concat(),
+            "<h1><!--[-->a<!--]--></h1><aside><!--[-->b<!--]--></aside>"
+        );
+        thread.join().expect("the thread fills the hole");
     }
 
     #[cfg(feature = "axum")]
