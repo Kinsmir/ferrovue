@@ -104,7 +104,7 @@
     "prepack": "pnpm run build && cp ../../README.md ../../LICENSE-MIT ../../LICENSE-APACHE ."
   },
   "dependencies": {
-    "@babel/parser": "^7.29.11",
+    "@babel/parser": "^7.29.12",
     "@intlify/message-compiler": "catalog:",
     "@vue/compiler-sfc": "catalog:",
     "@vue/shared": "catalog:",
