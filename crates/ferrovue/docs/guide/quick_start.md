@@ -43,7 +43,7 @@ network access, point it at the installed package: `"./node_modules/ferrovue/sch
 | `components` | yes | Directory of `.vue` files to compile |
 | `out` | yes | Directory the Rust modules are written to. **Every module ferrovue wrote there is replaced**, and one no component produces any more is removed; a `.rs` file without ferrovue's `// @generated` header is left alone |
 | `routes` | no | JSON file listing the app's routes: each a vue-router path, or `{ "path", "name", "children" }`. Needed for `<RouterLink>`, `<RouterView>` and `useRoute()`. See [`routing`](crate::guide::routing) |
-| `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass? }`, matching `createWebHistory(base)` and `createRouter`'s options |
+| `router` | no | Instead of `routes`: `{ routes, base?, linkActiveClass?, linkExactActiveClass?, strict?, sensitive? }`, matching `createWebHistory(base)` and `createRouter`'s options |
 | `stores` | no | Directory of Pinia stores whose state components may read. See [`pinia`](crate::guide::pinia) |
 | `trustedHtml` | no | Rust path of the type a `TrustedHtml` prop is: `ferrovue::html::BasicHtml`, `ferrovue::html::Sanitised` with the `ammonia` feature, or a type of your own such as `crate::html::CleanHtml`. Needed for `v-html`. See [`escaping`](crate::guide::escaping) |
 | `dateType` | no | Rust path of the type a `Date` prop is: `ferrovue::date::JsDate` (the default), `chrono::DateTime<chrono::Utc>` with the `chrono` feature, or a type of your own that implements [`JsTime`](crate::date::JsTime). See [`dates_and_prices`](crate::guide::dates_and_prices#date-props) |

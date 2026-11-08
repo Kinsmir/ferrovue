@@ -285,6 +285,8 @@ describe("the configuration", () => {
     ["a key like none", { ...CONFIG, plugins: [] }, "FV1114", /has no key `plugins`: it takes `components`, `out`/],
     ["a misspelt key in `router`", { ...CONFIG, router: { routes: "routes.json", linkActiveClas: "on" } }, "FV1114", /^`router` in ferrovue\.config\.json has no key `linkActiveClas`: did you mean `linkActiveClass`\?/],
     ["a string of client directives", { ...CONFIG, clientDirectives: "focus" }, "FV1115", /^`clientDirectives` in ferrovue\.config\.json is a list of directive names/],
+    ["`router.strict` that is not a boolean", { ...CONFIG, router: { routes: "routes.json", strict: "yes" } }, "FV1115", /^`router\.strict` in ferrovue\.config\.json is `true` or `false`/],
+    ["`router.sensitive` that is not a boolean", { ...CONFIG, router: { routes: "routes.json", sensitive: 1 } }, "FV1115", /^`router\.sensitive` in ferrovue\.config\.json is `true` or `false`/],
     ["`isProduction` that is not a boolean", { ...CONFIG, isProduction: "yes" }, "FV1115", /^`isProduction` in ferrovue\.config\.json is `true` or `false`/],
     ["`comments` that is not a boolean", { ...CONFIG, comments: "keep" }, "FV1115", /^`comments` in ferrovue\.config\.json is `true` or `false`/],
     ["`whitespace` that is no mode", { ...CONFIG, whitespace: "trim" }, "FV1115", /^`whitespace` in ferrovue\.config\.json is `"condense"` or `"trim-edges"`/],
@@ -329,7 +331,7 @@ describe("the configuration", () => {
   it("takes every key the README lists, and the repository's own configurations", () => {
     const full = {
       ...CONFIG,
-      router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here" },
+      router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here", strict: true, sensitive: false },
       stores: "stores",
       trustedHtml: "ferrovue::html::InlineHtml",
       helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int", "string?"], returns: "string", maxLen: 1 } } },

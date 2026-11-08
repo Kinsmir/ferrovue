@@ -14,6 +14,10 @@ export interface LinkRouterOptions {
   linkActiveClass?: string;
   /** As `router.linkExactActiveClass` in `ferrovue.config.json`. */
   linkExactActiveClass?: string;
+  /** As `router.strict` in `ferrovue.config.json`. */
+  strict?: boolean;
+  /** As `router.sensitive` in `ferrovue.config.json`. */
+  sensitive?: boolean;
   /** The location of the page the router is for, as an `href` with the base (the one `navigate`
    * is given): the page a navigation goes to, which the browser's location is not yet. The
    * browser's location by default. */
@@ -51,6 +55,8 @@ export function linkRouter(routes: RouteEntry[], options: LinkRouterOptions): Ro
     routes: routeRecords(routes, Empty),
     ...(options.linkActiveClass !== undefined ? { linkActiveClass: options.linkActiveClass } : {}),
     ...(options.linkExactActiveClass !== undefined ? { linkExactActiveClass: options.linkExactActiveClass } : {}),
+    ...(options.strict !== undefined ? { strict: options.strict } : {}),
+    ...(options.sensitive !== undefined ? { sensitive: options.sensitive } : {}),
   });
   router.beforeEach((to, from) => {
     if (from === START_LOCATION) return true;

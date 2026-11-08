@@ -217,6 +217,8 @@ interface Expected {
   expectedBases: Array<[string, boolean]>;
   expectedNested: NestedExpected;
   expectedFiles: NestedExpected;
+  options: { routes: RouteEntry[]; settings: Array<{ strict?: boolean; sensitive?: boolean }>; locations: string[]; links: Array<[string, string]> };
+  expectedOptions: Array<{ links: Array<[string, boolean, boolean]>; locations: Array<{ path: string; name: string | null; params: Record<string, string> }> }>;
 }
 interface Nested {
   routes: RouteEntry[];
@@ -233,8 +235,8 @@ interface NestedExpected {
 const unescape = (s: string): string =>
   s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
 
-async function rendered(routes: RouteEntry[], at: string, to: RouteLocationRaw, base?: string): Promise<[string, boolean, boolean]> {
-  const app = createSSRApp({ render: () => h(RouterLink, { to }, () => "x") }).use(linkRoutes(routes, { navigate: () => {}, location: at, ...(base !== undefined ? { base } : {}) }));
+async function rendered(routes: RouteEntry[], at: string, to: RouteLocationRaw, base?: string, matching: { strict?: boolean; sensitive?: boolean } = {}): Promise<[string, boolean, boolean]> {
+  const app = createSSRApp({ render: () => h(RouterLink, { to }, () => "x") }).use(linkRoutes(routes, { navigate: () => {}, location: at, ...matching, ...(base !== undefined ? { base } : {}) }));
   const html = await renderToString(app);
   const href = /href="([^"]*)"/.exec(html);
   expect(href, html).not.toBeNull();
@@ -277,6 +279,21 @@ describe("the router vectors recorded from vue-router", () => {
       got.push([href, exact]);
     }
     expect(got).toEqual(v.expectedBases);
+  });
+
+  it("matches strict and sensitive routes as vue-router does", async () => {
+    const { routes, settings, locations, links } = v.options;
+    const got = [];
+    for (const matching of settings) {
+      const linked: Array<[string, boolean, boolean]> = [];
+      for (const [at, to] of links) linked.push(await rendered(routes, at, to, undefined, matching));
+      const resolved = locations.map((at) => {
+        const r = linkRoutes(routes, { navigate: () => {}, location: at, ...matching }).route;
+        return { path: r.path, name: typeof r.name === "string" ? r.name : null, params: r.params };
+      });
+      got.push({ links: linked, locations: resolved });
+    }
+    expect(got).toEqual(v.expectedOptions);
   });
 
   for (const key of ["nested", "files"] as const) {
@@ -339,6 +356,8 @@ const RANKING: RouteEntry[][] = [
 ];
 
 const RANKED_AT = ["/b", "/x/", "/a/1/2", "/u/7/e", "/x", "/y"];
+
+const MATCHING = [{}, { strict: true }, { sensitive: true }, { strict: true, sensitive: true }];
 
 function namesOf(routes: RouteEntry[]): string[] {
   return routes.flatMap((r) => (typeof r === "string" ? [] : [...(r.name ? [r.name] : []), ...namesOf(r.children ?? [])]));
@@ -474,7 +493,7 @@ describe("against vue-router", () => {
         const href = (prefix && !prefix.startsWith("/") ? "/" + prefix : prefix) + (g.chance(0.1) ? at.toUpperCase() : at);
         const reference: string[] = [];
         const ours: string[] = [];
-        const options = { ...classes, location: href, ...(base !== undefined ? { base } : {}) };
+        const options = { ...classes, ...MATCHING[s % MATCHING.length], location: href, ...(base !== undefined ? { base } : {}) };
         const router = linkRouter(routes, { ...options, navigate: (to, route) => void reference.push(JSON.stringify([to, shaped(route as never)])) });
         const failure = await router.push(router.options.history.location);
         expect(failure, `${JSON.stringify(routes)} at ${href}`).toBeUndefined();

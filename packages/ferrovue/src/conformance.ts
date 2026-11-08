@@ -144,6 +144,8 @@ export function fixtureOptions(root: string, config: Config): { routes: RouteEnt
   if (router?.base !== undefined) options.base = router.base;
   if (router?.linkActiveClass !== undefined) options.linkActiveClass = router.linkActiveClass;
   if (router?.linkExactActiveClass !== undefined) options.linkExactActiveClass = router.linkExactActiveClass;
+  if (router?.strict !== undefined) options.strict = router.strict;
+  if (router?.sensitive !== undefined) options.sensitive = router.sensitive;
   if (config.i18n) {
     const dir = join(root, config.i18n.messages);
     options.i18n = {

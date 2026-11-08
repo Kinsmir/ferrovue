@@ -72,6 +72,8 @@ export const CONFIG_SCHEMA: Schema = {
         base: { type: "string", default: "" },
         linkActiveClass: { type: "string", default: "router-link-active" },
         linkExactActiveClass: { type: "string", default: "router-link-exact-active" },
+        strict: { type: "boolean", default: false },
+        sensitive: { type: "boolean", default: false },
       },
       required: ["routes"],
       additionalProperties: false,

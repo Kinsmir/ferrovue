@@ -175,8 +175,9 @@ history's base, as vue-router's history reports it. The [`Route`](crate::router:
 the router, and is what every component that links or reads the route takes.
 
 A path matches a route as vue-router matches it: case-insensitively, with or without one trailing
-slash. The route `/` also matches `//`, a location vue-router warns about and still resolves to it, so
-a request for `//` renders the home page and its links as the client will.
+slash, unless the router is [strict or case-sensitive](#matching-paths-exactly). The route `/` also
+matches `//`, a location vue-router warns about and still resolves to it, so a request for `//`
+renders the home page and its links as the client will.
 
 The server can read the same route to decide what to render:
 
@@ -194,6 +195,36 @@ assert_eq!(route.query("ref").attr_value(), Some("home"));
 assert_eq!(route.hash(), "#reviews");
 assert_eq!(route.full_path(), "/books/dune?ref=home#reviews");
 ```
+
+# Matching paths exactly
+
+`createRouter({ strict: true })` matches a path only without a trailing slash, and `/` only as `/`.
+`createRouter({ sensitive: true })` matches a route's static text only in the case the route writes
+it. Set the same options under `router` in `ferrovue.config.json`, and `route_table.rs` builds the
+router with [`Router::with_strict`](crate::router::Router::with_strict) and
+[`Router::with_sensitive`](crate::router::Router::with_sensitive):
+
+```json
+{ "router": { "routes": "client/routes.json", "strict": true, "sensitive": true } }
+```
+
+```rust
+let router = ferrovue::router::Router::named(&[("/admin", Some("admin"))])
+    .with_strict(true)
+    .with_sensitive(true);
+assert_eq!(router.at("/admin").name(), Some("admin"));
+assert_eq!(router.at("/admin/").name(), None);
+assert_eq!(router.at("/Admin").name(), None);
+```
+
+Give `linkRoutes` the same `strict` and `sensitive`, so the client resolves the page the server
+rendered. The options also change the order vue-router tries routes in, and ferrovue's order follows
+it: with `strict`, `/a` matches the route `/a` before `/a/:b?`, and without it, `/a/:b?` first.
+
+A web framework's own routes match their paths exactly. With both options set, a path that misses a
+route of the framework misses the same route in the router, so a page rendered from the framework's
+fallback is never one a guarded route of the framework serves. [Routes behind
+middleware](crate::guide::security#what-ferrovue-inherits-from-vue) says more.
 
 # `<RouterView>`: a page in a layout
 

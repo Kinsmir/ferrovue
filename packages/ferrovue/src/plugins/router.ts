@@ -44,6 +44,8 @@ interface RouterRun {
   base: string;
   linkActive: string;
   linkExactActive: string;
+  strict: boolean;
+  sensitive: boolean;
   readers: Set<Component>;
   views: Set<Component>;
 }
@@ -153,6 +155,8 @@ function routeDefs(routes: RouteDef[], depth: number): string {
 }
 
 export function routesSource(routes: RouteDef[], file: string, pages: boolean): string {
+  const { strict, sensitive } = runOf(router);
+  const matching = `${strict ? ".with_strict(true)" : ""}${sensitive ? ".with_sensitive(true)" : ""}`;
   return `${header(file, pages ? "the pages" : "the routes file")}
 //! The app's routes: what \`<RouterLink>\` resolves against and \`useRoute()\` reads.
 
@@ -173,7 +177,7 @@ pub const BASE: &str = ${rustStr(runOf(router).base)};
 /// The router these routes make: build it once, and resolve each request's location with
 /// [\`ferrovue::router::Router::at\`].
 pub fn router() -> ferrovue::router::Router {
-    ferrovue::router::Router::tree(ROUTES).with_base(BASE)
+    ferrovue::router::Router::tree(ROUTES).with_base(BASE)${matching}
 }
 `;
 }
@@ -195,6 +199,8 @@ export const router: Plugin<RouterRun, RouterScope> = {
       base: r?.base ?? "",
       linkActive: r?.linkActiveClass ?? "router-link-active",
       linkExactActive: r?.linkExactActiveClass ?? "router-link-exact-active",
+      strict: r?.strict ?? false,
+      sensitive: r?.sensitive ?? false,
       readers: new Set(),
       views: new Set(),
     };

@@ -65,6 +65,8 @@ export interface RouterOptions {
     // (undocumented)
     linkExactActiveClass?: string;
     pinia?: pinia | undefined;
+    sensitive?: boolean;
+    strict?: boolean;
     vueI18n?: vueI18n | undefined;
     vueRouter?: vueRouter | undefined;
 }

@@ -96,6 +96,30 @@ struct NestedFile {
     expected_nested: NestedExpected,
     files: Nested,
     expected_files: NestedExpected,
+    options: Options,
+    expected_options: Vec<OptionsExpected>,
+}
+
+#[derive(serde::Deserialize)]
+struct Options {
+    routes: Vec<NestedRoute>,
+    settings: Vec<Matching>,
+    locations: Vec<String>,
+    links: Vec<(String, String)>,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct Matching {
+    #[serde(default)]
+    strict: bool,
+    #[serde(default)]
+    sensitive: bool,
+}
+
+#[derive(serde::Deserialize)]
+struct OptionsExpected {
+    links: Vec<(String, bool, bool)>,
+    locations: Vec<NestedLocation>,
 }
 
 fn nested_file() -> NestedFile {
@@ -117,6 +141,76 @@ fn file_based_routes_resolve_and_activate_as_vue_router_does() {
         "the vectors were not all read"
     );
     check_nested(&file.files, &file.expected_files);
+}
+
+#[test]
+fn strict_and_sensitive_routes_match_as_vue_router_matches_them() {
+    let file = nested_file();
+    let v = &file.options;
+    assert!(
+        v.settings.len() >= 3 && v.locations.len() >= 20 && v.links.len() >= 7,
+        "the vectors were not all read"
+    );
+    assert_eq!(v.settings.len(), file.expected_options.len());
+    for (matching, want) in v.settings.iter().zip(&file.expected_options) {
+        let router = Router::tree(route_defs(&v.routes))
+            .with_strict(matching.strict)
+            .with_sensitive(matching.sensitive);
+        for (at, want) in v.locations.iter().zip(&want.locations) {
+            let route = router.at(at);
+            assert_eq!(
+                (route.path(), route.name()),
+                (want.path.as_str(), want.name.as_deref()),
+                "{matching:?} at {at:?}"
+            );
+            for (name, value) in &want.params {
+                assert_eq!(
+                    route.param(name),
+                    Some(value.as_str()),
+                    "{matching:?} at {at:?}, param {name:?}"
+                );
+            }
+        }
+        for ((at, to), (href, active, exact)) in v.links.iter().zip(&want.links) {
+            let route = router.at(at);
+            let link = route.link(to);
+            written_as(&route, to, &link);
+            assert_eq!(
+                (&link.href, link.active, link.exact),
+                (href, *active, *exact),
+                "{matching:?} at {at:?}, a link to {to:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn matching_options_can_be_set_and_cleared_in_any_order() {
+    let file = nested_file();
+    for routes in [
+        &file.nested.routes,
+        &file.files.routes,
+        &file.options.routes,
+    ] {
+        let defs = route_defs(routes);
+        let plain = Router::tree(defs);
+        let again = Router::tree(defs)
+            .with_sensitive(true)
+            .with_strict(true)
+            .with_sensitive(false)
+            .with_strict(false);
+        assert_eq!(format!("{plain:?}"), format!("{again:?}"));
+        let strict = Router::tree(defs).with_strict(true);
+        let twice = Router::tree(defs)
+            .with_strict(true)
+            .with_sensitive(true)
+            .with_strict(false)
+            .with_strict(true);
+        assert_eq!(format!("{strict:?}"), format!("{twice:?}"));
+        for at in &file.options.locations {
+            assert_eq!(plain.at(at).name(), again.at(at).name(), "at {at:?}");
+        }
+    }
 }
 
 fn check_nested(v: &Nested, want: &NestedExpected) {

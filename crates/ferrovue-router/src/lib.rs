@@ -44,6 +44,8 @@ pub struct Router {
     routes: Vec<Pattern>,
     base: String,
     most: usize,
+    strict: bool,
+    sensitive: bool,
 }
 
 /// The base, and each route's full path with its name, in the order vue-router tries them.
@@ -181,53 +183,59 @@ impl Router {
                 assert!(!again, "two routes are called {name:?}");
             }
         }
-        let mut order: Vec<usize> = Vec::new();
-        for i in (0..records.len()).filter(|&i| records[i].matchable) {
-            let (mut lower, mut upper) = (0, order.len());
-            while lower != upper {
-                let mid = (lower + upper) / 2;
-                if compare(&records[i].score, &records[order[mid]].score)
-                    == std::cmp::Ordering::Less
-                {
-                    upper = mid;
-                } else {
-                    lower = mid + 1;
-                }
-            }
-            let mut ancestor = records[i].parent;
-            while let Some(a) = ancestor {
-                if records[a].matchable
-                    && compare(&records[i].score, &records[a].score) == std::cmp::Ordering::Equal
-                {
-                    if let Some(at) = order[..upper].iter().rposition(|&x| x == a) {
-                        upper = at;
-                    }
-                    break;
-                }
-                ancestor = records[a].parent;
-            }
-            order.insert(upper, i);
-        }
-        order.extend((0..records.len()).filter(|&i| !records[i].matchable));
-        let mut position = vec![0; records.len()];
-        for (at, &i) in order.iter().enumerate() {
-            position[i] = at;
-        }
-        let mut slots: Vec<Option<Pattern>> = records.into_iter().map(Some).collect();
-        let routes: Vec<Pattern> = order
-            .iter()
-            .map(|&i| {
-                let mut p = slots[i].take().expect("each record once");
-                p.parent = p.parent.map(|parent| position[parent]);
-                p
-            })
-            .collect();
-        let most = routes.iter().map(|r| r.names().count()).max().unwrap_or(0);
+        let most = records.iter().map(|r| r.names().count()).max().unwrap_or(0);
         Router {
-            routes,
+            routes: ordered(records),
             base: String::new(),
             most,
+            strict: false,
+            sensitive: false,
         }
+    }
+
+    /// The same routes matched as `createRouter({ strict })` matches them: with `true`, a path
+    /// matches only without a trailing slash, and `/` only as `/`. vue-router's default is `false`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::named(&[("/admin", Some("admin"))]).with_strict(true);
+    /// assert_eq!(router.at("/admin").name(), Some("admin"));
+    /// assert_eq!(router.at("/admin/").name(), None);
+    /// ```
+    #[must_use]
+    pub fn with_strict(self, strict: bool) -> Router {
+        let sensitive = self.sensitive;
+        self.matching(strict, sensitive)
+    }
+
+    /// The same routes matched as `createRouter({ sensitive })` matches them: with `true`, the
+    /// static text of a path matches only in the case the route writes it. vue-router's default is
+    /// `false`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # mod ferrovue { pub use ferrovue_router as router; }
+    /// let router = ferrovue::router::Router::named(&[("/admin", Some("admin"))]).with_sensitive(true);
+    /// assert_eq!(router.at("/admin").name(), Some("admin"));
+    /// assert_eq!(router.at("/Admin").name(), None);
+    /// ```
+    #[must_use]
+    pub fn with_sensitive(self, sensitive: bool) -> Router {
+        let strict = self.strict;
+        self.matching(strict, sensitive)
+    }
+
+    fn matching(mut self, strict: bool, sensitive: bool) -> Router {
+        for route in &mut self.routes {
+            route.rescore(strict);
+        }
+        self.routes = ordered(std::mem::take(&mut self.routes));
+        self.strict = strict;
+        self.sensitive = sensitive;
+        self
     }
 
     /// The same routes under a base path, as `createWebHistory(base)` serves them: every `href`
@@ -299,6 +307,48 @@ impl Router {
             full_path,
         }
     }
+}
+
+fn ordered(records: Vec<Pattern>) -> Vec<Pattern> {
+    let mut order: Vec<usize> = Vec::new();
+    for i in (0..records.len()).filter(|&i| records[i].matchable) {
+        let (mut lower, mut upper) = (0, order.len());
+        while lower != upper {
+            let mid = (lower + upper) / 2;
+            if compare(&records[i].score, &records[order[mid]].score) == std::cmp::Ordering::Less {
+                upper = mid;
+            } else {
+                lower = mid + 1;
+            }
+        }
+        let mut ancestor = records[i].parent;
+        while let Some(a) = ancestor {
+            if records[a].matchable
+                && compare(&records[i].score, &records[a].score) == std::cmp::Ordering::Equal
+            {
+                if let Some(at) = order[..upper].iter().rposition(|&x| x == a) {
+                    upper = at;
+                }
+                break;
+            }
+            ancestor = records[a].parent;
+        }
+        order.insert(upper, i);
+    }
+    order.extend((0..records.len()).filter(|&i| !records[i].matchable));
+    let mut position = vec![0; records.len()];
+    for (at, &i) in order.iter().enumerate() {
+        position[i] = at;
+    }
+    let mut slots: Vec<Option<Pattern>> = records.into_iter().map(Some).collect();
+    order
+        .iter()
+        .map(|&i| {
+            let mut p = slots[i].take().expect("each record once");
+            p.parent = p.parent.map(|parent| position[parent]);
+            p
+        })
+        .collect()
 }
 
 /// A route as the routes file lists it: a path, its name if it has one, whether it shows a

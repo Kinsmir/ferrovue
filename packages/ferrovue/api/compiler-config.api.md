@@ -37,6 +37,8 @@ export interface Config {
         base?: string;
         linkActiveClass?: string;
         linkExactActiveClass?: string;
+        strict?: boolean;
+        sensitive?: boolean;
     };
     routes?: RoutesSource;
     scopeId?: ScopeIdMode;
