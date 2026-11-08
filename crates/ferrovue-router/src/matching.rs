@@ -9,8 +9,6 @@ pub(crate) struct Pattern {
     pub(crate) name: Option<String>,
     pub(crate) matchable: bool,
     pub(crate) seq: usize,
-    pub(crate) strict: bool,
-    pub(crate) sensitive: bool,
 }
 
 pub(crate) enum Token {
@@ -114,14 +112,42 @@ impl Router {
     }
 
     pub(crate) fn matched(&self, path: &str) -> Option<(usize, Values)> {
+        match (self.strict, self.sensitive) {
+            (false, false) => self.matched_as::<false, false>(path),
+            (true, false) => self.matched_as::<true, false>(path),
+            (false, true) => self.matched_as::<false, true>(path),
+            (true, true) => self.matched_as::<true, true>(path),
+        }
+    }
+
+    fn matched_as<const STRICT: bool, const SENSITIVE: bool>(
+        &self,
+        path: &str,
+    ) -> Option<(usize, Values)> {
         self.routes
             .iter()
             .enumerate()
             .filter(|(_, r)| r.matchable)
-            .find_map(|(i, r)| r.parse(path).map(|params| (i, params)))
+            .find_map(|(i, r)| {
+                let mut params = Vec::new();
+                r.parse_from::<_, STRICT, SENSITIVE>(&r.tokens, path, &mut params)
+                    .then_some((i, params))
+            })
     }
 
     pub(crate) fn matched_spans<'p>(&self, path: &'p str) -> Option<(usize, Spans<'p>)> {
+        match (self.strict, self.sensitive) {
+            (false, false) => self.spans_as::<false, false>(path),
+            (true, false) => self.spans_as::<true, false>(path),
+            (false, true) => self.spans_as::<false, true>(path),
+            (true, true) => self.spans_as::<true, true>(path),
+        }
+    }
+
+    fn spans_as<'p, const STRICT: bool, const SENSITIVE: bool>(
+        &self,
+        path: &'p str,
+    ) -> Option<(usize, Spans<'p>)> {
         self.routes
             .iter()
             .enumerate()
@@ -131,7 +157,7 @@ impl Router {
                     at: [None; SPANS],
                     len: 0,
                 };
-                r.parse_from(&r.tokens, path, &mut spans)
+                r.parse_from::<_, STRICT, SENSITIVE>(&r.tokens, path, &mut spans)
                     .then_some((i, spans))
             })
     }
@@ -235,16 +261,12 @@ impl Pattern {
             name,
             matchable: true,
             seq: 0,
-            strict: false,
-            sensitive: false,
         };
-        pattern.set_matching(false, false);
+        pattern.rescore(false);
         pattern
     }
 
-    pub(crate) fn set_matching(&mut self, strict: bool, sensitive: bool) {
-        self.strict = strict;
-        self.sensitive = sensitive;
+    pub(crate) fn rescore(&mut self, strict: bool) {
         self.score = if self.tokens.is_empty() {
             vec![ROOT]
         } else {
@@ -263,28 +285,14 @@ impl Pattern {
         }
     }
 
-    pub(crate) fn parse(&self, path: &str) -> Option<Values> {
-        let mut params = Vec::new();
-        self.parse_from(&self.tokens, path, &mut params)
-            .then_some(params)
-    }
-
-    fn same_text(&self, head: &str, text: &str) -> bool {
-        if self.sensitive {
-            head == text
-        } else {
-            head.eq_ignore_ascii_case(text)
-        }
-    }
-
-    pub(crate) fn parse_from<'p, C: Captures<'p>>(
+    pub(crate) fn parse_from<'p, C: Captures<'p>, const STRICT: bool, const SENSITIVE: bool>(
         &self,
         tokens: &[Token],
         rest: &'p str,
         params: &mut C,
     ) -> bool {
         let Some((token, after)) = tokens.split_first() else {
-            if !self.strict {
+            if !STRICT {
                 return matches!(rest, "" | "/") || (self.tokens.is_empty() && rest == "//");
             }
             return rest == if self.tokens.is_empty() { "/" } else { "" };
@@ -295,8 +303,14 @@ impl Pattern {
                     return false;
                 };
                 match rest.get(..text.len()) {
-                    Some(head) if self.same_text(head, text) => {
-                        self.parse_from(after, &rest[text.len()..], params)
+                    Some(head)
+                        if if SENSITIVE {
+                            head == text
+                        } else {
+                            head.eq_ignore_ascii_case(text)
+                        } =>
+                    {
+                        self.parse_from::<C, STRICT, SENSITIVE>(after, &rest[text.len()..], params)
                     }
                     _ => false,
                 }
@@ -310,7 +324,7 @@ impl Pattern {
                     let end = inner.find('/').unwrap_or(inner.len());
                     if end > 0 {
                         params.push(Some(&inner[..end]));
-                        if self.parse_from(after, &inner[end..], params) {
+                        if self.parse_from::<C, STRICT, SENSITIVE>(after, &inner[end..], params) {
                             return true;
                         }
                         params.pop();
@@ -318,7 +332,7 @@ impl Pattern {
                 }
                 if *optional {
                     params.push(None);
-                    if self.parse_from(after, rest, params) {
+                    if self.parse_from::<C, STRICT, SENSITIVE>(after, rest, params) {
                         return true;
                     }
                     params.pop();
@@ -333,7 +347,7 @@ impl Pattern {
                     return false;
                 }
                 params.push(Some(rest));
-                self.parse_from(after, "", params)
+                self.parse_from::<C, STRICT, SENSITIVE>(after, "", params)
             }
         }
     }

@@ -236,7 +236,7 @@ impl Router {
         let mut slots: Vec<Option<Pattern>> = (0..self.routes.len()).map(|_| None).collect();
         for mut p in self.routes.drain(..) {
             p.parent = p.parent.map(|parent| seqs[parent]);
-            p.set_matching(strict, sensitive);
+            p.rescore(strict);
             let seq = p.seq;
             slots[seq] = Some(p);
         }
