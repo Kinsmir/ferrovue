@@ -29,7 +29,8 @@ compiler to use `f64`.
   ECMAScript lays them out: `0.30000000000000004`, `1e+21`, `1.5e-7`, `NaN`, `-Infinity`, and `0`
   for `-0`.
 - In a template literal or a string `+`, a number goes through [`Js`](crate::core::Js), whose `Display`
-  writes it the same way.
+  writes it the same way, laying out the digits on the stack, so `Js(x).to_string()` allocates
+  only the `String` it returns.
 
 ```rust
 use ferrovue::core::{Js, push_int, push_number};
