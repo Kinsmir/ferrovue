@@ -57,7 +57,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         + props.title.len()
     );
     out.push_str("<div class=\"shell\"><nav>");
-    fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+    fv::attrs::link_to_open(out, fv_route, "/", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push_str(">Home</a></nav>");
     super::cart_badge::try_render(out, &super::cart_badge::Props {}, fv_stores)?;
     super::translated::try_render(out, &super::translated::Props { name: Cow::Borrowed(&*props.title) }, fv_i18n)?;

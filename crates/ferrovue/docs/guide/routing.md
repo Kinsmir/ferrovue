@@ -351,9 +351,9 @@ defineProps<{ user: string }>();
 # pub fn render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_route: &fv::router::Route<'_>) {
 #     out.reserve(137 + props.user.len());
 #     out.push_str("<div id=\"app\"><nav>");
-#     fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+#     fv::attrs::link_to_open(out, fv_route, "/", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
 #     out.push_str(">home</a> ");
-#     fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+#     fv::attrs::link_to_open(out, fv_route, &format!("/users/{}", props.user), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
 #     out.push('>');
 #     fv::core::escape_into(out, &props.user);
 #     out.push_str("</a></nav><main>");
@@ -394,11 +394,18 @@ assert_eq!(
 );
 ```
 
+# How links are written
+
 For each `<RouterLink>` the generated code asks the route to resolve the link and writes the result:
 [`Route::link`](crate::router::Route::link) for a string `to`, [`Route::link_named`](crate::router::Route::link_named)
 for `{ name, params, query, hash }`, [`Route::link_path`](crate::router::Route::link_path) for
 `{ path, query, hash }`. Each returns a [`Link`](crate::router::Link): the `href`, with the base, and
 whether it is active and exactly active.
+
+A string `to` is resolved as `Route::link` resolves it and written straight into the page: the
+anchor's `href` goes from the base, the path and the `to`'s query and hash into the output, and the
+link's parameters are compared with the route's where they stand in `to`, so the link allocates
+nothing. A route with more than eight parameters is resolved through `Route::link`.
 
 Nested routes work the same way at every level: a parent route's component has a `<RouterView>`
 whose slot holds the child route's component. A link to a parent is active, but not exactly active,

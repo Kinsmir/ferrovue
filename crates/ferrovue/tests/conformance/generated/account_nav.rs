@@ -57,7 +57,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         fv::attrs::link_open(out, &fv_link, "page", "in", "in here", &[], false);
         out.push_str(">home</a>");
     }
-    fv::attrs::link_open(out, &fv_route.link("/account/orders"), "page", "router-link-active", "router-link-active router-link-exact-active", &["orders"], true);
+    fv::attrs::link_to_open(out, fv_route, "/account/orders", "page", "router-link-active", "router-link-active router-link-exact-active", &["orders"], true);
     out.push_str(">orders</a>");
     {
         let fv_link = {

@@ -230,7 +230,7 @@ mod class {
 
 #[cfg(feature = "router")]
 mod links {
-    use super::link_open;
+    use super::{link_open, link_to_open};
     use crate::router::{RouteDef, Router};
 
     fn open(
@@ -244,9 +244,22 @@ mod links {
             RouteDef::new("/"),
             RouteDef::new("/blog").with_children(&[RouteDef::new(":slug")]),
         ]);
-        let link = router.at(location).link(to);
+        let route = router.at(location);
+        let link = route.link(to);
         let mut out = String::new();
         link_open(&mut out, &link, "page", names.0, names.1, classes, string);
+        let mut written = String::new();
+        link_to_open(
+            &mut written,
+            &route,
+            to,
+            "page",
+            names.0,
+            names.1,
+            classes,
+            string,
+        );
+        assert_eq!(written, out, "a link to {to:?} written in place");
         out
     }
 

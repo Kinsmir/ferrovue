@@ -54,9 +54,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         + props.note.as_deref().map_or(0, str::len)
     );
     out.push_str("<nav>");
-    fv::attrs::link_open(out, &fv_route.link("/blog/intro"), "page", "router-link-active", "router-link-active router-link-exact-active", &["tab"], true);
+    fv::attrs::link_to_open(out, fv_route, "/blog/intro", "page", "router-link-active", "router-link-active router-link-exact-active", &["tab"], true);
     out.push_str(">intro</a> ");
-    fv::attrs::link_open(out, &fv_route.link(&props.href), "page", "router-link-active", "router-link-active router-link-exact-active", &["tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }], false);
+    fv::attrs::link_to_open(out, fv_route, &props.href, "page", "router-link-active", "router-link-active router-link-exact-active", &["tab", if props.note.as_deref().is_some_and(|v| !v.is_empty()) { "noted" } else { "" }], false);
     if props.label.is_empty() {
         out.push_str(" title>");
     } else {

@@ -50,9 +50,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_slots: Slots<'_>, fv_r
         + props.user.len()
     );
     out.push_str("<div id=\"app\"><nav>");
-    fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+    fv::attrs::link_to_open(out, fv_route, "/", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push_str(">home</a> ");
-    fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+    fv::attrs::link_to_open(out, fv_route, &format!("/users/{}", props.user), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push('>');
     fv::core::escape_into(out, &props.user);
     out.push_str("</a></nav><main>");
