@@ -117,6 +117,16 @@ it("reads back the numbers JSON cannot carry, and the escapes the server writes"
   vi.restoreAllMocks();
 });
 
+it("reads the record from a script, passing over another element with its id", async () => {
+  const forged = { props: { title: "forged" }, slots: {} };
+  document.body.innerHTML = `<p id="__fv_page">${JSON.stringify(forged)}</p><div id="app">${shelfHtml}</div>`;
+  await expect(mountPage(Shelf, { Item })).rejects.toThrow(/no record: no <script id="__fv_page">/);
+  document.body.insertAdjacentHTML("beforeend", `<script type="application/json" id="__fv_page">${JSON.stringify(shelf)}</script>`);
+  const app = await mountPage(Shelf, { Item });
+  expect(document.querySelector("#app li:last-child")!.textContent).toBe("b 2");
+  app.unmount();
+});
+
 it("fails on a fragment the client does not render, as a v-for of the parts would write", async () => {
   const html = `<div id="app"><ul><li>s</li><!--[--><!--[--><li>a 1</li><li>b 2</li><!--]--><!--]--></ul></div>`;
   await expect(hydrateRecordedPage({ html, record: shelf }, Shelf, { Item })).rejects.toThrow(/did not hydrate exactly/);

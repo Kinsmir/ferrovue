@@ -13,6 +13,22 @@ it("hands Pinia the state the server escaped into the page", () => {
   expect(pinia.state.value).toEqual({ prefs: { label: "</script>&" } });
 });
 
+it("reads the state from a script, passing over another element or an SVG script with its id", () => {
+  document.body.innerHTML =
+    '<p id="__pinia">{"user":{"role":"admin"}}</p><svg></svg><script type="application/json" id="__pinia">{"user":{"role":"guest"}}</script>';
+  const svgScript = document.createElementNS("http://www.w3.org/2000/svg", "script");
+  svgScript.id = "__pinia";
+  svgScript.textContent = '{"user":{"role":"svg"}}';
+  document.querySelector("svg")!.append(svgScript);
+  const pinia = createPinia();
+  hydrateState(pinia);
+  expect(pinia.state.value).toEqual({ user: { role: "guest" } });
+  document.body.innerHTML = '<p id="__pinia">{"user":{"role":"admin"}}</p>';
+  const empty = createPinia();
+  hydrateState(empty);
+  expect(empty.state.value).toEqual({});
+});
+
 it("reads back the bare NaN and infinities the server writes for numbers JSON cannot carry", () => {
   document.body.innerHTML =
     '<script type="application/json" id="__pinia">{"m":{"a":NaN,"b":[Infinity,-Infinity,-0.0,1.5],"c":"NaN","d":"\\"Infinity\\\\","e":"\\u0000NaN","f":["\\u0000\\u0000-Infinity",null]}}</script>';

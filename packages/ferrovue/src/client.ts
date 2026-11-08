@@ -135,12 +135,22 @@ export interface StateText {
 
 /** Give Pinia the state the server rendered with (what `ferrovue::page::state_script_into` wrote) before
  * the app mounts, so every store starts from it and the markup agrees with the server's. The state
- * is read from the script with the `id` given (`__pinia` by default) in `doc`, or given as
- * `{ text }`: the `state` of a fetched page that `readPage` read. Either way the numbers JSON
- * cannot carry (`NaN`, `Infinity`) are read back. Pinia is left alone when there is no state. */
+ * is read from the first `<script>` with the `id` given (`__pinia` by default) in `doc`, so another
+ * element with that `id`, such as one in user HTML, is passed over. Or it is given as `{ text }`:
+ * the `state` of a fetched page that `readPage` read. Either way the numbers JSON cannot carry
+ * (`NaN`, `Infinity`) are read back. Pinia is left alone when there is no state. */
 export function hydrateState(pinia: Pinia, from: string | StateText = "__pinia", doc: Document = document): void {
-  const text = typeof from === "string" ? doc.getElementById(from)?.textContent : from.text;
+  const text = typeof from === "string" ? scriptById(doc, from) : from.text;
   if (text) pinia.state.value = parseJson(text) as Pinia["state"]["value"];
+}
+
+const HTML_NS = "http://www.w3.org/1999/xhtml";
+
+function scriptById(doc: Document, id: string): string | undefined {
+  for (const el of doc.getElementsByTagName("script")) {
+    if (el.id === id && el.namespaceURI === HTML_NS) return el.textContent ?? undefined;
+  }
+  return undefined;
 }
 
 const SPACE = /[\t\n\f\r ]/;
@@ -337,7 +347,7 @@ export interface ReadPage {
 
 /** Read the record and the state of a page out of the HTML of its document, as a navigation that
  * fetches the next page receives it. It needs no `DOMParser`, so it also runs in a worker and on a
- * server. Each script is the one the browser's `getElementById` would find in the parsed document:
+ * server. Each script is the one `hydrateState` and `mountPage` would find in the parsed document:
  * the first `<script>` with that `id` outside a `<template>`, an `<svg>` and a `<math>`, with
  * comments, attribute values and the text of `<script>`, `<style>`, `<textarea>`, `<title>` and the
  * other raw-text elements passed over as the HTML parser passes over them. Throws when the page
@@ -655,7 +665,8 @@ async function loadPage(caller: string, layout: IslandComponent, record: PageRec
   return [root, Object.fromEntries(parts)];
 }
 
-/** Hydrate a page `ferrovue::page::Page` rendered: read its record, load the components it names (and
+/** Hydrate a page `ferrovue::page::Page` rendered: read its record from the first `<script>` with
+ * its `id`, passing over any other element with that `id`, load the components it names (and
  * no others), wait for the router, and mount the layout on the container. Rejects, leaving the page
  * as the server rendered it, when the container or the record is missing or a component is not
  * given or does not load. */
@@ -663,7 +674,7 @@ export async function mountPage(layout: IslandComponent, components: Record<stri
   const doc = options.doc ?? document;
   const container = containerOf(options);
   const id = options.record ?? "__fv_page";
-  const text = doc.getElementById(id)?.textContent;
+  const text = scriptById(doc, id);
   if (!text) throw new Error(`[ferrovue] the page has no record: no <script id="${id}">`);
   const record = parseJson(text) as PageRecord;
   const [[root, parts]] = await Promise.all([loadPage("mountPage", layout, record, components), options.router?.isReady()]);

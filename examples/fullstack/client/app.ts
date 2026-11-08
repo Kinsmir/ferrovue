@@ -36,7 +36,7 @@ export async function hydrate(location?: string): Promise<Hydrated> {
   const pinia = createPinia();
   hydrateState(pinia);
   const head = createHead();
-  const paged = document.getElementById("__fv_page") !== null;
+  const paged = document.querySelector("script#__fv_page") !== null;
 
   const pageLinks = (at: string | undefined): LinkRoutes =>
     linkRoutes(pageRoutes, {
