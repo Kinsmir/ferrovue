@@ -118,8 +118,8 @@
   },
   "devDependencies": {
     "@unhead/vue": "catalog:",
-    "@vue/language-core": "3.3.13",
-    "@vue/language-service": "3.3.13",
+    "@vue/language-core": "3.3.14",
+    "@vue/language-service": "3.3.14",
     "@vue/server-renderer": "catalog:",
     "pinia": "catalog:",
     "playwright": "catalog:",
