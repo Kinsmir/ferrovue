@@ -142,9 +142,14 @@ fn push_decimal(out: &mut String, n: u64) {
 }
 
 fn write_decimal(out: &mut impl std::fmt::Write, n: u64) -> std::fmt::Result {
+    if n < 10 {
+        return out.write_char(char::from(b'0' + n as u8));
+    }
     let mut buf = [0; 20];
     let start = decimal(&mut buf, n);
-    out.write_str(std::str::from_utf8(&buf[start..]).expect("ASCII digits"))
+    buf[start..]
+        .iter()
+        .try_for_each(|&b| out.write_char(char::from(b)))
 }
 
 /// `String(n)` for an integer, which is what `toDisplayString` and `escapeHtml` make of a number.
@@ -236,13 +241,6 @@ impl std::fmt::Write for Short {
 /// assert_eq!(written(f64::NAN), "NaN");
 /// ```
 pub fn push_number(out: &mut String, x: f64) {
-    if x.fract() == 0.0 && x.abs() <= MAX_SAFE_INTEGER as f64 {
-        if x < 0.0 {
-            out.push('-');
-        }
-        push_decimal(out, x.abs() as u64);
-        return;
-    }
     let _ = write_number(out, x);
 }
 
