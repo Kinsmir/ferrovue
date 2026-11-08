@@ -685,6 +685,110 @@ mod chunks {
     }
 }
 
+mod stylesheets {
+    use super::*;
+
+    const MANIFEST: &str = r#"{
+        "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "imports": ["_vue.js"], "dynamicImports": ["client/app.ts"] },
+        "client/app.ts": { "file": "assets/app.js", "isDynamicEntry": true, "css": ["assets/app.css"], "imports": ["_vue.js"], "dynamicImports": ["client/components/Cart.vue", "client/components/Reviews.vue"] },
+        "client/components/Cart.vue": { "file": "assets/Cart.js", "isDynamicEntry": true, "css": ["assets/Cart.css"], "imports": ["_vue.js", "_money.js", "client/main.ts"] },
+        "client/components/Reviews.vue": { "file": "assets/Reviews.js", "isDynamicEntry": true, "css": ["assets/Re\"views.css", "assets/Cart.css"], "imports": ["_money.js"], "dynamicImports": ["client/components/Stars.vue"] },
+        "client/components/Stars.vue": { "file": "assets/Stars.js", "isDynamicEntry": true, "css": ["assets/Stars.css"] },
+        "client/components/Lone.vue": { "file": "assets/Lone.js", "css": ["assets/Lone.css"], "imports": ["_money.js"] },
+        "_money.js": { "file": "assets/money.js", "css": ["assets/money.css"], "imports": ["_vue.js"] },
+        "_vue.js": { "file": "assets/vue.js", "css": ["assets/vue.css"] }
+    }"#;
+
+    const ISLANDS: &str = r#"{
+        "Cart": "assets/Cart.js",
+        "Reviews": "assets/Reviews.js",
+        "Lone": "assets/Lone.js",
+        "Unbuilt": "assets/Unbuilt.js"
+    }"#;
+
+    fn chunks() -> Chunks {
+        Chunks::from_manifest(MANIFEST, ISLANDS).unwrap()
+    }
+
+    #[test]
+    fn the_entry_needs_its_own_then_those_it_imports_statically_or_dynamically() {
+        assert_eq!(
+            chunks().stylesheets_for_entry("client/main.ts"),
+            [
+                "/assets/main.css",
+                "/assets/vue.css",
+                "/assets/app.css",
+                "/assets/Cart.css",
+                "/assets/Re\"views.css",
+                "/assets/money.css",
+                "/assets/Stars.css",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_key_the_manifest_lacks_needs_nothing() {
+        assert!(
+            chunks()
+                .stylesheets_for_entry("client/missing.ts")
+                .is_empty()
+        );
+        assert!(
+            chunks()
+                .stylesheets_for_islands(["Unbuilt", "Nowhere"])
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn an_island_needs_those_of_its_chunk_and_its_static_imports_but_never_the_entry() {
+        assert_eq!(
+            chunks().stylesheets_for_islands(["Cart"]),
+            ["/assets/Cart.css", "/assets/vue.css", "/assets/money.css"]
+        );
+        assert_eq!(
+            chunks().stylesheets_for_islands(["Reviews", "Cart", "Lone"]),
+            [
+                "/assets/Re\"views.css",
+                "/assets/Cart.css",
+                "/assets/money.css",
+                "/assets/vue.css",
+                "/assets/Lone.css",
+            ]
+        );
+    }
+
+    #[test]
+    fn a_page_links_each_stylesheet_once_under_the_base() {
+        let chunks = chunks().with_base("/a&b\"/");
+        assert_eq!(
+            chunks.stylesheets_for_islands(["Lone"]),
+            [
+                "/a&b\"/assets/Lone.css",
+                "/a&b\"/assets/money.css",
+                "/a&b\"/assets/vue.css"
+            ]
+        );
+        let mut stylesheets = chunks.stylesheets();
+        let mut head = String::new();
+        stylesheets.islands_into(&mut head, ["Reviews"]);
+        stylesheets.entry_into(&mut head, "client/app.ts");
+        stylesheets.islands_into(&mut head, ["Lone", "Reviews"]);
+        assert_eq!(
+            head,
+            concat!(
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/Re&quot;views.css">"#,
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/Cart.css">"#,
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/money.css">"#,
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/vue.css">"#,
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/app.css">"#,
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/Stars.css">"#,
+                r#"<link rel="stylesheet" href="/a&amp;b&quot;/assets/Lone.css">"#,
+            )
+        );
+    }
+}
+
 mod teleport {
     use super::*;
 

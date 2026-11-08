@@ -477,10 +477,8 @@ once per page however many islands share it, as most share Vue's chunk;
 [`with_base`](crate::page::Chunks::with_base) serves them under Vite's `base`. In development Vite serves
 the sources and there is no manifest: link nothing.
 
-An island's `<style>` goes into its chunk too, and Vite links it only once the island's script has
-loaded, after the server's markup is on screen. Link those stylesheets from the page up front: a
-server reading Vite's manifest takes the `css` of the entry's `dynamicImports` as well as its own,
-as `examples/fullstack/src/assets.rs` does.
+An island's `<style>` goes into its chunk too: [Linking the stylesheets](#linking-the-stylesheets)
+links it up front.
 
 Preload the islands that hydrate at once. An island given a [`Hydrate`](crate::html::Hydrate) waits to be
 seen, clicked or idle before it fetches its code; preloading it fetches that code with the page,
@@ -499,6 +497,46 @@ Where the links go:
   [`PageRecord::island_names`](crate::page::PageRecord::island_names) names those of the slots and the
   holes filled by then, and a hole's parts name themselves with [`Part::name`](crate::page::Part::name).
   Keep one `Preloads` for the page so nothing is linked twice.
+
+# Linking the stylesheets
+
+An island's `<style>` goes into its chunk, and Vite links it only once the island's script has
+loaded, after the server's markup is on screen, which shows unstyled until then. Link the
+stylesheets from the page's `<head>` up front. [`Chunks`](crate::page::Chunks) reads each chunk's
+`css` from the manifest, and [`Stylesheets`](crate::page::Stylesheets) writes a
+`<link rel="stylesheet">` for each, once per page:
+
+```rust
+# let manifest = r#"{
+#     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "dynamicImports": ["client/components/Counter.vue"] },
+#     "client/components/Counter.vue": { "file": "assets/Counter.js", "css": ["assets/Counter.css"], "imports": ["_vue.js"] },
+#     "_vue.js": { "file": "assets/vue.js" }
+# }"#;
+# let islands = r#"{ "Counter": "assets/Counter.js" }"#;
+let chunks = ferrovue::page::Chunks::from_manifest(manifest, islands)?;
+
+let mut stylesheets = chunks.stylesheets();
+let mut head = String::new();
+stylesheets.entry_into(&mut head, "client/main.ts");
+stylesheets.islands_into(&mut head, ["Counter"]); // linked already, through the entry
+assert_eq!(
+    head,
+    concat!(
+        r#"<link rel="stylesheet" href="/assets/main.css">"#,
+        r#"<link rel="stylesheet" href="/assets/Counter.css">"#,
+    )
+);
+# Ok::<(), ferrovue::page::ManifestError>(())
+```
+
+The entry needs its own stylesheets and those of every chunk it imports, statically or dynamically,
+so linking the entry's covers each island it can load. An island needs those of its own chunk and
+the chunks it imports statically: link them where a page loads islands the entry does not reach.
+[`stylesheets_for_entry`](crate::page::Chunks::stylesheets_for_entry) and
+[`stylesheets_for_islands`](crate::page::Chunks::stylesheets_for_islands) give the URLs instead, for
+a `Link` header. Both follow the manifest's order and
+[`with_base`](crate::page::Chunks::with_base). In development Vite injects the styles itself: link
+nothing. `examples/fullstack/src/assets.rs` links the entry's.
 
 # The page shell
 

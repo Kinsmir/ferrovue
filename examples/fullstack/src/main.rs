@@ -132,7 +132,7 @@ mod tests {
 
     fn site() -> Site {
         let manifest = r#"{
-            "client/main.ts": { "file": "assets/main.js", "isEntry": true, "imports": ["_vue.js"] },
+            "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "imports": ["_vue.js"] },
             "client/components/AddToBasket.vue": { "file": "assets/AddToBasket.js", "imports": ["_vue.js", "client/main.ts"] },
             "client/components/Pick.vue": { "file": "assets/Pick.js", "imports": ["_vue.js"] },
             "client/components/Reviews.vue": { "file": "assets/Reviews.js", "imports": ["_vue.js"] },
@@ -145,7 +145,6 @@ mod tests {
         }"#;
         let assets = Assets::Built {
             script: "/assets/main.js".to_owned(),
-            styles: vec!["/assets/main.css".to_owned()],
             chunks: ferrovue::page::Chunks::from_manifest(manifest, islands).unwrap(),
         };
         Site::new(assets, Duration::ZERO)
