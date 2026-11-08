@@ -215,7 +215,7 @@ function inheritedAttrs(s: Scope, e: Emitter): void {
   if (s.attrs !== null) e.stmt(`out.push_str(${s.attrs});`);
 }
 
-export function directiveProps(s: Scope, n: N): boolean {
+function directiveProps(s: Scope, n: N): boolean {
   if (n?.type !== "CallExpression" || n.callee.type !== "Identifier" || n.callee.name !== "_ssrGetDirectiveProps") return false;
   const dir = n.arguments[1];
   let name: string | null = null;
@@ -353,7 +353,7 @@ export function mergeProps(s: Scope, n: N): N {
   return { type: "ObjectExpression", properties: [...merged.values()] };
 }
 
-export function attrEntries(s: Scope, obj: N, side: "vnode" | "own"): string[] {
+function attrEntries(s: Scope, obj: N, side: "vnode" | "own"): string[] {
   const out: string[] = [];
   for (const p of obj.properties) {
     if (p.type !== "ObjectProperty" || p.computed) fail(s.comp, "FV0408", "attribute objects hold plain keys", p);

@@ -212,7 +212,7 @@ function refType(comp: Component, init: N): Ty {
   return literal(value) ?? fail(comp, "FV1314", "a setup store's ref declares its type: `ref<string[]>([])`", init);
 }
 
-export function storeHome(file: string): Component {
+function storeHome(file: string): Component {
   return blankComponent(basename(file), "stores", file, runOf(piniaStores).structs);
 }
 

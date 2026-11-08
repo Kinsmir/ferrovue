@@ -10,7 +10,7 @@ export interface Flag {
 }
 
 /** The commands `ferrovue` takes, with their lines in `--help`. */
-export const COMMANDS: Readonly<Record<string, string>> = {
+const COMMANDS: Readonly<Record<string, string>> = {
   init: "scaffold starter ferrovue.config.json and components",
   diff: "render the conformance fixtures at a git ref and now, and show whose text changed",
 };

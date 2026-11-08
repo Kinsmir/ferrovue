@@ -15,9 +15,9 @@ import { runOf } from "../plugin.ts";
 import { scopeIdOf } from "./scoped.ts";
 import { allRoutes, router } from "./router.ts";
 
-export const ROUTER_LINK_PROPS = new Set(["to", "class", "activeClass", "exactActiveClass", "ariaCurrentValue"]);
+const ROUTER_LINK_PROPS = new Set(["to", "class", "activeClass", "exactActiveClass", "ariaCurrentValue"]);
 
-export const ROUTER_LINK_INERT = new Set(["replace", "viewTransition"]);
+const ROUTER_LINK_INERT = new Set(["replace", "viewTransition"]);
 
 export function routeParams(path: string): string[] {
   return [...path.matchAll(/:(\w+)/g)].map((m) => m[1]!);
@@ -31,7 +31,7 @@ function noHalves(s: Scope, v: Val, n: N): void {
   if (v.lone) fail(s.comp, "FV0706", lonely("a `<RouterLink>` location"), n);
 }
 
-export function urlText(s: Scope, v: Val, n: N): string {
+function urlText(s: Scope, v: Val, n: N): string {
   noHalves(s, v, n);
   if (v.ty.k === "str") return v.code;
   if (v.ty.k === "int" || v.ty.k === "float") return `&*fv::core::Js(${bare(asWritten(v).code)}).to_string()`;
@@ -46,7 +46,7 @@ function linkCall(s: Scope, to: N): string {
   return `fv_route.link(${strArg(target.code)})`;
 }
 
-export function resolveLink(s: Scope, e: Emitter, to: N): void {
+function resolveLink(s: Scope, e: Emitter, to: N): void {
   if (to.type !== "ObjectExpression") {
     e.stmt(`let fv_link = ${linkCall(s, to)};`);
     return;

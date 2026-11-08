@@ -120,7 +120,7 @@ function readPages(root: string, config: Config, pages: string): FileRoute[] {
   return routes;
 }
 
-export function readRoutes(root: string, file: string): RouteDef[] {
+function readRoutes(root: string, file: string): RouteDef[] {
   const raw = readJsonFile(root, file, { missing: "FV1246", invalid: "FV1247" });
   if (!Array.isArray(raw)) throw new GenError("FV1232", `${file} lists the routes in an array`, { file });
   const read = (list: unknown[], parent: string | null): RouteDef[] =>

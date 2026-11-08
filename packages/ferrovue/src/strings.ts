@@ -254,7 +254,7 @@ function coverage(ranges: [number, number][], all: boolean[], negate: boolean): 
 
 /** The pieces of `/pattern/flags` in the subset of regular expressions `fv::strings::JsRegex`
  * runs, or what leaves the subset: the checks `JsRegex::parse` makes. */
-export function regexShape(pattern: string, flags: string): { refused: string } | { pieces: RegexPiece[] } {
+function regexShape(pattern: string, flags: string): { refused: string } | { pieces: RegexPiece[] } {
   const seen = new Set<string>();
   for (const f of flags) {
     if ((f !== "g" && f !== "i") || seen.has(f)) return { refused: `the flag \`${f}\`` };
@@ -379,7 +379,7 @@ function keepsPairs(pieces: RegexPiece[]): boolean {
 
 /** The Rust of the regular expression literal \`n\`, held once for the program's life: refused
  * with FV0710 where it leaves the subset \`fv::strings::JsRegex\` runs. */
-export function regexOf(comp: Component, n: N, what: string, at: N = n): string {
+function regexOf(comp: Component, n: N, what: string, at: N = n): string {
   const pattern: string = n.pattern;
   const flags: string = n.flags;
   const refused = regexRefusal(pattern, flags);

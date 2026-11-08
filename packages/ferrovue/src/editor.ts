@@ -21,7 +21,7 @@ const FRESH_MS = 1000;
 const recent = new Map<string, { text: string; at: number; found: Located[] }>();
 
 /** The directory holding `config` that is `dir` or the nearest above it. */
-export function projectRoot(dir: string, config: string = CONFIG_FILE): string | null {
+function projectRoot(dir: string, config: string = CONFIG_FILE): string | null {
   for (let at = resolve(dir); ; at = dirname(at)) {
     if (existsSync(join(at, config))) return at;
     if (dirname(at) === at) return null;

@@ -195,7 +195,7 @@ function setupCall(s: Scope, of: string, method: string, args: N[], n: N): Val |
   return null;
 }
 
-export function helperCall(s: Scope, name: string, args: N[], n: N): Val {
+function helperCall(s: Scope, name: string, args: N[], n: N): Val {
   const h = ctx.helpers[name]!;
   if (args.length !== h.params.length) fail(s.comp, "FV1101", `\`${name}\` takes ${h.params.length} argument(s)`, n);
   const code = args.map((a, i) => bare(coerce(s.comp, expr(s, a), h.params[i]!, a))).join(", ");

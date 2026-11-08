@@ -57,7 +57,7 @@ function pascal(name: string): string {
 }
 
 /** The name of the variant for a literal or an enum member's name, or null when it has none. */
-export function variantName(text: string): string | null {
+function variantName(text: string): string | null {
   if (text === "") return "Empty";
   const parts = text
     .split(/[^A-Za-z0-9]+/)

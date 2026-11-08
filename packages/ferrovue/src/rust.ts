@@ -16,7 +16,7 @@ import { scopeFor } from "./script.ts";
 import { readable } from "./names.ts";
 import { foldBranches } from "./folding.ts";
 
-export function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
+function needsLifetime(ty: Ty, comp: Component, seen: Set<string> = new Set()): boolean {
   switch (ty.k) {
     case "str":
       return enumOf(ty) === undefined;
@@ -350,7 +350,7 @@ function fixedLen(inner: string[]): number {
   return inner.reduce((sum, len) => sum + Number(len), 0);
 }
 
-export function textLen(comp: Component, place: string, ty: Ty, seen: Set<string> = new Set()): string[] {
+function textLen(comp: Component, place: string, ty: Ty, seen: Set<string> = new Set()): string[] {
   const def = enumOf(ty);
   if (def !== undefined) return [String(Math.max(...def.literals.map((l) => Buffer.byteLength(l))))];
   switch (ty.k) {
