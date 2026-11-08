@@ -21,7 +21,7 @@ const COW = "std::borrow::Cow::<str>";
 
 /** Runtime calls that refuse where JavaScript throws or a value cannot be held, or user code that
  * may panic. */
-export const PANICS = /\bfv_refusals\.(?:keep|date)\(|\bfv_i18n\.t\(/;
+const PANICS = /\bfv_refusals\.(?:keep|date)\(|\bfv_i18n\.t\(/;
 
 /** Whether `code` calls a runtime routine that may refuse the render. */
 export function refuses(code: string): boolean {
@@ -322,7 +322,7 @@ function stepOf(update: N, name: string): number {
 /** How many times a body's statements may be translated again after an `if` or a `case` that
  * falls off its end: each such path continues with the statements after it, translated on its own,
  * so sequential `switch`es of `break`ing cases multiply them. */
-export const PATH_BUDGET = 4096;
+const PATH_BUDGET = 4096;
 
 class Desugar {
   private readonly comp: Component;

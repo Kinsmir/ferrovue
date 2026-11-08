@@ -36,7 +36,7 @@ export const ONE_NOTHING = "its Rust type is an `Option`, whose `None` cannot be
 
 const NULL_OR_UNDEFINED = `a type that is both \`null\` and \`undefined\`: ${ONE_NOTHING}; keep one of them`;
 
-export const DATES_REVIVED =
+const DATES_REVIVED =
   "a `Date` reaches the browser as a `Date` from a prop or a loader's result, where the compiler tells the client which values are dates; Pinia state, `provide`, `inject`, a `ref` and a `defineModel` reach it as JSON the client cannot tell from a string: pass an ISO string or a number of milliseconds and build the date with `new Date()` (see the `dates_and_prices` guide)";
 
 /** Whether a value of the type holds a `Date` itself, or in a list or a dictionary, outside any object. */
@@ -319,7 +319,7 @@ function indexed(comp: Component, t: N, structs: Map<string, Struct>, seen: Set<
   return field.ty;
 }
 
-export function refusePrelude(comp: Component, d: N): void {
+function refusePrelude(comp: Component, d: N): void {
   if (RUST_PRELUDE.has(d.name)) {
     fail(comp, "FV0318", `an interface called \`${d.name}\` would hide Rust's own \`${d.name}\` in the generated code; rename it`, d.node);
   }

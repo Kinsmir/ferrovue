@@ -271,7 +271,7 @@ export function extraParams(c: Component, unread: (name: string) => boolean = ()
   return (takesSlots(c) ? ", fv_slots: Slots<'_>" : "") + paramsOf(c).map((p) => `, ${unread(p.name) ? "_" : ""}${p.name}: ${p.ty}`).join("");
 }
 
-export function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null, later = false): void {
+function callChild(s: Scope, e: Emitter, child: Component, propsCode: string, slots: N, attrs: string | null, later = false): void {
   const m = `super::${child.module}`;
   const scoped = child.inherits || takesAttrs(child);
   const trailing = paramsOf(child).map((p) => `, ${p.name}`).join("") + (scoped ? `, ${attrs ?? (takesAttrs(child) ? "&fv::attrs::Attrs::NONE" : '""')}` : "");

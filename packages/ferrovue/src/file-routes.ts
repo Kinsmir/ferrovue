@@ -136,7 +136,7 @@ function sorted(n: Node): Node[] {
 }
 
 /** The name ferrovue gives a page's component: the PascalCase of its path in the pages folder. */
-export function pageComponentName(rel: string): string {
+function pageComponentName(rel: string): string {
   return rel
     .replace(/\.vue$/, "")
     .split(/[^A-Za-z0-9]+/)

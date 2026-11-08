@@ -191,7 +191,7 @@ export interface StyleItem {
   entries: { key: string; css: string; value: N }[];
 }
 
-export function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
+function styleItems(s: Scope, n: N, when: string | null): StyleItem[] {
   if (when === "false") return [];
   if (when === "true") when = null;
   const both = (a: string | null, b: string) => (a === null ? b : logical(a, "&&", b));

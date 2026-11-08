@@ -297,12 +297,6 @@ export function strArg(code: string): string {
   return m[1] ? m[2]! : `&${m[2]}`;
 }
 
-export function callOn(recv: string, call: string): string {
-  const branches = ifElse(recv);
-  if (branches) return `if ${branches.test} { ${callOn(branches.yes, call)} } else { ${callOn(branches.no, call)} }`;
-  return `${receiver(recv)}.${call}`;
-}
-
 export function receiver(code: string): string {
   const m = /^[&*]+(.*)$/s.exec(code);
   return m && binding(m[1]!) === ATOM ? m[1]! : atom(code);

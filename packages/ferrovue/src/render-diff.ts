@@ -41,7 +41,7 @@ function files(dir: string, base = dir): string[] {
 }
 
 /** The rendered HTML under `dir`, by `<config>/<Component>/<case>`. */
-export function renderedFixtures(dir: string): Map<string, string> {
+function renderedFixtures(dir: string): Map<string, string> {
   return new Map(
     files(dir)
       .filter((f) => f.endsWith(".html"))

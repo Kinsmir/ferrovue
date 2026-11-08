@@ -37,7 +37,7 @@ const IGNORED_ATTRS = new Set(["id", "index", "src", "type", "lang", "module", "
 
 /** The id Vite gives a `<style module>` block, as `@vitejs/plugin-vue` requests it, which postcss-modules
  * names its classes from. */
-export function styleRequest(file: string, index: number, style: SFCStyleBlock, id: string): string {
+function styleRequest(file: string, index: number, style: SFCStyleBlock, id: string): string {
   let query = "";
   for (const [name, value] of Object.entries(style.attrs)) {
     if (!IGNORED_ATTRS.has(name)) query += `&${encodeURIComponent(name)}${value ? `=${encodeURIComponent(value)}` : ""}`;
@@ -47,7 +47,7 @@ export function styleRequest(file: string, index: number, style: SFCStyleBlock, 
 
 /** The classes, keyframes and values a CSS module exports, by name, as postcss-modules names them
  * with `names`. */
-export function moduleTokens(css: string, from: string, names: NameGenerator): Record<string, string> {
+function moduleTokens(css: string, from: string, names: NameGenerator): Record<string, string> {
   const root: Root = postcss([modulesValues, localByDefault({ mode: "local" }), extractImports, modulesScope({ generateScopedName: (local, file) => names(local, file), exportGlobals: false })]).process(css, { from }).root;
   const tokens: Record<string, string> = {};
   root.each((node) => {

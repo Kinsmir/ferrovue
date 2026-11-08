@@ -60,7 +60,7 @@ function count(n: number, one: string): string {
 
 /** The line after a run's refusals: how many there are, in how many components, and how many
  * components were left unchecked because they use a refused one. */
-export function refusalSummary(e: GenError | SyntaxError): string {
+function refusalSummary(e: GenError | SyntaxError): string {
   const all = refusalsOf(e);
   const files = new Set(all.flatMap((one) => (one instanceof GenError && one.at ? [one.at.file] : [])));
   const what = [...files].every((f) => f.endsWith(".vue")) ? "component" : "file";
