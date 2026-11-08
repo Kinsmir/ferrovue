@@ -24,6 +24,54 @@ function isRustPath(path: string): boolean {
   return segments.length >= 2 && segments.every((s, i) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s) && s !== "_" && (s === "crate" ? i === 0 && !path.startsWith("::") : !RUST_KEYWORDS.has(s)));
 }
 
+function isRustType(text: string): boolean {
+  let at = 0;
+  const type = (inner: boolean): boolean => {
+    const m = /^(?:::)?[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)*/.exec(text.slice(at));
+    if (!m || !(isRustPath(m[0]) || (inner && !m[0].includes(":") && m[0] !== "_" && !RUST_KEYWORDS.has(m[0])))) return false;
+    at += m[0].length;
+    if (text[at] !== "<") return true;
+    do {
+      at++;
+      while (text[at] === " ") at++;
+      if (!type(true)) return false;
+      while (text[at] === " ") at++;
+    } while (text[at] === ",");
+    if (text[at] !== ">") return false;
+    at++;
+    return true;
+  };
+  return type(false) && at === text.length;
+}
+
+function hasControl(text: string): boolean {
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    if (c < 0x20 || c === 0x7f) return true;
+  }
+  return false;
+}
+
+function controlIn(value: unknown, path: string): string | null {
+  if (typeof value === "string") return hasControl(value) ? path : null;
+  if (Array.isArray(value)) {
+    for (const [i, v] of value.entries()) {
+      const found = controlIn(v, `${path}[${i}]`);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value === "object" && value !== null) {
+    for (const [k, v] of Object.entries(value)) {
+      const at = path ? `${path}.${k}` : k;
+      if (hasControl(k)) return at;
+      const found = controlIn(v, at);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
 const isObject = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
 const isStrings = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
 
@@ -92,6 +140,8 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
   const shape = schema.properties ?? {};
   const entry = (node: Schema | undefined): Schema | undefined => node?.additionalProperties || undefined;
   keys(raw, "", schema);
+  const controlled = controlIn(raw, "");
+  if (controlled) refuse("FV1123", `\`${controlled}\` in ${file} holds a control character, such as a line break, which would end a comment of the generated code: remove it`);
   if (typeof raw.components !== "string" || typeof raw.out !== "string") {
     throw new GenError("FV1104", `${file} needs \`components\` and \`out\` directories`, { file });
   }
@@ -102,6 +152,11 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
     throw new GenError("FV1106", `\`builders\` in ${file} is \`true\` or \`false\`: whether each props struct gets \`new()\` and a setter per optional field`, { file });
   }
   for (const key of ["$schema", "stores", "trustedHtml", "dateType", "viteRoot"]) string(raw, key, key);
+  for (const key of ["dateType", "trustedHtml"]) {
+    if (typeof raw[key] === "string" && !isRustType(raw[key])) {
+      refuse("FV1122", `\`${key}\` in ${file} is ${JSON.stringify(raw[key])}, which is not the path of a Rust type: name the type from the crate root or a crate the project depends on, as \`chrono::DateTime<chrono::Utc>\` or \`crate::sanitize::SafeHtml\``);
+    }
+  }
   if (raw.unions !== undefined) {
     if (!isObject(raw.unions)) return wrong("unions", 'an object of Rust paths by `type` alias, as `{ "Tone": "crate::domain::Tone" }`');
     for (const [alias, path] of Object.entries(raw.unions)) {
@@ -161,6 +216,9 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
       if (!isObject(spec)) return wrong(path, "an object: `{ rust, params, returns, maxLen? }`");
       keys(spec, path, entry(shape.helpers?.properties?.functions));
       string(spec, "rust", `${path}.rust`, true);
+      if (!isRustPath(spec.rust as string)) {
+        refuse("FV1121", `\`${path}.rust\` in ${file} is ${JSON.stringify(spec.rust)}, which is not the path of a Rust function: name the function from the crate root or a crate the project depends on, as \`crate::helpers::${name}\``);
+      }
       if (!Array.isArray(spec.params)) return wrong(`${path}.params`, 'the list of types the function takes, as `["int"]`');
       spec.params.forEach((t, i) => typeName(t, `${path}.params[${i}]`));
       typeName(spec.returns, `${path}.returns`);
