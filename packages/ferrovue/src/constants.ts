@@ -18,7 +18,7 @@ export interface Named {
 
 /** The test that `key` is among `keys`, the own keys of a constant object or the keys of a constant
  * `Map`, and the keys it may then be: `null` where `key` is not a string or an integer. */
-export function keyAmong(comp: Component, key: Val, keys: readonly (string | number)[]): { test: string; among: (string | number)[] } | null {
+function keyAmong(comp: Component, key: Val, keys: readonly (string | number)[]): { test: string; among: (string | number)[] } | null {
   if (key.ty.k !== "str" && key.ty.k !== "int") return null;
   const mine = keys.filter((k) => (key.ty.k === "str" ? typeof k === "string" : typeof k === "number"));
   const fixed = key.ty.k === "str" && /^"[^"\\]*"$/.test(key.code) ? (JSON.parse(key.code) as string) : key.ty.k === "int" && key.num !== undefined && key.code === `${key.num}i64` ? key.num : undefined;
