@@ -1,4 +1,4 @@
-import { ELEMENT, gaps, HTML, keeps, names, rootSource, type TemplateNode } from "./whitespace-rules.ts";
+import { ELEMENT, gaps, HTML, keeps, names, rootSource, trimsInside, type TemplateNode } from "./whitespace-rules.ts";
 
 const PRESERVING_UTILITY = /^(?:[^\s:]+:)*whitespace-(?:pre|pre-wrap|pre-line|break-spaces)$/;
 
@@ -63,7 +63,7 @@ function visit(node: TemplateNode, source: string, start: number, options: White
   for (const child of node.children ?? []) {
     if (child.type !== ELEMENT || keeps(child, options.classes)) continue;
     const unlisted = staticClasses(child).find((c) => PRESERVING_UTILITY.test(c) && !options.classes.has(c));
-    if (unlisted !== undefined) {
+    if (unlisted !== undefined && trimsInside(child, options.classes)) {
       out.push({
         code: "FV0428",
         message: `\`${unlisted}\` sets a preserving \`white-space\` in Tailwind, and \`trim-edges\` trims the text of ${label(child)} all the same: list it in \`preserveWhitespace.classes\` in ferrovue.config.json`,

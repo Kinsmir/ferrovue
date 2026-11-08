@@ -434,7 +434,7 @@ export const ERRORS = {
   },
   FV0428: {
     title: "Class that sets a preserving `white-space`, not listed in `preserveWhitespace`",
-    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: a class named as Tailwind names its `white-space` utilities (`whitespace-pre`, `whitespace-pre-wrap`, `whitespace-pre-line`, `whitespace-break-spaces`, with any variant) shows the line breaks the mode trims. List it in `preserveWhitespace.classes`, so the element keeps its text.",
+    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: a class named as Tailwind names its `white-space` utilities (`whitespace-pre`, `whitespace-pre-wrap`, `whitespace-pre-line`, `whitespace-break-spaces`, with any variant) shows the line breaks the mode trims, and the warning names it where the element holds one. List it in `preserveWhitespace.classes`, so the element keeps its text.",
   },
   FV0429: {
     title: "Line breaks on both sides of a `v-if` that may render nothing",
