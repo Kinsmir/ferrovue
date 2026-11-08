@@ -27,6 +27,11 @@ function isRustPath(path: string): boolean {
 function isRustType(text: string): boolean {
   let at = 0;
   const type = (inner: boolean): boolean => {
+    const lifetime = inner ? /^'[A-Za-z_][A-Za-z0-9_]*/.exec(text.slice(at)) : null;
+    if (lifetime) {
+      at += lifetime[0].length;
+      return true;
+    }
     const m = /^(?:::)?[A-Za-z_][A-Za-z0-9_]*(?:::[A-Za-z_][A-Za-z0-9_]*)*/.exec(text.slice(at));
     if (!m || !(isRustPath(m[0]) || (inner && !m[0].includes(":") && m[0] !== "_" && !RUST_KEYWORDS.has(m[0])))) return false;
     at += m[0].length;

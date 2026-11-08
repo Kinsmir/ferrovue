@@ -1133,7 +1133,7 @@ export const ERRORS: {
     };
     readonly FV1122: {
         readonly title: "`dateType` or `trustedHtml` that is not a Rust type";
-        readonly detail: "`dateType` and `trustedHtml` in `ferrovue.config.json` are written into the generated props structs as the type of a field, so each must be a path of a Rust type, with generic arguments if it takes any: `chrono::DateTime<chrono::Utc>`, `crate::sanitize::SafeHtml`. Anything else is refused, as it could add fields or code to the struct. Write the type's full path.";
+        readonly detail: "`dateType` and `trustedHtml` in `ferrovue.config.json` are written into the generated props structs as the type of a field, so each must be a path of a Rust type, with generic arguments and lifetimes if it takes any: `chrono::DateTime<chrono::Utc>`, `crate::sanitize::SafeHtml<'a>`. Anything else is refused, as it could add fields or code to the struct. Write the type's full path.";
     };
     readonly FV1123: {
         readonly title: "Text in `ferrovue.config.json` holding a control character";
