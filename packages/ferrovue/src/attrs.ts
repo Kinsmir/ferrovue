@@ -388,17 +388,11 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
   return formattedAttr(v) ?? valueAttr(s, v, n);
 }
 
-const OWNED = /^(?:std::borrow::)?Cow::<str>::Owned\(/;
-
 /** A string built by a `format!` alone, as an attribute that formats it as it is written. */
 function formattedAttr(v: Val): string | null {
-  if (!isTemporary(v)) return null;
-  let code = asCow(v);
-  const owned = OWNED.exec(code);
-  if (owned && closing(code, owned[0].length - 1) === code.length - 1) code = code.slice(owned[0].length, -1);
-  if (!code.startsWith("format!(") || closing(code, 7) !== code.length - 1) return null;
+  if (!v.code.startsWith("&*format!(") || closing(v.code, 9) !== v.code.length - 1) return null;
   const f = fresh("f", "f");
-  return `fv::attrs::Attr::Fmt(&fv::attrs::format(|${f}| write!(${f}, ${code.slice(8, -1)})))`;
+  return `fv::attrs::Attr::Fmt(&fv::attrs::format(|${f}| write!(${f}, ${v.code.slice(10, -1)})))`;
 }
 
 /** A binding that is a string, `null` or `undefined`, as an attribute, refused with `code` and `what`

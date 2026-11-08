@@ -5,6 +5,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { oneLine } from "./code.ts";
 import { GenError } from "../src/errors.ts";
 import { generate } from "../src/compiler.ts";
+import { emptyTest } from "../src/attrs.ts";
+import type { Val } from "../src/model.ts";
 
 const roots: string[] = [];
 
@@ -130,6 +132,31 @@ defineProps<{ xs?: string[] }>();
     const e = refusal(island(parent, { Child: component("label?: string", "<div>x</div>") }));
     expect(e.code).toBe("FV0412");
     expect(e.message).toContain("an attribute that may fall through is a string, a number or a boolean");
+  });
+
+  it("passes a template literal on to a child as a value it formats as it is written, and other strings it builds as strings", () => {
+    const parent = `<script setup lang="ts">
+import Child from "./Child.vue";
+defineProps<{ a: string }>();
+</script>
+<template><div><Child :title="\`\${a}-\`" :data-u="a.toUpperCase()" :data-v="\`\${a}-\`.toUpperCase()" /></div></template>`;
+    const out = compile(island(parent, { Child: component("label?: string", "<div>x</div>") })).get("x.rs")!;
+    expect(out).toContain('("title", fv::attrs::Attr::Fmt(&fv::attrs::format(|fv_f| write!(fv_f, "{}-", props.a))))');
+    expect(out).toContain('("data-u", fv::attrs::Attr::Str(Cow::<str>::Owned(props.a.to_uppercase())))');
+    expect(out).toContain('("data-v", fv::attrs::Attr::Str(Cow::<str>::Owned(format!("{}-", props.a).to_uppercase())))');
+  });
+
+  it.each([
+    ["strings with a separator", "xs.iter().into_iter()", '"-"', "str", 'xs.iter().take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2'],
+    ["strings with a longer separator", "xs.iter()", '"--"', "str", 'xs.iter().take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2'],
+    ["strings with no separator", "xs.iter()", '""', "str", "xs.iter().all(|fv_item| fv_item.is_empty())"],
+    ["integers", "ns.iter().copied().into_iter()", '","', "int", "ns.iter().copied().next().is_none()"],
+    ["strings with a separator bound", "xs.iter()", "&props.sep", "str", "joined.is_empty()"],
+    ["strings with a raw separator", "xs.iter()", 'r"-"', "str", "joined.is_empty()"],
+    ["strings with a separator built from a literal", "xs.iter()", '"-".repeat(2)', "str", "joined.is_empty()"],
+  ] as const)("tests a `.join()` of %s for being empty from its items where it can", (_, items, sep, each, test) => {
+    const v: Val = { code: "joined", ty: { k: "str" }, joined: { of: "joined", items, sep, each } };
+    expect(emptyTest(v)).toBe(test);
   });
 
   it("passes `null` and `undefined` on to a child as attributes Vue leaves out", () => {
