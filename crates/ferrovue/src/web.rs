@@ -809,9 +809,13 @@ mod tests {
             .into_response();
         assert_eq!(response.headers()["content-type"], TEXT_HTML);
         assert_eq!(response.body().size_hint().exact(), None);
-        let body = axum::body::to_bytes(response.into_body(), 1 << 16)
-            .await
-            .expect("a body");
+        let body = tokio::time::timeout(
+            Duration::from_secs(10),
+            axum::body::to_bytes(response.into_body(), 1 << 16),
+        )
+        .await
+        .expect("the stream ends")
+        .expect("a body");
         assert_eq!(
             body,
             "<h1><!--[-->a<!--]--></h1><aside><!--[-->b<!--]--></aside>"
@@ -844,7 +848,7 @@ mod tests {
         let response = greet(Path("<Ada>".to_owned())).await.into_response();
         assert_eq!(response.status(), 200);
         assert_eq!(response.headers()["content-type"], TEXT_HTML);
-        let body = axum::body::to_bytes(response.into_body(), 1 << 16)
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
             .await
             .expect("a body");
         assert_eq!(
@@ -857,7 +861,7 @@ mod tests {
     #[tokio::test]
     async fn actix_sends_a_component_and_a_streamed_page() {
         use actix_web::Responder;
-        use actix_web::body::{BodySize, MessageBody, to_bytes};
+        use actix_web::body::{BodySize, MessageBody, to_bytes, to_bytes_limited};
 
         #[derive(serde::Serialize)]
         struct Props<'a> {
@@ -887,7 +891,14 @@ mod tests {
             .respond_to(&request);
         assert_eq!(response.headers().get("content-type").unwrap(), TEXT_HTML);
         assert_eq!(response.body().size(), BodySize::Stream);
-        let body = to_bytes(response.into_body()).await.expect("a body");
+        let body = tokio::time::timeout(
+            Duration::from_secs(10),
+            to_bytes_limited(response.into_body(), 1 << 16),
+        )
+        .await
+        .expect("the stream ends")
+        .expect("a short body")
+        .expect("a body");
         assert_eq!(
             body,
             "<h1><!--[-->a<!--]--></h1><aside><!--[-->b<!--]--></aside>"
