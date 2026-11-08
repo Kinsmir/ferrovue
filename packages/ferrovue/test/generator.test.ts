@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { loadConfig } from "../src/config.ts";
 import { generate } from "../src/compiler.ts";
 import { GENERATED_VERSION } from "../src/rust.ts";
-import { borrowsHeld } from "../src/lists.ts";
+import { borrowsHeld } from "../src/borrows.ts";
 import { CONFIG, compile, island } from "./project.ts";
 
 describe("the generator", () => {

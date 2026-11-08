@@ -71,8 +71,10 @@ packages/ferrovue/           the compiler (npm package)
   src/config.ts              `ferrovue/compiler/config`: `ferrovue.config.json`'s types and `loadConfig`
   src/context.ts, model.ts   the configuration checked, and the types and values the compiler passes around
   src/schema.ts              the configuration's keys, types and defaults, from which `schema.json` is written
-  src/component.ts, script.ts, typescript.ts, constants.ts
-                             a `.vue` file read, <script setup>, TypeScript types, constants and enums
+  src/component.ts, script.ts, typescript.ts, ts-exports.ts
+                             a `.vue` file read, <script setup>, TypeScript types, what a `.ts` file exports
+  src/const-decls.ts, const-values.ts, constants.ts
+                             constants and enums: evaluated, as Rust values, read by name and key
   src/template.ts, children.ts, slots.ts, loops.ts, vhtml.ts
                              the compiled template: statements, child components, slots, v-for,
                              where `v-html` may go
@@ -82,6 +84,12 @@ packages/ferrovue/           the compiler (npm package)
   src/strings.ts, numbers.ts, narrowing.ts, calls.ts, globals.ts, lists.ts, parens.ts
                              strings, numbers, narrowing, calls, JavaScript's globals, lists,
                              the parentheses Rust needs
+  src/list-calls.ts, sorting.ts, reduce.ts, flat.ts
+                             a list's `.includes()` and `.join()`, `.toSorted()`, `.reduce()`,
+                             `.flat()` and `.flatMap()`
+  src/array-literals.ts, object-calls.ts, destructuring.ts, borrows.ts
+                             array literals and spreads, `Object.keys()` and its kin, pairs and
+                             tuples destructured, the iterator chains a list may keep borrowed
   src/attrs.ts, classes.ts, styles.ts, fallthrough.ts
                              attributes, class and style, attributes a parent passes on
   src/dynamic.ts             `<component :is>` over a closed set of choices

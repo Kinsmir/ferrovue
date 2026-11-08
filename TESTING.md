@@ -689,9 +689,12 @@ locally on the functions a change touches (`-F`, or `--in-diff` with a diff file
 
 [Stryker](https://stryker-mutator.io) does the same for the compiler's TypeScript, configured in
 `stryker.config.json`: it mutates the modules listed under `mutate` (`attrs.ts`, `template.ts`,
-`constants.ts`, `dynamic.ts`, `expr.ts` with the expression modules `members.ts`,
-`operators.ts`, `logical.ts` and `conditional.ts`, and the modules of calls and methods `calls.ts`,
-`globals.ts`, `lists.ts`, `numbers.ts` and `strings.ts`, which hold what moved out of `expr.ts`) and runs the vitest suite against each mutant,
+`constants.ts` with the constant modules `const-decls.ts`, `const-values.ts` and `ts-exports.ts`,
+`dynamic.ts`, `expr.ts` with the expression modules `members.ts`, `operators.ts`, `logical.ts` and
+`conditional.ts`, the modules of calls and methods `calls.ts`, `globals.ts`, `numbers.ts` and
+`strings.ts`, which hold what moved out of `expr.ts`, and `lists.ts` with the list modules
+`array-literals.ts`, `borrows.ts`, `destructuring.ts`, `flat.ts`, `list-calls.ts`,
+`object-calls.ts`, `reduce.ts` and `sorting.ts`) and runs the vitest suite against each mutant,
 compiler tests and the Vue half of conformance included. The conformance check that `generated/` is
 what the compiler writes now catches any mutant that changes the Rust of a conformance component, so
 a fixture there kills more than its HTML.
@@ -710,8 +713,8 @@ a component while it loads: what runs then is covered by no test, and Stryker ru
 against every mutant it reaches (a static mutant). At four test runners on twelve cores, `attrs.ts`
 and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about 40 and `expr.ts` with
 the expression modules about 45; two runners take about twice as long. The **Mutants** workflow runs
-the modules in six groups (`attrs.ts` with `template.ts`, `constants.ts`, `dynamic.ts`, the
-expression modules, `calls.ts` with `globals.ts`, `numbers.ts` and `strings.ts`, and `lists.ts`),
+the modules in six groups (`attrs.ts` with `template.ts`, the constant modules, `dynamic.ts`, the
+expression modules, `calls.ts` with `globals.ts`, `numbers.ts` and `strings.ts`, and the list modules),
 one job each and three at a time, each within the job's 150 minutes. The reports are
 `target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
 an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.

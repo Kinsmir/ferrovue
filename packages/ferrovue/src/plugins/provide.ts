@@ -1,6 +1,7 @@
 import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, fail, nothing, opt, sameTy, snake } from "../model.ts";
 import { ctx } from "../context.ts";
-import { type Declared, exportedConst } from "../constants.ts";
+import type { Declared } from "../const-decls.ts";
+import { exportedConst } from "../ts-exports.ts";
 import { lookupStruct, markHome, refuseDates, tyOfTs } from "../typescript.ts";
 import { resolveImport } from "../resolve.ts";
 import { describeTy, expr } from "../expr.ts";

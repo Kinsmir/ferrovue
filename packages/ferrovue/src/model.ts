@@ -1,7 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
 import type { SourceMapConsumer } from "source-map-js";
 import type { Plugin } from "./plugin.ts";
-import type { Const } from "./constants.ts";
+import type { Const } from "./const-decls.ts";
 import { type ErrorCode, GenError, type SourceLocation } from "./errors.ts";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
