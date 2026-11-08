@@ -34,16 +34,16 @@ it("keeps the package root to the browser API, reaching only Vue", () => {
   expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/client.ts", "src/loads.ts", "src/page-json.ts", "src/revive.ts"]);
 });
 
-it("keeps ferrovue/link-router to vue-router and the routes it is given", () => {
+it("keeps ferrovue/link-router to vue-router, the routes it is given and the check for links to other hosts", () => {
   const { files, packages } = graph("src/link-router.ts");
   expect([...packages].toSorted()).toEqual(["vue-router"]);
-  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/route-records.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-router.ts", "src/other-host.ts", "src/route-records.ts"]);
 });
 
-it("keeps ferrovue/link-routes to Vue's shallow reactivity, vue-router's RouterLink and injection keys and the routes it is given", () => {
+it("keeps ferrovue/link-routes to Vue's shallow reactivity, vue-router's RouterLink and injection keys, the routes it is given and the check for links to other hosts", () => {
   const { files, packages } = graph("src/link-routes.ts");
   expect([...packages].toSorted()).toEqual(["vue", "vue-router"]);
-  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-routes.ts", "src/route-records.ts"]);
+  expect([...files].map((f) => relativePath(ROOT, f)).toSorted()).toEqual(["src/link-routes.ts", "src/other-host.ts", "src/route-records.ts"]);
   const text = readFileSync(join(ROOT, "src/link-routes.ts"), "utf8");
   const values = (from: string): string[] =>
     [...text.matchAll(new RegExp(`^import \\{([^}]*)\\} from "${from}";$`, "gm"))].flatMap((m) => m[1]!.split(",").map((s) => s.trim()).filter((s) => !s.startsWith("type ")));
