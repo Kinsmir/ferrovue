@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
 import { loadConfig } from "../src/config.ts";
 import { GenError } from "../src/errors.ts";
-import { generate } from "../src/compiler.ts";
+import { generate, write } from "../src/compiler.ts";
 import type { ErrorCode } from "../src/errors.ts";
 import { CONFIG, compile, island, roots } from "./project.ts";
 
@@ -318,6 +318,16 @@ describe("the configuration", () => {
     ["a `unions` path with generic arguments", { ...CONFIG, unions: { Tone: "crate::Tone<'a>" } }, "FV1119", /is "crate::Tone<'a>"/],
     ["a `unions` path with `crate` inside it", { ...CONFIG, unions: { Tone: "app::crate::Tone" } }, "FV1119", /is "app::crate::Tone"/],
     ["a `unions` path that ends in `::`", { ...CONFIG, unions: { Tone: "crate::" } }, "FV1119", /is "crate::"/],
+    ["a helper `rust` that is a closure", { ...CONFIG, helpers: { module: "./helpers", functions: { fmt: { rust: "(|_n: f64| -> &str { \"ok\" })", params: ["float"], returns: "string" } } } }, "FV1121", /^`helpers\.functions\.fmt\.rust` in ferrovue\.config\.json is "\(\|_n: f64\| -> &str \{ \\"ok\\" \}\)", which is not the path of a Rust function: name the function from the crate root or a crate the project depends on, as `crate::helpers::fmt`$/],
+    ["a helper `rust` of one name", { ...CONFIG, helpers: { module: "./helpers", functions: { fmt: { rust: "fmt", params: ["float"], returns: "string" } } } }, "FV1121", /is "fmt", which is not the path of a Rust function/],
+    ["a helper `rust` that calls a method", { ...CONFIG, helpers: { module: "./helpers", functions: { fmt: { rust: "crate::fmt().len", params: ["float"], returns: "string" } } } }, "FV1121", /is "crate::fmt\(\)\.len"/],
+    ["a `dateType` that adds a field", { ...CONFIG, dateType: "u8, pub evil: fn() -> ()" }, "FV1122", /^`dateType` in ferrovue\.config\.json is "u8, pub evil: fn\(\) -> \(\)", which is not the path of a Rust type: name the type from the crate root or a crate the project depends on, as `chrono::DateTime<chrono::Utc>` or `crate::sanitize::SafeHtml`$/],
+    ["a `dateType` of one name", { ...CONFIG, dateType: "JsDate" }, "FV1122", /is "JsDate"/],
+    ["a `dateType` whose generic arguments do not close", { ...CONFIG, dateType: "chrono::DateTime<chrono::Utc" }, "FV1122", /is "chrono::DateTime<chrono::Utc"/],
+    ["a `trustedHtml` that is a block", { ...CONFIG, trustedHtml: "crate::Safe { x }" }, "FV1122", /^`trustedHtml` in ferrovue\.config\.json is "crate::Safe \{ x \}"/],
+    ["a path holding a line break", { ...CONFIG, components: "\npub fn evil() {}\n//../components" }, "FV1123", /^`components` in ferrovue\.config\.json holds a control character, such as a line break, which would end a comment of the generated code: remove it$/],
+    ["a nested name holding a control character", { ...CONFIG, router: { routes: "routes.json", linkActiveClass: "on\u0000" } }, "FV1123", /^`router\.linkActiveClass` in/],
+    ["a key holding a control character", { ...CONFIG, unions: { "To\tne": "crate::Tone" } }, "FV1123", /^`unions\.To\tne` in/],
   ];
   for (const [what, config, code, message] of cases) {
     it(`refuses ${what}`, () => {
@@ -327,6 +337,12 @@ describe("the configuration", () => {
       expect(e.at).toEqual({ file: "ferrovue.config.json" });
     });
   }
+
+  it("takes the paths of Rust types with generic arguments as `dateType` and `trustedHtml`", () => {
+    for (const ty of ["chrono::DateTime<chrono::Utc>", "::app::When<app::Zone, u8>", "crate::a::B<c::D<e::F>, G>", "crate::Html"]) {
+      expect(loadConfig(configured({ ...CONFIG, dateType: ty, trustedHtml: ty }))).toMatchObject({ dateType: ty, trustedHtml: ty });
+    }
+  });
 
   it("takes every key the README lists, and the repository's own configurations", () => {
     const full = {
@@ -402,5 +418,40 @@ defineProps<{ item: Item }>();
     const store = failure(() => generate(root, { ...CONFIG, stores: "stores" }));
     expect(store.code).toBe("FV0001");
     expect(store.at).toMatchObject({ file: "stores/prefs.ts", line: 3, column: 1 });
+  });
+});
+
+describe("writing the output", () => {
+  const project = (): string => {
+    const made = mkdtempSync(join(tmpdir(), "ferrovue-"));
+    roots.push(made);
+    mkdirSync(join(made, "components"));
+    writeFileSync(join(made, "components/Hello.vue"), "<template><p>Hello</p></template>\n");
+    return made;
+  };
+  const config = { components: "components", out: "out" };
+
+  it("leaves a file it did not write alone, and writes nothing", () => {
+    const root = project();
+    mkdirSync(join(root, "out"));
+    writeFileSync(join(root, "out/mod.rs"), "fn own_code() {}\n");
+    let error: unknown;
+    try {
+      write(root, config);
+    } catch (e) {
+      error = e;
+    }
+    expect((error as GenError).code).toBe("FV1124");
+    expect((error as GenError).message).toBe("out/mod.rs is not a file ferrovue wrote: it does not open with `// @generated by ferrovue`, so it is left alone. Point `out` at a directory of generated modules, or move the file away");
+    expect(readFileSync(join(root, "out/mod.rs"), "utf8")).toBe("fn own_code() {}\n");
+    expect(existsSync(join(root, "out/hello.rs"))).toBe(false);
+  });
+
+  it("replaces the files it wrote", () => {
+    const root = project();
+    expect(write(root, config).changed).toContain("hello.rs");
+    writeFileSync(join(root, "components/Hello.vue"), "<template><p>Bye</p></template>\n");
+    expect(write(root, config).changed).toEqual(["hello.rs"]);
+    expect(readFileSync(join(root, "out/hello.rs"), "utf8")).toContain("Bye");
   });
 });

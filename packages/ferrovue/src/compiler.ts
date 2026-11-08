@@ -337,13 +337,20 @@ export function write(root: string, config: Config = loadConfig(root), options: 
   const target = join(root, config.out);
   mkdirSync(target, { recursive: true });
   const changed: string[] = [];
-  for (const [name, text] of files) {
-    let old: string | null = null;
+  const old = new Map<string, string | null>();
+  for (const name of files.keys()) {
+    let text: string | null = null;
     try {
-      old = readFileSync(join(target, name), "utf8");
+      text = readFileSync(join(target, name), "utf8");
     } catch {
     }
-    if (old !== text) {
+    if (text !== null && !text.startsWith(GENERATED)) {
+      throw new GenError("FV1124", `${join(config.out, name)} is not a file ferrovue wrote: it does not open with \`${GENERATED}\`, so it is left alone. Point \`out\` at a directory of generated modules, or move the file away`, { file: join(config.out, name) });
+    }
+    old.set(name, text);
+  }
+  for (const [name, text] of files) {
+    if (old.get(name) !== text) {
       writeFileSync(join(target, name), text);
       changed.push(name);
     }
