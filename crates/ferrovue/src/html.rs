@@ -47,7 +47,7 @@ use std::borrow::Cow;
 /// assert_eq!(hello::html(&props).into_string(), "<p>Hello, Ada!</p>");
 /// assert_eq!(
 ///     hello::island(&props).into_string(),
-///     r#"<div data-island="Hello" data-props="{&quot;name&quot;:&quot;Ada&quot;}"><p>Hello, Ada!</p></div>"#
+///     r#"<div data-island="Hello" data-props='{"name":"Ada"}'><p>Hello, Ada!</p></div>"#
 /// );
 ///
 /// // `into_html` holds the props, so the function that makes them can return the page.
@@ -249,7 +249,7 @@ impl<'p, P: Serialize, F: Renderer<P>> Html<'p, P, F> {
     /// let props = counter::Props { start: 5 };
     /// assert_eq!(
     ///     counter::island(&props).hydrate(Hydrate::Interaction).into_string(),
-    ///     r#"<div data-island="Counter" data-props="{&quot;start&quot;:5}" data-hydrate="interaction"><button>5</button></div>"#
+    ///     r#"<div data-island="Counter" data-props='{"start":5}' data-hydrate="interaction"><button>5</button></div>"#
     /// );
     /// ```
     #[must_use]
@@ -439,17 +439,20 @@ fn island_into<P: Serialize>(
 ) -> Result<(), Refused> {
     out.push_str("<div data-island=\"");
     escape_into(out, name);
-    out.push_str("\" data-props=\"");
+    out.push_str("\" data-props='");
     json::escaped_into(out, props);
+    out.push('\'');
     if let Some(hydrate) = hydrate {
-        out.push_str("\" data-hydrate=\"");
+        out.push_str(" data-hydrate=\"");
         escape_into(out, &hydrate.attribute());
+        out.push('"');
     }
     if !dates.is_empty() {
-        out.push_str("\" data-dates=\"");
+        out.push_str(" data-dates=\"");
         escape_into(out, dates);
+        out.push('"');
     }
-    out.push_str("\">");
+    out.push('>');
     render(out)?;
     out.push_str("</div>");
     Ok(())
@@ -479,11 +482,11 @@ fn island_into<P: Serialize>(
 /// let props = counter::Props { start: 5 };
 /// assert_eq!(
 ///     counter::island(&props).hydrate(Hydrate::Visible).into_string(),
-///     r#"<div data-island="Counter" data-props="{&quot;start&quot;:5}" data-hydrate="visible"><button>5</button></div>"#
+///     r#"<div data-island="Counter" data-props='{"start":5}' data-hydrate="visible"><button>5</button></div>"#
 /// );
 /// assert_eq!(
 ///     counter::island(&props).hydrate(Hydrate::media("(min-width: 40rem)")).into_string(),
-///     r#"<div data-island="Counter" data-props="{&quot;start&quot;:5}" data-hydrate="media:(min-width: 40rem)"><button>5</button></div>"#
+///     r#"<div data-island="Counter" data-props='{"start":5}' data-hydrate="media:(min-width: 40rem)"><button>5</button></div>"#
 /// );
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

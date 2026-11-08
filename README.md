@@ -155,7 +155,7 @@ let props = Props::new("Ada", 3).note("welcome back");
 let html: String = greeting::html(&props).into_string();
 
 // …or as an island the client hydrates: wrapped in
-// <div data-island="Greeting" data-props="{…}">…</div>
+// <div data-island="Greeting" data-props='{…}'>…</div>
 let island = greeting::island(&props).into_string();
 
 // (`island()` exists for a component that renders from its props alone: the client rebuilds it from

@@ -1,6 +1,6 @@
 #![no_main]
 
-use ferrovue_fuzz::{Value, reference_escape, unescape};
+use ferrovue_fuzz::Value;
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|value: Value| {
@@ -13,11 +13,15 @@ fuzz_target!(|value: Value| {
     })
     .into_string();
     let props = html
-        .strip_prefix(r#"<div data-island="Fuzz" data-props=""#)
-        .and_then(|rest| rest.strip_suffix(r#""><i></i></div>"#))
+        .strip_prefix(r#"<div data-island="Fuzz" data-props='"#)
+        .and_then(|rest| rest.strip_suffix("'><i></i></div>"))
         .expect("an island's markup around its props");
-    assert_eq!(props, reference_escape(&json));
-    let read = unescape(props).expect("data-props holds escaped text alone");
+    assert_eq!(props, json.replace('&', "&amp;").replace('\'', "&#39;"));
+    assert!(
+        !props.contains('\''),
+        "data-props ends at its closing quote alone"
+    );
+    let read = props.replace("&#39;", "'").replace("&amp;", "&");
     assert_eq!(read, json);
     if value.reads_back() {
         let parsed: serde_json::Value = serde_json::from_str(&read).expect("data-props is JSON");

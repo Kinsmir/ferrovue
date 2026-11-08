@@ -281,7 +281,7 @@ let island = greeting::island(&props).into_string();
 assert_eq!(
     island,
     concat!(
-        r#"<div data-island="Greeting" data-props="{&quot;name&quot;:&quot;Ada&quot;,&quot;unread&quot;:3}">"#,
+        r#"<div data-island="Greeting" data-props='{"name":"Ada","unread":3}'>"#,
         r#"<p class="greeting">Hello, Ada!<b>3 new</b><!----></p></div>"#,
     )
 );

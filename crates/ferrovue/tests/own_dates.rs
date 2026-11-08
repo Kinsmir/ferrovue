@@ -25,7 +25,7 @@ impl JsTime for Loose {
 }
 
 fn unescape(s: &str) -> String {
-    s.replace("&quot;", "\"").replace("&amp;", "&")
+    s.replace("&#39;", "'").replace("&amp;", "&")
 }
 
 #[test]
@@ -35,8 +35,8 @@ fn a_time_value_beyond_the_range_or_a_fraction_renders_and_travels_as_new_date_m
         .deleted(Loose(f64::INFINITY));
     let island = date_stamp::island(&props).into_string();
     let (attr, markup) = island
-        .strip_prefix(r#"<div data-island="DateStamp" data-props=""#)
-        .and_then(|rest| rest.split_once(r#"">"#))
+        .strip_prefix(r#"<div data-island="DateStamp" data-props='"#)
+        .and_then(|rest| rest.split_once("'>"))
         .expect("the island wrapper");
     assert_eq!(
         markup,

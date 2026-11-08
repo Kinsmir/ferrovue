@@ -86,7 +86,7 @@ fn an_island_carries_a_chrono_date_as_a_js_date_carries_it() {
     let props = date_post::Props::new(posted, "Spring", ["a", "b"]).edited(edited);
     let island = date_post::island(&props).into_string();
     assert!(island.starts_with(
-        r#"<div data-island="DatePost" data-props="{&quot;posted&quot;:&quot;2024-03-10T08:05:09.007Z&quot;,&quot;edited&quot;:&quot;+262142-12-31T23:59:59.999Z&quot;,&quot;deleted&quot;:null,"#
+        r#"<div data-island="DatePost" data-props='{"posted":"2024-03-10T08:05:09.007Z","edited":"+262142-12-31T23:59:59.999Z","deleted":null,"#
     ));
     assert!(island.contains("<footer>1710057909007|59 <span>8210266876799999</span>"));
     let stamp = date_stamp::Props::new(posted, edited).deleted(posted);

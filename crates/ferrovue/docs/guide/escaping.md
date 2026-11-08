@@ -49,7 +49,8 @@ Validate URLs from users before rendering them, as a Vue app would. The
 
 What the page carries for the client is escaped for its context as well:
 
-- an island's `data-props` is JSON, escaped as an attribute value;
+- an island's `data-props` is JSON in single quotes, with each `&` written `&amp;` and each `'`
+  written `&#39;`, so no value can end the attribute;
 - [`state_script_into`](crate::page::state_script_into) writes `<`, `>`, `&`, U+2028 and U+2029 inside its
   JSON as `\u` escapes, so no value can end the `<script>` element or be read as markup inside it,
   and it escapes the element's `id`.

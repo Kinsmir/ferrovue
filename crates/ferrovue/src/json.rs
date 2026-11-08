@@ -20,7 +20,7 @@ pub(crate) fn to_string_or_null<T: Serialize + ?Sized>(value: &T) -> String {
     or(value, "null")
 }
 
-/// [`to_string`] escaped for an attribute's value, written straight into `out`.
+/// [`to_string`] escaped for an attribute's value in single quotes, written straight into `out`.
 pub(crate) fn escaped_into<T: Serialize + ?Sized>(out: &mut String, value: &T) {
     let start = out.len();
     if let Err(e) = write(Escaped(out), value) {
@@ -57,14 +57,21 @@ fn write<W: io::Write, T: Serialize + ?Sized>(writer: W, value: &T) -> serde_jso
     value.serialize(Wrap(&mut json, &pending))
 }
 
-/// Escapes what serde_json writes as it goes. serde_json writes whole characters each time, cutting
-/// a string only where it escapes an ASCII one.
+/// Escapes what serde_json writes as it goes, for an attribute in single quotes: `&` and `'`.
+/// serde_json writes whole characters each time, cutting a string only where it escapes an ASCII
+/// one.
 struct Escaped<'o>(&'o mut String);
 
 impl io::Write for Escaped<'_> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let text = std::str::from_utf8(buf).map_err(io::Error::other)?;
-        ferrovue_core::escape_into(self.0, text);
+        let mut last = 0;
+        for (i, c) in text.match_indices(['&', '\'']) {
+            self.0.push_str(&text[last..i]);
+            self.0.push_str(if c == "&" { "&amp;" } else { "&#39;" });
+            last = i + 1;
+        }
+        self.0.push_str(&text[last..]);
         Ok(buf.len())
     }
 
@@ -482,9 +489,7 @@ mod tests {
             (written_escaped(&value), to_string(&value)),
             (written_escaped(&by_number), to_string(&by_number)),
         ] {
-            let mut escaped = String::new();
-            ferrovue_core::escape_into(&mut escaped, &json);
-            assert_eq!(written, escaped);
+            assert_eq!(written, json.replace('&', "&amp;").replace('\'', "&#39;"));
         }
     }
 

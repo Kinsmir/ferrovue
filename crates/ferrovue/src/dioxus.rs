@@ -18,8 +18,8 @@
 //! # }
 //! let props = counter::Props { start: 5 };
 //! let html = dioxus_ssr::render_element(counter::island(&props).to_element());
-//! // The same element, attribute values and markup as `island().into_string()`; Dioxus spells
-//! // the quotes in `data-props` as `&#34;` where Vue writes `&quot;`.
+//! // The same element, attribute values and markup as `island().into_string()`; Dioxus writes
+//! // `data-props` in double quotes, with each `"` in it as `&#34;`.
 //! assert_eq!(
 //!     html,
 //!     r#"<div data-island="Counter" data-props="{&#34;start&#34;:5}"><button>5</button></div>"#

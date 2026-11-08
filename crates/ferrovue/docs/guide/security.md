@@ -89,8 +89,8 @@ escaped too and stays code: see below.
 
 | | |
 |---|---|
-| Written | An island's wrapper, `<div data-island="Name" data-props="{…}" data-hydrate="…">` |
-| Guarantee | `data-props` is the props as JSON (serde_json, with `NaN` and `Infinity` as bare tokens), escaped with `escape_into` as it is written, so it is one attribute value whatever the props hold. Props serde_json refuses write an empty value in a release build and panic in a debug one. `data-island` is the component's name, a constant, escaped as well. `data-hydrate` is [`Hydrate::attribute`](crate::html::Hydrate::attribute), escaped. The client reads `data-props` with `JSON.parse` and a reviver for the non-finite tokens (`parseJson` in `packages/ferrovue/src/client.ts`), and never evaluates it |
+| Written | An island's wrapper, `<div data-island="Name" data-props='{…}' data-hydrate="…">` |
+| Guarantee | `data-props` is the props as JSON (serde_json, with `NaN` and `Infinity` as bare tokens), written in single quotes with each `&` as `&amp;` and each `'` as `&#39;` as it is written, so it is one attribute value whatever the props hold: inside a single-quoted value only `'` ends it and only `&` starts a reference. Props serde_json refuses write an empty value in a release build and panic in a debug one. `data-island` is the component's name, a constant, escaped as well. `data-hydrate` is [`Hydrate::attribute`](crate::html::Hydrate::attribute), escaped. The client reads `data-props` with `JSON.parse` and a reviver for the non-finite tokens (`parseJson` in `packages/ferrovue/src/client.ts`), and never evaluates it |
 | Code | `island_into` in `crates/ferrovue/src/html.rs`; `escaped_into` in `crates/ferrovue/src/json.rs`; with the `dioxus` feature, `to_element` in `crates/ferrovue/src/dioxus.rs` hands the same values to Dioxus as attributes, which it escapes |
 | Tests | `island_props_cannot_leave_their_attribute`, `the_island_name_is_escaped_too` and `a_hostile_media_query_or_root_margin_cannot_leave_its_attribute` (`crates/ferrovue/src/html/tests.rs`); `written_escaped_is_what_escaping_the_json_gives` (`json.rs`); the Dioxus tests in `tests/conformance.rs` |
 

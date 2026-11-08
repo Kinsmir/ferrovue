@@ -176,7 +176,7 @@ An island's props travel as JSON, which has no words for some numbers JavaScript
 # }
 // Gauge.vue: defineProps<{ level: Float }>(), rendering <p>{{ level }}</p>.
 let html = gauge::island(&gauge::Props { level: f64::NAN }).into_string();
-assert_eq!(html, r#"<div data-island="Gauge" data-props="{&quot;level&quot;:NaN}"><p>NaN</p></div>"#);
+assert_eq!(html, r#"<div data-island="Gauge" data-props='{"level":NaN}'><p>NaN</p></div>"#);
 ```
 
 The tokens are not JSON, so code that reads the props with plain `JSON.parse` refuses them; an
