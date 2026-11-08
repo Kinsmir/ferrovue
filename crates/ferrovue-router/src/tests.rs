@@ -466,6 +466,27 @@ fn a_static_segment_outranks_a_parameter_whatever_the_order_given() {
 }
 
 #[test]
+fn a_query_of_many_keys_keeps_each_key_once_with_its_values_in_order() {
+    let search: Vec<String> = (0..20_000)
+        .map(|i| format!("k{}={i}", i % 10_000))
+        .collect();
+    let query = crate::url::parse_query(&search.join("&"));
+    assert_eq!(query.len(), 10_000);
+    for (i, (key, values)) in query.iter().enumerate() {
+        assert_eq!(key, &format!("k{i}"));
+        assert_eq!(
+            values,
+            &[Some(i.to_string()), Some((i + 10_000).to_string())]
+        );
+    }
+    let router = Router::new(&["/"]);
+    let route = router.at("/?b=1&a&b=2&a=%41&c+d=e+f");
+    assert_eq!(route.query("b").attr_value(), None);
+    assert!(route.query("a").is_array());
+    assert_eq!(route.query("c d").attr_value(), Some("e f"));
+}
+
+#[test]
 fn the_location_path_drops_the_query_and_hash() {
     let router = Router::new(&["/"]);
     assert_eq!(router.at("/a/b?x=1#h").path(), "/a/b");

@@ -64,6 +64,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [A page from the fallback](https://docs.rs/ferrovue/latest/ferrovue/guide/web_frameworks/index.html#a-page-from-the-fallback).
 - `hydrateState` and `mountPage` read the state and the page record only from a `<script>` with their `id`, so an element of user HTML given that `id` cannot stand in for them.
   [The state script and the page record](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#the-state-script-and-the-page-record).
+- `Router::at` parses a query string in time linear in its length; a query of thousands of distinct keys took time quadratic in their number, about 300 ms for a 75 KB URL.
+  [A router per application, a route per request](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#a-router-per-application-a-route-per-request).
 
 ## [0.15.2] - 2026-11-07
 
