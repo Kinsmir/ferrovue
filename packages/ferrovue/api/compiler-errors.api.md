@@ -445,7 +445,7 @@ export const ERRORS: {
     };
     readonly FV0429: {
         readonly title: "Line breaks on both sides of a `v-if` that may render nothing";
-        readonly detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line breaks before and after a `v-if` with no `v-else` each render as a space, so when no branch renders the text holds two spaces. The browser shows one, and `textContent` and the server's HTML hold both. Hug the tags on one side of the `v-if` to render one.";
+        readonly retired: "0.16.0";
     };
     readonly FV0501: {
         readonly title: "Child component that is not among the compiled components";
