@@ -1,5 +1,5 @@
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, join, posix, resolve } from "node:path";
 import { relativePath } from "./paths.ts";
 import { type Config, CONFIG_FILE, loadConfig } from "./config.ts";
 import { ctx, JS_DATE, templateComments, tyOfName } from "./context.ts";
@@ -345,7 +345,8 @@ export function write(root: string, config: Config = loadConfig(root), options: 
     } catch {
     }
     if (text !== null && !text.startsWith(GENERATED)) {
-      throw new GenError("FV1124", `${join(config.out, name)} is not a file ferrovue wrote: it does not open with \`${GENERATED}\`, so it is left alone. Point \`out\` at a directory of generated modules, or move the file away`, { file: join(config.out, name) });
+      const shown = posix.join(config.out.replaceAll("\\", "/"), name);
+      throw new GenError("FV1124", `${shown} is not a file ferrovue wrote: it does not open with \`${GENERATED}\`, so it is left alone. Point \`out\` at a directory of generated modules, or move the file away`, { file: shown });
     }
     old.set(name, text);
   }
