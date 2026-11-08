@@ -61,6 +61,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 - `Head::render` keeps each class of a `class` and each property of a `style` once in time linear in their number, merges of `htmlAttrs` and `bodyAttrs` included; a `class` of 16,000 names takes 3 ms, down from 305 ms.
   [What a component may pass](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html#what-a-component-may-pass).
+- A `:style` string merged with other styles has its comments stripped in one pass, copying nothing at each `/*`; 48 KB of unclosed `/*` takes 0.09 ms, down from 543 ms.
+  [CSS](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#css).
 
 ### Fixed
 

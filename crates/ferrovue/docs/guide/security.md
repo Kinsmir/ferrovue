@@ -81,7 +81,7 @@ escaped too and stays code: see below.
 | | |
 |---|---|
 | Written | `:style` objects, arrays and strings, merged with a static `style`, `v-show`'s `display:none`, styles falling through |
-| Guarantee | Property names come from the template (computed names are refused, FV1008, and so are numeric and `:`-prefixed ones, FV1009) and are escaped; values are escaped. A string merged with other styles is parsed into declarations as Vue's `normalizeStyle` parses it and written back escaped. `v-bind()` in a `<style>` block is refused (FV1006), so no prop reaches CSS custom properties |
+| Guarantee | Property names come from the template (computed names are refused, FV1008, and so are numeric and `:`-prefixed ones, FV1009) and are escaped; values are escaped. A string merged with other styles is parsed into declarations as Vue's `normalizeStyle` parses it and written back escaped. Its comments are stripped in one pass over the string, however many unclosed `/*` it holds. `v-bind()` in a `<style>` block is refused (FV1006), so no prop reaches CSS custom properties |
 | Code | `packages/ferrovue/src/styles.ts`; `style_into`, `parse_style` and `style_text_into` in `crates/ferrovue/src/attrs.rs` |
 | Tests | `Styles` and `Shown` fixtures (hostile included), `attrs.json`'s styles, `Unsanitised` |
 
