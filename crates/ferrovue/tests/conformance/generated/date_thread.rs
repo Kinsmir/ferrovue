@@ -48,7 +48,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     );
     let fv_refusals = fv::render::Refusals::new(NAME, "components/DateThread.vue");
     let s_moved = std::cell::LazyCell::new(|| props.thread.replies.iter().map(|fv_r| super::types::Reply { author: Cow::<str>::Owned(fv_r.author.to_uppercase()), at: fv_refusals.date(fv::date::js_time_clip(fv::date::js_time_of(&fv_r.at) + props.shift), 9, 81), edited: fv_r.edited.as_ref().map(fv::date::js_time_of).map(|fv_t| fv_refusals.date(fv_t, 9, 129)), removed: None, replies: Vec::new() }).collect::<Vec<_>>());
-    let s_opening = std::cell::LazyCell::new(|| super::types::Reply { author: Cow::<str>::Borrowed(&*props.thread.title), at: fv_refusals.date(fv::date::js_time_of(&props.thread.opened), 11, 74), removed: Some(fv_refusals.date(fv::date::js_time_of(&props.thread.opened), 11, 104)), replies: s_moved.to_owned(), edited: None });
+    let s_opening = std::cell::LazyCell::new(|| super::types::Reply { author: Cow::<str>::Borrowed(&*props.thread.title), at: fv_refusals.date(fv::date::js_time_of(&props.thread.opened), 11, 74), removed: Some(fv_refusals.date(fv::date::js_time_of(&props.thread.opened), 11, 104)), replies: s_moved.iter().map(|v| v.borrowed()).collect(), edited: None });
     out.push_str("<article><h2>");
     fv::core::escape_into(out, &props.thread.title);
     out.push_str("</h2><p>opened ");
@@ -57,11 +57,11 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::push_int(out, props.thread.seen.len() as i64);
     out.push_str(" seen</p>");
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
-        replies: props.thread.replies.to_owned(),
+        replies: props.thread.replies.iter().map(|v| v.borrowed()).collect(),
         depth: 0i64,
     }))?;
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
-        replies: s_moved.to_owned(),
+        replies: s_moved.iter().map(|v| v.borrowed()).collect(),
         depth: 1i64,
     }))?;
     out.push_str("<p>");
@@ -72,7 +72,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     fv::core::push_number(out, if let Some(fv_removed) = s_opening.removed.as_ref().map(fv::date::js_time_of) { fv::date::js_utc_day(fv_removed) } else { -1.0f64 });
     out.push_str("</p>");
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
-        replies: s_opening.replies.to_owned(),
+        replies: s_opening.replies.iter().map(|v| v.borrowed()).collect(),
         depth: 2i64,
     }))?;
     out.push_str("<!--[-->");

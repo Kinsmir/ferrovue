@@ -23,6 +23,16 @@ impl<'a> Item<'a> {
     }
 }
 
+impl<'a> Item<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Item<'_> {
+        Item {
+            id: self.id,
+            name: Cow::Borrowed(&*self.name),
+        }
+    }
+}
+
 /// `Panel` in `Lifecycle.vue`.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

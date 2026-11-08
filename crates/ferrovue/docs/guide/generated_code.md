@@ -164,6 +164,13 @@ Every component module has, in this order:
 `Props` has no lifetime when none of its fields borrow (a component whose props are all numbers
 and booleans has a plain `Props`), and a component with no props has an empty `Props`.
 
+A struct that a parent hands to a child, alone or in a list, gets a `#[doc(hidden)]`
+`borrowed(&self)`: the same value with each string a `Cow::Borrowed` of the parent's, which the
+parent passes as `rows: props.rows.iter().map(|v| v.borrowed()).collect()`. Handing a child its
+rows then copies no text, however the parent's props were built. A struct holding a dictionary
+(`Record`), a project's own `dateType` or a union `unions` maps to an enum of the application has
+none, and is cloned.
+
 The module is laid out for `git diff`. The render's `out.reserve` writes its constant on a line of
 its own and each term it adds on the next ones, so an edit of the template's markup changes the
 constant's line and the line of the markup. A child's props, the attributes and styles given to

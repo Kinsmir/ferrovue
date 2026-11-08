@@ -27,6 +27,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 
 - An island's `data-props` is written in single quotes, escaping only `&` and `'`, so the props take 7 to 28% fewer bytes; `mountIslands` reads it unchanged.
   [Islands](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#islands).
+- A struct, or a list of structs, passed to a child is handed over with its strings borrowed from the parent's props through a hidden `borrowed()`, copying no text.
+  [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 - A render writes the text next to a `v-if` or `?:` inside each branch, and branches that only write text as one write of the text their test picks; the bench renders run up to 5% fewer instructions.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
 - Text the compiler proves needs no escaping is written without `escape_into`: a `?:` or a constant lookup whose values are plain string literals, `String(n)` with no string built, and the digits of `.toFixed()` and its kin.

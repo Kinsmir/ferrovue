@@ -94,7 +94,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_loads: &fv::loaders::L
     }
     out.push_str("<!--]-->");
     fv_refusals.check(super::date_replies::try_render(out, &super::date_replies::Props {
-        replies: l_1.replies.to_owned(),
+        replies: l_1.replies.iter().map(|v| v.borrowed()).collect(),
         depth: 0i64,
     }))?;
     out.push_str("</section>");

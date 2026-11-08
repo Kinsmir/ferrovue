@@ -24,6 +24,17 @@ impl<'a> Row<'a> {
     }
 }
 
+impl<'a> Row<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Row<'_> {
+        Row {
+            id: self.id,
+            label: Cow::Borrowed(&*self.label),
+            tags: self.tags.iter().map(|v| Cow::Borrowed(&**v)).collect(),
+        }
+    }
+}
+
 /// The props `DataList.vue` declares.
 #[derive(Debug, Clone, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]

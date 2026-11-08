@@ -2,7 +2,7 @@ import { basename } from "node:path";
 import { type Component, type Field, type N, type Struct, type Ty, blankComponent, enumItems, enumOf, enumPath, fail, isTuple, REFUSALS, rustStr, snake, takesAttrs, templateAst } from "./model.ts";
 import { GenError } from "./errors.ts";
 import { enumsSource, holdsMapped } from "./enums.ts";
-import { ctx, INLINE_HTML } from "./context.ts";
+import { ctx, INLINE_HTML, JS_DATE } from "./context.ts";
 import { bareDates, datePlan, holdsDate, lookupStruct, typeWritten } from "./typescript.ts";
 import { childOf } from "./expr.ts";
 import { Emitter } from "./emitter.ts";
@@ -247,6 +247,66 @@ ${required.length > 7 ? "    // One argument per required field, however many th
 `;
 }
 
+const viewed = new WeakSet<Struct>();
+
+/** A copy of the value at `place` whose strings borrow from it, so that making it copies no text,
+ * or `undefined` where a part of the value has no such copy. A `place` of `*v` reads through the
+ * reference `v`. Each struct the copy calls `borrowed()` on is marked, so that it is written. */
+export function viewOf(ty: Ty, place: string, comp: Component, seen: Set<string> = new Set()): string | undefined {
+  const at = place.startsWith("*") ? place.slice(1) : place;
+  if (holdsMapped(ty)) return undefined;
+  if (enumOf(ty) !== undefined) return place;
+  if (enumItems(ty) !== undefined) return ty.k === "opt" ? place : `${at}.to_vec()`;
+  switch (ty.k) {
+    case "str":
+      return `std::borrow::Cow::Borrowed(&*${place})`;
+    case "int":
+    case "float":
+    case "bool":
+      return place;
+    case "date":
+      return ctx.dateType === JS_DATE ? place : undefined;
+    case "opt": {
+      if (ty.of.k === "str" && enumOf(ty.of) === undefined) return `${at}.as_deref().map(std::borrow::Cow::Borrowed)`;
+      const inner = viewOf(ty.of, "*v", comp, seen);
+      if (inner === undefined) return undefined;
+      return inner === "*v" ? place : inner === "v.clone()" ? `${at}.clone()` : `${at}.as_ref().map(|v| ${inner})`;
+    }
+    case "list": {
+      const inner = viewOf(ty.of, "*v", comp, seen);
+      if (inner === undefined) return undefined;
+      return inner === "*v" || inner === "v.clone()" ? `${at}.to_vec()` : `${at}.iter().map(|v| ${inner}).collect()`;
+    }
+    case "struct": {
+      const { st, owner } = lookupStruct(comp, ty);
+      if (!st || isTuple(st)) return undefined;
+      if (!structLifetime(st, owner)) return `${at}.clone()`;
+      if (!seen.has(ty.name)) {
+        const inner = new Set(seen).add(ty.name);
+        if (st.fields.some((f) => viewOf(f.ty, `self.${f.rust}`, owner, inner) === undefined)) return undefined;
+        viewed.add(st);
+      }
+      return `${at}.borrowed()`;
+    }
+    default:
+      return undefined;
+  }
+}
+
+function borrowedSource(st: Struct, comp: Component, life: string): string {
+  if (!life || !viewed.has(st)) return "";
+  const inits = st.fields.map((f) => `            ${fieldInit(f.rust, viewOf(f.ty, `self.${f.rust}`, comp, new Set([st.name]))!)},\n`).join("");
+  return shortCow(`
+impl${life} ${st.name}${life} {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> ${st.name}<'_> {
+        ${st.name} {
+${inits}        }
+    }
+}
+`);
+}
+
 export function structSource(st: Struct, comp: Component, doc: string): string {
   const life = structLifetime(st, comp) ? "<'a>" : "";
   if (isTuple(st)) {
@@ -265,7 +325,7 @@ ${ctx.builders ? `\n${builderSource(st, comp, life)}` : ""}`;
   return `${doc}#[derive(${derives}, serde::Serialize)]
 #[cfg_attr(test, derive(serde::Deserialize))]
 pub struct ${st.name}${life} ${fields ? `{\n${fields}\n}` : "{}"}
-${ctx.builders ? `\n${builderSource(st, comp, life)}` : ""}`;
+${ctx.builders ? `\n${builderSource(st, comp, life)}` : ""}${borrowedSource(st, comp, life)}`;
 }
 
 /** The version of generated code this compiler writes, which `mod.rs` hands `ferrovue::__compat!`:

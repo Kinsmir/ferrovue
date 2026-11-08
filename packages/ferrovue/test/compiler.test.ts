@@ -703,6 +703,61 @@ defineProps<Props>();
 </script>
 <template><b>{{ label }}</b></template>`;
 
+    describe("a struct, or a list of them, handed to a child", () => {
+      const types = `export interface Tag { name: string; note?: string; weight: number }
+export interface Row { id: number; label: string; tags: Tag[]; marks: number[]; best?: Tag; dict: Record<string, number> }
+export interface Plain { id: number; on: boolean }`;
+      const withTypes = (root: string, text: string): string => {
+        writeFileSync(join(root, "types.ts"), text);
+        return root;
+      };
+      const rows = `<script setup lang="ts">
+import type { Row, Tag, Plain } from "../types";
+defineProps<{ rows: Row[]; tag?: Tag; tags: Tag[]; plains: Plain[] }>();
+</script>
+<template><ul><li v-for="r in rows" :key="r.id">{{ r.label }}</li></ul></template>`;
+      const parent = `<script setup lang="ts">
+import type { Row, Tag, Plain } from "../types";
+import Rows from "./Rows.vue";
+const props = defineProps<{ rows: Row[]; tags: Tag[]; plains: Plain[] }>();
+</script>
+<template><Rows :rows="rows" :tag="rows[0]?.best" :tags="tags" :plains="plains" /><Rows v-for="r in rows" :key="r.id" :rows="[]" :tag="r.tags[0]" :tags="r.tags" :plains="[]" /></template>`;
+
+      it("hands the child copies whose strings borrow from the parent's", () => {
+        const out = compile(withTypes(island(parent, { Rows: rows }), types));
+        const x = oneLine(out.get("x.rs")!);
+        expect(x).toContain("tags: props.tags.iter().map(|v| v.borrowed()).collect()");
+        expect(x).toContain("tags: fv_r.tags.iter().map(|v| v.borrowed()).collect()");
+        expect(x).toContain("tag: props.rows.first().and_then(|fv_value| fv_value.best.as_ref()).map(|v| v.borrowed())");
+        expect(x).toContain("tag: fv_r.tags.first().map(|v| v.borrowed())");
+        expect(x).toContain("plains: props.plains.to_vec()");
+        expect(x).toContain("rows: props.rows.to_owned()");
+        expect(x).not.toMatch(/tags: [^,]*\.to_owned\(\)/);
+        const shared = out.get("types.rs")!;
+        expect(shared).toContain(`impl<'a> Tag<'a> {
+    #[doc(hidden)]
+    pub fn borrowed(&self) -> Tag<'_> {
+        Tag {
+            name: Cow::Borrowed(&*self.name),
+            note: self.note.as_deref().map(Cow::Borrowed),
+            weight: self.weight,
+        }
+    }
+}`);
+        expect(shared).not.toContain("impl<'a> Row<'a> {\n    #[doc(hidden)]");
+        expect(shared).not.toContain("impl Plain {\n    #[doc(hidden)]");
+      });
+
+      it("writes no borrowed copy for a struct no child is handed", () => {
+        const alone = `<script setup lang="ts">
+import type { Tag } from "../types";
+defineProps<{ tags: Tag[] }>();
+</script>
+<template><p v-for="t in tags" :key="t.name">{{ t.name }}</p></template>`;
+        expect(compile(withTypes(island(alone), types)).get("types.rs")).not.toContain("borrowed");
+      });
+    });
+
     it("renders a child given no props", () => {
       const bare = `<script setup lang="ts">
 defineProps<{ note?: string }>();
