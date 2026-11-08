@@ -1,5 +1,7 @@
 import { escapeHtml, normalizeClass } from "@vue/shared";
-import { type N, type Scope, type Val, camelize, fail, rustStr } from "../model.ts";
+import { type N, type Scope, type Val, camelize } from "../model.ts";
+import { fail } from "../locate.ts";
+import { rustStr } from "../rust-syntax.ts";
 import { asWritten } from "../numbers.ts";
 import { CONFIG_FILE } from "../config.ts";
 import { expr } from "../expr.ts";

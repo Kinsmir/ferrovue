@@ -1,4 +1,6 @@
-import { type Component, type EnumDef, type N, fail } from "./model.ts";
+import { type Component, type N } from "./model.ts";
+import { type EnumDef } from "./literal-types.ts";
+import { fail } from "./locate.ts";
 import { ctx } from "./context.ts";
 import { aliasEnum } from "./enums.ts";
 import { tyOfTs } from "./typescript.ts";

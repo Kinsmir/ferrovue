@@ -1,4 +1,5 @@
-import { type Component, type Fn, type N, type Scope, type Ty, type Val, fail, placeOf } from "./model.ts";
+import { type Component, type Fn, type N, type Scope, type Ty, type Val } from "./model.ts";
+import { fail, placeOf } from "./locate.ts";
 import { GenError } from "./errors.ts";
 import type { Const } from "./const-decls.ts";
 import { constOfDecl } from "./const-decls.ts";

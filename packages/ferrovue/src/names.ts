@@ -1,5 +1,5 @@
 import { ctx } from "./context.ts";
-import { snakeWords } from "./model.ts";
+import { snakeWords } from "./rust-syntax.ts";
 
 const TOKEN = /(?<![\w$])(?<![^.]\.)(_?)(fv_[a-z]+\d+)(?![\w$])/g;
 

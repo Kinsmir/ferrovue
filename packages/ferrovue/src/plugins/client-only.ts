@@ -1,5 +1,6 @@
 import { parse as parseJs } from "@babel/parser";
-import { type Component, type N, fail } from "../model.ts";
+import { type Component, type N } from "../model.ts";
+import { fail } from "../locate.ts";
 import { isAttrs } from "../attrs.ts";
 import { slotContent } from "../slots.ts";
 import { statements } from "../template.ts";

@@ -1,6 +1,8 @@
 import { basename, posix } from "node:path";
 import { createParser } from "@intlify/message-compiler";
-import { type Component, type N, type Scope, type Val, fail, failIn, rustStr, STR } from "../model.ts";
+import { type Component, type N, type Scope, type Val, STR } from "../model.ts";
+import { fail, failIn } from "../locate.ts";
+import { rustStr } from "../rust-syntax.ts";
 import { expr } from "../expr.ts";
 import { bare, strArg } from "../parens.ts";
 import { header } from "../rust.ts";

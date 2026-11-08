@@ -1,5 +1,8 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
-import { type N, type Piece, type Scope, type Ty, type Val, fail, neverEmpty, nothing, rustStr } from "./model.ts";
+import { type N, type Piece, type Scope, type Ty, type Val, nothing } from "./model.ts";
+import { fail } from "./locate.ts";
+import { neverEmpty } from "./literal-types.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { type ErrorCode, GenError } from "./errors.ts";
 import { asWritten } from "./numbers.ts";
 import { CONFIG_FILE } from "./config.ts";

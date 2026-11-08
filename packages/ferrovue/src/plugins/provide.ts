@@ -1,4 +1,7 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, fail, nothing, opt, sameTy, snake } from "../model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, blankComponent, camelize, nothing, opt } from "../model.ts";
+import { fail } from "../locate.ts";
+import { sameTy } from "../literal-types.ts";
+import { snake } from "../rust-syntax.ts";
 import { ctx } from "../context.ts";
 import type { Declared } from "../const-decls.ts";
 import { exportedConst } from "../ts-exports.ts";

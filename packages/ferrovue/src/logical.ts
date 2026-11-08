@@ -1,4 +1,6 @@
-import { type Component, type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, filledTy, FLOAT, joinTy, keptLiterals, literalsOf, nothing, opt, refusalAt, sameTy, STR, unionStr, variantPath, withAbsence } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, FLOAT, nothing, opt, STR, withAbsence } from "./model.ts";
+import { type EnumDef, enumOf, falsyLiteral, filledTy, joinTy, keptLiterals, literalsOf, sameTy, unionStr, variantPath } from "./literal-types.ts";
+import { fail, refusalAt } from "./locate.ts";
 import { enumListVal, exactlyEnum, intoEnum, knownLiteral } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, logical, strArg } from "./parens.ts";

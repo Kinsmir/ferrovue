@@ -1,4 +1,7 @@
-import { type EnumDef, type N, type Scope, type Ty, type Val, absence, BOOL, enumOf, fail, falsyLiteral, filledTy, keptLiterals, literalsOf, literalTy, neverEmpty, nothing, rustStr, STR, UNDEF, unionStr, variantPath } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, absence, BOOL, nothing, STR, UNDEF } from "./model.ts";
+import { type EnumDef, enumOf, falsyLiteral, filledTy, keptLiterals, literalsOf, literalTy, neverEmpty, unionStr, variantPath } from "./literal-types.ts";
+import { fail } from "./locate.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { GenError } from "./errors.ts";
 import { ownKeyTest, pickPresent } from "./constants.ts";
 import { isObjectCall } from "./calls.ts";

@@ -1,4 +1,6 @@
-import { type N, type Scope, type Ty, fail, nodeName, patternNames } from "./model.ts";
+import { type N, type Scope, type Ty } from "./model.ts";
+import { fail } from "./locate.ts";
+import { nodeName, patternNames } from "./node-names.ts";
 
 export const CLIENT_HOOKS = new Set([
   "onMounted", "onBeforeMount", "onUnmounted", "onBeforeUnmount", "onUpdated", "onBeforeUpdate",

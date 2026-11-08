@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseSfc } from "@vue/compiler-sfc";
-import { failIn } from "./model.ts";
+import { failIn } from "./locate.ts";
 import { GenError } from "./errors.ts";
 import type { RouteEntry } from "./route-records.ts";
 import type { FileRoute } from "./vite.ts";

@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, fail, FLOAT } from "./model.ts";
+import { type N, type Scope, type Ty, type Val, FLOAT } from "./model.ts";
+import { fail } from "./locate.ts";
 import { atom } from "./parens.ts";
 import { arrow, collected, computed, items, itemsTy, mapped, untypedEmpty } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";

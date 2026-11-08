@@ -1,4 +1,5 @@
-import { type Component, type N, type Ty, type Val, fail, isTuple, STR, UNDEF } from "./model.ts";
+import { type Component, type N, type Ty, type Val, isTuple, STR, UNDEF } from "./model.ts";
+import { fail } from "./locate.ts";
 import { atom } from "./parens.ts";
 import { lookupStruct } from "./typescript.ts";
 import { fieldVal } from "./expr.ts";

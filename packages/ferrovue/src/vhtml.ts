@@ -1,4 +1,5 @@
-import { type Component, type N, fail, vHtmlElement } from "./model.ts";
+import { type Component, type N } from "./model.ts";
+import { fail, vHtmlElement } from "./locate.ts";
 
 const ELEMENT = 0;
 const SLOT = 2;

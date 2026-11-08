@@ -1,4 +1,4 @@
-import { rustChar, rustStr } from "./model.ts";
+import { rustChar, rustStr } from "./rust-syntax.ts";
 import { occurrences } from "./parens.ts";
 
 export class Emitter {

@@ -1,4 +1,7 @@
-import { type Cell, type LoopFrame, type LoopState, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, INT, isAscii, nothing, refusalAt, rustChar, rustStr, sameTy, STEP, strTy, withAbsence } from "./model.ts";
+import { type Cell, type LoopFrame, type LoopState, type N, type Scope, type Ty, type Val, absence, BOOL, FLOAT, INT, nothing, STEP, withAbsence } from "./model.ts";
+import { fail, refusalAt } from "./locate.ts";
+import { isAscii, sameTy, strTy } from "./literal-types.ts";
+import { rustChar, rustStr } from "./rust-syntax.ts";
 import { ctx } from "./context.ts";
 import { fresh, jsHint } from "./names.ts";
 import { describeTy, expr, statedTy, typedBy } from "./expr.ts";

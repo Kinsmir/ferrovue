@@ -1,4 +1,6 @@
-import { type N, type Scope, type Val, absence, BOOL, fail, rustStr } from "./model.ts";
+import { type N, type Scope, type Val, absence, BOOL } from "./model.ts";
+import { fail } from "./locate.ts";
+import { rustStr } from "./rust-syntax.ts";
 import { ctx } from "./context.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary } from "./parens.ts";

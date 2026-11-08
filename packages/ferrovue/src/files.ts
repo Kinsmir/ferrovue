@@ -2,7 +2,8 @@ import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ErrorCode } from "./errors.ts";
-import { type Component, type N, fail, failIn } from "./model.ts";
+import { type Component, type N } from "./model.ts";
+import { fail, failIn } from "./locate.ts";
 import { GenError } from "./errors.ts";
 
 function why(e: unknown): string {

@@ -6,7 +6,9 @@ import type { Declared } from "./const-decls.ts";
 import type { Exports } from "./ts-exports.ts";
 import type { Alias } from "./compiler.ts";
 import type { TsProject } from "./resolve.ts";
-import { type Component, type EnumDef, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, INT, opt, RUST_KEYWORDS, STR } from "./model.ts";
+import { type Component, type Fn, type N, type Struct, type Ty, BOOL, FLOAT, INT, opt, STR } from "./model.ts";
+import { type EnumDef } from "./literal-types.ts";
+import { RUST_KEYWORDS } from "./rust-syntax.ts";
 import { type ErrorCode, GenError } from "./errors.ts";
 import { CONFIG_SCHEMA, type Schema, TYPE_NAMES } from "./schema.ts";
 

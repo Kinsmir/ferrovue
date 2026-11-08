@@ -1,4 +1,6 @@
-import { type Component, type N, type Scope, type Val, absence, fail, rustStr } from "../model.ts";
+import { type Component, type N, type Scope, type Val, absence } from "../model.ts";
+import { fail } from "../locate.ts";
+import { rustStr } from "../rust-syntax.ts";
 import { describeTy, expr } from "../expr.ts";
 import { arrow, items } from "../lists.ts";
 import { bare, scrutinee, strArg } from "../parens.ts";

@@ -1,4 +1,5 @@
-import { type N, type Scope, type Ty, type Val, fail } from "./model.ts";
+import { type N, type Scope, type Ty, type Val } from "./model.ts";
+import { fail } from "./locate.ts";
 import { fresh, jsHint } from "./names.ts";
 import { computed, items, itemsTy, itemVal } from "./lists.ts";
 import { unbound } from "./narrowing.ts";

@@ -1,4 +1,6 @@
-import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize, distinctFields, fail, snake } from "../model.ts";
+import { type Component, type Field, type N, type Scope, type Ty, blankComponent, camelize } from "../model.ts";
+import { distinctFields, snake } from "../rust-syntax.ts";
+import { fail } from "../locate.ts";
 import { GenError } from "../errors.ts";
 import { CONFIG_FILE, type TwinSpec } from "../config.ts";
 import { tyOfName } from "../context.ts";

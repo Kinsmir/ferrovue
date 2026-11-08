@@ -1,4 +1,6 @@
-import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, fail, FLOAT, nothing, refusalAt, sameTy, STR } from "./model.ts";
+import { type Component, type N, type Scope, type Ty, type Val, absence, BOOL, FLOAT, nothing, STR } from "./model.ts";
+import { fail, refusalAt } from "./locate.ts";
+import { sameTy } from "./literal-types.ts";
 import { annotatedStr, enumEquality, knownLiteral, refuseOutside } from "./enums.ts";
 import { claim } from "./plugin.ts";
 import { atom, bare, binary, negate, not, pure, strArg } from "./parens.ts";
