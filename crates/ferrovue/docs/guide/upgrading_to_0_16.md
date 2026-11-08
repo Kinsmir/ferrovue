@@ -54,8 +54,9 @@ error: this module was generated as version 9 of ferrovue's generated code, and 
 ```
 
 Most generated files change once. A render writes the text beside a `v-if` or `?:` inside each
-branch, writes text that needs no escaping without `escape_into`, and the modules lose their stray
-blank lines. A module imports `std::borrow::Cow` and writes `Cow`, and a field keeps
+branch, writes text that needs no escaping without `escape_into`, writes formatted text into the
+page as it escapes it, and writes a `<RouterLink>` with a string `to` in place, and the modules lose
+their stray blank lines. A module imports `std::borrow::Cow` and writes `Cow`, and a field keeps
 `#[serde(rename)]` only where its JSON key differs from its name, so props read and write the same
 JSON. What a render writes is the same. A CI job that runs `pnpm ferrovue --check` reports each
 module as stale until it is generated again with 0.16 and committed. See
@@ -65,9 +66,20 @@ module as stale until it is generated again with 0.16 and committed. See
 
 ## Renders run fewer instructions
 
-Outside the changes below, the HTML of every page is byte for byte what 0.15 wrote. `escape_into` escapes in one pass, which
-helps most on long strings, and a `.join()` writes into the page with no string built per item.
-The bench renders run up to 9% fewer instructions, and renders that join a list up to 25% fewer.
+Outside the changes below, the HTML of every page is byte for byte what 0.15 wrote, in fewer
+instructions and allocations:
+
+- `escape_into` escapes in one pass, which helps most on long strings, and the bench renders run up
+  to 9% fewer instructions.
+- A `.join()` writes into the page with no string built per item: renders that join a list run up
+  to 25% fewer instructions.
+- A `<RouterLink>` with a string `to` is resolved and written into the page with no allocation: the
+  `small` bench, which holds two links, runs 55% fewer instructions.
+- [`Head::render`](crate::head::Head::render) borrows what it was pushed: the bench head renders in
+  59% fewer instructions. A `Head`'s `Debug` output shows unhead's defaults as `Defaults`.
+- Formatted text, such as a template literal or a number with a unit, is escaped as it is written,
+  with no string built first: the conformance components allocate 10% less.
+
 A test that counts allocations or instructions of a render sees lower numbers. See
 [how a render writes text](crate::guide::generated_code#how-a-render-writes-text).
 
@@ -103,3 +115,12 @@ all the same. FV0427 names a line break that renders as a space beside a class l
 `whitespace-pre*` class on an element whose contents `trim-edges` renders otherwise than Vue does:
 list it in `preserveWhitespace.classes`, and the element renders as Vue spaces it, which changes
 its HTML. See [the error codes](crate::guide::error_codes#fv0427).
+
+## Linking the stylesheets
+
+An island's `<style>` goes into its chunk, and Vite links it only once the island's script has
+loaded, so the server's markup shows unstyled until then. [`Chunks`](crate::page::Chunks) now reads
+each chunk's `css` from Vite's manifest, and [`Stylesheets`](crate::page::Stylesheets) writes the
+`<link rel="stylesheet">`s of the entry, its lazily loaded islands and the islands a page renders,
+each once. A server that read the manifest's `css` itself, as the full-stack example did, can use
+them instead. See [linking the stylesheets](crate::guide::islands_and_hydration#linking-the-stylesheets).
