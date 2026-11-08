@@ -2,8 +2,9 @@ Upgrading a project from ferrovue 0.15 to 0.16: the steps to take and what behav
 
 The [CHANGELOG](https://github.com/Kinsmir/ferrovue/blob/main/CHANGELOG.md) lists every change;
 this page picks out what an application notices. The steps are to bump both halves together and to
-generate every component again, for version 9 of generated code. A page renders the same HTML as
-with 0.15, in fewer instructions. An upgrade to 0.15 took only the bump, so the page for the
+generate every component again, for version 9 of generated code. A page renders in fewer
+instructions, and its HTML is what 0.15 wrote outside an island's `data-props` and two boolean
+attributes. An upgrade to 0.15 took only the bump, so the page for the
 release before is [`upgrading_to_0_14`](crate::guide::upgrading_to_0_14).
 
 # Steps
@@ -53,8 +54,9 @@ error: this module was generated as version 9 of ferrovue's generated code, and 
 ```
 
 Most generated files change once. A render writes the text beside a `v-if` or `?:` inside each
-branch, writes text that needs no escaping without `escape_into`, and the modules lose their stray
-blank lines. A module imports `std::borrow::Cow` and writes `Cow`, and a field keeps
+branch, writes text that needs no escaping without `escape_into`, writes formatted text into the
+page as it escapes it, and writes a `<RouterLink>` with a string `to` in place, and the modules lose
+their stray blank lines. A module imports `std::borrow::Cow` and writes `Cow`, and a field keeps
 `#[serde(rename)]` only where its JSON key differs from its name, so props read and write the same
 JSON. What a render writes is the same. A CI job that runs `pnpm ferrovue --check` reports each
 module as stale until it is generated again with 0.16 and committed. See
@@ -64,9 +66,20 @@ module as stale until it is generated again with 0.16 and committed. See
 
 ## Renders run fewer instructions
 
-The HTML of every page is byte for byte what 0.15 wrote. `escape_into` escapes in one pass, which
-helps most on long strings, and a `.join()` writes into the page with no string built per item.
-The bench renders run up to 9% fewer instructions, and renders that join a list up to 25% fewer.
+Outside the changes below, the HTML of every page is byte for byte what 0.15 wrote, in fewer
+instructions and allocations:
+
+- `escape_into` escapes in one pass, which helps most on long strings, and the bench renders run up
+  to 9% fewer instructions.
+- A `.join()` writes into the page with no string built per item: renders that join a list run up
+  to 25% fewer instructions.
+- A `<RouterLink>` with a string `to` is resolved and written into the page with no allocation: the
+  `small` bench, which holds two links, runs 55% fewer instructions.
+- [`Head::render`](crate::head::Head::render) borrows what it was pushed: the bench head renders in
+  59% fewer instructions. A `Head`'s `Debug` output shows unhead's defaults as `Defaults`.
+- Formatted text, such as a template literal or a number with a unit, is escaped as it is written,
+  with no string built first: the conformance components allocate 10% less.
+
 A test that counts allocations or instructions of a render sees lower numbers. See
 [how a render writes text](crate::guide::generated_code#how-a-render-writes-text).
 
@@ -77,3 +90,37 @@ and 0.16 writes them as Vue does. Bound, or falling through to a child's root, `
 name alone and `false` leaves the attribute out; 0.15 wrote `disablepictureinpicture="true"` and
 `disablepictureinpicture="false"`. A project whose fixtures hold such an attribute records them
 again. See [attribute values](crate::guide::security#attribute-values).
+
+## An island's props are in single quotes
+
+An island's `data-props` is written in single quotes, with only `&` and `'` escaped, as
+`data-props='{"n":1}'`; 0.15 wrote `data-props="{&quot;n&quot;:1}"`. The browser gives
+`dataset.props` back as the same JSON, so `mountIslands` reads it unchanged, and the props take 7
+to 28% fewer bytes. A project whose fixtures or tests hold an island's HTML records them again. See
+[islands](crate::guide::islands_and_hydration#islands).
+
+## The Vite plugin gives plugin-vue `trimEdges`
+
+With `"whitespace": "trim-edges"`, the Vite plugin adds `trimEdges`, with the classes of
+`preserveWhitespace`, to a plugin-vue that has no `trimEdges` of its own. A `vite.config.ts` and a
+Vitest config that use the Vite plugin can drop `nodeTransforms: [trimEdges]`. A plugin-vue given
+`trimEdges` by hand keeps it, and a Vitest config with plugin-vue alone still adds it. See
+[whitespace](crate::guide::generated_code#whitespace).
+
+## Two warnings under `trim-edges`
+
+`pnpm ferrovue` may print two new warnings with `"whitespace": "trim-edges"`, and writes the modules
+all the same. FV0427 names a line break that renders as a space beside a class listed in the new
+`inlineBlockClasses`, which lists none until a project sets it. FV0428 names a Tailwind
+`whitespace-pre*` class on an element whose contents `trim-edges` renders otherwise than Vue does:
+list it in `preserveWhitespace.classes`, and the element renders as Vue spaces it, which changes
+its HTML. See [the error codes](crate::guide::error_codes#fv0427).
+
+## Linking the stylesheets
+
+An island's `<style>` goes into its chunk, and Vite links it only once the island's script has
+loaded, so the server's markup shows unstyled until then. [`Chunks`](crate::page::Chunks) now reads
+each chunk's `css` from Vite's manifest, and [`Stylesheets`](crate::page::Stylesheets) writes the
+`<link rel="stylesheet">`s of the entry, its lazily loaded islands and the islands a page renders,
+each once. A server that read the manifest's `css` itself, as the full-stack example did, can use
+them instead. See [linking the stylesheets](crate::guide::islands_and_hydration#linking-the-stylesheets).
