@@ -349,15 +349,31 @@ impl I18n {
     /// // A key no locale has is written as itself.
     /// assert_eq!(i18n.t("no.such.key", &Args::new()), "no.such.key");
     /// ```
+    ///
+    /// # Panics
+    ///
+    /// Where vue-i18n throws a `SyntaxError`: a message of three or more cases given a plural
+    /// number that chooses none of them, a fraction between -2 and 2 such as `1.5`.
     #[must_use]
     pub fn t(&self, key: &str, args: &Args<'_>) -> String {
+        self.try_t(key, args)
+            .unwrap_or_else(|choice| panic!("{}", no_case(key, choice)))
+    }
+
+    /// [`t`](Self::t), returning the plural number where it panics.
+    ///
+    /// # Errors
+    ///
+    /// The plural number, where it chooses none of the message's cases.
+    #[doc(hidden)]
+    pub fn try_t(&self, key: &str, args: &Args<'_>) -> Result<String, f64> {
         match self.find(0, key) {
             Some((at, message)) => {
                 let mut out = String::new();
-                self.evaluate(message, at, args, &mut out, 0);
-                out
+                self.evaluate(message, at, args, &mut out, 0)?;
+                Ok(out)
             }
-            None => key.to_owned(),
+            None => Ok(key.to_owned()),
         }
     }
 
@@ -379,20 +395,15 @@ impl I18n {
         args: &Args<'_>,
         out: &mut String,
         depth: usize,
-    ) {
+    ) -> Result<(), f64> {
         let case = match message.cases {
-            [] => return,
+            [] => return Ok(()),
             [only] => *only,
             cases => {
-                let index = plural_index(plural_choice(args), cases.len());
-                debug_assert!(
-                    index.is_some(),
-                    "a plural number of {} chooses none of the cases",
-                    plural_choice(args)
-                );
-                match index.and_then(|i| cases.get(i)) {
+                let choice = plural_choice(args);
+                match plural_index(choice, cases.len()).and_then(|i| cases.get(i)) {
                     Some(case) => *case,
-                    None => return,
+                    None => return Err(choice),
                 }
             }
         };
@@ -414,7 +425,7 @@ impl I18n {
                     if depth < MAX_LINK_DEPTH
                         && let Some((_, m)) = self.find(from, key)
                     {
-                        self.evaluate(m, from, args, &mut linked, depth + 1);
+                        let _ = self.evaluate(m, from, args, &mut linked, depth + 1);
                     }
                     if linked.is_empty() {
                         linked.push_str(key);
@@ -433,7 +444,23 @@ impl I18n {
                 }
             }
         }
+        Ok(())
     }
+}
+
+/// What [`I18n::t`] panics with, and a refused render says, where the plural number `choice` given
+/// to `t(key, …)` chooses none of the message's cases.
+#[doc(hidden)]
+#[must_use]
+#[cold]
+pub fn no_case(key: &str, choice: f64) -> String {
+    let mut shown = String::new();
+    ferrovue_core::push_number(&mut shown, choice);
+    format!(
+        "`t({key:?})` with a plural number of {shown}, which chooses none of the message's cases: \
+         vue-i18n throws a SyntaxError and Vue's render fails too; round the number \
+         (`Math.round(n)`) or check the props before rendering"
+    )
 }
 
 fn named<'a>(args: &Args<'a>, name: &str) -> Option<Value<'a>> {

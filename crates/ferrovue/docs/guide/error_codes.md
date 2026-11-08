@@ -2228,6 +2228,12 @@ A number given to `t()` after the key chooses the plural case, and ferrovue take
 
 What `useI18n()` returns is destructured into plain names, renamed or not: `const { t, locale } = useI18n()`. A rest element, a computed key, a nested pattern or a default leaves the compiler without a name for each part. Of the parts, `t` and `locale` render on the server; `d`, `n` and the rest are client-only.
 
+## FV1414
+
+Plural number that chooses no case of the message, as it renders.
+
+vue-i18n chooses the case of a message of three or more cases by the plural number's distance from zero: `0`, `1`, then the last case for anything from `2` on. A fraction between -2 and 2, such as `1.5` or `0.5`, chooses none, and vue-i18n throws a `SyntaxError`, which fails the render in Vue as well. A `count` or `n` named value of type `Float` is checked as the component renders: a generated `try_render` returns it as a `ferrovue::render::Refused`, with the component and the line and column of the `t()` call, so a server can answer `400 Bad Request`; `render` panics with its message. Inside a linked message, vue-i18n writes the key, and so does ferrovue. See [`i18n`](crate::guide::i18n#what-is-supported). Round the number (`Math.round(n)`) before passing it.
+
 # Raw HTML, client-only content, teleports and Rust twins: FV15xx
 
 See [`errors_and_limits`](crate::guide::errors_and_limits).

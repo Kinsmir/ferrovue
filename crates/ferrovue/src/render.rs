@@ -323,6 +323,22 @@ fn int_refused(x: f64) -> Refused {
     )
 }
 
+/// `t(key, …)` as a template calls it.
+///
+/// # Errors
+///
+/// FV1414 where a plural number chooses none of the message's cases, where vue-i18n throws.
+#[cfg(feature = "i18n")]
+#[doc(hidden)]
+pub fn try_t(
+    i18n: &crate::i18n::I18n,
+    key: &str,
+    args: &crate::i18n::Args<'_>,
+) -> Result<String, Refused> {
+    i18n.try_t(key, args)
+        .map_err(|choice| Refused::new("FV1414", crate::i18n::no_case(key, choice)))
+}
+
 /// What a parent puts in one of a component's slots.
 ///
 /// # Example

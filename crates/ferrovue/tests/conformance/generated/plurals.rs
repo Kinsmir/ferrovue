@@ -45,20 +45,21 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
         45
         + props.label.len()
     );
+    let fv_refusals = fv::render::Refusals::new(NAME, "components/Plurals.vue");
     out.push_str("<!--[--><p>");
-    fv::core::escape_into(out, &fv_i18n.t("items", &fv::i18n::Args::new().with_named(&[("n", fv::i18n::Value::Float(props.amount))])));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::render::try_t(fv_i18n, "items", &fv::i18n::Args::new().with_named(&[("n", fv::i18n::Value::Float(props.amount))])), 8, 9));
     out.push('|');
-    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount + 1.0))])));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::render::try_t(fv_i18n, "apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount + 1.0))])), 8, 42));
     out.push('|');
-    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))])));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::render::try_t(fv_i18n, "apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))])), 8, 84));
     out.push('|');
-    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))]).with_plural(5i64)));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::render::try_t(fv_i18n, "apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount / 0.0))]).with_plural(5i64)), 8, 126));
     out.push_str("</p><p>");
     fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Str(&props.label))]).with_plural(props.count)));
     out.push('|');
     fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Bool(props.on))]).with_plural(props.count)));
     out.push('|');
-    fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount * 2.0))]).with_plural(props.count)));
+    fv::core::escape_into(out, &fv_refusals.keep(fv::render::try_t(fv_i18n, "apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Float(props.amount * 2.0))]).with_plural(props.count)), 9, 94));
     out.push('|');
     fv::core::escape_into(out, &fv_i18n.t("apples", &fv::i18n::Args::new().with_named(&[("count", fv::i18n::Value::Int(0i64))]).with_plural(props.count)));
     out.push('|');
@@ -68,7 +69,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
     out.push_str("</p><p>");
     fv::core::escape_into(out, &fv_i18n.t("shout", &fv::i18n::Args::new()));
     out.push_str("</p><!--]-->");
-    Ok(())
+    fv_refusals.check(Ok(()))
 }
 
 /// The component's markup, for a maud page that shows it.

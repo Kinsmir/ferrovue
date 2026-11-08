@@ -527,6 +527,31 @@ fn a_computed_the_render_reads_is_refused_where_javascript_throws() {
 }
 
 #[test]
+fn a_fraction_that_chooses_no_plural_case_is_refused_where_vue_i18n_throws() {
+    for whole in ["1.5", "0.5", "-1.5", "1e-300"] {
+        let refused = generated::render_json(
+            "PluralFractions",
+            &format!(r#"{{"amount":1,"whole":{whole},"label":"x"}}"#),
+        )
+        .unwrap_err();
+        assert!(
+            refused.starts_with(
+                "error[FV1414]: components/PluralFractions.vue:8:9: `t(\"apples\")` with a plural \
+                 number of "
+            ),
+            "{refused}"
+        );
+    }
+    let props = generated::plural_fractions::Props::new(1.5, 1.5, "x");
+    let i18n = generated::i18n::i18n(generated::i18n::LOCALE);
+    let refused =
+        generated::plural_fractions::try_render(&mut String::new(), &props, &i18n).unwrap_err();
+    assert_eq!(refused.code(), "FV1414");
+    assert_eq!(refused.component(), Some("PluralFractions"));
+    assert_eq!((refused.line(), refused.column()), (Some(8), Some(9)));
+}
+
+#[test]
 fn a_computed_s_statements_run_in_order_and_only_as_far_as_it_returns() {
     let html =
         generated::render_json("UnreadSteps", r#"{"show":false,"count":-1,"word":"ab"}"#).unwrap();

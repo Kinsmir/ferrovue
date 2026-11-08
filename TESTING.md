@@ -181,7 +181,7 @@ A fixture is a JSON object of props plus optional keys:
 | `DateReplies`, `DateThread` | A shared, recursive interface (`types/dated.ts`) whose replies hold dates, rendered by a component that renders itself; object literals of it built by a `computed` and by a `.map()` whose dates come from `new Date()` of a sum and from another reply's optional date: typical, invalid and far dates, empty threads, markup in every string |
 | `DateFormats` | `.toUTCString()`, `.toJSON()` (interpolated, bound, tested against `null` and given a fallback with `??`) and `JSON.stringify()` of `Date` props and dates built from strings and numbers; `Date.UTC()` of one, two and seven parts, from the props and as literals worked out when compiling, held in a `computed`; `<`, `<=`, `>` and `>=` between two dates, in a `computed`, `v-if` and `:class`: typical dates, two-digit years and parts carried into the next month, the edges of the range and expanded years, invalid dates, hostile text |
 | `Dates`, `Prices` | `new Date` of ISO strings (dates alone, offsets, expanded years, the edges of the range) and of numbers, `Date.parse`, `.toISOString()`, `.getTime()` and the `.getUTC…()` methods in `computed`, `v-if` and `v-for`, invalid dates; a price formatted in Rust beside one written with `.toFixed()` into a `$t` message, and a date both ways, in two locales |
-| `Translated`, `Plurals` | vue-i18n's `$t` and `useI18n()`: named and list values, literals, linked messages and their modifiers, fallback locales; the plural case chosen by an integer, a fraction or a value that is not a finite number, and `count` and `n` given or taking the plural number |
+| `Translated`, `Plurals`, `PluralFractions` | vue-i18n's `$t` and `useI18n()`: named and list values, literals, linked messages and their modifiers, fallback locales; the plural case chosen by an integer, a fraction or a value that is not a finite number, and `count` and `n` given or taking the plural number; fractions of two cases, of three from 2 on, and a linked message whose fraction chooses no case, written as its key (a fraction below 2 of three cases is refused with FV1414, in `conformance.rs`) |
 | `Badge`, `Cart` | Pinia state through the store and `storeToRefs`, getters, two stores, store reads in `computed` |
 | `ScopedPage` and its children | `<style scoped>`: the id on every element and what reaches each kind of child: `ScopedLeaf` (a root chosen by `v-if`), `ScopedRoot` (a root that is a component), `ScopedPair` (a fragment), `PlainBox` (no scoped styles), `ScopedCard` (`:slotted()`, a scoped slot, fallbacks), `PlainForward`, `ScopedShelf` and `ScopedRack` (slots forwarded into `:slotted()` ones, slot scope ids with two spaces), `ScopedFade` (a `<Transition>` root), and `<KeepAlive>`, `<Teleport>` |
 | `ScopedTree` | A scoped component rendering itself, whose children's roots carry its id twice |
@@ -301,7 +301,7 @@ when it names a component that is not in `components/` with fixtures of its own.
 | Built-ins | `Builtins`, `Modal`, `ScopedPage`, `DirectedEmpty` |
 | Vue Router | `Nav`, `Links`, `Menu`, `App`, `AccountNav`, `RouteInfo`, `LinkSpaces`, `FallSpaces` |
 | Pinia | `Badge`, `Cart`, `Counter`, `Session` |
-| vue-i18n | `Translated`, `Plurals`, `MappedChoice` |
+| vue-i18n | `Translated`, `Plurals`, `PluralFractions`, `MappedChoice` |
 | `v-html` | `Prose`, `InlineProse`, `PlacedHtml`, `HtmlTruth` |
 | Page head | `HeadPage`, `HeadArticle`, `HeadSeo`, `HeadServer`, `HeadTheme`, `HeadThemePage`, `HeadChoice`, `HeadNote`, `HeadLater`, `HeadNest`, `HeadLeaf` |
 

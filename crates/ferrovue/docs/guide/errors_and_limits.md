@@ -310,6 +310,7 @@ refused, with a code from the same list as the compiler's refusals:
 | [FV0714](crate::guide::error_codes#fv0714) | `.repeat()` by a negative or infinite count, where JavaScript throws |
 | [FV0725](crate::guide::error_codes#fv0725) | `.repeat()`, `.padStart()` or `.padEnd()` beyond the longest string V8 makes |
 | [FV0724](crate::guide::error_codes#fv0724) | an integer beyond the range of `i64` where the generated code holds one: a child's `number` prop, an index, the count of a `v-for` over a range, or an integer a `computed`, a variable, a list or a callback such as `.reduce()`'s keeps |
+| [FV1414](crate::guide::error_codes#fv1414) | `t()` with a fractional `count` or `n` that chooses none of a plural message's cases, where vue-i18n throws |
 | [FV0518](crate::guide::error_codes#fv0518) | a string outside a union of string literals, held as a string, where a child's union prop or an object's union field needs the union's enum |
 
 Every component has a `try_render` beside its `render`, with the same parameters, which returns

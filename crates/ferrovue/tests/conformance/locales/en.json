@@ -16,5 +16,6 @@
   "loud": "LOUD Noise",
   "shout": "@.lower:loud",
   "price": "€{amount}",
-  "posted": "Posted on {date}"
+  "posted": "Posted on {date}",
+  "fractionLink": "{count} of @.upper:apples"
 }
