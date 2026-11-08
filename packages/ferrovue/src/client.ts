@@ -451,7 +451,7 @@ function trigger(when: string): Trigger | undefined {
 
 function keyScript(scripts: Iterable<Element>, id: string): string | undefined {
   for (const el of scripts) {
-    if (el.id === id && el.namespaceURI === "http://www.w3.org/1999/xhtml") {
+    if (el.id === id && el.namespaceURI === HTML_NS) {
       const key: unknown = JSON.parse(el.textContent || "null");
       if (typeof key !== "string" || key === "") throw new Error(`[ferrovue] the island key in <script id="${id}"> is not a string`);
       return key;
