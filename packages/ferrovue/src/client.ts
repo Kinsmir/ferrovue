@@ -373,6 +373,11 @@ export interface MountOptions {
   plugins?: Plugin[];
   /** Where to look for islands: the whole document by default. */
   root?: ParentNode;
+  /** The `id` of the script holding the page's island key, which `IslandKey::script_into` writes:
+   * `__fv_island_key` by default. When `root`, or else its document, holds that script, only the
+   * islands whose `data-island-key` is that key mount, and every other one is reported to `onError`
+   * and left as the server rendered it, so an island copied into user HTML mounts nothing. */
+  islandKey?: string;
   /** Told about an island left as the server rendered it, because its component is not among
    * those given, did not load or its props are malformed, and about one hydrated at once because
    * its `data-hydrate` is not one this version knows. Warns on the console by default. */
@@ -444,6 +449,24 @@ function trigger(when: string): Trigger | undefined {
   return undefined;
 }
 
+function keyScript(scripts: Iterable<Element>, id: string): string | undefined {
+  for (const el of scripts) {
+    if (el.id === id && el.namespaceURI === "http://www.w3.org/1999/xhtml") {
+      const key: unknown = JSON.parse(el.textContent || "null");
+      if (typeof key !== "string" || key === "") throw new Error(`[ferrovue] the island key in <script id="${id}"> is not a string`);
+      return key;
+    }
+  }
+  return undefined;
+}
+
+function pageIslandKey(root: ParentNode, id: string): string | undefined {
+  const own = keyScript(root.querySelectorAll("script"), id);
+  if (own !== undefined) return own;
+  const doc = (root as Node).ownerDocument;
+  return doc ? keyScript(doc.getElementsByTagName("script"), id) : undefined;
+}
+
 /** Hydrate every island on the page: each `<div data-island="Name" data-props="…">` that
  * `Html::island` wrote becomes an app of the component of that name, given the props the server
  * rendered it with, mounted where it is. A loader is called only for an island the page holds, all
@@ -454,7 +477,12 @@ function trigger(when: string): Trigger | undefined {
 export async function mountIslands(components: Record<string, IslandComponent>, options: MountOptions = {}): Promise<Islands> {
   const root = options.root ?? document;
   const report = options.onError ?? ((el: Element, problem: string) => console.warn(`[ferrovue] island left unhydrated: ${problem}`, el));
-  const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-island]"));
+  const key = pageIslandKey(root, options.islandKey ?? "__fv_island_key");
+  const elements = Array.from(root.querySelectorAll<HTMLElement>("[data-island]")).filter((el) => {
+    if (key === undefined || el.dataset.islandKey === key) return true;
+    report(el, `${JSON.stringify(el.dataset.island ?? "")} does not carry the page's island key, so it is not an island the server wrote`);
+    return false;
+  });
   const loading = new Map<string, Promise<Component | Error>>();
   const loadIsland = (name: string): Promise<Component | Error> => {
     let pending = loading.get(name);

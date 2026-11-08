@@ -34,6 +34,7 @@ dioxus = { version = "0.7.10", default-features = false }
 dioxus-core = { version = "0.7.10", default-features = false }
 dioxus-ssr = { version = "0.7.10", default-features = false }
 futures-core = { version = "0.3.34", default-features = false }
+getrandom = "0.4.3"
 gungraun = "0.20.0"
 http = "1.5.0"
 maud = "0.27.0"

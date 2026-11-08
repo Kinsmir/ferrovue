@@ -115,6 +115,9 @@ impl<P: Serialize, F: crate::html::Renderer<P>> Html<'_, P, F> {
         let mut attrs = Vec::with_capacity(4);
         if let Some(name) = self.island {
             attrs.push(Attribute::new("data-island", name, None, false));
+            if let Some(key) = crate::html::island_key() {
+                attrs.push(Attribute::new("data-island-key", key, None, false));
+            }
             let json = crate::json::to_string(self.props.get());
             attrs.push(Attribute::new("data-props", json, None, false));
             if let Some(hydrate) = &self.hydrate {
@@ -236,6 +239,21 @@ mod tests {
                 r#"<main data-node-hydration="0"><h1>Page</h1><div {attrs} data-node-hydration="1">{markup}</div></main>"#
             )
         );
+    }
+
+    #[test]
+    fn an_island_rendered_in_a_key_s_scope_carries_the_key() {
+        let props = Label { label: "x" };
+        let key = crate::html::IslandKey::new("k3y");
+        let [plain, _] = key.scope(|| rendered(|| page(Html::island("Label", &props, label))));
+        assert!(
+            plain.starts_with(
+                r#"<main><h1>Page</h1><div data-island="Label" data-island-key="k3y" data-props="#
+            ),
+            "{plain}"
+        );
+        let [plain, _] = rendered(|| page(Html::island("Label", &props, label)));
+        assert!(!plain.contains("data-island-key"), "{plain}");
     }
 
     #[test]

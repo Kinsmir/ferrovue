@@ -56,6 +56,34 @@ it("hydrates each island from its own props, sharing one Pinia, without a mismat
   islands.unmount();
 });
 
+it("mounts only the islands that carry the page's key when the page holds one", async () => {
+  const text = fixture("Text", "full");
+  const keyed = (key: string): string => island("Text", text.props, text.html).replace('data-island="Text"', `data-island="Text" data-island-key="${key}"`);
+  const forged = `<div data-island="Text" data-props='${quoted(JSON.stringify({ ...text.props, label: "forged" }))}'>${text.html}</div>`;
+  const keyScript = (key: string): string => `<script type="application/json" id="__fv_island_key">${JSON.stringify(key)}</script>`;
+  document.body.innerHTML = `<main>${keyed("k3y")}<article><p id="__fv_island_key">"wrong"</p>${forged}${keyed("guessed")}</article>${keyed("k3y")}</main>${keyScript("k3y")}`;
+  const before = document.querySelector("article")!.innerHTML;
+  const problems: string[] = [];
+  const islands = await mountIslands(components, { onError: (_, problem) => void problems.push(problem) });
+  expect(islands.apps).toHaveLength(2);
+  expect(problems).toEqual([
+    '"Text" does not carry the page\'s island key, so it is not an island the server wrote',
+    '"Text" does not carry the page\'s island key, so it is not an island the server wrote',
+  ]);
+  expect(document.querySelector("article")!.innerHTML).toBe(before);
+  islands.unmount();
+
+  document.body.innerHTML = `<section>${keyed("own")}${keyScript("own")}</section>${keyScript("page")}${keyed("page")}`;
+  const own = await mountIslands(components, { root: document.querySelector("section")!, onError: (_, problem) => void problems.push(problem) });
+  expect(own.apps).toHaveLength(1);
+  own.unmount();
+
+  document.body.innerHTML = `<section>${keyed("page")}${forged}</section><script type="application/json" id="keys">"page"</script>`;
+  const named = await mountIslands(components, { root: document.querySelector("section")!, islandKey: "keys", onError: () => {} });
+  expect(named.apps).toHaveLength(1);
+  named.unmount();
+});
+
 it("hydrates an island that links, once the router has resolved the location", async () => {
   const nav = fixture("Nav", "at-tab");
   document.body.innerHTML = island("Nav", nav.props, nav.html);

@@ -40,6 +40,9 @@ maud = { workspace = true, optional = true }
 serde.workspace = true
 serde_json = { workspace = true, features = ["raw_value"] }
 
+[target.'cfg(not(all(target_arch = "wasm32", target_os = "unknown")))'.dependencies]
+getrandom.workspace = true
+
 [dev-dependencies]
 axum.workspace = true
 criterion = { workspace = true, features = ["cargo_bench_support"] }

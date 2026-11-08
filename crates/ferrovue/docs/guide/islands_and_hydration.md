@@ -175,6 +175,52 @@ A waiting island keeps the props it was rendered with, so it hydrates exactly ho
 waits. Its handlers do nothing until then, so a control the reader needs at once (a menu toggle,
 say) is better hydrated at once.
 
+# Islands only the server wrote
+
+`mountIslands` finds islands by their `data-island` attribute. User HTML that a page renders with
+`v-html` keeps that attribute when the sanitiser allows `data-*` attributes, as DOMPurify does by
+default, so `<div data-island="Link" data-props='{"href":"javascript:…"}'>` in a comment would
+mount the `Link` island with the props it chose. An [`IslandKey`](crate::html::IslandKey) stops
+that: render the page inside the key's scope, and every island written there carries the key in
+`data-island-key`. Write the key's script, and `mountIslands` mounts only the islands that carry it,
+reporting every other to `onError`:
+
+```rust
+# mod counter {
+# use ferrovue as fv;
+# #[derive(serde::Serialize)]
+# pub struct Props { pub start: i64 }
+# pub fn render(out: &mut String, props: &Props) {
+#     out.push_str("<button>");
+#     fv::core::push_int(out, props.start);
+#     out.push_str("</button>");
+# }
+# pub fn island(props: &Props) -> fv::html::Html<'_, Props> {
+#     fv::html::Html::island("Counter", props, render)
+# }
+# }
+use ferrovue::html::IslandKey;
+
+let key = IslandKey::random();
+let mut page = String::from("<!doctype html><html><body>");
+key.scope(|| counter::island(&counter::Props { start: 1 }).render_to(&mut page));
+key.script_into(&mut page);
+page.push_str("</body></html>");
+assert!(page.contains(&format!(r#"data-island-key="{}""#, key.as_str())));
+assert!(page.contains(r#"<script type="application/json" id="__fv_island_key">"#));
+```
+
+Make a new key for each page with `IslandKey::random`, which takes 128 bits from the operating
+system, or give `IslandKey::new` a key of your own, such as the page's CSP nonce. A key fixed for
+the whole application is no key: every page shows it, so anyone who reads one can copy it.
+
+The scope covers what is rendered on that thread while it runs, so render each hole's content
+inside the same key's scope too, when the hole is filled. An island fetched later and mounted with
+`mountIslands({ root })` carries its own response's key: give the fragment its own script, which
+`mountIslands` reads from `root` before the document. The key changes nothing Vue renders: it is an
+attribute of the wrapper, which the island's app mounts on and does not hydrate. A page without the
+script mounts every island, as before.
+
 # Hydrating a page
 
 A page is often a layout whose slots hold components, each rendered from its own props: a header,
