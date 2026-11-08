@@ -128,7 +128,9 @@ fn check_nested(v: &Nested, want: &NestedExpected) {
     assert_eq!(v.locations.len(), want.locations.len());
     let router = Router::tree(route_defs(&v.routes));
     for ((at, to), (href, active, exact)) in v.links.iter().zip(&want.links) {
-        let link = router.at(at).link(to);
+        let route = router.at(at);
+        let link = route.link(to);
+        written_as(&route, to, &link);
         assert_eq!(
             (&link.href, link.active, link.exact),
             (href, *active, *exact),
@@ -177,6 +179,23 @@ fn check_nested(v: &Nested, want: &NestedExpected) {
     }
 }
 
+fn written_as(route: &Route<'_>, to: &str, link: &Link) {
+    let mut want = String::new();
+    if link.exact {
+        want.push_str(" aria-current=\"page\"");
+    }
+    want.push_str(" href=\"");
+    ferrovue_core::escape_into(&mut want, &link.href);
+    want.push('"');
+    let mut out = String::new();
+    let state = route.link_into(&mut out, to, "page");
+    assert_eq!(
+        (out, state),
+        (want, (link.active, link.exact)),
+        "a link to {to:?} written in place"
+    );
+}
+
 fn vectors() -> Vectors {
     let text = include_str!("../tests/vectors/router.expected.json");
     serde_json::from_str(text).expect("router vectors")
@@ -198,7 +217,9 @@ fn links_resolve_as_vue_router_resolves_them() {
     assert_eq!(v.links.len(), v.expected.len());
     let router = router(&v);
     for ((at, to), (href, active)) in v.links.iter().zip(&v.expected) {
-        let link = router.at(at).link(to);
+        let route = router.at(at);
+        let link = route.link(to);
+        written_as(&route, to, &link);
         assert_eq!(
             (&link.href, link.active),
             (href, *active),
@@ -282,7 +303,9 @@ fn links_under_a_base_resolve_as_vue_router_resolves_them() {
     assert_eq!(v.bases.len(), v.expected_bases.len());
     for ((base, at, to), (href, active)) in v.bases.iter().zip(&v.expected_bases) {
         let router = router(&v).with_base(base);
-        let link = router.at(at).link(to);
+        let route = router.at(at);
+        let link = route.link(to);
+        written_as(&route, to, &link);
         assert_eq!(
             (&link.href, link.active),
             (href, *active),
@@ -409,6 +432,61 @@ fn parameters_compare_decoded() {
     let router = Router::new(&["/t/:tag"]);
     assert!(router.at("/t/a%20b").link("/t/a b").active);
     assert!(!router.at("/t/a%20b").link("/t/a%2520b").active);
+}
+
+#[test]
+fn parameters_written_in_place_compare_decoded() {
+    let router = Router::new(&["/t/:tag", "/w/:rest(.*)"]);
+    for (at, to) in [
+        ("/t/a%20b", "/t/a b"),
+        ("/t/a b", "/t/a%20b"),
+        ("/t/a%20b", "/t/a%2520b"),
+        ("/t/a%2", "/t/a%2"),
+        ("/t/a%252", "/t/a%2"),
+        ("/t/%C3", "/t/%C3"),
+        ("/t/%25C3", "/t/%C3"),
+        ("/t/%C3%A9", "/t/é"),
+        ("/t/é", "/t/%C3%A9x"),
+        ("/t/ab", "/t/a"),
+        ("/t/a", "/t/ab"),
+        ("/w/a/b", "/w/a%2Fb"),
+    ] {
+        let route = router.at(at);
+        written_as(&route, to, &route.link(to));
+    }
+}
+
+#[test]
+fn a_route_with_more_parameters_than_spans_is_written_in_place() {
+    let router = Router::new(&["/:a/:b/:c/:d/:e/:f/:g/:h/:i"]);
+    let route = router.at("/1/2/3/4/5/6/7/8/9");
+    for to in ["/1/2/3/4/5/6/7/8/9", "/1/2/3/4/5/6/7/8/0", "x"] {
+        written_as(&route, to, &route.link(to));
+    }
+    assert!(route.link("/1/2/3/4/5/6/7/8/9").exact);
+}
+
+#[test]
+fn nested_links_written_in_place_match_their_links() {
+    let router = Router::tree(&[RouteDef::new("/users/:id")
+        .with_name("user")
+        .with_children(&[
+            RouteDef::new("").with_name("user-home"),
+            RouteDef::new("posts"),
+        ])]);
+    for at in ["/users/7", "/users/7/posts", "/users/8"] {
+        let route = router.at(at);
+        for to in [
+            "/users/7",
+            "/users/7/posts",
+            "posts",
+            "../x",
+            "",
+            "?q=<a>#\"h\"",
+        ] {
+            written_as(&route, to, &route.link(to));
+        }
+    }
 }
 
 #[test]

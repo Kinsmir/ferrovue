@@ -126,8 +126,9 @@ stops a module of an earlier version at this line. Version 7 writes the keys of
 [loaders](crate::guide::loaders#keys) that take an object, with calls of the key the 0.12 crate
 lacks; the 0.13 crate supports versions 6 and 7, and a module of version 6 builds unchanged.
 Version 8 writes the anchor of each `<RouterLink>` with one call of a helper the 0.13 crate lacks;
-the 0.14 crate supports versions 6 to 8. Version 9 writes the string a list's `.join()` builds
-straight into the page with helpers the 0.15 crate lacks; the 0.16 crate supports versions 6 to 9.
+the 0.14 crate supports versions 6 to 8. Version 9 writes the string a list's `.join()` builds,
+and the anchor of a `<RouterLink>` with a string `to`, straight into the page with helpers the 0.15
+crate lacks; the 0.16 crate supports versions 6 to 9.
 The upgrade pages,
 [`upgrading_to_0_16`](crate::guide::upgrading_to_0_16),
 [`upgrading_to_0_14`](crate::guide::upgrading_to_0_14),

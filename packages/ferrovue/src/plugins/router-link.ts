@@ -41,11 +41,15 @@ function urlText(s: Scope, v: Val, n: N): string {
   return fail(s.comp, "FV1201", "a route parameter is a string or a number that is present", n);
 }
 
-function linkCall(s: Scope, to: N): string {
+function linkTo(s: Scope, to: N): string {
   const target = expr(s, to);
   if (target.ty.k !== "str") fail(s.comp, "FV1202", "`<RouterLink>`'s `to` is a string or an object literal", to);
   noHalves(s, target, to);
-  return `fv_route.link(${strArg(target.code)})`;
+  return strArg(target.code);
+}
+
+function linkCall(s: Scope, to: N): string {
+  return `fv_route.link(${linkTo(s, to)})`;
 }
 
 function resolveLink(s: Scope, e: Emitter, to: N): void {
@@ -184,7 +188,6 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const passedOn = (p: N): boolean => s.fallthrough !== null && ((isAttrs(p) && s.comp.inheritAttrs) || dollarAttrs(s, p));
   const fallsThrough = parts.some(passedOn);
   const inline = !fallsThrough && to.type !== "ObjectExpression";
-  const link = inline ? `&${linkCall(s, to)}` : "&fv_link";
   if (!inline) {
     e.open("");
     resolveLink(s, e, to);
@@ -206,7 +209,8 @@ export function routerLink(s: Scope, e: Emitter, n: N): void {
   const cls = fields.get("class");
   const string = !!cls && stringClass(cls);
   const own = !cls ? [] : cls.type === "StringLiteral" ? [rustStr(cls.value)] : classItems(s, cls).map((it) => ("lit" in it ? rustStr(it.lit) : it.code));
-  e.stmt(`fv::attrs::link_open(out, ${link}, ${rustStr(current)}, ${rustStr(escapeHtml(active))}, ${rustStr(escapeHtml(exact))}, &[${own.join(", ")}], ${string});`);
+  const open = inline ? `link_to_open(out, fv_route, ${linkTo(s, to)}` : "link_open(out, &fv_link";
+  e.stmt(`fv::attrs::${open}, ${rustStr(current)}, ${rustStr(escapeHtml(active))}, ${rustStr(escapeHtml(exact))}, &[${own.join(", ")}], ${string});`);
   e.expect(Buffer.byteLength(`<a aria-current="${current}" href="" class=""`));
   for (const p of attrs) {
     const key: string = p.key.value;

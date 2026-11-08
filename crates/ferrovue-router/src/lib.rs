@@ -13,6 +13,8 @@
 //! ```
 #![warn(rustdoc::missing_crate_level_docs)]
 
+use std::borrow::Cow;
+
 /// The routes, in the order vue-router tries them.
 ///
 /// # Example
@@ -32,6 +34,7 @@
 pub struct Router {
     routes: Vec<Pattern>,
     base: String,
+    most: usize,
 }
 
 /// The base, and each route's full path with its name, in the order vue-router tries them.
@@ -85,6 +88,64 @@ enum Token {
 }
 
 type Values = Vec<Option<String>>;
+
+const SPANS: usize = 8;
+
+struct Spans<'p> {
+    at: [Option<&'p str>; SPANS],
+    len: usize,
+}
+
+trait Captures<'p> {
+    fn push(&mut self, raw: Option<&'p str>);
+    fn pop(&mut self);
+}
+
+impl Captures<'_> for Values {
+    fn push(&mut self, raw: Option<&str>) {
+        Vec::push(self, raw.map(decode));
+    }
+
+    fn pop(&mut self) {
+        Vec::pop(self);
+    }
+}
+
+impl<'p> Captures<'p> for Spans<'p> {
+    fn push(&mut self, raw: Option<&'p str>) {
+        self.at[self.len] = raw;
+        self.len += 1;
+    }
+
+    fn pop(&mut self) {
+        self.len -= 1;
+    }
+}
+
+trait Captured {
+    fn given(&self) -> Option<&str>;
+    fn same(given: &str, here: &str) -> bool;
+}
+
+impl Captured for Option<String> {
+    fn given(&self) -> Option<&str> {
+        self.as_deref()
+    }
+
+    fn same(given: &str, here: &str) -> bool {
+        given == here
+    }
+}
+
+impl Captured for Option<&str> {
+    fn given(&self) -> Option<&str> {
+        *self
+    }
+
+    fn same(given: &str, here: &str) -> bool {
+        decodes_to(given, here)
+    }
+}
 
 const ROOT: i32 = 90;
 const STATIC: i32 = 80;
@@ -238,7 +299,7 @@ impl Router {
             position[i] = at;
         }
         let mut slots: Vec<Option<Pattern>> = records.into_iter().map(Some).collect();
-        let routes = order
+        let routes: Vec<Pattern> = order
             .iter()
             .map(|&i| {
                 let mut p = slots[i].take().expect("each record once");
@@ -246,30 +307,28 @@ impl Router {
                 p
             })
             .collect();
+        let most = routes.iter().map(|r| r.names().count()).max().unwrap_or(0);
         Router {
             routes,
             base: String::new(),
+            most,
         }
     }
 
-    fn chain(&self, mut i: usize) -> Vec<usize> {
-        let mut chain = vec![i];
-        while let Some(p) = self.routes[i].parent {
-            chain.push(p);
-            i = p;
+    fn up(&self, mut from: usize, to: usize) -> Option<usize> {
+        let mut steps = 0;
+        loop {
+            if from == to {
+                return Some(steps);
+            }
+            from = self.routes[from].parent?;
+            steps += 1;
         }
-        chain.reverse();
-        chain
     }
 
     fn params<'a>(&'a self, i: usize, values: &'a [Option<String>]) -> Vec<(&'a str, &'a str)> {
         self.routes[i]
-            .tokens
-            .iter()
-            .filter_map(|t| match t {
-                Token::Param { name, .. } => Some(name.as_str()),
-                Token::Static(_) => None,
-            })
+            .names()
             .zip(values)
             .filter_map(|(name, value)| Some((name, value.as_deref()?)))
             .collect()
@@ -351,6 +410,21 @@ impl Router {
             .enumerate()
             .filter(|(_, r)| r.matchable)
             .find_map(|(i, r)| r.parse(path).map(|params| (i, params)))
+    }
+
+    fn matched_spans<'p>(&self, path: &'p str) -> Option<(usize, Spans<'p>)> {
+        self.routes
+            .iter()
+            .enumerate()
+            .filter(|(_, r)| r.matchable)
+            .find_map(|(i, r)| {
+                let mut spans = Spans {
+                    at: [None; SPANS],
+                    len: 0,
+                };
+                r.parse_from(&r.tokens, path, &mut spans)
+                    .then_some((i, spans))
+            })
     }
 }
 
@@ -770,14 +844,7 @@ impl Route<'_> {
     #[must_use]
     pub fn param(&self, name: &str) -> Option<&str> {
         let (i, values) = self.matched.as_ref()?;
-        let at = self.router.routes[*i]
-            .tokens
-            .iter()
-            .filter_map(|t| match t {
-                Token::Param { name, .. } => Some(name.as_str()),
-                Token::Static(_) => None,
-            })
-            .position(|n| n == name)?;
+        let at = self.router.routes[*i].names().position(|n| n == name)?;
         values.get(at)?.as_deref()
     }
 
@@ -798,7 +865,8 @@ impl Route<'_> {
     #[must_use]
     pub fn link(&self, to: &str) -> Link {
         let (path, full) = parse_url(to, &self.path);
-        let (active, exact) = self.state(self.router.matched(&path));
+        let matched = self.router.matched(&path);
+        let (active, exact) = self.state(matched.as_ref().map(|(i, v)| (*i, v.as_slice())));
         Link {
             href: format!("{}{full}", self.router.base),
             active,
@@ -806,36 +874,67 @@ impl Route<'_> {
         }
     }
 
-    fn state(&self, target: Option<(usize, Values)>) -> (bool, bool) {
+    /// What `<RouterLink :to>` writes from here: ` aria-current="{current}"` when the link is exact
+    /// and ` href="…"` escaped, into `out`. Returns `(active, exact)`.
+    #[doc(hidden)]
+    pub fn link_into(&self, out: &mut String, to: &str, current: &str) -> (bool, bool) {
+        let router = self.router;
+        let (path, search, hash) = split_url(to, &self.path);
+        let (active, exact) = if router.most > SPANS {
+            let matched = router.matched(&path);
+            self.state(matched.as_ref().map(|(i, v)| (*i, v.as_slice())))
+        } else {
+            let matched = router.matched_spans(&path);
+            self.state(matched.as_ref().map(|(i, s)| (*i, &s.at[..s.len])))
+        };
+        if exact {
+            out.push_str(" aria-current=\"");
+            out.push_str(current);
+            out.push('"');
+        }
+        out.push_str(" href=\"");
+        ferrovue_core::escape_into(out, &router.base);
+        ferrovue_core::escape_into(out, &path);
+        ferrovue_core::escape_into(out, search);
+        ferrovue_core::escape_into(out, hash);
+        out.push('"');
+        (active, exact)
+    }
+
+    fn state<V: Captured>(&self, target: Option<(usize, &[V])>) -> (bool, bool) {
         let (Some((t, link_values)), Some((c, here_values))) = (target, self.matched.as_ref())
         else {
             return (false, false);
         };
         let router = self.router;
-        let link_chain = router.chain(t);
-        let here_chain = router.chain(*c);
-        let routed = *link_chain.last().expect("a chain holds its route");
-        let mut index = here_chain.iter().position(|&r| r == routed);
-        if index.is_none() && link_chain.len() > 1 {
-            let parent = link_chain[link_chain.len() - 2];
+        let c = *c;
+        let up = router.up(c, t).or_else(|| {
+            let parent = router.routes[t].parent?;
             let parent_path = &router.routes[parent].path;
-            let here_last = *here_chain.last().expect("a chain holds its route");
-            if router.routes[routed].path == *parent_path
-                && router.routes[here_last].path != *parent_path
-            {
-                index = here_chain.iter().position(|&r| r == parent);
-            }
-        }
-        let Some(index) = index else {
+            let nested =
+                router.routes[t].path == *parent_path && router.routes[c].path != *parent_path;
+            nested.then(|| router.up(c, parent)).flatten()
+        });
+        let Some(up) = up else {
             return (false, false);
         };
-        let link_params = router.params(t, &link_values);
-        let here_params = router.params(*c, here_values);
-        let includes = link_params
-            .iter()
-            .all(|(k, v)| here_params.iter().any(|(hk, hv)| hk == k && hv == v));
-        let same = includes && link_params.len() == here_params.len();
-        (includes, index == here_chain.len() - 1 && same)
+        let here = || {
+            router.routes[c]
+                .names()
+                .zip(here_values)
+                .filter_map(|(name, value)| Some((name, value.as_deref()?)))
+        };
+        let mut given = 0;
+        for (k, v) in router.routes[t].names().zip(link_values) {
+            let Some(v) = v.given() else {
+                continue;
+            };
+            given += 1;
+            if !here().any(|(hk, hv)| hk == k && V::same(v, hv)) {
+                return (false, false);
+            }
+        }
+        (true, up == 0 && given == here().count())
     }
 
     /// Resolve `{ name, params, query, hash }`: the named route's path with each parameter
@@ -933,7 +1032,7 @@ impl Route<'_> {
         if path.is_empty() {
             path.push('/');
         }
-        let (active, exact) = self.state(Some((i, values)));
+        let (active, exact) = self.state(Some((i, values.as_slice())));
         Link {
             href: self.href(&path, search, hash),
             active,
@@ -961,7 +1060,8 @@ impl Route<'_> {
     #[must_use]
     pub fn link_path(&self, path: &str, search: &str, hash: &str) -> Link {
         let (path, _) = parse_url(path, &self.path);
-        let (active, exact) = self.state(self.router.matched(&path));
+        let matched = self.router.matched(&path);
+        let (active, exact) = self.state(matched.as_ref().map(|(i, v)| (*i, v.as_slice())));
         Link {
             href: self.href(&path, search, hash),
             active,
@@ -1039,6 +1139,13 @@ fn encode_url(text: &str, part: Part) -> String {
 }
 
 impl Pattern {
+    fn names(&self) -> impl Iterator<Item = &str> {
+        self.tokens.iter().filter_map(|t| match t {
+            Token::Param { name, .. } => Some(name.as_str()),
+            Token::Static(_) => None,
+        })
+    }
+
     fn new(path: &str, name: Option<String>) -> Pattern {
         let Some(rest) = path.strip_prefix('/') else {
             panic!("a route path starts with `/`: {path:?}");
@@ -1112,7 +1219,12 @@ impl Pattern {
             .then_some(params)
     }
 
-    fn parse_from(&self, tokens: &[Token], rest: &str, params: &mut Values) -> bool {
+    fn parse_from<'p, C: Captures<'p>>(
+        &self,
+        tokens: &[Token],
+        rest: &'p str,
+        params: &mut C,
+    ) -> bool {
         let Some((token, after)) = tokens.split_first() else {
             return matches!(rest, "" | "/") || (self.tokens.is_empty() && rest == "//");
         };
@@ -1136,7 +1248,7 @@ impl Pattern {
                 if let Some(inner) = rest.strip_prefix('/') {
                     let end = inner.find('/').unwrap_or(inner.len());
                     if end > 0 {
-                        params.push(Some(decode(&inner[..end])));
+                        params.push(Some(&inner[..end]));
                         if self.parse_from(after, &inner[end..], params) {
                             return true;
                         }
@@ -1159,7 +1271,7 @@ impl Pattern {
                 if rest.contains(['\n', '\r', '\u{2028}', '\u{2029}']) {
                     return false;
                 }
-                params.push(Some(decode(rest)));
+                params.push(Some(rest));
                 self.parse_from(after, "", params)
             }
         }
@@ -1176,6 +1288,12 @@ fn compare(a: &[i32], b: &[i32]) -> std::cmp::Ordering {
 }
 
 fn parse_url(location: &str, current: &str) -> (String, String) {
+    let (path, search, hash) = split_url(location, current);
+    let full = format!("{path}{search}{hash}");
+    (path.into_owned(), full)
+}
+
+fn split_url<'a>(location: &'a str, current: &'a str) -> (Cow<'a, str>, &'a str, &'a str) {
     let hash_pos = location.find('#');
     let search_pos = location
         .find('?')
@@ -1192,17 +1310,19 @@ fn parse_url(location: &str, current: &str) -> (String, String) {
         path = Some(path.filter(|p| !p.is_empty()).unwrap_or(&location[..h]));
         hash = &location[h..];
     }
-    let path = resolve_relative_path(path.unwrap_or(location), current);
-    let full = format!("{path}{search}{hash}");
-    (path, full)
+    (
+        resolve_relative_path(path.unwrap_or(location), current),
+        search,
+        hash,
+    )
 }
 
-fn resolve_relative_path(to: &str, from: &str) -> String {
+fn resolve_relative_path<'a>(to: &'a str, from: &'a str) -> Cow<'a, str> {
     if to.starts_with('/') {
-        return to.to_owned();
+        return Cow::Borrowed(to);
     }
     if to.is_empty() {
-        return from.to_owned();
+        return Cow::Borrowed(from);
     }
     let from_segments: Vec<&str> = from.split('/').collect();
     let mut to_segments: Vec<&str> = to.split('/').collect();
@@ -1227,11 +1347,44 @@ fn resolve_relative_path(to: &str, from: &str) -> String {
         }
         to_position += 1;
     }
-    format!(
+    Cow::Owned(format!(
         "{}/{}",
         from_segments[..position].join("/"),
         to_segments[to_position..].join("/")
-    )
+    ))
+}
+
+fn decodes_to(raw: &str, here: &str) -> bool {
+    if !raw.contains('%') {
+        return raw == here;
+    }
+    let bytes = raw.as_bytes();
+    let mut want = here.bytes();
+    let mut equal = true;
+    let mut i = 0;
+    while i < bytes.len() {
+        let byte = if bytes[i] == b'%' {
+            let hex = |b: u8| (b as char).to_digit(16);
+            match (
+                bytes.get(i + 1).and_then(|&b| hex(b)),
+                bytes.get(i + 2).and_then(|&b| hex(b)),
+            ) {
+                (Some(hi), Some(lo)) => {
+                    i += 3;
+                    (hi * 16 + lo) as u8
+                }
+                _ => return raw == here,
+            }
+        } else {
+            i += 1;
+            bytes[i - 1]
+        };
+        equal = equal && want.next() == Some(byte);
+    }
+    if equal && want.next().is_none() {
+        return true;
+    }
+    raw == here && decode(raw) == raw
 }
 
 fn decode(text: &str) -> String {

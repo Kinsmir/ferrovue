@@ -779,10 +779,53 @@ pub fn link_open(
     }
     out.push_str(" href=\"");
     escape_into(out, &link.href);
-    out.push_str("\" class=\"");
-    let names = if link.exact {
+    out.push('"');
+    link_class(
+        out,
+        (link.active, link.exact),
+        active,
+        exact,
+        classes,
+        string,
+    );
+}
+
+/// [`link_open`] for a string `to`, resolved from `route` as [`crate::router::Route::link`]
+/// resolves it and written in place.
+#[doc(hidden)]
+#[cfg(feature = "router")]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "generated code passes what `link_open` takes, with the route and `to` in place of the link"
+)]
+pub fn link_to_open(
+    out: &mut String,
+    route: &crate::router::Route<'_>,
+    to: &str,
+    current: &str,
+    active: &str,
+    exact: &str,
+    classes: &[&str],
+    string: bool,
+) {
+    out.push_str("<a");
+    let state = route.link_into(out, to, current);
+    link_class(out, state, active, exact, classes, string);
+}
+
+#[cfg(feature = "router")]
+fn link_class(
+    out: &mut String,
+    (is_active, is_exact): (bool, bool),
+    active: &str,
+    exact: &str,
+    classes: &[&str],
+    string: bool,
+) {
+    out.push_str(" class=\"");
+    let names = if is_exact {
         exact
-    } else if link.active {
+    } else if is_active {
         active
     } else {
         ""

@@ -12,6 +12,23 @@ proptest! {
     }
 
     #[test]
+    fn a_link_written_in_place_is_the_link_escaped(at in "/[a/%2Cb?#é ]{0,8}", to in "[a/%2Cb?#é<&\".]{0,8}") {
+        let router = Router::new(&["/", "/a/:x", "/a/:x/b", "/w/:rest(.*)"]);
+        let route = router.at(&at);
+        let link = route.link(&to);
+        let mut want = String::new();
+        if link.exact {
+            want.push_str(" aria-current=\"page\"");
+        }
+        want.push_str(" href=\"");
+        ferrovue_core::escape_into(&mut want, &link.href);
+        want.push('"');
+        let mut out = String::new();
+        let state = route.link_into(&mut out, &to, "page");
+        prop_assert_eq!((out, state), (want, (link.active, link.exact)));
+    }
+
+    #[test]
     fn a_link_to_where_the_reader_is_is_active(segment in "[a-zA-Z0-9_~-]{1,12}") {
         let router = Router::new(&["/", "/a/:x", "/a/:x/b"]);
         let at = format!("/a/{segment}");

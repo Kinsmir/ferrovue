@@ -52,9 +52,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
         + props.tab.as_deref().map_or(0, str::len)
     );
     out.push_str("<nav>");
-    fv::attrs::link_open(out, &fv_route.link("/"), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+    fv::attrs::link_to_open(out, fv_route, "/", "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     out.push_str(">home</a> ");
-    fv::attrs::link_open(out, &fv_route.link(&format!("/users/{}", props.user)), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+    fv::attrs::link_to_open(out, fv_route, &format!("/users/{}", props.user), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
     if props.user.is_empty() {
         out.push_str(" data-user rel=\"author\">");
     } else {
@@ -65,7 +65,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_route: &fv::router::Ro
     fv::core::escape_into(out, &props.user);
     out.push_str("</a> ");
     if let Some(fv_tab) = props.tab.as_deref().filter(|v| !v.is_empty()) {
-        fv::attrs::link_open(out, &fv_route.link(&format!("/blog/{}/{}", props.user, fv_tab)), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
+        fv::attrs::link_to_open(out, fv_route, &format!("/blog/{}/{}", props.user, fv_tab), "page", "router-link-active", "router-link-active router-link-exact-active", &[], false);
         out.push_str(" title=\"");
         fv::core::escape_into(out, fv_tab);
         out.push_str("\">");

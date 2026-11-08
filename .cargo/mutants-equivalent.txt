@@ -54,8 +54,8 @@ crates/ferrovue-router/src/lib.rs: replace > with >= in Router::with_base
 # so `h > 0` and `h >= 0` agree.
 crates/ferrovue-router/src/lib.rs: replace < with <= in Router::at
 crates/ferrovue-router/src/lib.rs: replace > with >= in Router::at
-crates/ferrovue-router/src/lib.rs: replace < with <= in parse_url
-crates/ferrovue-router/src/lib.rs: replace > with >= in parse_url
+crates/ferrovue-router/src/lib.rs: replace < with <= in split_url
+crates/ferrovue-router/src/lib.rs: replace > with >= in split_url
 
 # `resolveRelativePath`. The loop always stops at a segment other than `.` or `..` (a final one is
 # followed by an empty segment), so `to_position` never reaches the end. And `from` is absolute: its

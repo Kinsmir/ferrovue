@@ -43,12 +43,14 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 - `escape_into` escapes in one pass, copying the runs between the characters it replaces eight bytes at a time; the bench renders run up to 9% fewer instructions.
   [Everything a template interpolates is escaped](https://docs.rs/ferrovue/latest/ferrovue/guide/escaping/index.html#everything-a-template-interpolates-is-escaped).
-- Generated code is version 9, which writes a list's `.join()` into the page item by item with helpers the 0.15 crate lacks, so renders that join run up to 25% fewer instructions; the 0.16 crate builds versions 6 to 8 too.
+- Generated code is version 9, which writes a list's `.join()` into the page item by item, and a `<RouterLink>` in place, with helpers the 0.15 crate lacks, so renders that join run up to 25% fewer instructions; the 0.16 crate builds versions 6 to 8 too.
   [Upgrading to 0.16](https://docs.rs/ferrovue/latest/ferrovue/guide/upgrading_to_0_16/index.html#2-generate-every-component-again).
 - Generated code writes `std::borrow::Cow` as `Cow`, and a field's `#[serde(rename)]` only where its JSON key differs from its name, which makes the generated Rust about 3% smaller.
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 - `Head::render` borrows the tags, props and keys it builds from the pushed values, copying none of them, so the bench head renders in 59% fewer instructions.
   [The page head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
+- A `<RouterLink>` with a string `to` is resolved and written straight into the page, allocating nothing; the `small` bench render runs 55% fewer instructions.
+  [How links are written](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#how-links-are-written).
 
 ## [0.15.2] - 2026-11-07
 
