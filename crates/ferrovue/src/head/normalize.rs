@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
 use super::tag::{
-    CONFIG_KEYS, DUPEABLE, HAS_ELEMENT, Key, Prop, Tag, invalid_attr_name, unsafe_key,
+    CONFIG_KEYS, DUPEABLE, HAS_ELEMENT, Key, Places, Prop, Tag, add_class, add_style,
+    invalid_attr_name, unsafe_key,
 };
 use super::{HeadValue, SeoMeta};
 use crate::strings::js_trim;
@@ -202,19 +203,12 @@ fn config_field<'a>(tag: &mut Tag<'a>, prop: &str, value: Cow<'a, HeadValue>) {
     }
 }
 
-fn add_style<'a>(styles: &mut Vec<(&'a str, Cow<'a, str>)>, k: &'a str, v: Cow<'a, str>) {
-    if let Some(slot) = styles.iter_mut().find(|(sk, _)| *sk == k) {
-        slot.1 = v;
-    } else {
-        styles.push((k, v));
-    }
-}
-
 fn add_part<'a>(
     style: bool,
     v: &'a str,
     classes: &mut Vec<&'a str>,
     styles: &mut Vec<(&'a str, Cow<'a, str>)>,
+    places: &mut Places<'a>,
 ) {
     if v.is_empty() {
         return;
@@ -223,15 +217,14 @@ fn add_part<'a>(
         if let Some(i) = v.find(':').filter(|i| *i > 0) {
             add_style(
                 styles,
+                places,
                 js_trim(&v[..i]),
                 Cow::Borrowed(js_trim(&v[i + 1..])),
             );
         }
     } else {
         for c in v.split(' ').filter(|c| !c.is_empty()) {
-            if !classes.contains(&c) {
-                classes.push(c);
-            }
+            add_class(classes, places, c);
         }
     }
 }
@@ -239,17 +232,18 @@ fn add_part<'a>(
 fn class_or_style(style: bool, value: &HeadValue) -> Prop<'_> {
     let mut classes = Vec::new();
     let mut styles = Vec::new();
+    let mut places = Places::default();
     match value {
         HeadValue::Str(s) if style => {
             for part in s.split(';') {
-                add_part(style, part, &mut classes, &mut styles);
+                add_part(style, part, &mut classes, &mut styles, &mut places);
             }
         }
-        HeadValue::Str(s) => add_part(style, s, &mut classes, &mut styles),
+        HeadValue::Str(s) => add_part(style, s, &mut classes, &mut styles, &mut places),
         HeadValue::Array(items) => {
             for item in items {
                 if let HeadValue::Str(s) = item {
-                    add_part(style, s, &mut classes, &mut styles);
+                    add_part(style, s, &mut classes, &mut styles, &mut places);
                 }
             }
         }
@@ -257,9 +251,9 @@ fn class_or_style(style: bool, value: &HeadValue) -> Prop<'_> {
             for (k, v) in entries {
                 if v.truthy() && !matches!(v, HeadValue::Str(s) if s == "false") {
                     if style {
-                        add_style(&mut styles, js_trim(k), v.js_str());
+                        add_style(&mut styles, &mut places, js_trim(k), v.js_str());
                     } else {
-                        add_part(style, k, &mut classes, &mut styles);
+                        add_part(style, k, &mut classes, &mut styles, &mut places);
                     }
                 }
             }

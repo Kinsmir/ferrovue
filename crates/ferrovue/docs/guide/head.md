@@ -148,6 +148,11 @@ leave it out); `content` of a `meta` may be a list, which makes one tag per item
 value, and `tagPosition`, `tagPriority` and `tagDuplicateStrategy` are literals. Any value may be a
 getter, `() => props.title`, which unhead calls on the server and ferrovue evaluates.
 
+A `class` keeps each class once, where it first appears, and a `style` each property once, where it
+first appears with the last value given, as unhead's `Set` and `Map` keep them, also where the
+`htmlAttrs` or `bodyAttrs` of several entries merge. Both take time linear in the length of the
+list, a long one through a hash table beside it.
+
 `useSeoMeta` (and `useServerSeoMeta`) takes an object literal of camel-case keys
 (`description`, `ogTitle`, `twitterCard`, `robots`) whose values are strings, numbers, booleans,
 `null` or absent, and `title` and `titleTemplate`.

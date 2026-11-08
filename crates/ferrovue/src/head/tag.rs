@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 
 use super::{HeadValue, js_key_place};
@@ -130,6 +131,42 @@ impl<'a> Key<'a> {
             HeadValue::Bool(b) => Key::Bool(b),
             _ => Key::Unique(UNIQUE_KEYS.fetch_add(1, AtomicOrdering::Relaxed)),
         }
+    }
+}
+
+const SCANNED: usize = 16;
+
+#[derive(Default)]
+pub(super) struct Places<'a>(Option<HashMap<&'a str, usize>>);
+
+impl<'a> Places<'a> {
+    fn of<T>(&mut self, items: &[T], key: impl Fn(&T) -> &'a str, k: &str) -> Option<usize> {
+        if items.len() < SCANNED {
+            return items.iter().position(|item| key(item) == k);
+        }
+        let places = self.0.get_or_insert_with(HashMap::new);
+        for (i, item) in items.iter().enumerate().skip(places.len()) {
+            places.entry(key(item)).or_insert(i);
+        }
+        places.get(k).copied()
+    }
+}
+
+pub(super) fn add_class<'a>(classes: &mut Vec<&'a str>, places: &mut Places<'a>, c: &'a str) {
+    if places.of(classes, |c| c, c).is_none() {
+        classes.push(c);
+    }
+}
+
+pub(super) fn add_style<'a>(
+    styles: &mut Vec<(&'a str, Cow<'a, str>)>,
+    places: &mut Places<'a>,
+    k: &'a str,
+    v: Cow<'a, str>,
+) {
+    match places.of(styles, |(k, _)| k, k) {
+        Some(i) => styles[i].1 = v,
+        None => styles.push((k, v)),
     }
 }
 
