@@ -3,12 +3,12 @@
   "target": "x86_64-unknown-linux-musl",
   "budget": 5,
   "instructions": {
-    "small": 15480,
+    "small": 6891,
     "list": 992978,
     "tree": 124194,
     "page": 58846,
-    "attrs_into": 9391,
-    "push_number": 8980,
-    "head": 61801
+    "attrs_into": 9392,
+    "push_number": 8979,
+    "head": 61856
   }
 }

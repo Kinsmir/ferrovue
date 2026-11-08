@@ -47,7 +47,7 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [A component's module](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#a-components-module).
 - `Head::render` borrows the tags, props and keys it builds from the pushed values, copying none of them, so the bench head renders in 59% fewer instructions.
   [The page head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
-- A `<RouterLink>` with a string `to` is resolved and written straight into the page, allocating nothing; the `small` bench render runs N% fewer instructions.
+- A `<RouterLink>` with a string `to` is resolved and written straight into the page, allocating nothing; the `small` bench render runs 55% fewer instructions.
   [How links are written](https://docs.rs/ferrovue/latest/ferrovue/guide/routing/index.html#how-links-are-written).
 
 ## [0.15.2] - 2026-11-07
