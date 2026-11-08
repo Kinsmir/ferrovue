@@ -62,6 +62,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 
 - `linkRoutes` and `linkRouter` refuse to hand `navigate` a link to another host, such as a relative link on a page whose path starts with `//`.
   [A page from the fallback](https://docs.rs/ferrovue/latest/ferrovue/guide/web_frameworks/index.html#a-page-from-the-fallback).
+- `hydrateState` and `mountPage` read the state and the page record only from a `<script>` with their `id`, so an element of user HTML given that `id` cannot stand in for them.
+  [The state script and the page record](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#the-state-script-and-the-page-record).
 
 ## [0.15.2] - 2026-11-07
 
