@@ -1074,13 +1074,8 @@ describe("whitespace", () => {
     ]);
     expect(warned('<div class="whitespace-pre">\n  <b>a</b>\n  <i>b</i>\n</div>')).toHaveLength(1);
     expect(warned('<div class="whitespace-pre"><pre>\n  a\n</pre></div>')).toEqual([]);
-    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([
-      "FV0429 6:3 the line breaks before and after this `v-if` both render as a space, so the text holds two spaces when no branch renders: hug the tags on one side, `</b\\n><i v-if>`, to render one",
-    ]);
-    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <i v-else>y</i>\n  <a>z</a>\n</p>')).toEqual([]);
-    expect(warned('<p>\n  <b>a</b\n  ><i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([]);
-    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n</p>')).toEqual([]);
-    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>', { whitespace: "condense" })).toEqual([]);
+    expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([]);
+    expect(warned('<div class="whitespace-pre">\n  a\n</div>', { whitespace: "condense" })).toEqual([]);
   });
 
   it("trims the content a component and `<template v-slot>` hand a child", () => {

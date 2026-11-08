@@ -14,7 +14,7 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
 
 ### Added
 
-- With `"whitespace": "trim-edges"`, the compiler warns where the page may still show what a formatter did not mean: a gap beside a class of the new `inlineBlockClasses` (FV0427), an unlisted Tailwind `whitespace-pre*` class (FV0428), and two spaces around a `v-if` (FV0429).
+- With `"whitespace": "trim-edges"`, the compiler warns where the page may still show what a formatter did not mean: a gap beside a class of the new `inlineBlockClasses` (FV0427) and an unlisted Tailwind `whitespace-pre*` class (FV0428).
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 - `"preserveWhitespace": { "classes": [...] }` names the classes a stylesheet gives a preserving `white-space`, which `"trim-edges"` leaves as Vue spaces them, and `trimEdges({ classes })` does the same for the client.
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).

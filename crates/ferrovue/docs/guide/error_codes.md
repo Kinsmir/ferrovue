@@ -660,9 +660,7 @@ A warning, with `"whitespace": "trim-edges"`: a class named as Tailwind names it
 
 ## FV0429
 
-Line breaks on both sides of a `v-if` that may render nothing.
-
-A warning, with `"whitespace": "trim-edges"`: the line breaks before and after a `v-if` with no `v-else` each render as a space, so when no branch renders the text holds two spaces. The browser shows one, and `textContent` and the server's HTML hold both. Hug the tags on one side of the `v-if` to render one.
+Line breaks on both sides of a `v-if` that may render nothing. Retired in 0.16.0: the compiler no longer raises it.
 
 # Child components: FV05xx
 

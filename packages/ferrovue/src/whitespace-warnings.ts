@@ -5,7 +5,7 @@ const PRESERVING_UTILITY = /^(?:[^\s:]+:)*whitespace-(?:pre|pre-wrap|pre-line|br
 /** A place `"trim-edges"` renders as a formatter reads it, where the page may still show something
  * the template's author did not mean. */
 export interface WhitespaceWarning {
-  code: "FV0427" | "FV0428" | "FV0429";
+  code: "FV0427" | "FV0428";
   message: string;
   node: TemplateNode;
 }
@@ -18,24 +18,10 @@ export interface WhitespaceWarningOptions {
   inlineBlock: ReadonlySet<string>;
 }
 
-const directive = (node: TemplateNode, name: string): boolean => node.type === ELEMENT && node.props!.some((p) => p.type === 7 && p.name === name);
 const label = (node: TemplateNode): string => `\`<${node.tag}>\``;
 
 function staticClasses(node: TemplateNode): string[] {
   return node.props!.flatMap((p) => (p.type === 6 && p.name === "class" && p.value ? p.value.content.split(/\s+/).filter(Boolean) : []));
-}
-
-function chainsWithNoElse(node: TemplateNode): { first: TemplateNode; last: TemplateNode }[] {
-  const chains: { first: TemplateNode; last: TemplateNode }[] = [];
-  const children = node.children!.filter((c) => c.type === ELEMENT);
-  for (let i = 0; i < children.length; i++) {
-    if (!directive(children[i]!, "if")) continue;
-    let j = i;
-    while (j + 1 < children.length && (directive(children[j + 1]!, "else-if") || directive(children[j + 1]!, "else"))) j++;
-    if (!directive(children[j]!, "else")) chains.push({ first: children[i]!, last: children[j]! });
-    i = j;
-  }
-  return chains;
 }
 
 function visit(node: TemplateNode, source: string, start: number, options: WhitespaceWarningOptions, out: WhitespaceWarning[]): void {
@@ -47,16 +33,6 @@ function visit(node: TemplateNode, source: string, start: number, options: White
         code: "FV0427",
         message: `the line break between ${label(prev)} and ${label(next)} renders as a space, which shows as a gap beside ${label(boxed)}, whose class makes it \`inline-block\`: hug the tags, \`</${prev.tag}\\n><${next.tag}>\`, where no space is meant`,
         node: next,
-      });
-    }
-  }
-  for (const { first, last } of chainsWithNoElse(node)) {
-    const before = found.find((g) => g.next === first);
-    if (before && found.some((g) => g.prev === last)) {
-      out.push({
-        code: "FV0429",
-        message: `the line breaks before and after this \`v-if\` both render as a space, so the text holds two spaces when no branch renders: hug the tags on one side, \`</${before.prev.tag}\\n><${first.tag} v-if>\`, to render one`,
-        node: first,
       });
     }
   }

@@ -500,8 +500,7 @@ The space is decided when the template compiles, from its source, so it stays wh
 `v-for` beside it renders nothing. With only the first of two `<template v-if>`s on lines of their
 own rendering, the text ends in two spaces. The browser collapses them, so nothing shows, and they
 are in the server's HTML and in `textContent`, as in HTML written by hand. Where the branch renders,
-the space is the one it needs. The compiler warns (FV0429) at a `v-if` with no `v-else` that has a
-line break on both sides; hugging the tags on one side renders one space.
+the space is the one it needs.
 
 Everything else stays as Vue condenses it:
 
