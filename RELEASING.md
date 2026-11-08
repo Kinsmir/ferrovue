@@ -45,7 +45,7 @@ becomes public until a maintainer approves it, once on each registry.
      of type errors. This is a breaking change to the generated-code contract
      (`crates/ferrovue/docs/guide/generated_code.md`).
 
-   `compiler.test.ts` checks that `GENERATED_VERSION` is the newest version the crate accepts and
+   `generator.test.ts` checks that `GENERATED_VERSION` is the newest version the crate accepts and
    the message names the range, and `crates/ferrovue-contract/tests/compat.rs` checks the message
    a version the crate does not accept stops the build with (`TRYBUILD=overwrite cargo test -p
    ferrovue-contract --test compat` records it again).

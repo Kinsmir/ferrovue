@@ -55,8 +55,9 @@ reference; this file is the short version.
    pass.
 4. Refuse what is not translated exactly. A new refusal gets a code in `ERRORS` in
    `packages/ferrovue/src/errors.ts`, after the last of its area, with a title and a detail, and a
-   case in `refused` in `packages/ferrovue/test/compiler.test.ts`. A code is never reused or
-   renumbered: one no input can raise any more is marked `retired`.
+   row in one of the `refused` tables that `refusals.test.ts` runs
+   (`packages/ferrovue/test/refused-expressions.ts`, `refused-values.ts` or `refused-types.ts`). A
+   code is never reused or renumbered: one no input can raise any more is marked `retired`.
 5. Let the fuzzer (`packages/ferrovue/fuzz/`) generate the construct where it can.
 6. Document it: the README's "What a component may use" table (with its row in TESTING.md), the
    guide, and an entry under `## [Unreleased]` in CHANGELOG.md.
