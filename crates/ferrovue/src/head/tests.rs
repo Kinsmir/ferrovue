@@ -241,3 +241,59 @@ fn no_head_value_writes_the_hole_marker() {
         assert_eq!(html.head_tags.lines().count(), 8, "{}", html.head_tags);
     }
 }
+
+#[test]
+fn long_class_and_style_lists_keep_each_name_once_in_first_seen_order() {
+    let attrs = |key: &'static str, value: HeadValue| {
+        HeadValue::object([("bodyAttrs", HeadValue::object([(key, value)]))])
+    };
+    let tokens: Vec<String> = (0..3000).map(|i| format!("c{}", (i * 7) % 700)).collect();
+    let mut first_seen: Vec<&str> = Vec::new();
+    for t in &tokens {
+        if !first_seen.contains(&t.as_str()) {
+            first_seen.push(t);
+        }
+    }
+    let classes = format!(" class=\"{}\"", first_seen.join(" "));
+    let head = Head::new();
+    head.push(attrs("class", HeadValue::str(&tokens.join(" "))));
+    assert_eq!(head.render().body_attrs, classes);
+    let head = Head::new();
+    head.push(attrs(
+        "class",
+        HeadValue::array(tokens.iter().map(|t| HeadValue::str(t))),
+    ));
+    assert_eq!(head.render().body_attrs, classes);
+    let head = Head::new();
+    let (front, back) = tokens.split_at(1700);
+    head.push(attrs("class", HeadValue::str(&front.join(" "))));
+    head.push(attrs("class", HeadValue::str(&back.join(" "))));
+    assert_eq!(head.render().body_attrs, classes);
+
+    let declarations: Vec<(String, String)> = (0..3000)
+        .map(|i| (format!("p{}", (i * 7) % 700), format!("v{i}")))
+        .collect();
+    let mut kept: Vec<(&str, &str)> = Vec::new();
+    for (k, v) in &declarations {
+        match kept.iter_mut().find(|(kk, _)| kk == k) {
+            Some(slot) => slot.1 = v,
+            None => kept.push((k, v)),
+        }
+    }
+    let written: Vec<String> = kept.iter().map(|(k, v)| format!("{k}:{v}")).collect();
+    let styles = format!(" style=\"{}\"", written.join(";"));
+    let text = |d: &[(String, String)]| {
+        d.iter()
+            .map(|(k, v)| format!("{k}: {v}"))
+            .collect::<Vec<_>>()
+            .join(";")
+    };
+    let head = Head::new();
+    head.push(attrs("style", HeadValue::str(&text(&declarations))));
+    assert_eq!(head.render().body_attrs, styles);
+    let (front, back) = declarations.split_at(1700);
+    let head = Head::new();
+    head.push(attrs("style", HeadValue::str(&text(front))));
+    head.push(attrs("style", HeadValue::str(&text(back))));
+    assert_eq!(head.render().body_attrs, styles);
+}

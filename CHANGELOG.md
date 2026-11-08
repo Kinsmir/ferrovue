@@ -57,6 +57,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Numbers](https://docs.rs/ferrovue/latest/ferrovue/guide/numbers/index.html).
 - A render writes a template literal or string `+` it only escapes, and a `JSON.stringify` of a list, into the page as they are formatted, with no string built for them; the conformance components that format text allocate 6 to 40% less often.
   [How a render writes text](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#how-a-render-writes-text).
+- `Head::render` keeps each class of a `class` and each property of a `style` once in time linear in their number, merges of `htmlAttrs` and `bodyAttrs` included; a `class` of 16,000 names takes 3 ms, down from 305 ms.
+  [What a component may pass](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html#what-a-component-may-pass).
 
 ### Security
 

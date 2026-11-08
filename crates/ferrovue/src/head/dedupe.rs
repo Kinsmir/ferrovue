@@ -3,7 +3,10 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 use super::HeadValue;
-use super::tag::{INNER_CONTENT, Key, MERGED, META_ARRAYABLE, Prop, Tag, UNIQUE, joined};
+use super::tag::{
+    INNER_CONTENT, Key, MERGED, META_ARRAYABLE, Places, Prop, Tag, UNIQUE, add_class, add_style,
+    joined,
+};
 use crate::strings::{js_cmp, js_replace};
 
 pub(super) fn capo_weight(tag: &Tag<'_>) -> f64 {
@@ -215,11 +218,9 @@ fn merged<'a>(prev: Tag<'a>, mut next: Tag<'a>) -> Tag<'a> {
                     Some(Prop::Style(s)) => s.clone(),
                     _ => Vec::new(),
                 };
+                let mut places = Places::default();
                 for (k, v) in after {
-                    match all.iter_mut().find(|(sk, _)| *sk == k) {
-                        Some(slot) => slot.1 = v,
-                        None => all.push((k, v)),
-                    }
+                    add_style(&mut all, &mut places, k, v);
                 }
                 Prop::Style(all)
             }
@@ -228,10 +229,9 @@ fn merged<'a>(prev: Tag<'a>, mut next: Tag<'a>) -> Tag<'a> {
                     Some(Prop::Class(c)) => c.clone(),
                     _ => Vec::new(),
                 };
+                let mut places = Places::default();
                 for c in after {
-                    if !all.contains(&c) {
-                        all.push(c);
-                    }
+                    add_class(&mut all, &mut places, c);
                 }
                 Prop::Class(all)
             }
