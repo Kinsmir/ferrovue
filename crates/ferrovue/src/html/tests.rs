@@ -1,3 +1,4 @@
+use super::basic::{MAX_DEPTH, Tag};
 use super::*;
 use ferrovue_core::push_number;
 
