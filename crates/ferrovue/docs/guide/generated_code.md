@@ -833,8 +833,10 @@ room the page needs before the first one:
 - a value built by formatting, such as a template literal or a string `+` in a function or a
   `computed`, is written into the page as it is formatted, escaped on the way, with `write!`
   through a hidden `fv::core::escaping(out)`, and a `JSON.stringify` of a list is written item by
-  item. A bare attribute, and a CSS variable whose text may be empty, still build the value to
-  test it for being empty;
+  item. A fallthrough attribute given a template literal holds it as a hidden value that formats it
+  as it is written. A bare attribute tests its value for being empty from its parts, and a
+  `.join()` from its items; a CSS variable whose text may be empty still builds the value to test
+  it;
 - a string a loop builds by prepending, `out = ch + out`, grows in place.
 
 What each branch writes, and the order of the writes, stay those of Vue's `renderToString`.

@@ -1,10 +1,11 @@
 use crate::{props, strings::js_trim};
 use ferrovue_core::{escape_into, push_int, push_number};
 use std::borrow::Cow;
+use std::fmt;
 
 /// One attribute's value, as Vue holds it once the parent's virtual node is made: `createVNode`
 /// has already normalised a class given as an array or an object, and a style given as an array.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone)]
 #[non_exhaustive]
 pub enum Attr<'a> {
     /// `undefined`, an absent optional value. It writes nothing, and in a merge it replaces the
@@ -24,6 +25,82 @@ pub enum Attr<'a> {
     /// A style object: each property as written (camelCase, kebab-case or `--custom`) with its value,
     /// in JavaScript's order of keys.
     Style(Vec<(Cow<'a, str>, Attr<'a>)>),
+    /// A string written as it is formatted, which generated code passes for a template literal.
+    #[doc(hidden)]
+    Fmt(&'a (dyn fmt::Display + Sync)),
+}
+
+/// A string `Attr::Fmt` writes by calling `f`, built with [`format`].
+#[doc(hidden)]
+pub struct Format<F>(F);
+
+/// The value `Attr::Fmt` holds for `write!(f, …)` in `f`.
+#[doc(hidden)]
+pub fn format<F: Fn(&mut fmt::Formatter<'_>) -> fmt::Result + Sync>(f: F) -> Format<F> {
+    Format(f)
+}
+
+impl<F: Fn(&mut fmt::Formatter<'_>) -> fmt::Result> fmt::Display for Format<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        (self.0)(f)
+    }
+}
+
+impl<F: Fn(&mut fmt::Formatter<'_>) -> fmt::Result> fmt::Debug for Format<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Format").field(&self.to_string()).finish()
+    }
+}
+
+struct Written(bool);
+
+impl fmt::Write for Written {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        if s.is_empty() {
+            Ok(())
+        } else {
+            self.0 = true;
+            Err(fmt::Error)
+        }
+    }
+}
+
+fn writes_any(d: &dyn fmt::Display) -> bool {
+    let mut written = Written(false);
+    let _ = fmt::write(&mut written, format_args!("{d}"));
+    written.0
+}
+
+impl fmt::Debug for Attr<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Attr::Undefined => f.write_str("Undefined"),
+            Attr::Str(s) => f.debug_tuple("Str").field(s).finish(),
+            Attr::Bool(b) => f.debug_tuple("Bool").field(b).finish(),
+            Attr::Int(n) => f.debug_tuple("Int").field(n).finish(),
+            Attr::Float(x) => f.debug_tuple("Float").field(x).finish(),
+            Attr::Names(s) => f.debug_tuple("Names").field(s).finish(),
+            Attr::Style(entries) => f.debug_tuple("Style").field(entries).finish(),
+            Attr::Fmt(d) => f.debug_tuple("Fmt").field(&d.to_string()).finish(),
+        }
+    }
+}
+
+impl PartialEq for Attr<'_> {
+    fn eq(&self, other: &Attr<'_>) -> bool {
+        match (self, other) {
+            (Attr::Undefined, Attr::Undefined) => true,
+            (Attr::Bool(a), Attr::Bool(b)) => a == b,
+            (Attr::Int(a), Attr::Int(b)) => a == b,
+            (Attr::Float(a), Attr::Float(b)) => a == b,
+            (Attr::Names(a), Attr::Names(b)) => a == b,
+            (Attr::Style(a), Attr::Style(b)) => a == b,
+            _ => match (self.text(), other.text()) {
+                (Some(a), Some(b)) => a == b,
+                _ => false,
+            },
+        }
+    }
 }
 
 impl<'a> Attr<'a> {
@@ -55,10 +132,23 @@ impl<'a> Attr<'a> {
         Attr::Style(normal_order(res))
     }
 
+    fn text(&self) -> Option<Cow<'_, str>> {
+        match self {
+            Attr::Str(s) => Some(Cow::Borrowed(s)),
+            Attr::Fmt(d) => Some(Cow::Owned(d.to_string())),
+            _ => None,
+        }
+    }
+
+    fn is_text(&self) -> bool {
+        matches!(self, Attr::Str(_) | Attr::Fmt(_))
+    }
+
     fn truthy(&self) -> bool {
         match self {
             Attr::Undefined => false,
             Attr::Str(s) => !s.is_empty(),
+            Attr::Fmt(d) => writes_any(*d),
             Attr::Bool(b) => *b,
             Attr::Int(n) => *n != 0,
             Attr::Float(x) => *x != 0.0 && !x.is_nan(),
@@ -69,22 +159,24 @@ impl<'a> Attr<'a> {
     fn strict_eq(&self, other: &Attr<'_>) -> bool {
         match (self, other) {
             (Attr::Undefined, Attr::Undefined) => true,
-            (Attr::Str(a), Attr::Str(b)) => a == b,
+            (a, b) if a.is_text() && b.is_text() => a.text() == b.text(),
             _ => false,
         }
     }
 
-    fn class_text(&self) -> &str {
+    fn class_text(&self) -> Cow<'_, str> {
         match self {
-            Attr::Str(s) => js_trim(s),
-            Attr::Names(s) => s,
-            _ => "",
+            Attr::Str(s) => Cow::Borrowed(js_trim(s)),
+            Attr::Fmt(d) => Cow::Owned(js_trim(&d.to_string()).to_owned()),
+            Attr::Names(s) => Cow::Borrowed(s),
+            _ => Cow::Borrowed(""),
         }
     }
 
     fn write_string(&self, out: &mut String) {
         match self {
             Attr::Str(s) => escape_into(out, s),
+            Attr::Fmt(d) => write!(ferrovue_core::escaping(out), "{d}"),
             Attr::Bool(b) => out.push_str(if *b { "true" } else { "false" }),
             Attr::Int(n) => push_int(out, *n),
             Attr::Float(x) => push_number(out, *x),
@@ -227,7 +319,7 @@ fn merge<'s, 'a>(sources: &'s [&'s [(&'a str, Attr<'a>)]]) -> Vec<Merged<'s, 'a>
                 "class" => {
                     let so_far = at.map_or(&Attr::Undefined, |j| &*ret[j].1);
                     if !so_far.strict_eq(value) {
-                        let joined = join_classes(so_far.class_text(), value.class_text());
+                        let joined = join_classes(&so_far.class_text(), &value.class_text());
                         let joined = Cow::Owned(Attr::Str(Cow::Owned(joined)));
                         set(&mut ret, at, key, joined, i);
                     }
@@ -368,7 +460,7 @@ fn attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     match key {
         "class" => {
             out.push_str(" class=\"");
-            escape_into(out, value.class_text());
+            escape_into(out, &value.class_text());
             out.push('"');
         }
         "style" => {
@@ -429,7 +521,7 @@ fn is_boolean_attr(name: &str) -> bool {
 fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
     if !matches!(
         value,
-        Attr::Str(_) | Attr::Bool(_) | Attr::Int(_) | Attr::Float(_)
+        Attr::Str(_) | Attr::Fmt(_) | Attr::Bool(_) | Attr::Int(_) | Attr::Float(_)
     ) {
         return;
     }
@@ -441,12 +533,12 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
         _ => key.to_lowercase().into(),
     };
     let boolean = if name == "hidden" {
-        !matches!(value, Attr::Str(_))
+        !value.is_text()
     } else {
         is_boolean_attr(&name)
     };
     if boolean {
-        if value.truthy() || matches!(value, Attr::Str(s) if s.is_empty()) {
+        if value.is_text() || value.truthy() {
             out.push(' ');
             out.push_str(&name);
         }
@@ -461,16 +553,24 @@ fn dynamic_attr_into(out: &mut String, key: &str, value: &Attr<'_>) {
         return;
     }
     out.push_str("=\"");
+    let at = out.len();
     value.write_string(out);
-    out.push('"');
+    if out.len() == at {
+        out.truncate(at - 2);
+    } else {
+        out.push('"');
+    }
 }
 
 fn style_into(out: &mut String, value: &Attr<'_>) {
     match value {
-        Attr::Str(s) => escape_into(out, s),
+        Attr::Str(_) | Attr::Fmt(_) => value.write_string(out),
         Attr::Style(entries) => {
             for (key, v) in entries {
-                if !matches!(v, Attr::Str(_) | Attr::Int(_) | Attr::Float(_)) {
+                if !matches!(
+                    v,
+                    Attr::Str(_) | Attr::Fmt(_) | Attr::Int(_) | Attr::Float(_)
+                ) {
                     continue;
                 }
                 if key.starts_with("--") || is_lowercase_ascii(key) {
@@ -529,6 +629,7 @@ fn merge_style_into<'a>(res: &mut Vec<(Cow<'a, str>, Attr<'a>)>, item: Attr<'a>)
     let entries = match item {
         Attr::Style(entries) => entries,
         Attr::Str(css) => parse_style(&css),
+        Attr::Fmt(d) => parse_style(&d.to_string()),
         _ => return,
     };
     for (key, value) in entries {

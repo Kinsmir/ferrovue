@@ -30,6 +30,19 @@ fn vector_attr(v: &serde_json::Value) -> Attr<'static> {
     }
 }
 
+fn formatted<'a>(v: &'a Attr<'a>) -> Attr<'a> {
+    match v {
+        Attr::Str(s) => Attr::Fmt(s),
+        Attr::Style(entries) => Attr::Style(
+            entries
+                .iter()
+                .map(|(k, v)| (k.clone(), formatted(v)))
+                .collect(),
+        ),
+        other => other.clone(),
+    }
+}
+
 #[test]
 fn attributes_merge_and_render_as_vue_merges_and_renders_them() {
     type Source = Vec<(String, serde_json::Value)>;
@@ -54,7 +67,53 @@ fn attributes_merge_and_render_as_vue_merges_and_renders_them() {
         out.clear();
         attrs_into(&mut out, &[&merged], 0, "");
         assert_eq!(&out, want, "merged {sources:?}");
+        let lists: Vec<Vec<(&str, Attr<'_>)>> = lists
+            .iter()
+            .map(|l| l.iter().map(|(k, v)| (*k, formatted(v))).collect())
+            .collect();
+        let slices: Vec<&[(&str, Attr<'_>)]> = lists.iter().map(Vec::as_slice).collect();
+        out.clear();
+        attrs_into(&mut out, &slices, slices.len(), "");
+        assert_eq!(&out, want, "formatted {sources:?}");
+        assert_eq!(
+            merge_props(&slices),
+            merged,
+            "formatted, merged {sources:?}"
+        );
     }
+}
+
+#[test]
+fn a_formatted_value_is_written_as_it_is_formatted() {
+    let (tone, n, none, red) = ("a&'b'", 2, "", "red");
+    let value = format(|f| write!(f, "{tone}-{n}"));
+    let empty = format(|f| write!(f, "{none}{none}"));
+    let attr = Attr::Fmt(&value);
+    assert_eq!(attr, Attr::str("a&'b'-2"));
+    assert_eq!(Attr::str("a&'b'-2"), attr);
+    assert_ne!(attr, Attr::Fmt(&empty));
+    assert_ne!(attr, Attr::Int(2));
+    assert_eq!(format!("{attr:?}"), r#"Fmt("a&'b'-2")"#);
+    assert_eq!(format!("{value:?}"), r#"Format("a&'b'-2")"#);
+    assert!(attr.truthy() && !Attr::Fmt(&empty).truthy());
+    let mut out = String::new();
+    attrs_into(
+        &mut out,
+        &[&[
+            ("title", attr.clone()),
+            ("data-e", Attr::Fmt(&empty)),
+            ("disabled", Attr::Fmt(&empty)),
+            ("hidden", Attr::Fmt(&empty)),
+            ("class", Attr::Fmt(&value)),
+            ("style", Attr::Fmt(&format(|f| write!(f, "color: {red}")))),
+        ]],
+        1,
+        "",
+    );
+    assert_eq!(
+        out,
+        r#" title="a&amp;&#39;b&#39;-2" data-e disabled hidden class="a&amp;&#39;b&#39;-2" style="color:red;""#
+    );
 }
 
 #[test]

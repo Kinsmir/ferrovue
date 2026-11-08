@@ -68,6 +68,9 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
             fv_refusals.join(super::rated::try_render(out, &super::rated::Props { stars: fv_refusals.keep(fv::render::try_int(props.year as f64 * 2.0), 12, 39) }));
         })),
     }, &fv::attrs::Attrs::new(&[("class", fv::attrs::Attr::str("framed"))], "")))?;
+    fv_refusals.check(super::wrap::try_render_scoped(out, &super::wrap::Props {}, super::wrap::Slots {
+        default: None,
+    }, &fv::attrs::Attrs::new(&[("title", fv::attrs::Attr::Fmt(&fv::attrs::format(|fv_f| write!(fv_f, "{}-{}", props.fill, fv::core::Js(props.count)))))], "")))?;
     out.push_str("<!--]-->");
     fv_refusals.check(Ok(()))
 }

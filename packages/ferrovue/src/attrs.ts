@@ -10,13 +10,14 @@ import { ctx } from "./context.ts";
 import { describeTy, expr, shown } from "./expr.ts";
 import { known, truthy } from "./narrowing.ts";
 import { asCow, isTemporary, piecesOf, unquote } from "./strings.ts";
-import { atom, bare, condition, escapeFree, ifElse, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
+import { atom, bare, closing, condition, escapeFree, ifElse, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
 import { isDollarAttrs } from "./fallthrough.ts";
 import { claim } from "./plugin.ts";
 import { classAttr, classPresent, literalClass, maybeEqual, renderClass } from "./classes.ts";
 import { mergedStyle, renderStyle, styleAttr } from "./styles.ts";
 import { escapedWrite } from "./writes.ts";
+import { fresh } from "./names.ts";
 
 const NUMBER_BYTES = 6;
 
@@ -31,11 +32,21 @@ export function emptyTest(v: Val): string {
     if (!binds && no === "false") return logical(branches.test, "&&", yes);
     return `if ${branches.test} { ${yes} } else { ${no} }`;
   }
+  const joined = v.joined?.of === v.code ? joinedEmpty(v.joined) : null;
+  if (joined !== null) return joined;
   const pieces = piecesOf(v);
   if (pieces === undefined) return `${receiver(v.code)}.is_empty()`;
   const strs = pieces.filter((p): p is Val => typeof p !== "string" && !("shown" in p) && p.ty.k === "str");
   if (strs.length < pieces.length || strs.some((p) => neverEmpty(p.ty))) return "false";
   return strs.map((p) => `${receiver(p.code)}.is_empty()`).join(" && ");
+}
+
+function joinedEmpty(joined: NonNullable<Val["joined"]>): string | null {
+  const items = receiver(joined.items.replace(/\.into_iter\(\)$/, ""));
+  if (joined.each !== "str") return `${items}.next().is_none()`;
+  if (joined.sep === '""') return `${items}.all(|fv_item| fv_item.is_empty())`;
+  if (!/^"(?:[^"\\]|\\.)+"$/.test(joined.sep)) return null;
+  return `${items}.take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2`;
 }
 
 export function displayPieces(e: Emitter, pieces: Piece[]): void {
@@ -373,7 +384,21 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
   if (key === "class") return classAttr(s, n, side);
   if (key === "style") return styleAttr(s, n);
   if (n.type === "NullLiteral") return "fv::attrs::Attr::Undefined";
-  return valueAttr(s, attrShown(s, key, n), n);
+  const v = attrShown(s, key, n);
+  return formattedAttr(v) ?? valueAttr(s, v, n);
+}
+
+const OWNED = /^(?:std::borrow::)?Cow::<str>::Owned\(/;
+
+/** A string built by a `format!` alone, as an attribute that formats it as it is written. */
+function formattedAttr(v: Val): string | null {
+  if (!isTemporary(v)) return null;
+  let code = asCow(v);
+  const owned = OWNED.exec(code);
+  if (owned && closing(code, owned[0].length - 1) === code.length - 1) code = code.slice(owned[0].length, -1);
+  if (!code.startsWith("format!(") || closing(code, 7) !== code.length - 1) return null;
+  const f = fresh("f", "f");
+  return `fv::attrs::Attr::Fmt(&fv::attrs::format(|${f}| write!(${f}, ${code.slice(8, -1)})))`;
 }
 
 /** A binding that is a string, `null` or `undefined`, as an attribute, refused with `code` and `what`

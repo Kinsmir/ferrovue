@@ -43,7 +43,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>, fv_i18n: &fv::i18n::I18n)
         22
         + props.words.len()
     );
-    if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| Cow::<str>::Owned((if props.on { Cow::<str>::Owned(fv_w.to_uppercase()) } else { Cow::<str>::Borrowed(&*fv_w) }).into_owned())).collect::<Vec<_>>().join("-").is_empty() {
+    if fv::strings::js_split(&props.words, " ").into_iter().map(|fv_w| Cow::<str>::Owned((if props.on { Cow::<str>::Owned(fv_w.to_uppercase()) } else { Cow::<str>::Borrowed(&*fv_w) }).into_owned())).take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2 {
         out.push_str("<p title>");
     } else {
         out.push_str("<p title=\"");
