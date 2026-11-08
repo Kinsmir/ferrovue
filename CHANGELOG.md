@@ -22,6 +22,8 @@ Rendered output: unchanged, except where a project sets the new `preserveWhitesp
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 - `ferrovue diff --against <ref>` renders the conformance fixtures in the working tree and at a git ref, and prints the fixtures whose visible text changed, exiting 1 when one did.
   [Seeing what a change renders](https://docs.rs/ferrovue/latest/ferrovue/guide/testing/index.html#seeing-what-a-change-renders).
+- `ferrovue::page::Chunks` reads each chunk's `css` from Vite's manifest, and `Stylesheets` writes the `<link rel="stylesheet">`s of an entry, its lazily loaded islands included, and of the islands a page renders.
+  [Linking the stylesheets](https://docs.rs/ferrovue/latest/ferrovue/guide/islands_and_hydration/index.html#linking-the-stylesheets).
 
 ### Changed
 

@@ -478,6 +478,42 @@ pub struct Preloads<'c> {
     linked: HashSet<&'c str>,
 }
 
+/// The `<link rel="stylesheet">`s of one page, each URL written once however many chunks import
+/// it. Made by [`Chunks::stylesheets`].
+///
+/// # Example
+///
+/// ```
+/// let manifest = r#"{
+///     "client/main.ts": { "file": "assets/main.js", "isEntry": true, "css": ["assets/main.css"], "dynamicImports": ["client/components/Cart.vue"] },
+///     "client/components/Cart.vue": { "file": "assets/Cart.js", "css": ["assets/Cart.css"], "imports": ["_money.js"] },
+///     "client/components/Reviews.vue": { "file": "assets/Reviews.js", "css": ["assets/Reviews.css"], "imports": ["_money.js"] },
+///     "_money.js": { "file": "assets/money.js", "css": ["assets/money.css"] }
+/// }"#;
+/// let islands = r#"{ "Cart": "assets/Cart.js", "Reviews": "assets/Reviews.js" }"#;
+/// let chunks = ferrovue::page::Chunks::from_manifest(manifest, islands)?;
+///
+/// let mut stylesheets = chunks.stylesheets();
+/// let mut out = String::new();
+/// stylesheets.entry_into(&mut out, "client/main.ts");
+/// stylesheets.islands_into(&mut out, ["Cart", "Reviews"]);
+/// assert_eq!(
+///     out,
+///     concat!(
+///         r#"<link rel="stylesheet" href="/assets/main.css">"#,
+///         r#"<link rel="stylesheet" href="/assets/Cart.css">"#,
+///         r#"<link rel="stylesheet" href="/assets/money.css">"#,
+///         r#"<link rel="stylesheet" href="/assets/Reviews.css">"#,
+///     )
+/// );
+/// # Ok::<(), ferrovue::page::ManifestError>(())
+/// ```
+#[derive(Debug)]
+pub struct Stylesheets<'c> {
+    chunks: &'c Chunks,
+    linked: HashSet<&'c str>,
+}
+
 /// A manifest or a list of islands [`Chunks::from_manifest`] cannot read.
 #[derive(Debug)]
 pub struct ManifestError {
@@ -492,6 +528,10 @@ struct Chunk {
     imports: Vec<String>,
     #[serde(default, rename = "isEntry")]
     is_entry: bool,
+    #[serde(default)]
+    css: Vec<String>,
+    #[serde(default, rename = "dynamicImports")]
+    dynamic_imports: Vec<String>,
 }
 
 impl Chunks {
@@ -549,7 +589,7 @@ impl Chunks {
             .into_iter()
             .filter_map(|name| self.islands.get(name))
             .flat_map(|key| self.needed(key, &mut seen))
-            .map(|file| self.url(file))
+            .map(|chunk| self.url(&chunk.file))
             .collect()
     }
 
@@ -562,7 +602,7 @@ impl Chunks {
         };
         self.needed(key, &mut HashSet::new())
             .into_iter()
-            .map(|file| self.url(file))
+            .map(|chunk| self.url(&chunk.file))
             .collect()
     }
 
@@ -575,7 +615,77 @@ impl Chunks {
         }
     }
 
-    fn needed<'c>(&'c self, key: &'c str, seen: &mut HashSet<&'c str>) -> Vec<&'c str> {
+    /// The stylesheets the entry the manifest names by `key` (`"client/main.ts"`) needs, each
+    /// once: its own, then those of the chunks it imports, statically or dynamically, in the
+    /// order the manifest lists them, never passing through another entry. Vite links a dynamically imported chunk's stylesheet only
+    /// once its script has loaded, after the server's markup is on screen; linking them up front
+    /// styles that markup. A key the manifest lacks needs nothing.
+    #[must_use]
+    pub fn stylesheets_for_entry(&self, key: &str) -> Vec<String> {
+        self.entry_css(key)
+            .into_iter()
+            .map(|css| self.url(css))
+            .collect()
+    }
+
+    /// The stylesheets the islands called `names` need, each once: those of an island's own
+    /// chunk, then those of the chunks it imports statically. A name that is no island of the
+    /// build, or an island the manifest lacks, needs nothing.
+    #[must_use]
+    pub fn stylesheets_for_islands<'n>(
+        &self,
+        names: impl IntoIterator<Item = &'n str>,
+    ) -> Vec<String> {
+        let mut seen = HashSet::new();
+        let mut linked = HashSet::new();
+        names
+            .into_iter()
+            .filter_map(|name| self.islands.get(name))
+            .flat_map(|key| self.needed(key, &mut seen))
+            .flat_map(|chunk| &chunk.css)
+            .filter(|css| linked.insert(css.as_str()))
+            .map(|css| self.url(css))
+            .collect()
+    }
+
+    /// A page's stylesheets, which write each URL once.
+    #[must_use]
+    pub fn stylesheets(&self) -> Stylesheets<'_> {
+        Stylesheets {
+            chunks: self,
+            linked: HashSet::new(),
+        }
+    }
+
+    fn entry_css<'c>(&'c self, key: &str) -> Vec<&'c str> {
+        let Some((key, _)) = self.chunks.get_key_value(key) else {
+            return Vec::new();
+        };
+        let mut keys = vec![key.as_str()];
+        let mut seen: HashSet<&str> = HashSet::from([key.as_str()]);
+        let mut css = Vec::new();
+        let mut i = 0;
+        while let Some(&key) = keys.get(i) {
+            i += 1;
+            let Some(chunk) = self.chunks.get(key) else {
+                continue;
+            };
+            for file in &chunk.css {
+                if !css.contains(&file.as_str()) {
+                    css.push(file.as_str());
+                }
+            }
+            for import in chunk.imports.iter().chain(&chunk.dynamic_imports) {
+                let entry = self.chunks.get(import).is_some_and(|c| c.is_entry);
+                if !entry && seen.insert(import.as_str()) {
+                    keys.push(import.as_str());
+                }
+            }
+        }
+        css
+    }
+
+    fn needed<'c>(&'c self, key: &'c str, seen: &mut HashSet<&'c str>) -> Vec<&'c Chunk> {
         let mut files = Vec::new();
         let mut stack = vec![key];
         while let Some(key) = stack.pop() {
@@ -588,7 +698,7 @@ impl Chunks {
             if chunk.is_entry {
                 continue;
             }
-            files.push(chunk.file.as_str());
+            files.push(chunk);
             stack.extend(chunk.imports.iter().rev().map(String::as_str));
         }
         files
@@ -621,12 +731,48 @@ impl<'c> Preloads<'c> {
 
     fn key_into(&mut self, out: &mut String, key: &'c str) {
         let chunks = self.chunks;
-        for file in chunks.needed(key, &mut HashSet::new()) {
-            if self.linked.insert(file) {
+        for chunk in chunks.needed(key, &mut HashSet::new()) {
+            if self.linked.insert(&chunk.file) {
                 out.push_str("<link rel=\"modulepreload\" href=\"");
-                ferrovue_core::escape_into(out, &chunks.url(file));
+                ferrovue_core::escape_into(out, &chunks.url(&chunk.file));
                 out.push_str("\">");
             }
+        }
+    }
+}
+
+impl<'c> Stylesheets<'c> {
+    /// Write a `<link rel="stylesheet">` for each stylesheet the entry the manifest names by
+    /// `key` needs, as [`Chunks::stylesheets_for_entry`] lists them, that this page has not
+    /// linked yet.
+    pub fn entry_into(&mut self, out: &mut String, key: &str) {
+        let chunks = self.chunks;
+        for css in chunks.entry_css(key) {
+            self.link(out, css);
+        }
+    }
+
+    /// Write a `<link rel="stylesheet">` for each stylesheet the islands called `names` need, as
+    /// [`Chunks::stylesheets_for_islands`] lists them, that this page has not linked yet.
+    pub fn islands_into<'n>(&mut self, out: &mut String, names: impl IntoIterator<Item = &'n str>) {
+        let chunks = self.chunks;
+        let mut seen = HashSet::new();
+        for name in names {
+            if let Some(key) = chunks.islands.get(name) {
+                for chunk in chunks.needed(key, &mut seen) {
+                    for css in &chunk.css {
+                        self.link(out, css);
+                    }
+                }
+            }
+        }
+    }
+
+    fn link(&mut self, out: &mut String, css: &'c str) {
+        if self.linked.insert(css) {
+            out.push_str("<link rel=\"stylesheet\" href=\"");
+            ferrovue_core::escape_into(out, &self.chunks.url(css));
+            out.push_str("\">");
         }
     }
 }
@@ -689,8 +835,8 @@ impl Document {
         self.entry = Some(chunks.url(&chunk.file));
         let mut seen = HashSet::from([key.as_str()]);
         for import in &chunk.imports {
-            for file in chunks.needed(import, &mut seen) {
-                self.link(chunks.url(file));
+            for chunk in chunks.needed(import, &mut seen) {
+                self.link(chunks.url(&chunk.file));
             }
         }
         self

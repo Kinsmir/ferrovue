@@ -7,14 +7,12 @@ const ENTRY: &str = "client/main.ts";
 /// Where the page loads the client from.
 #[derive(Debug, Clone)]
 pub enum Assets {
-    /// The production build: the entry's hashed script and its stylesheets, served from `/assets`.
+    /// The production build: the entry's hashed script and the chunks of the build, served from
+    /// `/assets`.
     Built {
         /// The entry script's URL.
         script: String,
-        /// The stylesheets the entry imports, and those of the chunks it loads later: each island's
-        /// own, which the page links up front so the server's markup is styled before it hydrates.
-        styles: Vec<String>,
-        /// The chunks of the build, for preloading the islands a page renders.
+        /// The chunks of the build, for the page's stylesheets and the islands' preloads.
         chunks: ferrovue::page::Chunks,
     },
     /// Vite's dev server at this origin (`http://localhost:5173`), which serves the sources and
@@ -27,12 +25,6 @@ pub enum Assets {
 #[derive(Deserialize)]
 struct Chunk {
     file: String,
-    #[serde(default)]
-    css: Vec<String>,
-    #[serde(default)]
-    imports: Vec<String>,
-    #[serde(default, rename = "dynamicImports")]
-    dynamic_imports: Vec<String>,
 }
 
 impl Assets {
@@ -59,26 +51,6 @@ impl Assets {
         let entry = manifest
             .get(ENTRY)
             .ok_or_else(|| format!("{} has no entry {ENTRY}", path.display()))?;
-        let mut seen = vec![ENTRY];
-        let mut styles = Vec::new();
-        let mut i = 0;
-        while let Some(key) = seen.get(i) {
-            i += 1;
-            let Some(chunk) = manifest.get(*key) else {
-                continue;
-            };
-            for css in &chunk.css {
-                let href = format!("/{css}");
-                if !styles.contains(&href) {
-                    styles.push(href);
-                }
-            }
-            for key in chunk.imports.iter().chain(&chunk.dynamic_imports) {
-                if !seen.contains(&key.as_str()) {
-                    seen.push(key);
-                }
-            }
-        }
         let islands_path = dist.join(".vite/ferrovue-islands.json");
         let islands = std::fs::read_to_string(&islands_path)
             .map_err(|e| format!("{}: {e}", islands_path.display()))?;
@@ -86,19 +58,16 @@ impl Assets {
             .map_err(|e| format!("{}: {e}", dist.display()))?;
         Ok(Assets::Built {
             script: format!("/{}", entry.file),
-            styles,
             chunks,
         })
     }
 
-    /// The `<link>`s for the `<head>`. In development Vite injects the styles itself.
+    /// The `<link>`s for the `<head>`: the entry's stylesheets and those of the chunks it loads
+    /// later, each island's own among them, so the server's markup is styled before it hydrates.
+    /// In development Vite injects the styles itself.
     pub fn styles_into(&self, out: &mut String) {
-        if let Assets::Built { styles, .. } = self {
-            for href in styles {
-                out.push_str("<link rel=\"stylesheet\" href=\"");
-                ferrovue::core::escape_into(out, href);
-                out.push_str("\">");
-            }
+        if let Assets::Built { chunks, .. } = self {
+            chunks.stylesheets().entry_into(out, ENTRY);
         }
     }
 
@@ -148,18 +117,21 @@ mod tests {
         std::fs::write(dist.join(".vite/ferrovue-islands.json"), islands).unwrap();
         let assets = Assets::from_manifest(&dist);
         std::fs::remove_dir_all(&dist).unwrap();
-        let Ok(Assets::Built {
-            script,
-            styles,
-            chunks,
-        }) = assets
-        else {
+        let mut styles = String::new();
+        if let Ok(assets) = &assets {
+            assets.styles_into(&mut styles);
+        }
+        let Ok(Assets::Built { script, chunks }) = assets else {
             panic!("no build: {assets:?}");
         };
         assert_eq!(script, "/assets/main.js");
         assert_eq!(
             styles,
-            ["/assets/main.css", "/assets/A.css", "/assets/shared.css"]
+            concat!(
+                r#"<link rel="stylesheet" href="/assets/main.css">"#,
+                r#"<link rel="stylesheet" href="/assets/A.css">"#,
+                r#"<link rel="stylesheet" href="/assets/shared.css">"#,
+            )
         );
         assert_eq!(
             chunks.for_islands(["A"]),
