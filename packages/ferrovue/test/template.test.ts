@@ -1066,6 +1066,14 @@ describe("whitespace", () => {
     ]);
     expect(warned('<div class="whitespace-pre-line">\n  a\n</div>', { preserveWhitespace: { classes: ["whitespace-pre-line"] } })).toEqual([]);
     expect(warned('<div class="whitespace-normal">\n  a\n</div>')).toEqual([]);
+    expect(warned('<div class="whitespace-pre-wrap">{{ on }}</div>')).toEqual([]);
+    expect(warned('<div class="whitespace-pre-line">\n  {{ on }}\n</div>')).toEqual([]);
+    expect(warned('<div class="whitespace-pre-line">a <b>\n  x\n</b></div>')).toEqual([]);
+    expect(warned('<div class="whitespace-pre-line"><p>\n  x\n</p></div>')).toEqual([
+      "FV0428 4:11 `whitespace-pre-line` sets a preserving `white-space` in Tailwind, and `trim-edges` trims the text of `<div>` all the same: list it in `preserveWhitespace.classes` in ferrovue.config.json",
+    ]);
+    expect(warned('<div class="whitespace-pre">\n  <b>a</b>\n  <i>b</i>\n</div>')).toHaveLength(1);
+    expect(warned('<div class="whitespace-pre"><pre>\n  a\n</pre></div>')).toEqual([]);
     expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([
       "FV0429 6:3 the line breaks before and after this `v-if` both render as a space, so the text holds two spaces when no branch renders: hug the tags on one side, `</b\\n><i v-if>`, to render one",
     ]);

@@ -534,7 +534,8 @@ it applies at render, so `:class="{ 'whitespace-pre-line': open }"` keeps the te
 A class the element gets from a prop, or from a parent through its attributes, is not seen: write
 the class in the template, or the `white-space` in the `style` attribute. A class named as Tailwind
 names its `white-space` utilities, such as `whitespace-pre-line`, and left out of the list warns
-(FV0428).
+(FV0428) where the mode renders the element's contents otherwise than Vue does: a line break it
+trims at an edge or spaces between inline tags.
 
 The mode reads tag names and sees no stylesheet, for `white-space` as for `display`. An element a
 class makes block, flex or grid, such as `<span class="block">`, still counts as inline, and a line

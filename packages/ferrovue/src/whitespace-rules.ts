@@ -137,6 +137,17 @@ export function applyTrimEdges(root: TemplateNode, classes: ReadonlySet<string>)
   walk(root, classes);
 }
 
+/** Whether `trim-edges` renders anything inside `el` other than as Vue condenses it. */
+export function trimsInside(el: TemplateNode, classes: ReadonlySet<string>): boolean {
+  const children = el.children ?? [];
+  if (trims(el)) {
+    const [first, last] = [children[0], children.at(-1)];
+    if ((first?.type === TEXT && breaks(first, LEADING)) || (last?.type === TEXT && breaks(last, TRAILING))) return true;
+  }
+  if (el.ns === HTML && gaps(el, el.loc.source, el.loc.start.offset).length) return true;
+  return children.some((c) => c.type === ELEMENT && !keeps(c, classes) && trimsInside(c, classes));
+}
+
 function walk(node: TemplateNode, classes: ReadonlySet<string>): void {
   for (const child of node.children ?? []) {
     if (child.type !== ELEMENT || keeps(child, classes)) continue;
