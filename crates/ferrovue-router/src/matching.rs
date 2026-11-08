@@ -269,6 +269,14 @@ impl Pattern {
             .then_some(params)
     }
 
+    fn same_text(&self, head: &str, text: &str) -> bool {
+        if self.sensitive {
+            head == text
+        } else {
+            head.eq_ignore_ascii_case(text)
+        }
+    }
+
     pub(crate) fn parse_from<'p, C: Captures<'p>>(
         &self,
         tokens: &[Token],
@@ -276,11 +284,10 @@ impl Pattern {
         params: &mut C,
     ) -> bool {
         let Some((token, after)) = tokens.split_first() else {
-            return match (self.strict, self.tokens.is_empty()) {
-                (true, true) => rest == "/",
-                (true, false) => rest.is_empty(),
-                (false, root) => matches!(rest, "" | "/") || (root && rest == "//"),
-            };
+            if !self.strict {
+                return matches!(rest, "" | "/") || (self.tokens.is_empty() && rest == "//");
+            }
+            return rest == if self.tokens.is_empty() { "/" } else { "" };
         };
         match token {
             Token::Static(text) => {
@@ -288,9 +295,7 @@ impl Pattern {
                     return false;
                 };
                 match rest.get(..text.len()) {
-                    Some(head)
-                        if head == text || (!self.sensitive && head.eq_ignore_ascii_case(text)) =>
-                    {
+                    Some(head) if self.same_text(head, text) => {
                         self.parse_from(after, &rest[text.len()..], params)
                     }
                     _ => false,
