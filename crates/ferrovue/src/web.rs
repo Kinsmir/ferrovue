@@ -623,7 +623,7 @@ mod tests {
         assert_eq!(start.elapsed(), Duration::from_millis(100));
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn a_hole_without_content_is_empty_and_content_without_a_hole_is_dropped() {
         let stream = HtmlStream::new(two_holes()).hole(after(0, "only"));
         assert_eq!(
@@ -637,7 +637,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn a_value_in_the_head_cannot_move_a_hole() {
         use crate::head::{Head, HeadValue};
 
@@ -671,7 +671,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn empty_pieces_and_contents_are_not_sent() {
         let mut page = String::new();
         slot_into(&mut page, Some(hole()), None);
@@ -794,7 +794,7 @@ mod tests {
     }
 
     #[cfg(feature = "axum")]
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn axum_sends_a_page_without_holes_whole_and_one_with_holes_streamed() {
         use axum::body::HttpBody;
         use axum_core::response::IntoResponse;
@@ -858,7 +858,7 @@ mod tests {
     }
 
     #[cfg(feature = "actix-web")]
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn actix_sends_a_component_and_a_streamed_page() {
         use actix_web::Responder;
         use actix_web::body::{BodySize, MessageBody, to_bytes, to_bytes_limited};
