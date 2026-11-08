@@ -6,7 +6,7 @@ import { describeTy, expr } from "./expr.ts";
 import { cond, known } from "./narrowing.ts";
 import { condition, logical, not, receiver, scrutinee, strArg } from "./parens.ts";
 import { Emitter } from "./emitter.ts";
-import { display, stringAttr, valueAttr } from "./attrs.ts";
+import { display, emptyTest, stringAttr, valueAttr } from "./attrs.ts";
 import { isTemporary } from "./strings.ts";
 
 /** Put the object Vue's server compiler declares as `_cssVars`, the `v-bind()` variables in
@@ -108,6 +108,7 @@ function writeCssVar(s: Scope, e: Emitter, css: string, n: N): void {
     e.lit(`${escapeHtml(css)}:`);
     const k = v.ty.k === "str" ? known(v) : true;
     if (k === false) e.lit(" ");
+    else if (k === undefined && emptyTest(v) === "false") display(e, v);
     else if (k === undefined && isTemporary(v)) e.stmt(`match AsRef::<str>::as_ref(${strArg(v.code)}) { "" => out.push(' '), v => fv::core::escape_into(out, v) }`);
     else if (k === undefined) {
       e.open(`if ${receiver(v.code)}.is_empty()`);

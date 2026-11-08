@@ -92,7 +92,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push(' ');
     fv::core::escape_join_numbers(out, props.by.values().map(fv::date::js_time_of).map(fv::date::js_utc_hours), ",");
     out.push(' ');
-    fv::core::escape_into(out, &format!("[{}]", s_valid.iter().copied().map(fv::date::js_json_date).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, s_valid.iter().copied().map(fv::date::js_json_date), ","); out.push(']');
     out.push_str("</p><!--[-->");
     for fv_at in props.seen.iter().map(|v| v.as_ref().map(fv::date::js_time_of)) {
         out.push_str("<b>");

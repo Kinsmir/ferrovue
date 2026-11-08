@@ -59,7 +59,7 @@ pub fn render(out: &mut String, props: &Props<'_>) {
 /// The first [`fv::render::Refused`] the render met; `out` then holds what was written before it.
 pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render::Refused> {
     out.reserve(
-        187
+        186
         + 7 * props.items.len()
         + props.color.len()
         + props.label.as_deref().map_or(0, str::len)
@@ -96,11 +96,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
         out.push_str("<p style=\"color:");
         fv::core::escape_into(out, fv_tone);
         out.push_str(";--d9e366c1-tone:");
-        if fv_tone.is_empty() {
-            out.push(' ');
-        } else {
-            fv::core::escape_into(out, fv_tone);
-        }
+        fv::core::escape_into(out, fv_tone);
         out.push_str(";--d9e366c1-size:");
         fv::core::push_int(out, props.size);
         out.push_str(";\">");

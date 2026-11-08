@@ -10,7 +10,7 @@ import { asF64, intFromF64, isCast, isNumber } from "./numbers.ts";
 import { truthTested, truthy, unbound } from "./narrowing.ts";
 import { items, itemVal } from "./lists.ts";
 import { ownedString } from "./reduce.ts";
-import { atom, bare, closing, condition, enclosed, literalEnd, occurrences, outermost, receiver } from "./parens.ts";
+import { atom, bare, closing, condition, enclosed, literalEnd, occurrences, outermost, receiver, strArg } from "./parens.ts";
 
 const ITEMS = new Set(["str", "int", "float", "bool", "struct", "child", "entry"]);
 
@@ -224,6 +224,12 @@ function write(f: LoopFrame, st: LoopState, v: Val): { code: string; value: stri
     const plain = text.replace(/\{\{|\}\}/g, (x) => x[0]!);
     if (!args.length) return { code: String.fromCodePoint(plain.codePointAt(0) ?? 0) === plain ? `${m}.push(${rustChar(plain)});` : `${m}.push_str(${rustStr(plain)});`, value };
     return { code: `{ use std::fmt::Write as _; let _ = write!(${m}, ${rustStr(text)}, ${args.join(", ")}); }`, value };
+  }
+  if (c.kind === "str" && fmt && fmt.args.at(-1) === m && fmt.text.endsWith("{}") && fmt.args.slice(0, -1).every((a) => occurrences(a, m) === 0)) {
+    const head = fmt.text.slice(0, -2);
+    const first = fmt.pieces[0];
+    if (fmt.args.length === 1 && head !== "" && !/[{}]/.test(head.replace(/\{\{|\}\}/g, ""))) return { code: `${m}.insert_str(0, ${rustStr(head.replace(/\{\{|\}\}/g, (x) => x[0]!))});`, value };
+    if (fmt.args.length === 2 && head === "{}" && first !== undefined && typeof first !== "string" && !("shown" in first) && first.ty.k === "str") return { code: `${m}.insert_str(0, ${strArg(first.code)});`, value };
   }
   return { code: `${m} = ${value};`, value };
 }

@@ -25,6 +25,7 @@ pub mod posted;
 pub mod rated;
 pub mod scored;
 pub mod shell;
+pub mod shouted;
 pub mod sized;
 pub mod stamped;
 pub mod theme_scope;
@@ -206,6 +207,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             shell::try_render(&mut out, &props, shell::Slots { default: fixture.slot("default").map(|_| s_default), router_view: ferrovue::render::Slot::new(&s_router_view) }, &route, &state, &i18n, &teleports, provides::Provides::default(), &head).map_err(|e| e.to_string())?;
             teleports_into(&mut out, teleports);
             head_into(&mut out, &head);
+        }
+        "Shouted" => {
+            let props: shouted::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            shouted::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Sized" => {
             let props: sized::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

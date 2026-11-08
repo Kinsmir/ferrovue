@@ -70,7 +70,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push_str("\"></b><p>");
     out.push_str(if props.b0 { "a" } else { "ß" });
     out.push('|');
-    fv::core::escape_into(out, &{ let a = Cow::<str>::Borrowed(&*props.s1); if !a.is_empty() { a } else { Cow::<str>::Owned(format!("{}{}", props.s1, props.s1)) } });
+    { let a = Cow::<str>::Borrowed(&*props.s1); if !a.is_empty() { fv::core::escape_into(out, &a); } else { write!(fv::core::escaping(out), "{}{}", props.s1, props.s1); } }
     out.push_str("|é</p><a tabindex=\"a\"></a><a data-n=\"");
     fv::core::escape_into(out, &"a".to_lowercase());
     out.push_str("\"></a><header data-x=\"0.5\"></header><i title=\"");

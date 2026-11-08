@@ -93,7 +93,7 @@ pub fn try_render(out: &mut String, props: &Props<'_>) -> Result<(), fv::render:
     out.push('|');
     fv::core::escape_into(out, &fv::date::js_json_date(fv_refusals.keep(fv::date::try_date_parse(&props.published), 15, 97)));
     out.push('|');
-    fv::core::escape_into(out, &format!("[{}]", [&*props.label].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)).collect::<Vec<_>>().join(",")));
+    out.push('['); fv::core::escape_join(out, [&*props.label].iter().map(|v| Cow::<str>::Borrowed(&**v)).map(|v| fv::strings::js_json_string(&v)), ","); out.push(']');
     if fv::date::js_to_json(fv::date::js_time_of(&props.due)).as_deref().is_none() {
         out.push_str("</p><p>due is invalid</p><p>");
     } else {

@@ -417,6 +417,32 @@ mod uri {
     }
 }
 
+mod escaping_writer {
+    use super::*;
+
+    #[test]
+    fn write_through_escaping_escapes_as_escape_into_does() {
+        let cases: [(&str, f64); 3] =
+            [("", 0.0), ("Tom & 'Jerry'", 1.5), ("<a href=\"x\">", -1e21)];
+        for (s, x) in cases {
+            let mut out = String::from("<p>");
+            write!(escaping(&mut out), "{s}<{}>\"{s}\"", Js(x));
+            let mut want = String::from("<p>");
+            escape_into(&mut want, &format!("{s}<{}>\"{s}\"", Js(x)));
+            assert_eq!(out, want, "{s:?}");
+        }
+    }
+
+    #[test]
+    fn escaping_is_a_fmt_write() {
+        let mut out = String::new();
+        let mut w = escaping(&mut out);
+        std::fmt::Write::write_str(&mut w, "a&b").expect("writing to a String");
+        std::fmt::Write::write_char(&mut w, '<').expect("writing to a String");
+        assert_eq!(out, "a&amp;b&lt;");
+    }
+}
+
 mod join {
     use super::*;
 

@@ -799,6 +799,33 @@ pub fn percent_encode_into(out: &mut String, c: char) {
     }
 }
 
+/// A [`std::fmt::Write`] that escapes what it is given as [`escape_into`] escapes it, so `write!`
+/// puts formatted text in the page with no string built.
+#[doc(hidden)]
+#[derive(Debug)]
+pub struct Escaping<'a>(&'a mut String);
+
+/// The [`Escaping`] writer into `out`.
+#[doc(hidden)]
+#[must_use]
+pub fn escaping(out: &mut String) -> Escaping<'_> {
+    Escaping(out)
+}
+
+impl Escaping<'_> {
+    /// Writes `args` escaped, for `write!` with no `fmt::Write` in scope and no result to drop.
+    pub fn write_fmt(&mut self, args: std::fmt::Arguments<'_>) {
+        let _ = std::fmt::Write::write_fmt(self, args);
+    }
+}
+
+impl std::fmt::Write for Escaping<'_> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        escape_into(self.0, s);
+        Ok(())
+    }
+}
+
 /// `items.join(sep)`, escaped as [`escape_into`] escapes it, with no string built.
 #[doc(hidden)]
 pub fn escape_join<I>(out: &mut String, items: I, sep: &str)
