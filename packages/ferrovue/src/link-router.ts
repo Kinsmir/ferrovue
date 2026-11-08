@@ -1,4 +1,5 @@
 import { createMemoryHistory, createRouter, isNavigationFailure, NavigationFailureType, START_LOCATION, type RouteLocationNormalized, type Router, type RouterHistory } from "vue-router";
+import { otherHost, otherHostError } from "./other-host.ts";
 import { routeRecords, type RouteEntry } from "./route-records.ts";
 
 
@@ -6,7 +7,8 @@ import { routeRecords, type RouteEntry } from "./route-records.ts";
  * @deprecated Use `linkRoutes` and `LinkRoutesOptions` from `ferrovue/link-routes`. */
 export interface LinkRouterOptions {
   /** The application's own navigation, called with the `href` of every navigation after the first
-   * (the base included, as the link's `href` attribute has it) and the route it resolves to. */
+   * (the base included, as the link's `href` attribute has it) and the route it resolves to. A
+   * navigation whose `href` leads to another host fails with an error and is never handed to it. */
   navigate: (href: string, to: RouteLocationNormalized) => void;
   /** The history's base, as `router.base` in `ferrovue.config.json` gives it. */
   base?: string;
@@ -58,13 +60,17 @@ export function linkRouter(routes: RouteEntry[], options: LinkRouterOptions): Ro
     ...(options.strict !== undefined ? { strict: options.strict } : {}),
     ...(options.sensitive !== undefined ? { sensitive: options.sensitive } : {}),
   });
+  const navigate = (href: string, to: RouteLocationNormalized): void => {
+    if (otherHost(href)) throw otherHostError(href);
+    options.navigate(href, to);
+  };
   router.beforeEach((to, from) => {
     if (from === START_LOCATION) return true;
-    options.navigate(history.createHref(to.fullPath), to);
+    navigate(history.createHref(to.fullPath), to);
     return false;
   });
   router.afterEach((to, _from, failure) => {
-    if (isNavigationFailure(failure, NavigationFailureType.duplicated)) options.navigate(history.createHref(to.fullPath), to);
+    if (isNavigationFailure(failure, NavigationFailureType.duplicated)) navigate(history.createHref(to.fullPath), to);
   });
   return router;
 }

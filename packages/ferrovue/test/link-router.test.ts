@@ -61,6 +61,19 @@ it("lets the first navigation through and hands every later one to navigate, sta
   expect(router.currentRoute.value.fullPath).toBe("/users/ada");
 });
 
+it("refuses to hand navigate a link that leaves the site, on a page whose path starts with //", async () => {
+  const navigate = vi.fn<Navigate>();
+  const routes: RouteEntry[] = ["/", "/docs", { path: "/:path(.*)", name: "missing" }];
+  const router = linkRouter(routes, { navigate, history: atLocation("//evil.example/x") });
+  await router.push(router.options.history.location);
+  for (const to of ["?page=2", "#top", "sibling"]) {
+    await expect(router.push(to), to).rejects.toThrow(/leads to another host/);
+  }
+  expect(navigate).not.toHaveBeenCalled();
+  await router.push("/docs");
+  expect(navigate.mock.calls.map(([href]) => href)).toEqual(["/docs"]);
+});
+
 it("hands a navigation to the page already shown to navigate too", async () => {
   const navigate = vi.fn<Navigate>();
   const router = linkRouter(ROUTES, { navigate, history: atLocation("/") });

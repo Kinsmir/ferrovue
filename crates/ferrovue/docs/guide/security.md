@@ -220,8 +220,10 @@ not either, and ferrovue writes what Vue writes, so each of these is left to the
 - **`<script>` and `<style>` elements.** A template that renders one through `<component :is>` and
   interpolates into it writes the value escaped, and escaping does not make script or CSS safe.
 - **`<RouterLink>`.** A string `to` that starts with `//`, such as `//evil.example/x`, is a
-  protocol-relative URL to another host, as vue-router resolves it. A `to` built from reader input
-  should be an object with a `name` and `params`, whose values are encoded.
+  protocol-relative URL to another host, as vue-router resolves it. So are `/\evil.example/x` and a
+  `/`, a tab or line break and another `/`, since a browser reads `\` as `/` and drops tabs and line
+  breaks. A `to` built from reader input, `:to="'/' + slug"` included, should be an object with a
+  `name` and `params`, whose values are encoded.
 - **Routes behind middleware.** vue-router matches a path case-insensitively and with or without
   a trailing slash, and so does [`Router::at`](crate::router::Router::at). An axum or actix route
   matches its path exactly. When middleware guards a route of the framework and the same page is
@@ -232,6 +234,18 @@ not either, and ferrovue writes what Vue writes, so each of these is left to the
   paths as exactly as the framework does ([Matching paths
   exactly](crate::guide::routing#matching-paths-exactly)). A percent-encoded path such as
   `/%61dmin` matches neither side: neither decodes a path before matching it.
+- **A request path that starts with `//`.** On a page at `//evil.example/x`, every relative link,
+  such as `?page=2`, `#top` or `sibling`, resolves to an `href` on evil.example, as vue-router
+  resolves it. Answer a path that starts with `//` or holds a `\` before resolving it, as [a page
+  from the fallback](crate::guide::web_frameworks#a-page-from-the-fallback) does. `linkRoutes` and
+  `linkRouter` refuse to hand such a link to `navigate`.
+- **Route parameters.** A parameter is decoded, as vue-router and axum's `Path` decode it:
+  `/users/..%2Fadmin` gives the parameter `../admin`, and `%00` a NUL. Check a parameter before it
+  names a file, and encode it with `encodeURIComponent` before it goes into a URL, a loader's
+  `fetch` included.
+- **Sizes from props.** `.repeat()`, `.padStart()` and `.padEnd()` make strings as long as V8
+  makes them, about half a billion code units, and a regular expression with nested repetition takes
+  time that grows with its input. Bound counts and lengths that come from readers.
 - **Translated messages in URLs.** A message is text wherever it goes; bound to `:href`, it is a URL
   and may be any URL the message files hold.
 - **The page head.** unhead does not check URLs in `href` and `content`. A `script`, `style` or

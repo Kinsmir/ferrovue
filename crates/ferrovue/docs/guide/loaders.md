@@ -17,12 +17,12 @@ export interface Post {
 }
 
 export const loadPost = defineLoader("loadPost", async (slug: string, lang?: string): Promise<Post> => {
-  const response = await fetch(`/api/posts/${slug}?lang=${lang ?? "en"}`);
+  const response = await fetch(`/api/posts/${encodeURIComponent(slug)}?lang=${encodeURIComponent(lang ?? "en")}`);
   return (await response.json()) as Post;
 });
 
 export const loadViews = defineLoader("loadViews", async (slug: string): Promise<number> => {
-  const response = await fetch(`/api/views/${slug}`);
+  const response = await fetch(`/api/views/${encodeURIComponent(slug)}`);
   return (await response.json()) as number;
 });
 ```
