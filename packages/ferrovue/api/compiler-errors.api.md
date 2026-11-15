@@ -437,7 +437,7 @@ export const ERRORS: {
     };
     readonly FV0427: {
         readonly title: "Line break between elements a class makes `inline-block`";
-        readonly detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\\n><a>`, as a formatter writes them where no space is meant, or write the space on one line where it is.";
+        readonly detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\\n><a>`, as a formatter writes them where no space is meant. Where the space is meant, write it on one line, or, where a formatter puts the second element on a line of its own, write `<!-- ferrovue-ignore FV0427 -->` between the two, on the line before the second. See [`generated_code`](crate::guide::generated_code#whitespace).";
     };
     readonly FV0428: {
         readonly title: "Class that sets a preserving `white-space`, not listed in `preserveWhitespace`";
@@ -446,6 +446,10 @@ export const ERRORS: {
     readonly FV0429: {
         readonly title: "Line breaks on both sides of a `v-if` that may render nothing";
         readonly retired: "0.16.0";
+    };
+    readonly FV0430: {
+        readonly title: "`ferrovue-ignore` comment that silences nothing";
+        readonly detail: "A warning, with `\"whitespace\": \"trim-edges\"`: a `<!-- ferrovue-ignore … -->` comment names the warnings it silences at the line break it stands in, and this one names none, names a code it cannot silence (it silences FV0427), or stands where that warning does not fire, as after the tags were hugged. Remove it, or move it between the two elements whose gap is meant.";
     };
     readonly FV0501: {
         readonly title: "Child component that is not among the compiled components";

@@ -548,6 +548,26 @@ hug their tags, `</a\n><a>`, as a formatter writes them where no space is meant.
 in `"inlineBlockClasses"`, and the compiler warns (FV0427) at each line break it renders as a space
 beside such an element.
 
+A space between such elements is sometimes meant, such as the one between a title link and its
+inline-block label. Written on one line, `</a> <span class="flair">`, it gives no warning, but a
+formatter moves the `<span>` to a line of its own once the `<a>` breaks over several lines. Mark
+that gap as meant with a comment between the two elements, on the line before the second:
+
+```vue
+<a
+  class="title"
+  :href="title.href"
+  >{{ title.text }}</a
+>
+<!-- ferrovue-ignore FV0427 -->
+<span class="flair">{{ flair }}</span>
+```
+
+The comment names the warnings it silences, and changes nothing the page renders: the space is
+read past comments, and with `"comments": true` Vue renders the comment as it renders any other.
+A `ferrovue-ignore` comment that names no warning, names a code it cannot silence, or stands where
+FV0427 does not fire, as once the tags are hugged, warns of its own (FV0430), so a stale one shows.
+
 A `&nbsp;` is text: it stays at an edge. So does whitespace written as a character reference, such
 as `&#10;`.
 

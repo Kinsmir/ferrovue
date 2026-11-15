@@ -650,7 +650,7 @@ With a bound `type`, Vue's server renderer chooses as it renders what `v-model` 
 
 Line break between elements a class makes `inline-block`.
 
-A warning, with `"whitespace": "trim-edges"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\n><a>`, as a formatter writes them where no space is meant, or write the space on one line where it is.
+A warning, with `"whitespace": "trim-edges"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\n><a>`, as a formatter writes them where no space is meant. Where the space is meant, write it on one line, or, where a formatter puts the second element on a line of its own, write `<!-- ferrovue-ignore FV0427 -->` between the two, on the line before the second. See [`generated_code`](crate::guide::generated_code#whitespace).
 
 ## FV0428
 
@@ -661,6 +661,12 @@ A warning, with `"whitespace": "trim-edges"`: a class named as Tailwind names it
 ## FV0429
 
 Line breaks on both sides of a `v-if` that may render nothing. Retired in 0.16.0: the compiler no longer raises it.
+
+## FV0430
+
+`ferrovue-ignore` comment that silences nothing.
+
+A warning, with `"whitespace": "trim-edges"`: a `<!-- ferrovue-ignore … -->` comment names the warnings it silences at the line break it stands in, and this one names none, names a code it cannot silence (it silences FV0427), or stands where that warning does not fire, as after the tags were hugged. Remove it, or move it between the two elements whose gap is meant.
 
 # Child components: FV05xx
 
