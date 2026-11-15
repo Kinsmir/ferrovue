@@ -191,6 +191,7 @@ export function checkConfig(raw: unknown, file: string, warn: (warning: GenError
     string(m, "hashPrefix", "cssModules.hashPrefix");
     string(m, "context", "cssModules.context");
   }
+  if (raw.sharedDirectories !== undefined && !isStrings(raw.sharedDirectories)) wrong("sharedDirectories", 'a list of directories, relative to the project\'s root, as `["../shared/locales"]`');
   if (raw.clientDirectives !== undefined && !isStrings(raw.clientDirectives)) wrong("clientDirectives", 'a list of directive names, as `["focus"]`');
   if (raw.routes !== undefined) routesSource(raw.routes, "routes");
   if (raw.router !== undefined) {
@@ -303,6 +304,9 @@ export const ctx = {
   plugins: [] as readonly Plugin[],
   runs: new Map<Plugin, unknown>(),
   rootDir: "",
+  /** The real paths of the project's root and its `sharedDirectories`: what a file the
+   * configuration reaches must lie inside. Empty outside a compile, which checks nothing. */
+  reach: [] as readonly string[],
   typeStructs: new Map<string, Struct>(),
   typeAliases: new Map<string, N>(),
   typeFiles: new Map<string, string>(),

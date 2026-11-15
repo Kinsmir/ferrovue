@@ -42,6 +42,7 @@ export interface Config {
     };
     routes?: RoutesSource;
     scopeId?: ScopeIdMode;
+    sharedDirectories?: string[];
     stores?: string;
     trustedHtml?: string;
     twins?: Record<string, TwinSpec>;

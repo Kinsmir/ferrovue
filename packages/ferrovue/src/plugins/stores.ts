@@ -61,7 +61,7 @@ function storeImport(comp: Component, from: string): string | null {
 
 function readStores(root: string, dir: string): void {
   const run = runOf(piniaStores);
-  const files = listDir(root, dir, "stores").filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).toSorted();
+  const files = listDir(root, dir, "stores", (f) => f.endsWith(".ts") && !f.endsWith(".test.ts")).toSorted();
   for (const f of files) {
     const path = join(root, dir, f);
     const comp = storeHome(relativePath(root, path));

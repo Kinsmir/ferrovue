@@ -10,7 +10,7 @@ import { snake } from "./rust-syntax.ts";
 import { GenError, GenErrors } from "./errors.ts";
 import { isRefusal } from "./diagnostics.ts";
 import { readComponent, refuseOptionsApi } from "./component.ts";
-import { listDir } from "./files.ts";
+import { listDir, reachOf } from "./files.ts";
 import { scopeFor } from "./script.ts";
 import { attrsFlow } from "./fallthrough.ts";
 import { prepareDynamic } from "./dynamic.ts";
@@ -78,6 +78,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   ctx.warned = new Set();
   ctx.clientDirectives = new Set(config.clientDirectives ?? []);
   ctx.rootDir = root;
+  ctx.reach = reachOf(root, config.sharedDirectories ?? []);
   ctx.vnodeTag = null;
   ctx.typeStructs = new Map();
   ctx.typeAliases = new Map();
@@ -101,9 +102,7 @@ function generateAll(root: string, config: Config, sources: ReadonlyMap<string, 
   );
   const dir = join(root, config.components);
   const files = [
-    ...listDir(root, config.components, "components")
-      .filter((f) => f.endsWith(".vue"))
-      .toSorted()
+    ...listDir(root, config.components, "components", (f) => f.endsWith(".vue")).toSorted()
       .map((f) => ({ file: join(dir, f), name: basename(f, ".vue") })),
     ...PLUGINS.flatMap((p) => p.components?.() ?? []).map((c) => ({ file: join(root, c.file), name: c.name })),
   ];

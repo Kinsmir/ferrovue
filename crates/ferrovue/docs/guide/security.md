@@ -18,7 +18,8 @@ a reviewer.
   element name, attribute name, static attribute value, class and style property name, `useHead`
   key and `<RouterLink>` route name a template holds;
 - `ferrovue.config.json`, the routes file, the store definitions and the locale files (messages are
-  compiled into Rust at build time);
+  compiled into Rust at build time), each inside the project or a directory it shares (see
+  [files outside the project](#files-outside-the-project));
 - the application's Rust: the page around the components, slot closures, Rust twins and helpers,
   the [`TrustedHtml`](crate::html::TrustedHtml) types and their sanitisers, the futures that fill
   [`HtmlStream`](crate::web::HtmlStream) holes, and the ids given to
@@ -41,6 +42,33 @@ Untrusted data is safe in the sense Vue's server renderer gives: it cannot leave
 quoted attribute value it is written into, and it cannot add an element or an attribute. It can
 still be a hostile *value* where the context gives values meaning: a URL, CSS, an event handler.
 Those cases are listed under [what ferrovue inherits from Vue](#what-ferrovue-inherits-from-vue).
+
+## Files outside the project
+
+The compiler reads the components, the stores, the locale files, the routes file and the pages
+folder from the directories `ferrovue.config.json` names, and compiles their text into the
+binary. A symbolic link among them, or a `../` path in the configuration, could lead to any file
+on the machine that builds it, so a pull request that adds `locales/en.json` as a link to a file
+elsewhere would ship that file's text. The compiler takes the real path of each such file and
+directory, and refuses one outside the project's root (FV1125) unless it lies in a directory
+`sharedDirectories` lists:
+
+```json
+{ "components": "src/components", "out": "src/generated", "sharedDirectories": ["../shared/locales"] }
+```
+
+That is how the packages of a monorepo share locale files or components: list the shared
+directory, and review a change to that list as a change to what the build reads. A page in a
+pages folder that is a link is skipped, as vue-router's file-based routing reads only files.
+
+The `.ts` files a component imports types and constants from are found as TypeScript finds them,
+through `tsconfig.json`'s `paths` and packages, and are not checked: an import is visible in the
+component that writes it, where a link is not.
+
+| | |
+|---|---|
+| Code | `refuseOutsideProject` and `listDir` in `packages/ferrovue/src/files.ts`; `readRoutes` in `plugins/router.ts`; `fileRoutes` in `file-routes.ts` |
+| Tests | "refuses a file that leads out of the project" in `packages/ferrovue/test/configuration.test.ts` |
 
 # Where data is written
 
