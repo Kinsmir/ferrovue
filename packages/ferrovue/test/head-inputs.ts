@@ -256,6 +256,7 @@ const hand: HeadCase[] = [
   { defaults: false, calls: [{ head: { meta: [{ content: "a", textContent: "x" }] } }, { head: { meta: [{ content: "b", textContent: "y" }] } }] },
   { defaults: false, calls: [{ head: { script: [{ type: "application/ld+json", innerHTML: own([["name", "n"], ["constructor", "k"], ["list", [own([["prototype", 1], ["a", 2]])]]]) }] } }] },
   { defaults: false, calls: [{ head: { script: [{ type: "application/ld+json", innerHTML: { list: [own([["__proto__", { a: 1 }], ["b", 2]])] } }] } }] },
+  { defaults: false, calls: [{ head: { noscript: [{ type: "application/json", textContent: "</noscript><b>" }], style: [{ type: "application/json", innerHTML: "a</style>" }] } }] },
   { defaults: false, calls: [{ head: { meta: [{ property: "og:image", content: "a" }, { property: "og:image", content: "b" }] } }, { head: { meta: [{ property: "og:image", content: "c", media: "m", tagDuplicateStrategy: "merge" }] } }] },
 ];
 
