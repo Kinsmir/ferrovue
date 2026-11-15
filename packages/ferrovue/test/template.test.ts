@@ -1055,7 +1055,7 @@ describe("whitespace", () => {
     };
     const boxes = { inlineBlockClasses: ["btn"] };
     expect(warned('<p>\n  <a class="btn">One</a>\n  <a class="btn">Two</a>\n</p>', boxes)).toEqual([
-      "FV0427 6:3 the line break between `<a>` and `<a>` renders as a space, which shows as a gap beside `<a>`, whose class makes it `inline-block`: hug the tags, `</a\\n><a>`, where no space is meant",
+      "FV0427 6:3 the line break between `<a>` and `<a>` renders as a space, which shows as a gap beside `<a>`, whose class makes it `inline-block`: hug the tags, `</a\\n><a>`, where no space is meant, or write `<!-- ferrovue-ignore FV0427 -->` before `<a>` where it is",
     ]);
     expect(warned('<p>\n  <a class="btn">One</a\n  ><a class="btn">Two</a>\n</p>', boxes)).toEqual([]);
     expect(warned('<p>\n  <a class="btn">One</a> <a class="btn">Two</a>\n</p>', boxes)).toEqual([]);
@@ -1076,6 +1076,35 @@ describe("whitespace", () => {
     expect(warned('<div class="whitespace-pre"><pre>\n  a\n</pre></div>')).toEqual([]);
     expect(warned('<p>\n  <b>a</b>\n  <i v-if="on">x</i>\n  <a>z</a>\n</p>')).toEqual([]);
     expect(warned('<div class="whitespace-pre">\n  a\n</div>', { whitespace: "condense" })).toEqual([]);
+  });
+
+  it("leaves a gap a `ferrovue-ignore` comment marks as meant, and warns of a comment that silences nothing", () => {
+    const warned = (template: string, config: Record<string, unknown> = {}): string[] => {
+      const warnings: GenError[] = [];
+      generate(project(sfc("on: boolean", template), {}), { components: "components", out: "out", whitespace: "trim-edges", inlineBlockClasses: ["flair"], ...config }, new Map(), { warn: (w) => warnings.push(w) });
+      return warnings.map((w) => `${w.code} ${w.at?.line}:${w.at?.column} ${w.what}`);
+    };
+    const titled = (marker: string) => `<h2>\n  <a\n    class="title"\n    href="/t"\n    >Title</a\n  >\n  ${marker}\n  <span class="flair">new</span>\n</h2>`;
+    expect(warned(titled(""))).toHaveLength(1);
+    expect(warned(titled("<!-- ferrovue-ignore FV0427 -->"))).toEqual([]);
+    expect(warned(titled("<!-- ferrovue-ignore FV0427 -->"), { comments: true })).toEqual([]);
+    expect(warned(titled("<!--ferrovue-ignore\n    FV0427-->"))).toEqual([]);
+    expect(warned(titled("<!-- ferrovue-ignore FV0427 FV0428 -->"))).toEqual([
+      "FV0430 10:3 `ferrovue-ignore` names `FV0428`, which it does not silence: it silences FV0427",
+    ]);
+    expect(warned(titled("<!-- ferrovue-ignore -->"))).toEqual([
+      "FV0427 11:3 the line break between `<a>` and `<span>` renders as a space, which shows as a gap beside `<span>`, whose class makes it `inline-block`: hug the tags, `</a\\n><span>`, where no space is meant, or write `<!-- ferrovue-ignore FV0427 -->` before `<span>` where it is",
+      "FV0430 10:3 `ferrovue-ignore` names no warning: name the one it silences, as `<!-- ferrovue-ignore FV0427 -->`",
+    ]);
+    expect(warned(titled("<!-- ferrovue-ignored FV0427 -->"))).toHaveLength(1);
+    expect(warned('<p>\n  <a class="flair">One</a\n  ><!-- ferrovue-ignore FV0427 --><a class="flair">Two</a>\n</p>')).toEqual([
+      "FV0430 6:4 `ferrovue-ignore FV0427` stands before no line break that FV0427 warns of: remove it, or move it between the two elements",
+    ]);
+    expect(warned('<p>\n  <a>One</a>\n  <!-- ferrovue-ignore FV0427 -->\n  <a>Two</a>\n</p>')).toEqual([
+      "FV0430 6:3 `ferrovue-ignore FV0427` stands before no line break that FV0427 warns of: remove it, or move it between the two elements",
+    ]);
+    expect(warned('<p>\n  <a class="flair">One</a>\n  <!-- ferrovue-ignore FV0427 -->\n  <a>Two</a>\n  <a>Three</a>\n</p>')).toEqual([]);
+    expect(warned(titled("<!-- ferrovue-ignore FV0427 -->"), { whitespace: "condense" })).toEqual([]);
   });
 
   it("trims the content a component and `<template v-slot>` hand a child", () => {

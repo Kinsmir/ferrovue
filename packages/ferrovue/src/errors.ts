@@ -430,13 +430,17 @@ export const ERRORS = {
   },
   FV0427: {
     title: "Line break between elements a class makes `inline-block`",
-    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\\n><a>`, as a formatter writes them where no space is meant, or write the space on one line where it is.",
+    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: the line break between two inline elements renders as a space, as a formatter reads it, and where a class in `inlineBlockClasses` makes one of them `inline-block`, that space shows as a gap between the boxes. Hug the tags, `</a\\n><a>`, as a formatter writes them where no space is meant. Where the space is meant, write it on one line, or, where a formatter puts the second element on a line of its own, write `<!-- ferrovue-ignore FV0427 -->` between the two, on the line before the second. See [`generated_code`](crate::guide::generated_code#whitespace).",
   },
   FV0428: {
     title: "Class that sets a preserving `white-space`, not listed in `preserveWhitespace`",
     detail: "A warning, with `\"whitespace\": \"trim-edges\"`: a class named as Tailwind names its `white-space` utilities (`whitespace-pre`, `whitespace-pre-wrap`, `whitespace-pre-line`, `whitespace-break-spaces`, with any variant) shows the line breaks the mode trims, and the warning names it where the element holds one. List it in `preserveWhitespace.classes`, so the element keeps its text.",
   },
   FV0429: { title: "Line breaks on both sides of a `v-if` that may render nothing", retired: "0.16.0" },
+  FV0430: {
+    title: "`ferrovue-ignore` comment that silences nothing",
+    detail: "A warning, with `\"whitespace\": \"trim-edges\"`: a `<!-- ferrovue-ignore … -->` comment names the warnings it silences at the line break it stands in, and this one names none, names a code it cannot silence (it silences FV0427), or stands where that warning does not fire, as after the tags were hugged. Remove it, or move it between the two elements whose gap is meant.",
+  },
 
   FV0501: {
     title: "Child component that is not among the compiled components",

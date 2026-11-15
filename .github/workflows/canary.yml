@@ -28,7 +28,7 @@ jobs:
         run: |
           node --input-type=module -e '
             import { execFileSync } from "node:child_process";
-            import { appendFileSync, readFileSync } from "node:fs";
+            import { readFileSync, writeFileSync } from "node:fs";
             const peers = JSON.parse(readFileSync("packages/ferrovue/package.json", "utf8")).peerDependencies;
             const follows = {
               vue: ["vue", "@vue/compiler-sfc", "@vue/server-renderer", "@vue/shared"],
@@ -45,7 +45,11 @@ jobs:
               const version = newest(peer);
               return names.map((name) => `  "${name}": "${version}"`);
             });
-            appendFileSync("pnpm-workspace.yaml", `\noverrides:\n${lines.join("\n")}\n`);
+            // pnpm-workspace.yaml may already hold an `overrides:` map, and YAML refuses a second one.
+            const workspace = readFileSync("pnpm-workspace.yaml", "utf8");
+            writeFileSync("pnpm-workspace.yaml", /^overrides:$/m.test(workspace)
+              ? workspace.replace(/^overrides:$/m, `overrides:\n${lines.join("\n")}`)
+              : `${workspace}\noverrides:\n${lines.join("\n")}\n`);
           '
           cat pnpm-workspace.yaml
           pnpm install --no-frozen-lockfile
