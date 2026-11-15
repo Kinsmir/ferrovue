@@ -417,8 +417,8 @@ export function readComponent(file: string, root: string, name = basename(file, 
   }
   if (ctx.whitespace === "trim-edges" && descriptor.template.ast) {
     const options = { classes: new Set(ctx.preservedClasses), inlineBlock: new Set(ctx.inlineBlockClasses) };
-    for (const w of whitespaceWarnings(descriptor.template.ast as unknown as TemplateNode, options)) {
-      const { line, column } = w.node.loc.start;
+    for (const w of whitespaceWarnings(descriptor.template.ast as unknown as TemplateNode, descriptor.template.loc, options)) {
+      const { line, column } = w.at;
       const key = `${w.code}:${comp.file}:${line}:${column}`;
       if (ctx.warned.has(key)) continue;
       ctx.warned.add(key);

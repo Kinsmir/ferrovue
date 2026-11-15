@@ -10,6 +10,11 @@ for which constructs, so a project knows whether to record its fixtures again.
 
 ## [Unreleased]
 
+### Added
+
+- A `<!-- ferrovue-ignore FV0427 -->` comment between two elements marks the line break between them as a meant space, which FV0427 then does not warn of; a `ferrovue-ignore` comment that silences nothing warns (FV0430).
+  [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
+
 ## [0.16.0] - 2026-11-08
 
 Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes, in an island's wrapper, whose `data-props` is in single quotes, and for a bound or fallthrough `disablepictureinpicture` or `disableremoteplayback`.
