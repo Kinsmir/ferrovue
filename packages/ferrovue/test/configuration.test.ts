@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
 import { loadConfig } from "../src/config.ts";
@@ -394,7 +394,7 @@ describe("the project's inputs", () => {
     const root = island(page);
     const outside = mkdtempSync(join(tmpdir(), "ferrovue-outside-"));
     roots.push(outside);
-    const real = realpathSync(outside);
+    const real = realpathSync.native(outside);
     mkdirSync(join(outside, "locales"));
     writeFileSync(join(outside, "locales/en.json"), `{ "hello": "Hello" }`);
     writeFileSync(join(outside, "routes.json"), `["/"]`);
@@ -415,7 +415,7 @@ describe("the project's inputs", () => {
     expect(failure(() => generate(root, config({ components: ownDir, i18n: { messages: "locales" } })))).toMatchObject(leads("locales/en.json", "i18n.messages", "locales/en.json"));
     expect(failure(() => generate(root, config({ components: ownDir, routes: "routes.json" })))).toMatchObject(leads("routes.json", "routes", "routes.json"));
     expect(failure(() => generate(root, config({ components: ownDir, routes: { pages: "pages" } })))).toMatchObject(leads("pages", "routes.pages", "pages"));
-    const up = `../${real.slice(real.lastIndexOf("/") + 1)}`;
+    const up = `../${basename(real)}`;
     expect(failure(() => generate(root, config({ components: up })))).toMatchObject(leads(up, "components", ""));
     expect(failure(() => generate(root, { ...CONFIG, sharedDirectories: ["../nowhere"] }))).toMatchObject({ code: "FV1116", message: "cannot read the `sharedDirectories` directory `../nowhere`: it does not exist" });
     const shared = { sharedDirectories: [outside] };

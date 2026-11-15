@@ -1,6 +1,6 @@
 import { parse as parseJs } from "@babel/parser";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
+import { join, posix, resolve, sep } from "node:path";
 import { ctx } from "./context.ts";
 import type { ErrorCode } from "./errors.ts";
 import { type Component, type N } from "./model.ts";
@@ -50,7 +50,7 @@ export function listDir(root: string, dir: string, key: string, keep: (name: str
     throw new GenError("FV1116", `cannot read the \`${key}\` directory \`${dir}\`: ${why(e)}`, { file: dir });
   }
   refuseOutsideProject(root, dir, key);
-  for (const name of names) refuseOutsideProject(root, join(dir, name), key);
+  for (const name of names) refuseOutsideProject(root, posix.join(dir, name), key);
   return names;
 }
 
