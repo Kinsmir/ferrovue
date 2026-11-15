@@ -127,6 +127,7 @@ const FULL = {
   routes: "routes.json",
   router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here", strict: true, sensitive: true },
   stores: "stores",
+  sharedDirectories: ["."],
   clientDirectives: ["focus"],
   i18n: { messages: "locales", locale: "en", fallbackLocale: ["en"] },
   scopeId: "filepath",

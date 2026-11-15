@@ -15,6 +15,11 @@ for which constructs, so a project knows whether to record its fixtures again.
 - A `<!-- ferrovue-ignore FV0427 -->` comment between two elements marks the line break between them as a meant space, which FV0427 then does not warn of; a `ferrovue-ignore` comment that silences nothing warns (FV0430).
   [Whitespace](https://docs.rs/ferrovue/latest/ferrovue/guide/generated_code/index.html#whitespace).
 
+### Changed
+
+- The compiler refuses a component, store, locale file, routes file or pages folder that leads out of the project's root through a symbolic link or a `../` path (FV1125), as its text would ship in the binary. The new `sharedDirectories` key lists the directories outside the root, such as a monorepo's shared locale files, that may still be read.
+  [Files outside the project](https://docs.rs/ferrovue/latest/ferrovue/guide/security/index.html#files-outside-the-project).
+
 ### Fixed
 
 - A `useHead` object holding its own `constructor` key, such as the `innerHTML` of a JSON-LD script, keeps its `__proto__`, `constructor` and `prototype` keys and those of the objects inside it, as unhead leaves such an object whole; 0.16 dropped them.

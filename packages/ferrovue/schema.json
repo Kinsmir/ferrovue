@@ -250,6 +250,14 @@
       "markdownDescription": "The directory of Pinia stores (`.ts` files), whose state a component may read while it renders on the server.",
       "type": "string"
     },
+    "sharedDirectories": {
+      "description": "Directories outside the project's root that the components, stores, locale files, routes file and pages folder may be read from, through a symbolic link or a `../` path: the packages of a monorepo that share them, as `[\"../shared/locales\"]`. A file that leads anywhere else outside the root is refused (FV1125), since its text is compiled into the binary.",
+      "markdownDescription": "Directories outside the project's root that the components, stores, locale files, routes file and pages folder may be read from, through a symbolic link or a `../` path: the packages of a monorepo that share them, as `[\"../shared/locales\"]`. A file that leads anywhere else outside the root is refused (FV1125), since its text is compiled into the binary.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "clientDirectives": {
       "description": "Custom directives that render nothing on the server (no `getSSRProps`), by name, without `v-`: `[\"focus\", \"click-outside\"]`. Any other custom directive is refused, since the server cannot know what its `getSSRProps` would add.",
       "markdownDescription": "Custom directives that render nothing on the server (no `getSSRProps`), by name, without `v-`: `[\"focus\", \"click-outside\"]`. Any other custom directive is refused, since the server cannot know what its `getSSRProps` would add.",

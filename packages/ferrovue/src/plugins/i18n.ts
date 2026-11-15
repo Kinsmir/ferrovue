@@ -35,7 +35,7 @@ interface I18nScope {
 const MODIFIERS = new Set(["upper", "lower", "capitalize"]);
 
 function readLocales(root: string, config: { messages: string; locale?: string; fallbackLocale?: string | string[] }): I18nSetup {
-  const files = listDir(root, config.messages, "i18n.messages").filter((f) => f.endsWith(".json")).toSorted();
+  const files = listDir(root, config.messages, "i18n.messages", (f) => f.endsWith(".json")).toSorted();
   const parser = createParser({});
   const locales = files.map((f): LocaleMessages => {
     const file = posix.join(config.messages, f);

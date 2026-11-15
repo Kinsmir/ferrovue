@@ -10,7 +10,7 @@ import { boolOf, pathOf } from "../narrowing.ts";
 import { atom, bare, not, strArg } from "../parens.ts";
 import { type Plugin, runOf, scopeOf } from "../plugin.ts";
 import { header } from "../rust.ts";
-import { readJsonFile } from "../files.ts";
+import { readJsonFile, refuseOutsideProject } from "../files.ts";
 import { allPages, fileRoutes } from "../file-routes.ts";
 import { type FileRoute } from "../vite.ts";
 import { scopeIdOf } from "./scoped.ts";
@@ -125,6 +125,7 @@ function readPages(root: string, config: Config, pages: string): FileRoute[] {
 }
 
 function readRoutes(root: string, file: string): RouteDef[] {
+  refuseOutsideProject(root, file, "routes");
   const raw = readJsonFile(root, file, { missing: "FV1246", invalid: "FV1247" });
   if (!Array.isArray(raw)) throw new GenError("FV1232", `${file} lists the routes in an array`, { file });
   const read = (list: unknown[], parent: string | null): RouteDef[] =>

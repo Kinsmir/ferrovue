@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { compileTemplate, parse as parseSfc } from "@vue/compiler-sfc";
 import { loadConfig } from "../src/config.ts";
@@ -351,6 +351,7 @@ describe("the configuration", () => {
       ...CONFIG,
       router: { routes: { pages: "pages" }, base: "/app", linkActiveClass: "on", linkExactActiveClass: "here", strict: true, sensitive: false },
       stores: "stores",
+      sharedDirectories: ["../shared"],
       trustedHtml: "ferrovue::html::InlineHtml",
       helpers: { module: "./helpers", functions: { plural: { rust: "crate::plural", params: ["int", "string?"], returns: "string", maxLen: 1 } } },
       twins: { VBtn: { rust: "crate::v_btn", props: { label: "string" }, slots: ["default"] } },
@@ -387,6 +388,39 @@ describe("the project's inputs", () => {
     expect(failure(() => generate(root, { ...CONFIG, i18n: { messages: "locales" } }))).toMatchObject({ code: "FV1116", message: "cannot read the `i18n.messages` directory `locales`: it does not exist" });
     writeFileSync(join(root, "locales"), "");
     expect(failure(() => generate(root, { ...CONFIG, i18n: { messages: "locales" } })).message).toMatch(/it is not a directory$/);
+  });
+
+  it("refuses a file that leads out of the project, unless `sharedDirectories` lists where it leads", () => {
+    const root = island(page);
+    const outside = mkdtempSync(join(tmpdir(), "ferrovue-outside-"));
+    roots.push(outside);
+    const real = realpathSync.native(outside);
+    mkdirSync(join(outside, "locales"));
+    writeFileSync(join(outside, "locales/en.json"), `{ "hello": "Hello" }`);
+    writeFileSync(join(outside, "routes.json"), `["/"]`);
+    writeFileSync(join(outside, "Y.vue"), page);
+    mkdirSync(join(outside, "pages"));
+    writeFileSync(join(outside, "pages/index.vue"), page);
+    mkdirSync(join(root, "locales"));
+    symlinkSync(join(outside, "locales/en.json"), join(root, "locales/en.json"));
+    symlinkSync(join(outside, "routes.json"), join(root, "routes.json"));
+    symlinkSync(join(outside, "Y.vue"), join(root, "components/Y.vue"));
+    symlinkSync(join(outside, "pages"), join(root, "pages"));
+    const leads = (path: string, key: string, to: string) => ({ code: "FV1125", message: `\`${path}\`, which \`${key}\` reaches, leads to ${join(real, to)}, outside the project: list the directory it is in under \`sharedDirectories\`, or copy the file into the project`, at: { file: path } });
+    expect(failure(() => generate(root, CONFIG))).toMatchObject(leads("components/Y.vue", "components", "Y.vue"));
+    const config = (extra: object) => ({ components: "components", out: "out", ...extra });
+    const own = mkdtempSync(join(root, "own-"));
+    writeFileSync(join(own, "X.vue"), page);
+    const ownDir = own.slice(root.length + 1);
+    expect(failure(() => generate(root, config({ components: ownDir, i18n: { messages: "locales" } })))).toMatchObject(leads("locales/en.json", "i18n.messages", "locales/en.json"));
+    expect(failure(() => generate(root, config({ components: ownDir, routes: "routes.json" })))).toMatchObject(leads("routes.json", "routes", "routes.json"));
+    expect(failure(() => generate(root, config({ components: ownDir, routes: { pages: "pages" } })))).toMatchObject(leads("pages", "routes.pages", "pages"));
+    const up = `../${basename(real)}`;
+    expect(failure(() => generate(root, config({ components: up })))).toMatchObject(leads(up, "components", ""));
+    expect(failure(() => generate(root, { ...CONFIG, sharedDirectories: ["../nowhere"] }))).toMatchObject({ code: "FV1116", message: "cannot read the `sharedDirectories` directory `../nowhere`: it does not exist" });
+    const shared = { sharedDirectories: [outside] };
+    expect(() => generate(root, { ...CONFIG, ...shared, i18n: { messages: "locales" }, routes: "routes.json" })).not.toThrow();
+    expect(() => generate(root, { ...CONFIG, ...shared, routes: { pages: "pages" } })).not.toThrow();
   });
 
   it("refuses a routes file that is missing, is not JSON, or is not a list of routes", () => {
