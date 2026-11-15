@@ -591,3 +591,17 @@ fn comments_are_stripped_as_a_scan_of_characters_strips_them() {
     let many = "/* a".repeat(20_000);
     assert_eq!(strip_comments(&many), many);
 }
+
+#[test]
+fn class_names_equal_the_same_names_only() {
+    let names = Attr::Names(Cow::Borrowed("a b"));
+    assert_eq!(names, Attr::Names(Cow::Owned("a b".to_owned())));
+    assert_ne!(names, Attr::Names(Cow::Borrowed("a")));
+    assert_ne!(names, Attr::str("a b"));
+}
+
+#[test]
+fn a_string_is_truthy_unless_empty() {
+    assert!(Attr::str("a").truthy());
+    assert!(!Attr::str("").truthy());
+}

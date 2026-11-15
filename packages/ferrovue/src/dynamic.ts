@@ -111,50 +111,6 @@ function propOf(s: Scope, n: N): string | null {
   return name === null ? null : (destructuredProp(s, name) ?? s.comp.models.get(name) ?? null);
 }
 
-function literalUnion(comp: Component, t: N, seen: Set<string> = new Set()): string[] | null {
-  switch (t?.type) {
-    case "TSParenthesizedType":
-      return literalUnion(comp, t.typeAnnotation, seen);
-    case "TSLiteralType":
-      if (t.literal.type === "StringLiteral") return [t.literal.value];
-      if (t.literal.type === "TemplateLiteral" && !t.literal.expressions.length) return [t.literal.quasis[0].value.cooked];
-      return null;
-    case "TSUnionType": {
-      const all: string[] = [];
-      for (const u of t.types) {
-        const lits = literalUnion(comp, u, seen);
-        if (lits === null) return null;
-        for (const l of lits) if (!all.includes(l)) all.push(l);
-      }
-      return all;
-    }
-    case "TSTypeReference": {
-      const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
-      const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
-      return alias ? literalUnion(comp, alias, new Set(seen).add(name!)) : null;
-    }
-  }
-  return null;
-}
-
-function propType(s: Scope, name: string): N {
-  const ast = setupAsts.get(s.comp) ?? [];
-  let t: N = null;
-  for (const st of ast) {
-    const call = st.type === "ExpressionStatement" ? st.expression : st.type === "VariableDeclaration" ? st.declarations[0]?.init : null;
-    t = definePropsType(call) ?? t;
-  }
-  let members: N[] = t?.type === "TSTypeLiteral" ? t.members : [];
-  if (t?.type === "TSTypeReference") {
-    for (const st of ast) {
-      const d = st.type === "ExportNamedDeclaration" ? st.declaration : st;
-      if (d?.type === "TSInterfaceDeclaration" && d.id.name === t.typeName.name) members = d.body.body;
-      if (d?.type === "TSTypeAliasDeclaration" && d.id.name === t.typeName.name && d.typeAnnotation.type === "TSTypeLiteral") members = d.typeAnnotation.members;
-    }
-  }
-  return members.find((m) => m.type === "TSPropertySignature" && (m.key.name ?? m.key.value) === name)?.typeAnnotation?.typeAnnotation ?? null;
-}
-
 function fieldLiterals(ty: Ty): string[] | null {
   const literals = literalsOf(ty.k === "opt" ? ty.of : ty);
   return (ty.k === "opt" ? ty.of : ty).k === "str" && literals !== undefined && literals.every((l) => typeof l === "string") ? (literals as string[]) : null;
@@ -164,7 +120,7 @@ function keysOf(s: Scope, n: N, at: N): { on: N; keys: string[] } {
   const name = propOf(s, n);
   if (name === null) fail(s.comp, "FV0418", `${OPEN}; this value is not one of those`, n);
   const field = s.comp.props.fields.find((f) => f.js === name)!;
-  const keys = literalUnion(s.comp, propType(s, name)) ?? fieldLiterals(field.ty);
+  const keys = fieldLiterals(field.ty);
   if (keys === null) fail(s.comp, "FV0418", `${OPEN}; \`${name}\` is not typed as a union of string literals, as \`"h1" | "h2"\``, n);
   if (field.ty.k === "opt" && field.dflt === undefined) {
     fail(s.comp, "FV0420", `\`${name}\` may be absent, where Vue renders \`<!---->\` or fails: make it required, or give it a default`, at);

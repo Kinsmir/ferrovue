@@ -32,6 +32,13 @@ packages/ferrovue/src/attrs.ts: MethodExpression: branches.test.startsWith("let 
 packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "int" || v.ty.k === "float" => true in else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
 packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "bool" => true in else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
 
+# attrs.ts, `display`: only string values carry `numeral`, `plain` or `joined`, and `escapeFree`
+# holds only for code that is a Rust string literal, so the type test before each is implied by the
+# other half of the condition.
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "str" => true in else if (v.ty.k === "str" && v.numeral?.of === v.code) return display(e, v.numeral.number);
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "str" => true in else if (v.ty.k === "str" && (v.plain === v.code || escapeFree(v.code))) e.stmt(`out.push_str(${strArg(v.code)});`);
+packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "str" => true in else if (v.ty.k === "str" && v.joined?.of === v.code) e.st … ms.replace(/\.into_iter\(\)$/, ""))}, ${v.joined.sep});`);
+
 # attrs.ts, `attrValue`: every caller has passed the value through `renderable`, which refuses each
 # type `display` cannot write, so the throw is never reached.
 packages/ferrovue/src/attrs.ts: StringLiteral: "FV0402" => "" in if (!display(e, v)) throw new GenError("FV0402", "an attribute value must be a string, a number or a boolean");
@@ -135,11 +142,6 @@ packages/ferrovue/src/template.ts: BooleanLiteral: false => true in if (control 
 # expressions only a `?:` has a `test`, so another node gives no test and is returned as it is.
 packages/ferrovue/src/template.ts: ConditionalExpression: n?.type === "ConditionalExpression" => true in const test = n?.type === "ConditionalExpression" ? n.test : null;
 packages/ferrovue/src/template.ts: OptionalChaining: n?.type => n.type in const test = n?.type === "ConditionalExpression" ? n.test : null;
-
-# template.ts, `slot`: the temporary of a root `<textarea>` is read only by the `"value" in` test
-# Vue writes inside `_ssrInterpolate`, which `unpassedValue` also takes by `rootControl`, set for
-# that `<textarea>`.
-packages/ferrovue/src/template.ts: CallExpression: s.temps.add(a[0].left.name); => ; in if (a.length > 1) s.temps.add(a[0].left.name);
 
 # template.ts, `modelAttrs`: a sequence holds at least two expressions, so its first is present.
 packages/ferrovue/src/template.ts: OptionalChaining: set?.type => set.type in if (n.expressions.length !== 2 || set?.type !== "Assignmen … ", "this expression cannot be rendered on the server", n);
@@ -1339,7 +1341,6 @@ packages/ferrovue/src/logical.ts: ConditionalExpression: n.operator === "&&" => 
 # only one, returns where one side is `null` or `undefined` and otherwise raises the FV1809 it
 # raises a few lines later before any other refusal there (`meet` reads strings only, the typeof
 # and router tests return earlier), and the sides are read left to right both times.
-packages/ferrovue/src/operators.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" && !test => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
 packages/ferrovue/src/operators.ts: ConditionalExpression: n.operator !== "===" && n.operator !== "!==" => true in if (n.operator !== "===" && n.operator !== "!==" && !test) {
 packages/ferrovue/src/operators.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" && !test => n.operator !== "===" && n.operator !== "!==" || !test in if (n.operator !== "===" && n.operator !== "!==" && !test) {
 packages/ferrovue/src/operators.ts: LogicalOperator: n.operator !== "===" && n.operator !== "!==" => n.operator !== "===" || n.operator !== "!==" in if (n.operator !== "===" && n.operator !== "!==" && !test) {
@@ -1489,18 +1490,12 @@ packages/ferrovue/src/dynamic.ts: ConditionalExpression: resolved.callee.name !=
 # Babel records parentheses in `extra.parenthesized` and the type is never matched.
 packages/ferrovue/src/dynamic.ts: StringLiteral: "ParenthesizedExpression" => "" in while (n && ["TSAsExpression", "TSSatisfiesExpression", "T … enthesizedExpression"].includes(n.type)) n = n.expression;
 
-# dynamic.ts, `declared`, `destructuredProp`, `propType` and `tableOf`: `prepareDynamic` records
+# dynamic.ts, `declared`, `destructuredProp` and `tableOf`: `prepareDynamic` records
 # every component's setup before anything reads it, so the fallback list is never read; a string in
 # it has no `type`, which each loop skips.
 packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const st of setupAsts.get(s.comp) ?? []) {
 packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const st of setupAsts.get(s.comp) ?? []) {
-packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in const ast = setupAsts.get(s.comp) ?? [];
 packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in for (const st of setupAsts.get(s.comp) ?? []) {
-
-# dynamic.ts, `propType`: the fallback list stands for a props type that is no type literal; a
-# string in it is no `TSPropertySignature`, so `find` passes over it, and a named type replaces the
-# list with its members.
-packages/ferrovue/src/dynamic.ts: ArrayDeclaration: [] => ["Stryker was here"] in let members: N[] = t?.type === "TSTypeLiteral" ? t.members : [];
 
 # dynamic.ts, `setupName`, `propOf` and `pickOf`: the node is the argument of
 # `_resolveDynamicComponent`, a part of it, the value a `ref` or `computed` is given, an object a
@@ -1516,8 +1511,8 @@ packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.
 packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in if (n?.type === "MemberExpression" && !(n.object.type ===  … & ["$setup", "_ctx", "$props"].includes(n.object.name))) {
 packages/ferrovue/src/dynamic.ts: OptionalChaining: n?.type => n.type in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
 
-# dynamic.ts, `setupName`, `declared`, `destructuredProp`, `propOf`, `literalUnion`, `entry`,
-# `pickOf` and `outletsOf`: only a name has a `name`. Any other node reads `undefined` there, and no
+# dynamic.ts, `setupName`, `declared`, `destructuredProp`, `propOf`, `entry`, `pickOf` and
+# `outletsOf`: only a name has a `name`. Any other node reads `undefined` there, and no
 # `$setup`, `_ctx`, `$props`, prop, local, declaration, child, alias, import or `_ssr…` helper is
 # named `undefined`, so each test fails as the type test before it would. `setupName` returning
 # `undefined` in place of `null` finds no child, declaration, table or destructured prop either, so
@@ -1528,7 +1523,6 @@ packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.id.type === "Identifi
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: target.type === "Identifier" => true in if (target.type === "Identifier" && target.name === local) return p.key.name ?? p.key.value;
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: o.type === "Identifier" => true in if (o.type === "Identifier" && (o.name === "$props" || o.n … t && !s.locals.has(o.name)))) return own(n.property.name);
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "Identifier" => true in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: t.typeName.type === "Identifier" => true in const name: string | undefined = t.typeName.type === "Identifier" ? t.typeName.name : undefined;
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: value.type === "Identifier" => true in if (value.type === "Identifier") {
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n.object.type === "Identifier" => true in if (n?.type === "MemberExpression" && !(n.object.type ===  … & ["$setup", "_ctx", "$props"].includes(n.object.name))) {
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: n?.type === "Identifier" => true in const name = n?.type === "Identifier" && s.locals.has(n.name) ? null : setupName(n);
@@ -1615,33 +1609,6 @@ packages/ferrovue/src/dynamic.ts: StringLiteral: "$props" => "" in if (n?.type =
 # dynamic.ts, `destructuredProp`: FV0108 refuses a rest element in destructured props when the
 # component is read, so every property of the pattern is an `ObjectProperty`.
 packages/ferrovue/src/dynamic.ts: ConditionalExpression: p.type !== "ObjectProperty" => false in if (p.type !== "ObjectProperty") continue;
-
-# dynamic.ts, `literalUnion`: FV0314 refuses a props type whose alias refers to itself, in the
-# component and in a `.ts` file, when the component is read, so the walk never meets a name it has
-# seen and `seen` changes nothing.
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === undefined || seen.has(name) => false in const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
-packages/ferrovue/src/dynamic.ts: LogicalOperator: name === undefined || seen.has(name) => name === undefined && seen.has(name) in const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: name === undefined => false in const alias = name === undefined || seen.has(name) ? undefined : comp.aliases.get(name);
-
-# dynamic.ts, `propType`: FV0107 refuses an export in setup other than `export interface` and
-# `export type` with a declaration, so a statement that exports has a declaration.
-packages/ferrovue/src/dynamic.ts: OptionalChaining: d?.type => d.type in if (d?.type === "TSInterfaceDeclaration" && d.id.name === t.typeName.name) members = d.body.body;
-packages/ferrovue/src/dynamic.ts: OptionalChaining: d?.type => d.type in if (d?.type === "TSTypeAliasDeclaration" && d.id.name ===  … e === "TSTypeLiteral") members = d.typeAnnotation.members;
-
-# dynamic.ts, `propType`: FV0304 refuses `defineProps` of an alias that is no type literal, so the
-# alias `defineProps` names holds a type literal.
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: d.typeAnnotation.type === "TSTypeLiteral" => true in if (d?.type === "TSTypeAliasDeclaration" && d.id.name ===  … e === "TSTypeLiteral") members = d.typeAnnotation.members;
-
-# dynamic.ts, `propType`: FV0326 refuses a prop with no type when the props are read, before any
-# template is compiled, so the member found has a type.
-packages/ferrovue/src/dynamic.ts: OptionalChaining: members.find((m) => m.type === "TSPropertySignature" && (m …  ?? m.key.value) === name)?.typeAnnotation?.typeAnnotation => members.find(m => m.type === "TSPropertySignature" && (m.k … e ?? m.key.value) === name)?.typeAnnotation.typeAnnotation in return members.find((m) => m.type === "TSPropertySignature … .value) === name)?.typeAnnotation?.typeAnnotation ?? null;
-
-# dynamic.ts, `propType`: FV0320 refuses a props type that holds other than plain named fields, so
-# every member of the type literal or interface `defineProps` names is a `TSPropertySignature`.
-packages/ferrovue/src/dynamic.ts: ConditionalExpression: m.type === "TSPropertySignature" => true in return members.find((m) => m.type === "TSPropertySignature … .value) === name)?.typeAnnotation?.typeAnnotation ?? null;
-
-# dynamic.ts, `propType`: a `VariableDeclaration` holds at least one declarator.
-packages/ferrovue/src/dynamic.ts: OptionalChaining: st.declarations[0]?.init => st.declarations[0].init in const call = st.type === "ExpressionStatement" ? st.expres … = "VariableDeclaration" ? st.declarations[0]?.init : null;
 
 # dynamic.ts, `element`: `isHTMLTag` holds no name with a dash, so `camelize(tag)` is `tag` and each
 # of the first two equalities holds when the other does; `replace` without the `g` flag replaces the

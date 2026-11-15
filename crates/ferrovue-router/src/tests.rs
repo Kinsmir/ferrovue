@@ -664,6 +664,19 @@ fn decode_leaves_malformed_escapes_alone() {
 }
 
 #[test]
+fn a_parameter_decodes_to_what_it_is_compared_with() {
+    use crate::url::decodes_to;
+    assert!(decodes_to("a%20b", "a b"));
+    assert!(!decodes_to("%41", ""), "the decoded text is longer");
+    assert!(!decodes_to("%41%42", "A"), "the decoded text is longer");
+    assert!(
+        !decodes_to("%FF", "x"),
+        "malformed UTF-8 equals only itself, written as it is"
+    );
+    assert!(decodes_to("%FF", "%FF"));
+}
+
+#[test]
 fn relative_links_resolve_against_the_location() {
     assert_eq!(resolve_relative_path("c", "/a/b"), "/a/c");
     assert_eq!(resolve_relative_path("../c", "/a/b/d"), "/a/c");

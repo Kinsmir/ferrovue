@@ -186,8 +186,10 @@ jobs:
             modules: dynamic
           - name: expressions
             modules: expr members operators logical conditional
-          - name: calls and methods
-            modules: calls globals numbers strings
+          - name: calls, globals and numbers
+            modules: calls globals numbers
+          - name: strings
+            modules: strings
           - name: lists
             modules: lists array-literals borrows destructuring flat list-calls object-calls reduce sorting
     env:

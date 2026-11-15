@@ -40,6 +40,7 @@
   "incremental": true,
   "incrementalFile": "target/stryker/incremental.json",
   "concurrency": 4,
+  "timeoutMS": 20000,
   "reporters": ["clear-text", "progress", "json", "html"],
   "jsonReporter": { "fileName": "target/stryker/mutation.json" },
   "htmlReporter": { "fileName": "target/stryker/mutation.html" },
