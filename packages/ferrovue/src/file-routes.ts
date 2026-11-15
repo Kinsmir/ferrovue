@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { parse as parseSfc } from "@vue/compiler-sfc";
 import { failIn } from "./locate.ts";
 import { GenError } from "./errors.ts";
+import { refuseOutsideProject } from "./files.ts";
 import type { RouteEntry } from "./route-records.ts";
 import type { FileRoute } from "./vite.ts";
 
@@ -171,7 +172,9 @@ function checkSource(root: string, file: string): void {
 export function fileRoutes(root: string, pages: string): FileRoute[] {
   const dir = pages.replace(/\/+$/, "");
   const tree = node("", "", null);
-  for (const rel of pageFiles(root, dir)) {
+  const files = pageFiles(root, dir);
+  refuseOutsideProject(root, dir, "routes.pages");
+  for (const rel of files) {
     const file = `${dir}/${rel}`;
     checkSource(root, file);
     insert(tree, rel.slice(0, -".vue".length).split("/"), file, true);

@@ -79,6 +79,7 @@ export const CONFIG_SCHEMA: Schema = {
       additionalProperties: false,
     },
     stores: STRING,
+    sharedDirectories: { type: "array", items: STRING },
     clientDirectives: { type: "array", items: STRING },
     i18n: {
       type: "object",

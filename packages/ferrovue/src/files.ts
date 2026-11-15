@@ -1,6 +1,7 @@
 import { parse as parseJs } from "@babel/parser";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
+import { ctx } from "./context.ts";
 import type { ErrorCode } from "./errors.ts";
 import { type Component, type N } from "./model.ts";
 import { fail, failIn } from "./locate.ts";
@@ -11,13 +12,46 @@ function why(e: unknown): string {
   return code === "ENOENT" ? "it does not exist" : code === "ENOTDIR" ? "it is not a directory" : code === "EISDIR" ? "it is a directory" : (e as Error).message;
 }
 
-/** The entries of a directory the configuration names as `key`, refusing one that cannot be read. */
-export function listDir(root: string, dir: string, key: string): string[] {
+/** The real paths of the directories the project's files may be read from: its root, and each
+ * directory `sharedDirectories` names, refusing one that cannot be found. */
+export function reachOf(root: string, shared: readonly string[]): string[] {
+  return [root, ...shared].map((dir) => {
+    try {
+      return realpathSync.native(resolve(root, dir));
+    } catch (e) {
+      throw new GenError("FV1116", `cannot read the \`sharedDirectories\` directory \`${dir}\`: ${why(e)}`, { file: dir });
+    }
+  });
+}
+
+/** Refuse a path the configuration names as `key`, or a file found there, that leads out of the
+ * project's root, through a symbolic link or `..`, to a directory `sharedDirectories` does not list.
+ * A path that does not exist is left for its read to refuse, and outside a compile of `root` nothing
+ * is checked. */
+export function refuseOutsideProject(root: string, path: string, key: string): void {
+  if (ctx.rootDir !== root || ctx.reach.length === 0) return;
+  let real: string;
   try {
-    return readdirSync(join(root, dir));
+    real = realpathSync.native(resolve(root, path));
+  } catch {
+    return;
+  }
+  if (ctx.reach.some((dir) => real === dir || real.startsWith(dir.endsWith(sep) ? dir : dir + sep))) return;
+  throw new GenError("FV1125", `\`${path}\`, which \`${key}\` reaches, leads to ${real}, outside the project: list the directory it is in under \`sharedDirectories\`, or copy the file into the project`, { file: path });
+}
+
+/** The entries of a directory the configuration names as `key` that `keep` keeps, refusing a
+ * directory that cannot be read, and the directory or an entry kept when it leads out of the project. */
+export function listDir(root: string, dir: string, key: string, keep: (name: string) => boolean): string[] {
+  let names: string[];
+  try {
+    names = readdirSync(join(root, dir)).filter(keep);
   } catch (e) {
     throw new GenError("FV1116", `cannot read the \`${key}\` directory \`${dir}\`: ${why(e)}`, { file: dir });
   }
+  refuseOutsideProject(root, dir, key);
+  for (const name of names) refuseOutsideProject(root, join(dir, name), key);
+  return names;
 }
 
 /** A JSON file of the project's, parsed; one that cannot be read is refused with `missing`, and one
