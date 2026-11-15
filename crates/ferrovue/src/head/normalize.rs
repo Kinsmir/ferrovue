@@ -16,9 +16,7 @@ fn walked(entries: &[(Cow<'static, str>, HeadValue)]) -> bool {
 fn has_unsafe(value: &HeadValue) -> bool {
     match value {
         HeadValue::Array(items) => items.iter().any(has_unsafe),
-        HeadValue::Object(entries) => {
-            walked(entries) && entries.iter().any(|(k, v)| unsafe_key(k) || has_unsafe(v))
-        }
+        HeadValue::Object(entries) => entries.iter().any(|(k, v)| unsafe_key(k) || has_unsafe(v)),
         _ => false,
     }
 }

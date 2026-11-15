@@ -181,11 +181,7 @@ pub(crate) fn decode(text: &str) -> String {
     let bytes = text.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
-    #[cfg(test)]
-    let mut turns = crate::tests::Turns::default();
     while i < bytes.len() {
-        #[cfg(test)]
-        turns.next();
         if bytes[i] == b'%' {
             let hex = |b: u8| (b as char).to_digit(16);
             match (
