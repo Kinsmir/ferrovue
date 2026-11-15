@@ -7,10 +7,18 @@ use super::tag::{
 use super::{HeadValue, SeoMeta};
 use crate::strings::js_trim;
 
+/// Whether unhead's `walkResolver` walks into an object, which it does when `v.constructor ===
+/// Object`: an object with its own `constructor` key is kept whole, unsafe keys and all.
+fn walked(entries: &[(Cow<'static, str>, HeadValue)]) -> bool {
+    !entries.iter().any(|(k, _)| k == "constructor")
+}
+
 fn has_unsafe(value: &HeadValue) -> bool {
     match value {
         HeadValue::Array(items) => items.iter().any(has_unsafe),
-        HeadValue::Object(entries) => entries.iter().any(|(k, v)| unsafe_key(k) || has_unsafe(v)),
+        HeadValue::Object(entries) => {
+            walked(entries) && entries.iter().any(|(k, v)| unsafe_key(k) || has_unsafe(v))
+        }
         _ => false,
     }
 }
@@ -26,7 +34,7 @@ pub(super) fn strip_unsafe(value: &HeadValue) -> Cow<'_, HeadValue> {
 fn stripped(value: &HeadValue) -> HeadValue {
     match value {
         HeadValue::Array(items) => HeadValue::Array(items.iter().map(stripped).collect()),
-        HeadValue::Object(entries) => HeadValue::Object(
+        HeadValue::Object(entries) if walked(entries) => HeadValue::Object(
             entries
                 .iter()
                 .filter(|(k, _)| !unsafe_key(k))
@@ -292,7 +300,6 @@ pub(super) fn seo_meta_tags<'a>(meta: &'a [SeoMeta], out: &mut Vec<Tag<'a>>) {
                 .set(Cow::Borrowed("charset"), Prop::Value(charset));
         } else {
             let content = match &*value {
-                HeadValue::Null => Cow::Owned(HeadValue::Null),
                 HeadValue::Str(s) if s == "_null" => Cow::Owned(HeadValue::Null),
                 HeadValue::Number(_) => Cow::Owned(HeadValue::Str(value.js_string())),
                 _ => value,

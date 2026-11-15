@@ -672,7 +672,11 @@ impl Chunks {
         let mut seen: HashSet<&str> = HashSet::from([key.as_str()]);
         let mut css = Vec::new();
         let mut i = 0;
+        #[cfg(test)]
+        let mut turns = crate::Turns::default();
         while let Some(&key) = keys.get(i) {
+            #[cfg(test)]
+            turns.next();
             i += 1;
             let Some(chunk) = self.chunks.get(key) else {
                 continue;

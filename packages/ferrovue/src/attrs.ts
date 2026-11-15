@@ -79,7 +79,7 @@ export function display(e: Emitter, v: Val): boolean {
   if (v.ty.k === "str" && known(v) !== undefined) e.lit(escapeHtml(unquote(v.code)));
   else if ((v.ty.k === "int" || v.ty.k === "float") && v.num !== undefined) e.lit(String(v.num));
   else if (v.ty.k === "bool" && v.konst !== undefined) e.lit(String(v.konst));
-  else if (v.ty.k === "str" && v.numeral?.of === v.code && (v.numeral.number.ty.k === "int" || v.numeral.number.ty.k === "float")) return display(e, v.numeral.number);
+  else if (v.ty.k === "str" && v.numeral?.of === v.code) return display(e, v.numeral.number);
   else if (v.ty.k === "str" && (v.plain === v.code || escapeFree(v.code))) e.stmt(`out.push_str(${strArg(v.code)});`);
   else if (v.ty.k === "str" && v.joined?.of === v.code) e.stmt(`fv::core::${JOINS[v.joined.each]}(out, ${bare(v.joined.items.replace(/\.into_iter\(\)$/, ""))}, ${v.joined.sep});`);
   else if (v.ty.k === "str") e.stmt(escapedWrite(strArg(v.code)));

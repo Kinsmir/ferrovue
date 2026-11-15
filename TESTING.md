@@ -718,9 +718,9 @@ a component while it loads: what runs then is covered by no test, and Stryker ru
 against every mutant it reaches (a static mutant). At four test runners on twelve cores, `attrs.ts`
 and `template.ts` take 15 to 18 minutes, `constants.ts` and `dynamic.ts` about 40 and `expr.ts` with
 the expression modules about 45; two runners take about twice as long. The **Mutants** workflow runs
-the modules in six groups (`attrs.ts` with `template.ts`, the constant modules, `dynamic.ts`, the
-expression modules, `calls.ts` with `globals.ts`, `numbers.ts` and `strings.ts`, and the list modules),
-one job each and three at a time, each within the job's 150 minutes. The reports are
+the modules in seven groups (`attrs.ts` with `template.ts`, the constant modules, `dynamic.ts`, the
+expression modules, `calls.ts` with `globals.ts` and `numbers.ts`, `strings.ts`, and the list
+modules), one job each and three at a time, each within the job's 150 minutes. The reports are
 `target/stryker/mutation.html` and `mutation.json`; a run of some modules also reports the others as
 an earlier run left them, and `pnpm mutants:ts` holds only the modules it ran to the list.
 Incremental mode (`target/stryker/incremental.json`) reuses the result of a mutant whose code and
@@ -738,7 +738,9 @@ listed in the same form in `stryker-timeout.txt`, under a comment saying why it 
 `pnpm mutants:ts` fails on a survivor `stryker-equivalent.txt` does not explain, on a timeout
 neither list explains, and on an entry of either list that no mutant of the modules it holds uses.
 A listed equivalent that times out uses its entry: under load, a mutant whose tests all pass can
-still run past the timeout. Its summary lists every mutant that timed out, after the unexplained
+still run past the timeout. `timeoutMS` in `stryker.config.json` gives each mutant 20 seconds more
+than 1.5 times its tests' own time, not Stryker's default of 5, so that a mutant a test kills is not
+reported as a timeout on a busy runner. Its summary lists every mutant that timed out, after the unexplained
 survivors and timeouts. The **Mutants** workflow
 runs it every Monday beside cargo-mutants and uploads each job's HTML report. On `main`, each job
 also sends its report to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/Kinsmir/ferrovue/main),

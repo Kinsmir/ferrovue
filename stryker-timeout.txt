@@ -40,7 +40,6 @@ packages/ferrovue/src/members.ts: BlockStatement: { link = link.type === "Option
 # the next search starting before the match it just found.
 packages/ferrovue/src/members.ts: LogicalOperator: at > 0 && !enclosed(iter.slice(at + 4)) => at > 0 || !enclosed(iter.slice(at + 4)) in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: ConditionalExpression: at > 0 => true in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
-packages/ferrovue/src/members.ts: EqualityOperator: at > 0 => at <= 0 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: StringLiteral: ".map(" => "" in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: ArithmeticOperator: at + 1 => at - 1 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 

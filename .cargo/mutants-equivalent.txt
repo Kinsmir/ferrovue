@@ -3,13 +3,13 @@
 # line and column; the Mutants workflow fails on a survivor not listed here. Every entry says why.
 
 # `MAX_SAFE_INTEGER` as 2⁵³ instead of 2⁵³ − 1: `push_int` then writes ±2⁵³ with `write!` rather
-# than through `push_number`, and both write "9007199254740992".
+# than through `write_number`, and both write "9007199254740992".
 crates/ferrovue-core/src/lib.rs: replace - with /
 
 # `if x < 0.0` in the infinite branch and before writing the sign: zero has already returned, so
 # `x` is never 0 there.
-crates/ferrovue-core/src/lib.rs: replace < with <= in push_number
-crates/ferrovue-core/src/lib.rs: replace < with <= in push_number
+crates/ferrovue-core/src/lib.rs: replace < with <= in write_number
+crates/ferrovue-core/src/lib.rs: replace < with <= in write_number
 
 # The tie between two shortest spellings. `(b - b'0')` and `(b + b'0')` have the same parity, b'0'
 # being 48. The exact value of a tie is an odd multiple of 2⁻ʲ with j ≥ 2, whose decimal digits
@@ -24,7 +24,7 @@ crates/ferrovue-core/src/lib.rs: replace == with != in shortest_digits
 crates/ferrovue-core/src/lib.rs: replace - with + in push_decimal
 crates/ferrovue-core/src/lib.rs: replace - with / in push_decimal
 
-# `Js<i64>` at ±(2⁵³ − 1) through `Js<f64>`: the double is exact, and `push_number` writes it as the same integer.
+# `Js<i64>` at ±(2⁵³ − 1) through `Js<f64>`: the double is exact, and `write_number` writes it as the same integer.
 crates/ferrovue-core/src/lib.rs: replace > with >= in <impl std::fmt::Display for Js<i64>>::fmt
 
 # A double's fraction is below 2⁵², so `fraction ^ 1 << 52` and `fraction | 1 << 52` are equal.
@@ -40,10 +40,10 @@ crates/ferrovue-core/src/lib.rs: replace < with <= in few_exact_digits
 crates/ferrovue-core/src/lib.rs: replace < with <= in few_exact_digits
 
 # A borrow only carries toward higher-order bytes, so the lowest flagged byte equals one character and only that character's word flags it: `^` leaves it set wherever `|` does.
-crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
-crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
-crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
-crates/ferrovue-core/src/lib.rs: replace | with ^ in needs_escape
+crates/ferrovue-core/src/lib.rs: replace | with ^ in next_special
+crates/ferrovue-core/src/lib.rs: replace | with ^ in next_special
+crates/ferrovue-core/src/lib.rs: replace | with ^ in next_special
+crates/ferrovue-core/src/lib.rs: replace | with ^ in next_special
 
 # Stripping a hash history's base before its `#` when the `#` is at index 0 or later: at 0,
 # `b[0..]` is `b` itself.
@@ -54,6 +54,11 @@ crates/ferrovue-router/src/lib.rs: replace > with >= in Router::with_base
 # so `h > 0` and `h >= 0` agree.
 crates/ferrovue-router/src/lib.rs: replace < with <= in Router::at
 crates/ferrovue-router/src/lib.rs: replace > with >= in Router::at
+
+# `Route::state_at` with a router whose routes take at most `SPANS` parameters: `matched` and
+# `matched_spans` find the same route and the same values, the second without allocating, so taking
+# `matched` at exactly `SPANS` gives the same state.
+crates/ferrovue-router/src/lib.rs: replace > with >= in Route<'_>::state_at
 crates/ferrovue-router/src/url.rs: replace < with <= in split_url
 crates/ferrovue-router/src/url.rs: replace > with >= in split_url
 
@@ -110,35 +115,43 @@ crates/ferrovue/src/strings/regex.rs: replace < with <= in canonical
 crates/ferrovue/src/strings.rs: replace match guard l.is_finite() with true in JsRegex::split
 
 # A tag's position from entry `i` instead of `i + 1`: every position moves down by 1024, which keeps their order and which entry each one came from.
-crates/ferrovue/src/head.rs: replace + with * in Head::resolve
+crates/ferrovue/src/head.rs: replace + with * in resolve
 
 # `js_key_place` placing an array index: a key equal to one already there has been found and replaced before it is placed, so `other == index` never holds.
 crates/ferrovue/src/head.rs: replace < with <= in js_key_place
 
 # A link whose `rel` is falsy has `rel` absent, `true` (from "") or a number, and the `match` on it gives 100 for each of them too.
-crates/ferrovue/src/head.rs: replace match guard props.truthy("rel") with true in capo_weight
+crates/ferrovue/src/head/dedupe.rs: replace match guard props.truthy("rel") with true in capo_weight
 
 # `hash_tag` with a comma before every property: the hashes still differ exactly where they did, each one starting with the same comma.
-crates/ferrovue/src/head.rs: replace > with >= in hash_tag
+crates/ferrovue/src/head/dedupe.rs: replace > with >= in hash_tag
 
 # `same_key` of two numbers: `HeadValue`'s `==` compares the two `f64`s with `==` as well.
-crates/ferrovue/src/head.rs: delete match arm (HeadValue::Number(x), HeadValue::Number(y)) in same_key
+crates/ferrovue/src/head/dedupe.rs: delete match arm (HeadValue::Number(x), HeadValue::Number(y)) in same_key
 
 # `Key::of` decides a tag's identity only for a truthy `textContent` or `innerHTML`, which is never NaN or ±0: the key it gives a tag's `key` is never read, as a tag with a truthy `key` always has a dedupe key.
-crates/ferrovue/src/head.rs: replace match guard x.is_nan() with false in Key::of
-crates/ferrovue/src/head.rs: replace + with - in Key::of
+crates/ferrovue/src/head/tag.rs: replace match guard x.is_nan() with false in Key<'a>::of
+crates/ferrovue/src/head/tag.rs: replace + with - in Key<'a>::of
 
 # `outranks`: no two tags share a position, and its weights are compared only when they differ.
-crates/ferrovue/src/head.rs: replace > with >= in outranks
-crates/ferrovue/src/head.rs: replace < with <= in outranks
+crates/ferrovue/src/head/dedupe.rs: replace > with >= in outranks
+crates/ferrovue/src/head/dedupe.rs: replace < with <= in outranks
 
 # A `Prop::Class` is only ever set under "class", and a `Prop::Style` only under "style".
-crates/ferrovue/src/head.rs: replace match guard key == "class" with true in props_into
-crates/ferrovue/src/head.rs: replace match guard key == "style" with true in props_into
+crates/ferrovue/src/head/write.rs: replace match guard key == "class" with true in props_into
+crates/ferrovue/src/head/write.rs: replace match guard key == "style" with true in props_into
+
+# `has_unsafe` saying every input holds an unsafe key: `stripped` of an input that holds none is
+# equal to it, so only a copy is made.
+crates/ferrovue/src/head/normalize.rs: replace has_unsafe -> bool with true
 
 # `is_lowercase_ascii` is a shortcut: for a key it holds for, `to_lowercase` and `hyphenate` give the key back unchanged.
 crates/ferrovue/src/attrs.rs: replace match guard is_lowercase_ascii(key) with false in dynamic_attr_into
 crates/ferrovue/src/attrs.rs: replace is_lowercase_ascii -> bool with false
+
+# `strict_eq` of a text value and one that is not: `text()` gives `Some` for the first and `None`
+# for the second, so comparing them gives false, as the arm for values that are not both text does.
+crates/ferrovue/src/attrs.rs: replace && with || in Attr<'a>::strict_eq
 
 # `reference_len` counting at most `max` characters of a reference: one longer than `max` is then followed by another allowed character, never `;`, and is refused as it was.
 crates/ferrovue/src/html/basic.rs: replace + with * in reference_len

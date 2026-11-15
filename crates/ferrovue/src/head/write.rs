@@ -5,26 +5,20 @@ use super::tag::{
     INNER_CONTENT, Prop, Props, SELF_CLOSING, Tag, VALID, has_content, invalid_attr_name,
 };
 
-fn script_escaped<'a>(json_like: bool, content: &Cow<'a, HeadValue>) -> Cow<'a, HeadValue> {
-    if json_like {
-        let text = match &**content {
-            HeadValue::Str(s) => Cow::Borrowed(s.as_str()),
-            other => Cow::Owned(other.json().unwrap_or_default()),
-        };
-        if text.contains('<') {
-            Cow::Owned(HeadValue::Str(text.replace('<', "\\u003C")))
-        } else if let Cow::Owned(text) = text {
-            Cow::Owned(HeadValue::Str(text))
-        } else {
-            content.clone()
-        }
+/// A JSON-like script's content with every `<` escaped as JSON may escape it. Any other script's
+/// `</script` is escaped as it is written, by `replace_close_tag_into`, which also catches
+/// `</SCRIPT`.
+fn json_escaped<'a>(content: &Cow<'a, HeadValue>) -> Cow<'a, HeadValue> {
+    let text = match &**content {
+        HeadValue::Str(s) => Cow::Borrowed(s.as_str()),
+        other => Cow::Owned(other.json().unwrap_or_default()),
+    };
+    if text.contains('<') {
+        Cow::Owned(HeadValue::Str(text.replace('<', "\\u003C")))
+    } else if let Cow::Owned(text) = text {
+        Cow::Owned(HeadValue::Str(text))
     } else {
-        match &**content {
-            HeadValue::Str(s) if s.contains("</script") => {
-                Cow::Owned(HeadValue::Str(s.replace("</script", "<\\/script")))
-            }
-            _ => content.clone(),
-        }
+        content.clone()
     }
 }
 
@@ -52,11 +46,11 @@ pub(super) fn sanitize(tags: &mut Vec<Tag<'_>>) {
                     .map_or(Cow::Borrowed("undefined"), Prop::js_str);
                 ty.ends_with("json") || ty == "importmap" || ty == "speculationrules"
             };
-            if t.inner_html.truthy() {
-                t.inner_html = script_escaped(json_like, &t.inner_html);
+            if json_like && t.inner_html.truthy() {
+                t.inner_html = json_escaped(&t.inner_html);
             }
-            if t.text_content.truthy() {
-                t.text_content = script_escaped(json_like, &t.text_content);
+            if json_like && t.text_content.truthy() {
+                t.text_content = json_escaped(&t.text_content);
             }
         }
         true

@@ -253,6 +253,10 @@ const hand: HeadCase[] = [
   { defaults: false, calls: [{ head: { meta: [{ name: "description", key: ["k"], content: "a", media: "m" }] } }, { head: { meta: [{ name: "description", key: ["k"], content: "b" }] } }] },
   { defaults: false, calls: [{ head: { meta: [{ name: "a", content: "1", tagPriority: 5 }, { name: "z", content: "2", tagPriority: Number.NaN }, { name: "a", content: "3", tagPriority: 3 }] } }] },
   { defaults: false, calls: [{ head: { meta: [{ name: "description", key: 1, content: "a", media: "m" }] } }, { head: { meta: [{ name: "description", key: 1, content: "b" }] } }] },
+  { defaults: false, calls: [{ head: { meta: [{ content: "a", textContent: "x" }] } }, { head: { meta: [{ content: "b", textContent: "y" }] } }] },
+  { defaults: false, calls: [{ head: { script: [{ type: "application/ld+json", innerHTML: own([["name", "n"], ["constructor", "k"], ["list", [own([["prototype", 1], ["a", 2]])]]]) }] } }] },
+  { defaults: false, calls: [{ head: { script: [{ type: "application/ld+json", innerHTML: { list: [own([["__proto__", { a: 1 }], ["b", 2]])] } }] } }] },
+  { defaults: false, calls: [{ head: { meta: [{ property: "og:image", content: "a" }, { property: "og:image", content: "b" }] } }, { head: { meta: [{ property: "og:image", content: "c", media: "m", tagDuplicateStrategy: "merge" }] } }] },
 ];
 
 const TAGS = ["meta", "link", "script", "style", "noscript", "base", "htmlAttrs", "bodyAttrs", "title", "titleTemplate"] as const;

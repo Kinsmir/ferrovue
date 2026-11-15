@@ -10,6 +10,11 @@ for which constructs, so a project knows whether to record its fixtures again.
 
 ## [Unreleased]
 
+### Fixed
+
+- A `useHead` object holding its own `constructor` key, such as the `innerHTML` of a JSON-LD script, keeps its `__proto__`, `constructor` and `prototype` keys and those of the objects inside it, as unhead leaves such an object whole; 0.16 dropped them.
+  [Head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
+
 ## [0.16.0] - 2026-11-08
 
 Rendered output: unchanged, except where a project sets the new `preserveWhitespace` classes, in an island's wrapper, whose `data-props` is in single quotes, and for a bound or fallthrough `disablepictureinpicture` or `disableremoteplayback`.
