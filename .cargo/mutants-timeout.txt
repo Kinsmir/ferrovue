@@ -8,7 +8,3 @@
 # `lower` at `mid`. The conformance suite of `ferrovue` reaches it before the router's own tests run.
 crates/ferrovue-router/src/lib.rs: replace + with * in ordered
 
-# An infinite loop: `decode` stops advancing past a `%XX` at the start of the text when `i = 0 * 3`
-# leaves `i` at 0, and pushes its byte forever. The conformance suite of `ferrovue` reaches it, with
-# the router built without `cfg(test)`, before the router's own tests run.
-crates/ferrovue-router/src/url.rs: replace += with *= in decode
