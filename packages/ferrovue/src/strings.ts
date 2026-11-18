@@ -3,7 +3,7 @@ import { asciiText, isAscii, strTy } from "./literal-types.ts";
 import { fail, kept, placeOf, refusalAt, REFUSALS } from "./locate.ts";
 import { rustStr } from "./rust-syntax.ts";
 import type { ErrorCode } from "./errors.ts";
-import { atom, bare, binary, condition, enclosed, pure, receiver, strArg } from "./parens.ts";
+import { atom, bare, binary, closing, condition, enclosed, literalEnd, pure, receiver, strArg } from "./parens.ts";
 import { computed, items } from "./lists.ts";
 import { describeTy, expr } from "./expr.ts";
 import { known } from "./narrowing.ts";
@@ -126,11 +126,28 @@ export function yieldsCow(code: string): boolean {
     for (let at = code.lastIndexOf(`${method}(`); at >= 0; at = code.lastIndexOf(`${method}(`, at - 1)) {
       const rest = code.slice(at + method.length);
       if (!enclosed(rest)) continue;
-      const fallback = rest.slice(1, -1).replace(/^\|\| /, "");
+      const fallback = blockTail(rest.slice(1, -1).replace(/^\|\| /, ""));
       return fallback.startsWith("std::borrow::Cow::<str>::") || yieldsCow(fallback);
     }
   }
   return false;
+}
+
+function blockTail(code: string): string {
+  if (!code.startsWith("{") || !enclosed(code)) return code;
+  const body = code.slice(1, -1).trim();
+  let tail = 0;
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i]!;
+    if (ch === '"' || ch === "'") i = literalEnd(body, i);
+    else if (ch === "(" || ch === "[") i = closing(body, i);
+    else if (ch === "{") {
+      i = closing(body, i);
+      if (body[i + 1] === " ") tail = i + 2;
+    } else if (ch === ";") tail = i + 1;
+    if (i < 0) return code;
+  }
+  return blockTail(body.slice(tail).trim());
 }
 
 export function unquote(literal: string): string {

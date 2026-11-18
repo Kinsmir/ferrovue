@@ -148,6 +148,7 @@ defineProps<{ a: string }>();
 
   it.each([
     ["strings with a separator", "xs.iter().into_iter()", '"-"', "str", 'xs.iter().take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2'],
+    ["strings a call splits", 'fv::strings::js_split(&props.s, "").into_iter()', '"-"', "str", 'fv::strings::js_split(&props.s, "").into_iter().take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2'],
     ["strings with a longer separator", "xs.iter()", '"--"', "str", 'xs.iter().take(2).map(|fv_item| if fv_item.is_empty() { 1 } else { 2 }).sum::<u8>() < 2'],
     ["strings with no separator", "xs.iter()", '""', "str", "xs.iter().all(|fv_item| fv_item.is_empty())"],
     ["integers", "ns.iter().copied().into_iter()", '","', "int", "ns.iter().copied().next().is_none()"],
