@@ -147,7 +147,7 @@ function blockTail(code: string): string {
     } else if (ch === ";") tail = i + 1;
     if (i < 0) return code;
   }
-  return blockTail(body.slice(tail).trim());
+  return tail === 0 ? body : blockTail(body.slice(tail).trim());
 }
 
 export function unquote(literal: string): string {
