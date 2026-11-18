@@ -223,8 +223,10 @@ export function picked(s: Scope, target: Val, n: N, fromList: (list: string) => 
     const inner = of.k === "opt" ? of.of : of;
     const flat = of.k === "opt";
     switch (inner.k) {
-      case "str":
-        return { code: flat ? `${got}.and_then(|v| v.as_deref())` : `${got}.map(|v| &**v)`, ty: opt(of), ...lone };
+      case "str": {
+        const built = !flat && target.literal?.items.some(isTemporary) ? { held: `${got}.map(|v| ${COW}::Owned((**v).to_owned()))` } : {};
+        return { code: flat ? `${got}.and_then(|v| v.as_deref())` : `${got}.map(|v| &**v)`, ty: opt(of), ...built, ...lone };
+      }
       case "int":
       case "float":
       case "bool":

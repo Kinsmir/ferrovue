@@ -22,6 +22,7 @@ for which constructs, so a project knows whether to record its fixtures again.
 
 ### Fixed
 
+- Generated Rust compiles for expressions 0.16 wrote code rustc rejected: under `?:`, `.at()` of an array literal that builds a string and `??` falling back to a function with a loop; a fallthrough attribute's template literal holding a call that may be refused, such as `.repeat()`; and an attribute bound to `String()` of a `.split()`.
 - A `useHead` object holding its own `constructor` key, such as the `innerHTML` of a JSON-LD script, keeps its `__proto__`, `constructor` and `prototype` keys and those of the objects inside it, as unhead leaves such an object whole; 0.16 dropped them.
   [Head](https://docs.rs/ferrovue/latest/ferrovue/guide/head/index.html).
 

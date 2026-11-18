@@ -85,6 +85,7 @@ pub mod fall_binds;
 pub mod fall_fade;
 pub mod fall_formatted;
 pub mod fall_inner;
+pub mod fall_kept;
 pub mod fall_leaf;
 pub mod fall_link;
 pub mod fall_pair;
@@ -92,6 +93,7 @@ pub mod fall_root;
 pub mod fall_spaces;
 pub mod fall_switch;
 pub mod fall_use;
+pub mod fallback_block;
 pub mod fallthrough;
 pub mod fielded_card;
 pub mod fielded_cards;
@@ -191,6 +193,7 @@ pub mod pairs;
 pub mod panel;
 pub mod parsing;
 pub mod pending;
+pub mod picked_temporary;
 pub mod picker;
 pub mod placed_html;
 pub mod plain_box;
@@ -242,6 +245,7 @@ pub mod shape_square;
 pub mod shown;
 pub mod signed_zeros;
 pub mod slot_probe;
+pub mod split_attrs;
 pub mod statements;
 pub mod string_indexes;
 pub mod string_of;
@@ -722,6 +726,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: fall_inner::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_inner::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "FallKept" => {
+            let props: fall_kept::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fall_kept::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "FallLeaf" => {
             let props: fall_leaf::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_leaf::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -755,6 +763,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
         "FallUse" => {
             let props: fall_use::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             fall_use::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
+        "FallbackBlock" => {
+            let props: fallback_block::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            fallback_block::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Fallthrough" => {
             let props: fallthrough::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
@@ -1300,6 +1312,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let props: pending::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             pending::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
+        "PickedTemporary" => {
+            let props: picked_temporary::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            picked_temporary::try_render(&mut out, &props).map_err(|e| e.to_string())?;
+        }
         "Picker" => {
             let props: picker::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
             picker::try_render(&mut out, &props).map_err(|e| e.to_string())?;
@@ -1550,6 +1566,10 @@ pub fn render_json(component: &str, json: &str) -> Result<String, String> {
             let s_default = |out: &mut String| out.push_str(fixture.slot("default").unwrap_or_default());
             let s_footer = |out: &mut String| out.push_str(fixture.slot("footer").unwrap_or_default());
             slot_probe::try_render(&mut out, &props, slot_probe::Slots { header: fixture.slot("header").map(|_| ferrovue::render::Slot::new(&s_header)), default: fixture.slot("default").map(|_| ferrovue::render::Slot::new(&s_default)), footer: fixture.slot("footer").map(|_| ferrovue::render::Slot::new(&s_footer)) }).map_err(|e| e.to_string())?;
+        }
+        "SplitAttrs" => {
+            let props: split_attrs::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;
+            split_attrs::try_render(&mut out, &props).map_err(|e| e.to_string())?;
         }
         "Statements" => {
             let props: statements::Props = serde_json::from_str(json).map_err(|e| e.to_string())?;

@@ -1,6 +1,6 @@
 import { escapeHtml, hyphenate, isBooleanAttr, isSSRSafeAttrName, isSVGTag, propsToAttrMap } from "@vue/shared";
 import { type N, type Piece, type Scope, type Ty, type Val, nothing } from "./model.ts";
-import { fail } from "./locate.ts";
+import { fail, REFUSALS } from "./locate.ts";
 import { neverEmpty } from "./literal-types.ts";
 import { rustStr } from "./rust-syntax.ts";
 import { type ErrorCode, GenError } from "./errors.ts";
@@ -42,7 +42,7 @@ export function emptyTest(v: Val): string {
 }
 
 function joinedEmpty(joined: NonNullable<Val["joined"]>): string | null {
-  const items = receiver(joined.items.replace(/\.into_iter\(\)$/, ""));
+  const items = receiver(joined.items.replace(/(\.(?:iter|copied|cloned)\(\))\.into_iter\(\)$/, "$1"));
   if (joined.each !== "str") return `${items}.next().is_none()`;
   if (joined.sep === '""') return `${items}.all(|fv_item| fv_item.is_empty())`;
   if (!/^"(?:[^"\\]|\\.)+"$/.test(joined.sep)) return null;
@@ -390,7 +390,7 @@ export function attrOf(s: Scope, key: string, n: N, side: "vnode" | "own"): stri
 
 /** A string built by a `format!` alone, as an attribute that formats it as it is written. */
 function formattedAttr(v: Val): string | null {
-  if (!v.code.startsWith("&*format!(") || closing(v.code, 9) !== v.code.length - 1) return null;
+  if (!v.code.startsWith("&*format!(") || closing(v.code, 9) !== v.code.length - 1 || v.code.includes(`${REFUSALS}.`)) return null;
   const f = fresh("f", "f");
   return `fv::attrs::Attr::Fmt(&fv::attrs::format(|${f}| write!(${f}, ${v.code.slice(10, -1)})))`;
 }
