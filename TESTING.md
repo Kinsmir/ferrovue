@@ -742,9 +742,10 @@ listed in the same form in `stryker-timeout.txt`, under a comment saying why it 
 `pnpm mutants:ts` fails on a survivor `stryker-equivalent.txt` does not explain, on a timeout
 neither list explains, and on an entry of either list that no mutant of the modules it holds uses.
 A listed equivalent that times out uses its entry: under load, a mutant whose tests all pass can
-still run past the timeout. `timeoutMS` in `stryker.config.json` gives each mutant 20 seconds more
-than 1.5 times its tests' own time, not Stryker's default of 5, so that a mutant a test kills is not
-reported as a timeout on a busy runner. Its summary lists every mutant that timed out, after the unexplained
+still run past the timeout. `timeoutFactor` and `timeoutMS` in `stryker.config.json` give each mutant three times its tests' own
+time and 20 seconds more, not Stryker's default of 1.5 times and 5 seconds, so that a mutant a test kills is not
+reported as a timeout on a busy runner: a static mutant runs the whole suite, which four runners at once
+on a CI machine slow past the default. Its summary lists every mutant that timed out, after the unexplained
 survivors and timeouts. The **Mutants** workflow
 runs it every Monday beside cargo-mutants and uploads each job's HTML report. On `main`, each job
 also sends its report to the [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/Kinsmir/ferrovue/main),

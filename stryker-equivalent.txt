@@ -12,6 +12,11 @@ packages/ferrovue/src/attrs.ts: ConditionalExpression: branches.of === v.code =>
 # attrs.ts, `display`: the line `close(" else {")` writes ends in its one `} else {`.
 packages/ferrovue/src/attrs.ts: Regex: /\} else \{$/ => /\} else \{/ in if (e.lines.length === at + 1) e.lines.splice(at - 1, 2, e.lines[at - 1]!.replace(/\} else \{$/, "}"));
 
+# attrs.ts, `joinedEmpty`: an `.into_iter()` after `.iter()`, `.copied()` or `.cloned()` is the
+# identity wherever it stands in the chain, so dropping one before the end writes Rust that does the
+# same, and the chains the compiler builds hold it only at the end.
+packages/ferrovue/src/attrs.ts: Regex: /(\.(?:iter|copied|cloned)\(\))\.into_iter\(\)$/ => /(\.(?:iter|copied|cloned)\(\))\.into_iter\(\)/ in const items = receiver(joined.items.replace(/(\.(?:iter|copied|cloned)\(\))\.into_iter\(\)$/, "$1"));
+
 # attrs.ts, `someLiteral`: the first test gives no branches for a value that is not optional, and
 # the second returns null for one, so either alone keeps such a value out.
 packages/ferrovue/src/attrs.ts: ConditionalExpression: v.ty.k === "opt" => true in const branches = v.ty.k === "opt" ? ifElse(v.code) : null;

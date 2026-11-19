@@ -35,12 +35,10 @@ packages/ferrovue/src/dynamic.ts: CallExpression: vnodeSlots.set(p.comp, set); =
 packages/ferrovue/src/members.ts: BlockStatement: { link = link.type === "OptionalCallExpression" ? link.cal … this optional chain is not supported ${placeIn(s)}`, n); } => {} in while (!link.optional) {
 
 # members.ts, `computedLength`: an infinite loop. The search for the `.map(` the length is taken
-# before stops advancing: with -1 from `indexOf` kept in the loop (`||`, `true` and `<= 0`, which
-# start again from the first `.map(`), with an empty search string at the end of the text, and with
-# the next search starting before the match it just found.
+# before stops advancing: with -1 from `indexOf` kept in the loop (`||` and `true`, which start
+# again from the first `.map(`), and with the next search starting before the match it just found.
 packages/ferrovue/src/members.ts: LogicalOperator: at > 0 && !enclosed(iter.slice(at + 4)) => at > 0 || !enclosed(iter.slice(at + 4)) in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: ConditionalExpression: at > 0 => true in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
-packages/ferrovue/src/members.ts: StringLiteral: ".map(" => "" in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 packages/ferrovue/src/members.ts: ArithmeticOperator: at + 1 => at - 1 in while (at > 0 && !enclosed(iter.slice(at + 4))) at = iter.indexOf(".map(", at + 1);
 
 # borrows.ts, `refsHeld` and `borrowsHeld`: an infinite loop. `at` stops advancing with the loop's body gone, moves back with the call's length taken away, and matches an adapter later in the chain from a position before it, which `closing` sends back to where it was.
@@ -49,3 +47,24 @@ packages/ferrovue/src/borrows.ts: Regex: /^\.(filter|take|skip|rev|take_while|sk
 packages/ferrovue/src/borrows.ts: ArithmeticOperator: at + call[0].length => at - call[0].length in at = closing(chain, at + call[0].length - 1) + 1;
 packages/ferrovue/src/borrows.ts: BlockStatement: { const call = /^\.([a-z_]+)\(/.exec(chain.slice(at)); if  … ) : !ADAPTERS.has(call[1]!)) return false; at = end + 1; } => {} in while (at >= 0 && at < chain.length) {
 packages/ferrovue/src/borrows.ts: ArithmeticOperator: at + call[0].length => at - call[0].length in const open = at + call[0].length - 1;
+
+# reduce.ts, `reduced`: an infinite loop. The `for (;;)` that widens the accumulator until
+# one pass needs no change goes round again forever: with its body gone, with a `seen` flag set
+# from the start or on every pass (`true`, `||`), with a widening test always taken, and with
+# `lone` or `ascii` never taking the change the pass asked for (`&&=`, `||=`, `seen.wide`).
+packages/ferrovue/src/reduce.ts: BlockStatement: { const mark = ctx.narrowCount; const acc = fresh("acc", j …  ? { lone } : {}) }; return { code: folded, ty: accTy }; } => {} in for (;;) {
+packages/ferrovue/src/reduce.ts: BooleanLiteral: false => true in const seen = { wider: false, loner: false, wide: false };
+packages/ferrovue/src/reduce.ts: BooleanLiteral: false => true in const seen = { wider: false, loner: false, wide: false };
+packages/ferrovue/src/reduce.ts: ConditionalExpression: out.lone && !lone => true in if (out.lone && !lone) seen.loner = true;
+packages/ferrovue/src/reduce.ts: LogicalOperator: out.lone && !lone => out.lone || !lone in if (out.lone && !lone) seen.loner = true;
+packages/ferrovue/src/reduce.ts: ConditionalExpression: ascii && !isAscii(out.ty) => true in if (ascii && !isAscii(out.ty)) seen.wide = true;
+packages/ferrovue/src/reduce.ts: LogicalOperator: ascii && !isAscii(out.ty) => ascii || !isAscii(out.ty) in if (ascii && !isAscii(out.ty)) seen.wide = true;
+packages/ferrovue/src/reduce.ts: ConditionalExpression: seen.wider => true in if (seen.wider) {
+packages/ferrovue/src/reduce.ts: ConditionalExpression: seen.loner || seen.wide => true in if (seen.loner || seen.wide) {
+packages/ferrovue/src/reduce.ts: AssignmentOperator: lone ||= seen.loner => lone &&= seen.loner in lone ||= seen.loner;
+packages/ferrovue/src/reduce.ts: BooleanLiteral: !seen.wide => seen.wide in ascii &&= !seen.wide;
+packages/ferrovue/src/reduce.ts: AssignmentOperator: ascii &&= !seen.wide => ascii ||= !seen.wide in ascii &&= !seen.wide;
+
+# flat.ts, `flattened`: an infinite loop on `.flat(Infinity)`. With the loop's body gone the item
+# type never steps inward, so a list of lists stays one and `level < Infinity` always holds.
+packages/ferrovue/src/flat.ts: BlockStatement: { const inner: Ty = of.of; it = `${it}.flat_map(|v| ${inne … v.iter()" : items({ code: "v", ty: of })})`; of = inner; } => {} in for (let level = 0; level < depth && of.k === "list"; level++) {
